@@ -6,6 +6,7 @@ This repository contains the **frontend code**, built with **Next.js**, **Tailwi
 ---
 
 ## 🚀 Features
+
 - Modern, responsive UI with TailwindCSS
 - Product listing, search, and filters
 - Shopping cart & checkout process
@@ -15,8 +16,11 @@ This repository contains the **frontend code**, built with **Next.js**, **Tailwi
 ---
 
 ## 🛠️ Tech Stack
+
 - [Next.js](https://nextjs.org/) – React framework
 - [TailwindCSS](https://tailwindcss.com/) – utility-first CSS
 - [Axios](https://axios-http.com/) – HTTP client for API requests
 
 ---
+
+feature/branch
