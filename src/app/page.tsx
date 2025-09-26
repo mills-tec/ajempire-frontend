@@ -1,9 +1,11 @@
-
+import Categories from "@/components/ui/Categories";
 
 export default function Home() {
   return (
-    <div className="flex">
-      Home
+    <div className="w-full">
+      <div>
+        <Categories />
+      </div>
     </div>
   );
 }
