@@ -1,9 +1,14 @@
+import Navbar from "./components/Navbar/Navbar";
 
 
 export default function Home() {
   return (
-    <div className="flex">
-      Home
-    </div>
+    <>
+      <Navbar />
+      <main>
+      {/* //other component goes here */}
+      </main>
+      {/* // Footer goes here */}
+    </>
   );
 }

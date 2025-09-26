@@ -11,6 +11,10 @@ module.exports = {
       colors: {
         background: "#ffffff", // white
         foreground: "#171717", // dark gray text
+        highlight: "#ff008c", // bright pink
+        gradient: {
+          "background-to-t": "linear-gradient(90deg, #FF008C 0%, #A600FF 100%)",
+        }
       },
     },
   },
