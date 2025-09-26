@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function intro() {
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-brand_gradient rounded-3xl flex flex-col h-[35rem] w-[27rem] text-3xl">
+      <div className="bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl">
         <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
           <Image
             src={butterflyImage}
@@ -19,7 +19,7 @@ export default function intro() {
             priority
           />
         </div>
-        <div className="flex-1 object-contain bg-white rounded-3xl">
+        <div className="flex-1 object-contain bg-white rounded-t-3xl lg:rounded-3xl">
           <Image
             src={Logo}
             alt=""

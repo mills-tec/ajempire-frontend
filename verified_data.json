@@ -1,0 +1,215 @@
+{
+  "source": "verified",
+  "data": [
+    {
+      "id": "301",
+      "user": "FRSC_Enugu",
+      "text": "Traffic along Enugu-Onitsha Expressway is moving slowly after an early morning armed robbery scare. No casualties reported.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:35:00Z"
+    },
+    {
+      "id": "302",
+      "user": "Police_NG_Anambra",
+      "text": "Reports of a kidnapping near Udi are under investigation. Preliminary findings suggest it was a traffic jam mistaken for abduction.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:38:00Z"
+    },
+    {
+      "id": "303",
+      "user": "FRSC_Abia",
+      "text": "The Aba–Owerri accident involved 1 tricycle and 1 minibus. 2 persons sustained minor injuries. Road partially cleared.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:40:00Z"
+    },
+    {
+      "id": "304",
+      "user": "Abakaliki_FireService",
+      "text": "Our men responded to a fire outbreak near Abakaliki express caused by a tanker spill. Fire contained, no fatalities.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:42:00Z"
+    },
+    {
+      "id": "305",
+      "user": "EnuguGovt",
+      "text": "Enugu State Government confirms New Market road reopened after last night’s tanker fire. Commuters may now pass freely.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:45:00Z"
+    },
+    {
+      "id": "306",
+      "user": "FRSC_Anambra",
+      "text": "At Ihiala junction, a truck spilled petrol. Drivers warned to avoid scooping fuel as safety teams move in.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:48:00Z"
+    },
+    {
+      "id": "307",
+      "user": "Police_NG_Abia",
+      "text": "We confirm accident on Aba–Owerri express. Contrary to rumors, no deaths recorded. 4 persons treated at nearby clinic.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:50:00Z"
+    },
+    {
+      "id": "308",
+      "user": "EbonyiGovt",
+      "text": "Following clashes near Abakaliki road, security has been reinforced. Travelers are advised to use alternate routes.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:52:00Z"
+    },
+    {
+      "id": "309",
+      "user": "AnambraGovt",
+      "text": "Work is ongoing at Nnewi–Nkpor road to address flooding damage. Expect diversions during repairs.",
+      "lang": "en",
+      "created_at": "2025-09-25T09:55:00Z"
+    },
+    {
+      "id": "310",
+      "user": "FRSC_Nsukka",
+      "text": "Movement along Nsukka–9th Mile is free. No checkpoints mounted today. #TrafficUpdate",
+      "lang": "en",
+      "created_at": "2025-09-25T09:57:00Z"
+    },
+    {
+      "id": "311",
+      "user": "EnuguStatePolice",
+      "text": "Contrary to online reports, no armed robbery took place on Enugu–Onitsha road. Scene was cleared after a vehicle broke down.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:00:00Z"
+    },
+    {
+      "id": "312",
+      "user": "SEASTU",
+      "text": "Our union reports soldiers still collecting bribes at Ugwuoba checkpoint. We have lodged formal complaints to the authorities.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:03:00Z"
+    },
+    {
+      "id": "313",
+      "user": "AbiaFRSC",
+      "text": "Traffic on Aba express has eased. Both lanes reopened, tow truck removed wreckage successfully.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:05:00Z"
+    },
+    {
+      "id": "314",
+      "user": "FireService_Anambra",
+      "text": "No casualties in Onitsha tanker fire contrary to exaggerated reports. Three shops were affected.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:08:00Z"
+    },
+    {
+      "id": "315",
+      "user": "Nigeria_Police",
+      "text": "We urge citizens to disregard fake reports of multiple deaths on Aba–Owerri express. Official record is 0 fatalities.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:10:00Z"
+    },
+    {
+      "id": "316",
+      "user": "FRSC_Ebonyi",
+      "text": "Crash on Abakaliki road caused by reckless driving. We advise commuters to remain cautious.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:12:00Z"
+    },
+    {
+      "id": "317",
+      "user": "AnambraPolice",
+      "text": "There was no kidnapping on Enugu–PH road yesterday. Social media exaggerated. It was routine stop-and-search.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:15:00Z"
+    },
+    {
+      "id": "318",
+      "user": "Ebonyi_HealthMinistry",
+      "text": "2 injured persons from yesterday’s Abakaliki clash receiving treatment. No deaths recorded.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:18:00Z"
+    },
+    {
+      "id": "319",
+      "user": "TransportUnion_Anambra",
+      "text": "Drivers are advised to avoid Oba junction until tanker spill is cleared completely. Movement is restricted.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:20:00Z"
+    },
+    {
+      "id": "320",
+      "user": "FRSC_Enugu",
+      "text": "Enugu–Makurdi road currently free of obstruction. No incidents reported this morning.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:22:00Z"
+    },
+    {
+      "id": "321",
+      "user": "AnambraFireDept",
+      "text": "We confirm one market stall destroyed in Onitsha fuel spill fire. No life lost.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:24:00Z"
+    },
+    {
+      "id": "322",
+      "user": "EnuguGovt",
+      "text": "Government engineers deployed to repair collapsed section of Nnewi–Nkpor road after heavy flooding.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:27:00Z"
+    },
+    {
+      "id": "323",
+      "user": "FRSC_Abia",
+      "text": "Casualty figures circulating online about Aba express crash are false. Only 2 minor injuries confirmed.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:29:00Z"
+    },
+    {
+      "id": "324",
+      "user": "Police_NG_Enugu",
+      "text": "Armed robbery reports from last night were unfounded. It was a breakdown misinterpreted.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:32:00Z"
+    },
+    {
+      "id": "325",
+      "user": "RoadUnion_Abia",
+      "text": "We advise drivers to exercise caution. Aba–Owerri corridor is dangerous due to repeated accidents.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:35:00Z"
+    },
+    {
+      "id": "326",
+      "user": "EnuguFireService",
+      "text": "We confirm that tanker fire near New Market was caused by brake failure, not sabotage as claimed online.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:38:00Z"
+    },
+    {
+      "id": "327",
+      "user": "EbonyiPolice",
+      "text": "There was a minor clash between farmers and herders. Situation under control. Roads reopened.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:40:00Z"
+    },
+    {
+      "id": "328",
+      "user": "AbiaGovt",
+      "text": "Rescue teams attended quickly to Aba express victims. Situation exaggerated on social media.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:43:00Z"
+    },
+    {
+      "id": "329",
+      "user": "FRSC_Anambra",
+      "text": "Traffic flow improved at Onitsha head bridge after removal of broken trucks. Expect normal movement.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:45:00Z"
+    },
+    {
+      "id": "330",
+      "user": "Nigeria_PoliceHQ",
+      "text": "We caution citizens against spreading fake death tolls. Verified incidents are always communicated through official channels.",
+      "lang": "en",
+      "created_at": "2025-09-25T10:47:00Z"
+    }
+  ]
+}

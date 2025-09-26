@@ -3,7 +3,7 @@ import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
 export default function EmailVerificationPage() {
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-white flex flex-col rounded-3xl min-h-[30rem] w-[27rem]">
+      <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
           <h1>Verify your account</h1>

@@ -46,7 +46,7 @@ export default function SignInPage() {
 
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-white rounded-3xl flex flex-col justify-between min-h-[30rem] w-[27rem] text-3xl">
+      <div className="bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
         <Image
           src={Logo}
           alt=""

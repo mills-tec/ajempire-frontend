@@ -62,7 +62,7 @@ export default function PhoneNumberPage() {
 
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-white rounded-3xl flex flex-col justify-between min-h-[30rem] w-[27rem]">
+      <div className="bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
         <Image
           src={Logo}
           alt=""
@@ -81,7 +81,7 @@ export default function PhoneNumberPage() {
                   onValueChange={handleCountryCodeChange}
                   value={form.countryCode}
                 >
-                  <SelectTrigger className="w-[80px] border-none outline-none focus:ring-0 focus:outline-none">
+                  <SelectTrigger className="!w-[80px] border-none outline-none focus:ring-0 focus:outline-none">
                     <SelectValue>
                       {form.countryCode ? form.countryCode : "Code"}
                     </SelectValue>

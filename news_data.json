@@ -1,0 +1,224 @@
+{
+  "source": "news",
+  "data": [
+    {
+      "id": "news_1",
+      "user": "DailySun",
+      "text": "Fatal accident on Enugu–Onitsha expressway near Ugwuoba. Three vehicles involved, multiple casualties reported.",
+      "lang": "en",
+      "created_at": "2025-09-24T07:45:00Z",
+      "photo": "https://example.com/photos/enugu_onitsha_accident1.jpg"
+    },
+    {
+      "id": "news_2",
+      "user": "GuardianNigeria",
+      "text": "Flooding along Aba–Owerri road leaves commuters stranded for hours. Vehicles seen stuck in rising water.",
+      "lang": "en",
+      "created_at": "2025-09-24T08:10:00Z",
+      "photo": "https://example.com/photos/aba_owerri_flood1.jpg"
+    },
+    {
+      "id": "news_3",
+      "user": "PunchNews",
+      "text": "Protest erupts in Abakaliki as traders block major junction over multiple taxation.",
+      "lang": "en",
+      "created_at": "2025-09-24T08:30:00Z"
+    },
+    {
+      "id": "news_4",
+      "user": "ChannelsTV",
+      "text": "Gunmen attack bus along Onitsha–Owerri road, passengers robbed of belongings.",
+      "lang": "en",
+      "created_at": "2025-09-24T08:35:00Z",
+      "video": "https://example.com/videos/onitsha_owerri_attack.mp4"
+    },
+    {
+      "id": "news_5",
+      "user": "VanguardNews",
+      "text": "Petrol tanker falls at Ninth Mile, Enugu. Residents warned to avoid the area due to spillage.",
+      "lang": "en",
+      "created_at": "2025-09-24T08:45:00Z",
+      "photo": "https://example.com/photos/ninthmile_tanker.jpg"
+    },
+    {
+      "id": "news_6",
+      "user": "DailyTrust",
+      "text": "Traffic gridlock in Aba as a trailer overturned near Osisioma flyover.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:00:00Z"
+    },
+    {
+      "id": "news_7",
+      "user": "ThisDayLive",
+      "text": "Heavy police checkpoint causes long delays on Owerri–Onitsha expressway.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:05:00Z"
+    },
+    {
+      "id": "news_8",
+      "user": "SunriseFM",
+      "text": "Multiple accidents reported on Enugu–Port Harcourt road due to ongoing construction.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:15:00Z"
+    },
+    {
+      "id": "news_9",
+      "user": "AITNews",
+      "text": "Abia state transport union strike leaves commuters stranded in Umuahia.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:25:00Z"
+    },
+    {
+      "id": "news_10",
+      "user": "GuardianNigeria",
+      "text": "Truck carrying goods loses control and crashes near Ekwulobia, Anambra State.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:40:00Z",
+      "photo": "https://example.com/photos/ekwulobia_truck.jpg"
+    },
+    {
+      "id": "news_11",
+      "user": "PunchNews",
+      "text": "Power outage sparks protests in Nsukka, roads blocked by angry youths.",
+      "lang": "en",
+      "created_at": "2025-09-24T09:50:00Z"
+    },
+    {
+      "id": "news_12",
+      "user": "DailySun",
+      "text": "Rainstorm damages buildings and uproots trees in Owerri, several roads blocked.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:00:00Z",
+      "photo": "https://example.com/photos/owerri_rainstorm.jpg"
+    },
+    {
+      "id": "news_13",
+      "user": "ChannelsTV",
+      "text": "Motorists lament extortion by touts along Abakaliki–Onueke highway.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:10:00Z"
+    },
+    {
+      "id": "news_14",
+      "user": "VanguardNews",
+      "text": "Collapsed bridge cuts off communities in Ihiala, Anambra.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:20:00Z",
+      "photo": "https://example.com/photos/ihiala_bridge.jpg"
+    },
+    {
+      "id": "news_15",
+      "user": "DailyTrust",
+      "text": "Armed robbery reported near Aba–Ikot Ekpene road junction.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:30:00Z"
+    },
+    {
+      "id": "news_16",
+      "user": "ThisDayLive",
+      "text": "Umuahia–Owerri road partially blocked as farmers protest over land dispute.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:35:00Z"
+    },
+    {
+      "id": "news_17",
+      "user": "AITNews",
+      "text": "Long queues at Enugu fuel stations as scarcity worsens.",
+      "lang": "en",
+      "created_at": "2025-09-24T10:50:00Z"
+    },
+    {
+      "id": "news_18",
+      "user": "DailySun",
+      "text": "Fire outbreak in Ariaria Market, Aba. Several shops gutted.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:00:00Z",
+      "video": "https://example.com/videos/aba_fire.mp4"
+    },
+    {
+      "id": "news_19",
+      "user": "GuardianNigeria",
+      "text": "Heavy traffic reported at Upper Iweka, Onitsha following minor collision.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:10:00Z"
+    },
+    {
+      "id": "news_20",
+      "user": "PunchNews",
+      "text": "Residents of Abakaliki protest bad roads, block government house entrance.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:20:00Z"
+    },
+    {
+      "id": "news_21",
+      "user": "ChannelsTV",
+      "text": "Tanker fire narrowly averted in Nnewi after vehicle skidded off the road.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:30:00Z"
+    },
+    {
+      "id": "news_22",
+      "user": "DailyTrust",
+      "text": "Hoodlums vandalize buses at Owerri motor park, passengers flee.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:40:00Z"
+    },
+    {
+      "id": "news_23",
+      "user": "ThisDayLive",
+      "text": "Collapsed drainage causes flooding at New Market Road, Enugu.",
+      "lang": "en",
+      "created_at": "2025-09-24T11:55:00Z"
+    },
+    {
+      "id": "news_24",
+      "user": "VanguardNews",
+      "text": "Accident involving a tricycle and bus leaves two injured in Umuahia.",
+      "lang": "en",
+      "created_at": "2025-09-24T12:05:00Z"
+    },
+    {
+      "id": "news_25",
+      "user": "DailySun",
+      "text": "Erosion sweeps away part of road at Orlu–Mbano axis.",
+      "lang": "en",
+      "created_at": "2025-09-24T12:15:00Z",
+      "photo": "https://example.com/photos/orlu_erosion.jpg"
+    },
+    {
+      "id": "news_26",
+      "user": "GuardianNigeria",
+      "text": "Police foil attempted kidnapping near Okigwe, Imo State.",
+      "lang": "en",
+      "created_at": "2025-09-24T12:30:00Z"
+    },
+    {
+      "id": "news_27",
+      "user": "PunchNews",
+      "text": "Collapsed electric pole blocks road at Achara Layout, Enugu.",
+      "lang": "en",
+      "created_at": "2025-09-24T12:45:00Z"
+    },
+    {
+      "id": "news_28",
+      "user": "ChannelsTV",
+      "text": "Market fire prevented in Onitsha after quick response from fire service.",
+      "lang": "en",
+      "created_at": "2025-09-24T12:55:00Z"
+    },
+    {
+      "id": "news_29",
+      "user": "DailyTrust",
+      "text": "Flooding reported again at Aba–Owerri road as rains continue.",
+      "lang": "en",
+      "created_at": "2025-09-24T13:05:00Z"
+    },
+    {
+      "id": "news_30",
+      "user": "ThisDayLive",
+      "text": "Enugu–Onitsha expressway partially reopened after morning accident cleanup.",
+      "lang": "en",
+      "created_at": "2025-09-24T13:15:00Z"
+    }
+  ]
+}

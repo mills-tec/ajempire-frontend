@@ -7,7 +7,7 @@ import React from "react";
 export default function PromoPage() {
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-white rounded-3xl flex flex-col justify-between min-h-[30rem] w-[27rem]">
+      <div className="bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
         <div className="flex justify-between items-center border-b px-4 border-b-black/10 pt-8 pb-3">
           <div></div>
           <div>

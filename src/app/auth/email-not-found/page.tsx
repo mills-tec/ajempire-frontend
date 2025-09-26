@@ -4,7 +4,7 @@ import React from "react";
 export default function EmailNotFoundPage() {
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
-      <div className="bg-white rounded-3xl flex flex-col justify-between min-h-[25rem] w-[27rem]">
+      <div className="bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[25rem] lg:w-[27rem]">
         <div className="flex-1 pt-[4rem] space-y-8 py-8">
           <div className="w-[80%] mx-auto flex flex-col items-center space-y-20">
             <div className="space-y-8">
