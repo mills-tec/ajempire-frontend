@@ -26,17 +26,22 @@ export default function RootLayout({
       <body
         className={`${poppins.variable}  antialiased`}
       >
-        <div>
+        <header>
           <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
           </div>
           <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
             <SearchBar />
           </div>
-        </div>
+        </header>
         <main>
           {children}
         </main>
+        <footer>
+          <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
+            <Navbar />
+          </div>
+        </footer>
       </body>
     </html>
   );
