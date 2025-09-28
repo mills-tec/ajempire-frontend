@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
 import Link from "next/link";
-import ArrowRightIcon from "../svgs/ArrowRightIcon";
+import ArrowRightIcon from "@/components/svgs/ArrowRightIcon"
 
 const Categories = () => {
     const categories = [

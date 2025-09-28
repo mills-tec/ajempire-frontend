@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/ui/Navbar";
+import Navbar from "@/app/components/Navbar";
+import AuthWrapper from "./components/auth-component/AuthWrapper";
+import SearchBar from "./components/ui/SearchBar";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -24,8 +26,17 @@ export default function RootLayout({
       <body
         className={`${poppins.variable}  antialiased`}
       >
-        <Navbar />
-        <main>{children}</main>
+        <div>
+          <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+            <Navbar />
+          </div>
+          <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
+            <SearchBar />
+          </div>
+        </div>
+        <main>
+          {children}
+        </main>
       </body>
     </html>
   );
