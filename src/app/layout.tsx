@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/app/components/Navbar";
 import AuthWrapper from "./components/auth-component/AuthWrapper";
 import SearchBar from "./components/ui/SearchBar";
+import Footer from "./components/Footer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -26,22 +27,28 @@ export default function RootLayout({
       <body
         className={`${poppins.variable}  antialiased`}
       >
-        <header>
-          <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
-            <Navbar />
-          </div>
-          <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
-            <SearchBar />
-          </div>
-        </header>
-        <main>
-          {children}
-        </main>
-        <footer>
-          <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
-            <Navbar />
-          </div>
-        </footer>
+        <div className="flex flex-col min-h-screen">
+          <header>
+            <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+              <Navbar />
+            </div>
+            <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
+              <SearchBar />
+            </div>
+          </header>
+          <main className="flex-1 pt-[90px] lg:pt-[120px]">
+            {children}
+          </main>
+          <footer>
+            <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
+              <Navbar />
+            </div>
+            <div className="hidden lg:block bg-brand_gradient_dark  ">
+              <Footer />
+            </div>
+          </footer>
+        </div>
+
       </body>
     </html>
   );
