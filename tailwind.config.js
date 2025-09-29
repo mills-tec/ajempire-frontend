@@ -52,6 +52,9 @@ module.exports = {
         },
         brand_gray: "#c1c1c1",
       },
+      fontFamily: {
+        poppins: ["Poppins", "sans-serif"],
+      },
       backgroundImage: {
         brand_gradient:
           "linear-gradient(to right, rgba(255,0,140,0.6), rgba(166,0,255,0.6))",
