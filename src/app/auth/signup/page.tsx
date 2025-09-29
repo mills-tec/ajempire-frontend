@@ -8,6 +8,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeClosed } from "lucide-react";
+import { signupBackend } from "@/lib/api";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -27,9 +28,10 @@ export default function SignUpPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = schema.safeParse(form);
+
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
       result.error.issues.forEach((err) => {
@@ -37,11 +39,19 @@ export default function SignUpPage() {
           fieldErrors[err.path[0] as "email" | "password"] = err.message;
       });
       setErrors(fieldErrors);
-      return;
+      return; // stop here if validation failed
     }
-    setErrors({});
-    // Handle successful form submission here
-    alert("Form submitted successfully!");
+
+    try {
+      const { email, password } = form;
+      const res = await signupBackend(email, password);
+      console.log("res: ", res);
+      setErrors({});
+      alert("Form submitted successfully!");
+      // router.push("/dashboard");
+    } catch (err) {
+      alert("Signup failed");
+    }
   }
 
   return (

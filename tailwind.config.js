@@ -51,6 +51,10 @@ module.exports = {
           5: "hsl(var(--chart-5))",
         },
         brand_gray: "#c1c1c1",
+        brand_gray_dark: "#403C39",
+        brand_pink: "#FF008C",
+        brand_light_pink: "#FFD9EE",
+        brand_purple: "#A600FF",
       },
       backgroundImage: {
         brand_gradient:
