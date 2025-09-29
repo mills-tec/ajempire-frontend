@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* white */ /* almost black */
-}
-
 @theme {
   --color-brand-gradient: linear-gradient(to right, #ff008c, #a600ff);
   --color-brand-gray: #c1c1c1;
@@ -18,8 +14,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  @apply bg-background text-foreground font-sans;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 @layer base {
@@ -84,6 +98,6 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }

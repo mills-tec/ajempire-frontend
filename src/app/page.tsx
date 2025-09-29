@@ -3,6 +3,7 @@ import Image from "next/image";
 import ProductCard from "./components/ProductCard";
 import bannerImg from "@/assets/banner.png";
 import ProductScrollabeCategoriesContainer from "./components/ProductScrollabeCategoriesContainer";
+import Categories from "@/app/components/ui/Categories";
 
 export default function Home() {
   return (

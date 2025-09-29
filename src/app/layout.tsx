@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./provider";
+import Navbar from "@/app/components/Navbar";
+import AuthWrapper from "./components/auth-component/AuthWrapper";
+import SearchBar from "./components/ui/SearchBar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -25,10 +24,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Providers>{children}</Providers>
+      <body className={`${poppins.variable}  antialiased`}>
+        <header>
+          <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+            <Navbar />
+          </div>
+          <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
+            <SearchBar />
+          </div>
+        </header>
+        <main>{children}</main>
+        <footer>
+          <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
+            <Navbar />
+          </div>
+        </footer>
       </body>
     </html>
   );
