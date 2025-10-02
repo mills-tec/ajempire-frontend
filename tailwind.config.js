@@ -51,6 +51,10 @@ module.exports = {
           5: "hsl(var(--chart-5))",
         },
         brand_gray: "#c1c1c1",
+        brand_gray_dark: "#403C39",
+        brand_pink: "#FF008C",
+        brand_light_pink: "#FFD9EE",
+        brand_purple: "#A600FF",
       },
       fontFamily: {
         poppins: ["Poppins", "sans-serif"],
@@ -62,6 +66,7 @@ module.exports = {
           "linear-gradient(to right, rgba(255,0,140,0.5), rgba(166,0,255,0.5))",
         brand_gradient_dark:
           "linear-gradient(to right, rgba(255,0,140,0.8), rgba(166,0,255,0.8))",
+        brand_gradient_darker: "linear-gradient(to right, #FF008C, #A600FF)",
       },
       borderRadius: {
         lg: "var(--radius)",
