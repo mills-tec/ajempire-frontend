@@ -11,7 +11,7 @@ import ProductDescription from "@/app/components/ProductDescription";
 export default function ProductDetailPage() {
   return (
     <section className="flex px-[3.5rem] space-x-20">
-      <div className="w-1/2 h-full space-y-8 border-2 border-red-600">
+      <div className="w-1/2 h-full space-y-8">
         <div className="space-y-4">
           <div className="relative w-full h-[38rem] rounded-sm overflow-clip">
             <Image
@@ -62,7 +62,7 @@ export default function ProductDetailPage() {
           <CommentCard />
         </div>
       </div>
-      <div className="w-1/2 h-full border-2 border-blue-600">
+      <div className="w-1/2 h-full">
         <ProductDescription />
       </div>
     </section>

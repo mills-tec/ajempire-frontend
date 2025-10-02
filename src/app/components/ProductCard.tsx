@@ -39,16 +39,16 @@ export default function ProductCard() {
     </svg>
   );
   return (
-    <Link href={"product/2"} className="space-y-2 w-[15rem]">
-      <div className="relative w-[15rem] h-[16rem] rounded-sm overflow-clip">
+    <Link href={"product/2"} className="space-y-2 w-[13rem]">
+      <div className="relative w-[13rem] h-[14rem] rounded-sm overflow-clip">
         <Image src={productImg} alt="product image" fill className="" />
       </div>
       <div className="space-y-1">
-        <h2 className="text-xl">Glossy Gel Nail Kit – 24</h2>
-        <p className="text-xs p-1 px-2 bg-brand_purple text-white w-max rounded-sm">
+        <h2 className="text-lg">Glossy Gel Nail Kit – 24</h2>
+        <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm">
           Seller Tag
         </p>
-        <p className="text-sm text-brand_purple">Only 7 left</p>
+        <p className="text-[0.65rem] text-brand_purple">Only 7 left</p>
         <div className="flex items-center gap-2">
           {
             <div className="flex text-brand_gray_dark">
@@ -63,15 +63,15 @@ export default function ProductCard() {
           }
           <p className="text-black/60">1,000</p>
         </div>
-        <div className="flex w-max text-sm rounded-sm border border-brand_pink">
+        <div className="flex w-max text-xs rounded-sm border border-brand_pink">
           <p className="px-2 py-1 bg-brand_pink text-white">
             Save $15,000 extra
           </p>
           <p className="px-2 py-1 text-brand_pink">03:05:36</p>
         </div>
-        <div className="flex items-center gap-4 pt-1 justify-between">
+        <div className="flex items-center gap-2 pt-1 justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-2xl font-medium text-brand_pink">$22.50</h3>
+            <h3 className="text-xl font-medium text-brand_pink">$22.50</h3>
             <p className="text-sm text-black/60">1k+sold</p>
           </div>
           <div className="flex gap-2 items-center">
@@ -79,7 +79,7 @@ export default function ProductCard() {
               width="23"
               height="22"
               viewBox="0 0 23 22"
-              className="cursor-pointer"
+              className="cursor-pointer size-4"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
@@ -93,7 +93,7 @@ export default function ProductCard() {
               height="30"
               viewBox="0 0 44 30"
               fill="none"
-              className="cursor-pointer"
+              className="cursor-pointer h-5"
               xmlns="http://www.w3.org/2000/svg"
             >
               <rect

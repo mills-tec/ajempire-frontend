@@ -13,11 +13,11 @@ export async function loginBackend(email: string, password: string) {
 }
 
 export async function signupBackend(email: string, password: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/register/", {
+  const res = await fetch(AUTH_API_URL + "/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
-    credentials: "include", // so cookies (session) are set
+    // credentials: "include", // so cookies (session) are set
   });
   if (!res.ok) throw new Error("Login failed");
   return res.json();

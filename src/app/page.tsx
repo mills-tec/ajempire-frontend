@@ -7,46 +7,57 @@ import Categories from "@/app/components/ui/Categories";
 
 export default function Home() {
   return (
-    <section>
-      <ProductScrollabeCategoriesContainer />
+    <section className="max-w-screen w-screen">
+      {/* <ProductScrollabeCategoriesContainer /> */}
 
-      <div className="relative w-full h-[14rem] border mt-6">
-        <Image src={bannerImg} alt="banner image" fill />
-      </div>
+      <Categories />
 
-      <div className="grid grid-cols-4 gap-6 w-max mx-auto mt-8">
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-      </div>
-
-      <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-20 mb-10 py-2 rounded-full bg-brand_pink text-white">
-        <p>See More </p>
-        <svg
-          width="23"
-          height="16"
-          viewBox="0 0 23 16"
-          className="size-3"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M18.75 5.125L11.875 12L5 5.125"
-            stroke="white"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+      <div className="relative px-10 bottom-[13rem]">
+        <div className="relative mx-auto rounded-3xl overflow-clip mt-6 ">
+          <Image
+            src={bannerImg}
+            alt="banner image"
+            // className="absolute object-cover"
+            height={379}
+            width={1352}
+            // fill
           />
-        </svg>
-      </button>
+        </div>
+
+        <div className="flex justify-between flex-wrap gap-6 mx-auto mt-8">
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+          <ProductCard />
+        </div>
+
+        <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-20 mb-10 py-2 rounded-full bg-brand_pink text-white">
+          <p>See More </p>
+          <svg
+            width="23"
+            height="16"
+            viewBox="0 0 23 16"
+            className="size-3"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18.75 5.125L11.875 12L5 5.125"
+              stroke="white"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </section>
   );
 }

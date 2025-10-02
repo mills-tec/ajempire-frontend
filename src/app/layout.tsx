@@ -33,7 +33,7 @@ export default function RootLayout({
             <SearchBar />
           </div>
         </header>
-        <main>{children}</main>
+        <main className="relative mt-[6.5rem]">{children}</main>
         <footer>
           <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
             <Navbar />

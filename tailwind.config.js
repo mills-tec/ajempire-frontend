@@ -66,6 +66,7 @@ module.exports = {
           "linear-gradient(to right, rgba(255,0,140,0.5), rgba(166,0,255,0.5))",
         brand_gradient_dark:
           "linear-gradient(to right, rgba(255,0,140,0.8), rgba(166,0,255,0.8))",
+        brand_gradient_darker: "linear-gradient(to right, #FF008C, #A600FF)",
       },
       borderRadius: {
         lg: "var(--radius)",
