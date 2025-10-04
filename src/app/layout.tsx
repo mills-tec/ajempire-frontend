@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./provider";
 import Navbar from "@/app/components/Navbar";
 import AuthWrapper from "./components/auth-component/AuthWrapper";
 import SearchBar from "./components/ui/SearchBar";
+import { Toaster } from "@/components/ui/sonner";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -23,9 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${poppins.variable}  antialiased`}
-      >
+      <body className={`${poppins.variable}  antialiased`}>
         <header>
           <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
@@ -34,14 +34,17 @@ export default function RootLayout({
             <SearchBar />
           </div>
         </header>
-        <main>
-          {children}
-        </main>
+        <main className="relative mt-[6.5rem]">{children}</main>
         <footer>
           <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
             <Navbar />
           </div>
         </footer>
+        <Toaster
+          theme="light"
+          position="top-right"
+          className="!z-50 !bg-brand_purple"
+        />
       </body>
     </html>
   );
