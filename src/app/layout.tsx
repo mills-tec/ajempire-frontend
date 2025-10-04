@@ -5,6 +5,7 @@ import { Providers } from "./provider";
 import Navbar from "@/app/components/Navbar";
 import AuthWrapper from "./components/auth-component/AuthWrapper";
 import SearchBar from "./components/ui/SearchBar";
+import { Toaster } from "@/components/ui/sonner";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -39,6 +40,11 @@ export default function RootLayout({
             <Navbar />
           </div>
         </footer>
+        <Toaster
+          theme="light"
+          position="top-right"
+          className="!z-50 !bg-brand_purple"
+        />
       </body>
     </html>
   );

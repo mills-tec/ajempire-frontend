@@ -38,7 +38,7 @@ export default function ProductReview() {
   );
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex justify-center lg:justify-start gap-2">
         <h3 className="font-medium">Reviews</h3>
         <div className="flex items-center gap-2">
           {
@@ -55,11 +55,11 @@ export default function ProductReview() {
           <p className="text-black/60 text-xs">(1K)</p>
         </div>
       </div>
-      <div className="flex gap-8 w-[80%]">
+      <div className="flex gap-8 lg:w-[80%]">
         <h1 className="text-[4rem] font-medium">
           4.5<span className="text-lg text-brand_gray">/5</span>
         </h1>
-        <div className="border-2 w-full">
+        <div className="w-full">
           {[
             { lvl: 5, progress: 100 },
             { lvl: 4, progress: 40 },

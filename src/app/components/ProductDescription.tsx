@@ -37,10 +37,10 @@ export default function ProductDescription() {
   );
   return (
     <div className="space-y-4">
-      <h1 className="font-medium">
+      <h1 className="font-medium text-sm lg:text-base">
         AJ Empire Luxury Nail Care Kit – Magenta Edition
       </h1>
-      <p className="text-brand_gray_dark">
+      <p className="text-brand_gray_dark text-sm lg:text-base">
         Transform your nails with AJ Empire’s all-in-one luxury kit. Designed
         for beginners and professionals, it brings salon-quality results
         straight to your fingertips.
@@ -66,15 +66,17 @@ export default function ProductDescription() {
         </div>
 
         <div className="flex items-center">
-          <h3 className="text-2xl text-brand_pink font-medium">₦3,500</h3>
-          <h4 className="text-xs ml-2">₦33,500</h4>
+          <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+            ₦3,500
+          </h3>
+          <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
 
-          <div className="text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+          <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
             <p>93% OFF Limited time</p>
           </div>
         </div>
 
-        <div className="text-xs flex items-center gap-4 text-brand_pink">
+        <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
           <p className="font-medium">
             Only $18,5111 with extra ₦2,019 off | Ends in
           </p>
@@ -97,7 +99,7 @@ export default function ProductDescription() {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Color: </h4>
         <div className="flex gap-2">
           <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
@@ -107,7 +109,7 @@ export default function ProductDescription() {
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="lg:flex gap-6">
         <div className="space-y-2">
           <p className="text-xs text-brand_gray_dark">
             Select Property (Color): White
@@ -123,7 +125,7 @@ export default function ProductDescription() {
             </div>
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2  mt-4 lg:mt-0">
           <p className="text-xs text-brand_gray_dark">
             Select Property (Size):
           </p>
@@ -150,8 +152,8 @@ export default function ProductDescription() {
       </div>
 
       <div className="p-6 border rounded-lg space-y-2">
-        <h4 className="">What’s Inside</h4>
-        <ul className="text-sm list-disc pl-5 text-brand_gray_dark">
+        <h4 className=" text-sm lg:text-base">What’s Inside</h4>
+        <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
           <li className="list-disc">Nail buffer & file set</li>
           <li className="list-disc">Cuticle care tool</li>
           <li className="list-disc">
@@ -174,22 +176,22 @@ export default function ProductDescription() {
             <path
               d="M5.41602 18.4167C5.41602 18.9913 5.64429 19.5424 6.05062 19.9487C6.45695 20.3551 7.00805 20.5833 7.58268 20.5833C8.15732 20.5833 8.70842 20.3551 9.11475 19.9487C9.52108 19.5424 9.74935 18.9913 9.74935 18.4167C9.74935 17.842 9.52108 17.2909 9.11475 16.8846C8.70842 16.4783 8.15732 16.25 7.58268 16.25C7.00805 16.25 6.45695 16.4783 6.05062 16.8846C5.64429 17.2909 5.41602 17.842 5.41602 18.4167ZM16.2493 18.4167C16.2493 18.9913 16.4776 19.5424 16.884 19.9487C17.2903 20.3551 17.8414 20.5833 18.416 20.5833C18.9907 20.5833 19.5418 20.3551 19.9481 19.9487C20.3544 19.5424 20.5827 18.9913 20.5827 18.4167C20.5827 17.842 20.3544 17.2909 19.9481 16.8846C19.5418 16.4783 18.9907 16.25 18.416 16.25C17.8414 16.25 17.2903 16.4783 16.884 16.8846C16.4776 17.2909 16.2493 17.842 16.2493 18.4167Z"
               stroke="#8500CC"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
             <path
               d="M5.41602 18.418H3.24935V14.0846M2.16602 5.41797H14.0827V18.418M9.74935 18.418H16.2493M20.5827 18.418H22.7493V11.918M22.7493 11.918H14.0827M22.7493 11.918L19.4993 6.5013H14.0827M3.24935 9.7513H7.58268"
               stroke="#8500CC"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
 
-          <p className="font-medium">Shipping & Returns</p>
+          <p className="font-medium text-sm lg:text-base">Shipping & Returns</p>
         </div>
-        <div className="text-sm">
+        <div className="text-[11.11px] lg:text-sm">
           <p className="">
             <span className="text-brand_purple font-medium">
               Delivery fee:{" "}
@@ -211,7 +213,7 @@ export default function ProductDescription() {
         </div>
       </div>
 
-      <div className="w-[80%] space-y-4 pt-8">
+      <div className="hidden lg:block w-[80%] space-y-4 pt-8">
         <div className="flex gap-4 items-center">
           <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]">
             Add to Cart

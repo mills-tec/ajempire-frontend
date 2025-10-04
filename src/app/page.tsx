@@ -12,8 +12,8 @@ export default function Home() {
 
       <Categories />
 
-      <div className="relative px-10 bottom-[13rem]">
-        <div className="relative mx-auto rounded-3xl overflow-clip mt-6 ">
+      <div className="relative px-4 lg:px-10 lg:bottom-[13rem]">
+        <div className="relative mx-auto rounded-xl lg:rounded-3xl overflow-clip mt-6 ">
           <Image
             src={bannerImg}
             alt="banner image"
@@ -24,7 +24,7 @@ export default function Home() {
           />
         </div>
 
-        <div className="flex justify-between flex-wrap gap-6 mx-auto mt-8">
+        <div className="grid grid-cols-2 lg:flex justify-between flex-wrap gap-4 lg:gap-6 mx-auto mt-8">
           <ProductCard />
           <ProductCard />
           <ProductCard />
@@ -51,9 +51,9 @@ export default function Home() {
             <path
               d="M18.75 5.125L11.875 12L5 5.125"
               stroke="white"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
           </svg>
         </button>

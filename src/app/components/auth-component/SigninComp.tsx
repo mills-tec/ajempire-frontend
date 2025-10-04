@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { z } from "zod";
+import { email, z } from "zod";
 import { Eye, EyeClosed } from "lucide-react";
-import Link from "next/link";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
-import { signupBackend } from "@/lib/api";
+import { loginBackend } from "@/lib/api";
+import { toast } from "sonner";
+import Spinner from "../Spinner";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -31,16 +32,16 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
   async function handleSubmit(e: React.FormEvent) {
+    setIsLoading(true);
     e.preventDefault();
     const result = schema.safeParse(form);
-
-    await fetch("https://ajempire-backend.onrender.com");
 
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
@@ -54,18 +55,26 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
 
     try {
       const { email, password } = form;
-      const res = await signupBackend(email, password);
+      const res = await loginBackend(email, password);
+      // Store JWT token in localStorage (accessible to JS, but not httpOnly)
+      if (res?.message) {
+        localStorage.setItem("token", res.message);
+      }
       console.log("res: ", res);
       setErrors({});
-      alert("Form submitted successfully!");
+      toast("Login successful!");
+      setIsLoading(false);
+      onClose();
       // router.push("/dashboard");
     } catch (err) {
-      alert("Signup failed");
+      toast("Login failed");
+      setIsLoading(false);
     }
   }
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      {isLoading && <Spinner />}
       <div className=" relative bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
         <Image
           src={Logo}
@@ -74,7 +83,10 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
           width={103}
           height={48}
         />
-        <form className="w-[80%] mx-auto space-y-8" onSubmit={handleSubmit}>
+        <form
+          className="w-[80%] mx-auto text-left space-y-8"
+          onSubmit={handleSubmit}
+        >
           <div className="space-y-2">
             <div>
               <Label htmlFor="email">
@@ -86,7 +98,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
                 placeholder="Please enter your email address"
                 value={form.email}
                 onChange={handleChange}
-                className="text-base"
+                className="!text-sm lg:text-base"
               />
               {errors.email && (
                 <div className="text-xs text-red-600 mt-1">{errors.email}</div>
@@ -102,7 +114,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
                 placeholder="Input your password"
                 value={form.password}
                 onChange={handleChange}
-                className="pr-10 text-base"
+                className="pr-10 !text-sm lg:text-base"
               />
               <button
                 type="button"
@@ -126,13 +138,27 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
           </div>
 
           <div className="bg-white">
-            <Button
-              variant={"outline"}
-              className="w-full !rounded-full text-white hover:!text-white !bg-brand_gradient_light"
+            <button
+              className={`w-full !rounded-full text-base py-2 text-white hover:!text-white ${
+                isLoading ||
+                errors.email ||
+                errors.password ||
+                form.email.trim().length == 0 ||
+                form.password.trim().length == 0
+                  ? "!bg-brand_gradient_light"
+                  : "!bg-brand_pink"
+              }`}
               type="submit"
+              disabled={
+                isLoading ||
+                !!errors.email ||
+                !!errors.password ||
+                form.email.trim().length === 0 ||
+                form.password.trim().length === 0
+              }
             >
               Continue
-            </Button>
+            </button>
             <div>
               {" "}
               <Button

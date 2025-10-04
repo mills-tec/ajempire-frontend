@@ -4,11 +4,26 @@ import { emailVerification, resendVerificationCode } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import Spinner from "../Spinner";
 
-export default function EmailVerificationPage() {
+interface Props {
+  onClose: () => void;
+  setScreen: (
+    screen:
+      | "intro"
+      | "signin"
+      | "signup"
+      | "phonenumber"
+      | "forgotpassword"
+      | "verifyemail"
+      | "verifyphone"
+  ) => void;
+}
+
+export default function VerifyPhoneComp({ onClose, setScreen }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const email = searchParams.get("email");
+  const phone = searchParams.get("phone");
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
@@ -25,8 +40,8 @@ export default function EmailVerificationPage() {
   }, [resendTimer]);
 
   const handleVerification = async () => {
-    if (!email) {
-      toast.error("Email not found. Please try signing up again.");
+    if (!phone) {
+      toast.error("Phone number not found. Please try signing up again.");
       return;
     }
 
@@ -37,8 +52,8 @@ export default function EmailVerificationPage() {
 
     setIsVerifying(true);
     try {
-      const res = await emailVerification(email, otp);
-      toast.success("Email verified successfully!");
+      const res = await emailVerification(phone, otp);
+      toast.success("Phone number verified successfully!");
       router.push("/auth/signin");
     } catch (error) {
       console.log("error: ", error);
@@ -50,13 +65,13 @@ export default function EmailVerificationPage() {
   };
 
   const handleResendCode = async () => {
-    if (!email) {
-      toast.error("Email not found. Please try signing up again.");
+    if (!phone) {
+      toast.error("Phone number not found. Please try signing up again.");
       return;
     }
 
     try {
-      await resendVerificationCode(email);
+      await resendVerificationCode(phone);
       toast.success("Verification code sent successfully!");
       setResendTimer(60);
       setCanResend(false);
@@ -68,7 +83,8 @@ export default function EmailVerificationPage() {
   };
 
   return (
-    <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
+    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      {isVerifying && <Spinner />}
       <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
@@ -89,9 +105,9 @@ export default function EmailVerificationPage() {
                 Verifying your email adds an extra layer of Security and ensures
                 important notifications reach you <br />
                 <br />
-                We've sent a verification code to your email{" "}
+                We've sent a verification code to your Phone number{" "}
                 <b className="text-black font-medium">
-                  {email || "your email"}
+                  {phone || "your number"}
                 </b>
               </p>
             </div>
