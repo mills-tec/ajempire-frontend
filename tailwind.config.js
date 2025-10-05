@@ -10,6 +10,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        primaryhover: "#FF008C",
+        brand_solid_gradient: "#D200C6CC",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -67,6 +69,10 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      animation: {
+        "dropdown-in": "dropdown-open 200ms ease-out forwards",
+        "dropdown-out": "dropdown-close 150ms ease-in forwards",
       },
     },
   },

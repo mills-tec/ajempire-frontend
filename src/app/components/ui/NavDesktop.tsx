@@ -1,6 +1,7 @@
 "use client";
-import Link from "next/link";
-import Image from "next/image";
+import Link from "../../../../node_modules/next/link";
+import Image from "../../../../node_modules/next/image";
+import { useState, useRef } from "react";
 
 import VideoIcon from "@/components/svgs/VideoIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
@@ -10,6 +11,7 @@ import Logo from "@/assets/logo.png";
 
 import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
+import Userpopup from "./Userpopup";
 
 type NavDesktopProps = {
     isLoggedIn: boolean;
@@ -24,6 +26,21 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
     showIntro,
     setShowIntro,
 }) => {
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    const startCloseTimer = () => {
+        timeoutRef.current = setTimeout(() => {
+            setShowDropdown(false);
+        }, 300); // 5 seconds
+    };
+
+    const cancelCloseTimer = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+    };
     return (
         <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
             {/* Logo */}
@@ -63,30 +80,50 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 </li>
 
                 <li>
-                    {isLoggedIn ? (
-                        <Link
-                            href="/pages/ordersandaccount"
-                            className="flex items-center gap-1 text-[12.8px] opacity-80"
-                        >
-                            <UserIcon className="w-8" />
-                            <div>
-                                <p>Orders &</p>
-                                <p className="mt-[-5px]">Account</p>
-                            </div>
-                        </Link>
-                    ) : (
-                        <button
-                            onClick={() => setShowIntro(true)}
-                            className="flex items-center gap-1 text-[12.8px] opacity-80"
-                        >
-                            <UserIcon className="w-8" />
-                            <div>
-                                <p>Orders &</p>
-                                <p className="mt-[-5px]">Account</p>
-                            </div>
-                        </button>
-                    )}
+                    <div className=" "
+                    >
+                        {isLoggedIn ? (
+                            <Link
+                                href="/pages/ordersandaccount"
+                                className={`flex items-center gap-1 opacity-80 ${isActive("/pages/ordersandaccount")}`}
+                                onMouseEnter={() => {
+                                    cancelCloseTimer();
+                                    setShowDropdown(true);
+                                }}
+                                onMouseLeave={startCloseTimer}
 
+                            >
+                                <UserIcon className="w-8" />
+                                <div>
+                                    <p>Orders &</p>
+                                    <p className="mt-[-5px]">Account</p>
+                                </div>
+                            </Link>
+                        ) : (
+                            <button
+                                onClick={() => setShowIntro(true)}
+                                className="flex items-center gap-1 text-[12.8px] opacity-80"
+                            >
+                                <UserIcon className="w-8" />
+                                <div>
+                                    <p>Orders &</p>
+                                    <p className="mt-[-5px]">Account</p>
+                                </div>
+                            </button>
+                        )}
+                        {
+                            isLoggedIn && showDropdown &&
+                            <div className={`absolute right-8 top-[4.4rem]  duration-500 ease-out transform origin-top  ${showDropdown
+                                ? "  animate-dropdown-in"
+                                : " animate-dropdown-out"
+                                }`}
+                                onMouseEnter={cancelCloseTimer}
+                                onMouseLeave={startCloseTimer}
+                            >
+                                <Userpopup />
+                            </div>
+                        }
+                    </div>
                     {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />}
                 </li>
 

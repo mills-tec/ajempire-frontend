@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/app/components/Navbar";
-import AuthWrapper from "./components/auth-component/AuthWrapper";
 import SearchBar from "./components/ui/SearchBar";
 import Footer from "./components/Footer";
 
@@ -32,11 +31,9 @@ export default function RootLayout({
             <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
               <Navbar />
             </div>
-            <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
-              <SearchBar />
-            </div>
+
           </header>
-          <main className="flex-1 pt-[90px] lg:pt-[120px]">
+          <main className="flex-1 pt-[0px] lg:pt-[100px]">
             {children}
           </main>
           <footer>

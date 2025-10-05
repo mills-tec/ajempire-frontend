@@ -1,5 +1,3 @@
-import { CustomImgLogo } from "@/components/svgs/CustomImgLogo";
-import { LogoImg } from "@/components/svgs/LogoImg";
 import whiteLogo from "@/assets/whitelogo.png"
 import Image from "next/image";
 import FooterRout from "./ui/FooterRout";
