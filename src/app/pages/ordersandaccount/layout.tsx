@@ -28,9 +28,9 @@ export default function Layout({ children }: LayoutProps) {
     const activeItem = findActiveTitle(sidebarItems, pathname);
 
     return (
-        <div className="px-[30px] bg-[#F9F9F9] py-[30px]">
+        <div className="px-[30px] bg-[#F9F9F9] py-[30px] h-screen">
             <div>
-                <div className="hidden mb-2 lg:flex">
+                <div className=" mb-2 lg:flex">
                     <BreadCrumb activeItem={activeItem} />
                 </div>
             </div>
