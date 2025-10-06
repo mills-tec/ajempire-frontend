@@ -66,18 +66,18 @@ export default function intro() {
                       <path
                         d="M2.11111 1H19.8889C20.5 1 21 1.5 21 2.11111V15.4444C21 16.0556 20.5 16.5556 19.8889 16.5556H2.11111C1.5 16.5556 1 16.0556 1 15.4444V2.11111C1 1.5 1.5 1 2.11111 1Z"
                         stroke="black"
-                        stroke-opacity="0.8"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                        strokeOpacity="0.8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
                       <path
                         d="M1 2.66602L11 8.77713L21 2.66602"
                         stroke="black"
-                        stroke-opacity="0.8"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                        strokeOpacity="0.8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
                     </svg>
                   </span>
