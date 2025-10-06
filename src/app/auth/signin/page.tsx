@@ -8,6 +8,9 @@ import { useState } from "react";
 import { z } from "zod";
 import { Eye, EyeClosed } from "lucide-react";
 import Link from "next/link";
+import { loginBackend } from "@/lib/api";
+import { toast } from "sonner";
+import Spinner from "@/app/components/Spinner";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -27,9 +30,10 @@ export default function SignInPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = schema.safeParse(form);
+
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
       result.error.issues.forEach((err) => {
@@ -37,15 +41,24 @@ export default function SignInPage() {
           fieldErrors[err.path[0] as "email" | "password"] = err.message;
       });
       setErrors(fieldErrors);
-      return;
+      return; // stop here if validation failed
     }
-    setErrors({});
-    // Handle successful form submission here
-    alert("Form submitted successfully!");
+
+    try {
+      const { email, password } = form;
+      const res = await loginBackend(email, password);
+      console.log("res: ", res);
+      setErrors({});
+      toast("Login successful!");
+      // router.push("/dashboard");
+    } catch (err) {
+      toast("Login failed");
+    }
   }
 
   return (
     <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
+      <Spinner />
       <div className="bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
         <Image
           src={Logo}
