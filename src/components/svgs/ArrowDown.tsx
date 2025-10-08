@@ -1,7 +1,7 @@
 import React from "react";
 
 type IconProps = React.SVGProps<SVGSVGElement> & {
-    size?: number; // 👈 add size prop
+    size?: number;
 };
 
 export function ArrowDown({ size = 16, ...props }: IconProps) {

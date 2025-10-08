@@ -13,7 +13,7 @@ const SearchBar = () => {
         }
     };
     return (
-        <div className="w-full flex gap-2 items-center border border-gradientmix  rounded-full  h-[40px] px-[14px] ">
+        <div className="w-full flex gap-2 items-center border  rounded-full  h-[40px] px-[14px] focus-within:border-brand_solid_gradient transition-all duration-200  ">
 
             <input type="text" className="w-full outline-none bg-transparent placeholder:text-[13px] opacity-80 text-[14px]" placeholder="Search Product" ref={inputRef} />
             <div className="">
