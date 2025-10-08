@@ -41,13 +41,37 @@ export const sidebarItems: SideBarItem[] = [
   { title: "My Usage", route: "/pages/ordersandaccount/myuseage", icon: <MyUsageIcon className="text-primaryhover" /> },
   { title: "Wish List", route: "/pages/ordersandaccount/wishlist", icon: <WishListIcon className="text-primaryhover" /> },
   { title: "Notifications", route: "/pages/ordersandaccount/notifications", icon: <NotificationsIcon className="text-primaryhover" /> },
-  { title: "Help & Support", route: "/pages/ordersandaccount/help", icon: <HelpIcon /> },
+  {
+    title: "Help & Support",
+    route: "/pages/ordersandaccount/support",
+    icon: <HelpIcon />,
+    children: [
+      {
+        title: "About",
+        route: "/pages/ordersandaccount/support/about"
+      },
+      {
+        title: "Contact Us",
+        route: "/pages/ordersandaccount/support/contact"
+      },
+      {
+        title: "Share this App",
+        route: ""
+      },
+      {
+        title: "Legal terms and priorities",
+        route: ""
+      }
+    ]
+  },
   {
     title: "Settings",
     icon: <SettingsIcon />,
+    route: "/pages/ordersandaccount/support/settings",
     children: [
       { title: "Profile Settings", route: "/settings/profile" },
       { title: "Security", route: "/settings/security" },
     ],
   },
+
 ];

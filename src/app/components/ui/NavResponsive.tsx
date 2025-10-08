@@ -15,7 +15,7 @@ type NavResponsiveProps = {
 }
 const NavResponsive = ({ isLoggedIn, isActive, showIntro, setShowIntro }: NavResponsiveProps) => {
     return (
-        <div className="w-full h-[70px]  text-[13px] font-poppins flex items-center">
+        <div className="w-full h-[70px]  text-[11px] font-poppins flex items-center">
             <ul className="w-full  flex items-center  justify-between ">
                 <li>
                     <Link href="/" className={` ${isActive("/")} flex flex-col items-center`}>

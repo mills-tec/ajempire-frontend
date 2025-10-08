@@ -7,7 +7,7 @@ type SideNavProps = {
 
 const SideNav = () => {
     return (
-        <div>
+        <div className="">
             <SideBarComp items={sidebarItems} />
         </div>
     )

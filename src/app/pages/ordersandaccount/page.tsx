@@ -1,6 +1,8 @@
 "use client"
 import { useEffect } from "react";
 import { usePathname, useRouter, redirect } from "next/navigation";
+import Profile from "./components/Profile";
+import MobileAccountLinks from "./components/MobileAccountLinks";
 
 export default function OrdersAndAccountPage() {
     const isWorking = false
@@ -26,8 +28,13 @@ export default function OrdersAndAccountPage() {
     }, [pathname, router]);
 
     return (
-        <div>
-            <h1>ORDER AND ACCOUNT</h1>
+        <div className="w-full flex flex-col gap-[20px]">
+            <div>
+                <Profile />
+            </div>
+            <div>
+                <MobileAccountLinks />
+            </div>
         </div>
     );
 }

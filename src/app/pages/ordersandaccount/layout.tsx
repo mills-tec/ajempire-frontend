@@ -28,9 +28,9 @@ export default function Layout({ children }: LayoutProps) {
     const activeItem = findActiveTitle(sidebarItems, pathname);
 
     return (
-        <div className="px-[30px] bg-[#F9F9F9] py-[30px] h-screen">
+        <div className="bg:px-[30px] px-[20px] py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] h-screen bg-[#ffffff]">
             <div>
-                <div className=" mb-2 lg:flex">
+                <div className="hidden mb-2 lg:flex">
                     <BreadCrumb activeItem={activeItem} />
                 </div>
             </div>
@@ -38,7 +38,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="w-[23%] hidden lg:block">
                     <SideNav />
                 </div>
-                <div className="w-[88%]">
+                <div className="lg:w-[88%] w-full">
                     {children}
                 </div>
             </main>
