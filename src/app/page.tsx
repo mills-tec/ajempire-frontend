@@ -4,13 +4,18 @@ import ProductCard from "./components/ProductCard";
 import bannerImg from "@/assets/banner.png";
 import ProductScrollabeCategoriesContainer from "./components/ProductScrollabeCategoriesContainer";
 import Categories from "@/app/components/ui/Categories";
+import SearchBar from "./components/ui/SearchBar";
 
 export default function Home() {
   return (
-    <section className="max-w-screen w-screen">
-      {/* <ProductScrollabeCategoriesContainer /> */}
+    <section className="w-full ">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
+        <SearchBar />
+      </div>
+      <div>
+        <Categories />
 
-      <Categories />
+      </div>
 
       <div className="relative px-4 lg:px-10 lg:bottom-[13rem]">
         <div className="relative mx-auto rounded-xl lg:rounded-3xl overflow-clip mt-6 ">
@@ -20,7 +25,7 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1352}
-            // fill
+          // fill
           />
         </div>
 

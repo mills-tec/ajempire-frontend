@@ -3,8 +3,8 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./provider";
 import Navbar from "@/app/components/Navbar";
-import AuthWrapper from "./components/auth-component/AuthWrapper";
 import SearchBar from "./components/ui/SearchBar";
+import Footer from "./components/Footer";
 import { Toaster } from "@/components/ui/sonner";
 
 const poppins = Poppins({
@@ -25,26 +25,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable}  antialiased`}>
-        <header>
-          <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+      <body className={`${poppins.variable} antialiased`}>
+        <div className="flex flex-col min-h-screen">
+          {/* Fixed Navbar */}
+          <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
-          </div>
-          <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
-            <SearchBar />
-          </div>
-        </header>
-        <main className="relative mt-[6.5rem]">{children}</main>
-        <footer>
-          <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[30px]  flex items-center border justify-center text-center border-t-gray-300">
-            <Navbar />
-          </div>
-        </footer>
-        <Toaster
-          theme="light"
-          position="top-right"
-          className="!z-50 !bg-brand_purple"
-        />
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 pt-[0px] lg:pt-[100px] pb-[90px]">
+            {children}
+          </main>
+
+          {/* Footer Section */}
+          <footer>
+            {/* Mobile fixed nav */}
+            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
+              <Navbar />
+            </div>
+
+            {/* Desktop footer */}
+            <div className="hidden lg:block bg-brand_gradient_dark">
+              <Footer />
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );
