@@ -17,6 +17,7 @@ interface Props {
       | "forgotpassword"
       | "verifyemail"
       | "verifyphone"
+      | "deals"
   ) => void;
 }
 
@@ -57,6 +58,7 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
       toast.success("Email verified successfully!");
       //   router.push("/auth/signin");
       setScreen("signin");
+      setScreen("deals");
     } catch (error) {
       console.log("error: ", error);
       toast.error("Invalid verification code. Please try again.");

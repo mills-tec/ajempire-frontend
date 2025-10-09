@@ -10,6 +10,7 @@ import ForgotPassword from "./ForgotPassword";
 import VerifyEmailComp from "./VerifyEmailComp";
 import VerifyPhoneComp from "./VerifyPhoneComp";
 import VerifyPasswordResetCode from "./VerifyPasswordResetCode";
+import NewPassword from "./NewPassword";
 interface AuthWrapperProps {
   onClose: () => void;
 }
@@ -25,6 +26,8 @@ export default function AuthWrapper({ onClose }: AuthWrapperProps) {
     | "verifyemail"
     | "verifyphone"
     | "verifypassresetcode"
+    | "deals"
+    | "newpassword"
   >("intro");
   function handleClose() {
     // Go back to previous page if available, otherwise go to home
@@ -55,6 +58,9 @@ export default function AuthWrapper({ onClose }: AuthWrapperProps) {
       )}
       {screen === "verifypassresetcode" && (
         <VerifyPasswordResetCode setScreen={setScreen} onClose={handleClose} />
+      )}
+      {screen === "newpassword" && (
+        <NewPassword setScreen={setScreen} onClose={handleClose} />
       )}
     </div>
   );

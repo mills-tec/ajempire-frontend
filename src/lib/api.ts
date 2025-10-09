@@ -62,6 +62,16 @@ export async function resendVerificationCode(email: string) {
   return res.json();
 }
 
+export async function verifyPasswordResetCode(email: string, token: string) {
+  const res = await fetch(AUTH_API_URL + "/auth/verify-reset-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, token }),
+  });
+  if (!res.ok) throw new Error("Failed to resend verification code");
+  return res.json();
+}
+
 export async function fogortPassword(email: string) {
   const res = await fetch(AUTH_API_URL + "/auth/forgot-password", {
     method: "POST",

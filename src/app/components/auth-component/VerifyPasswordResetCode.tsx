@@ -1,9 +1,12 @@
 "use client";
 import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
+import { verifyPasswordResetCode } from "@/lib/api";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import Spinner from "../Spinner";
 
 interface Props {
   onClose: () => void;
@@ -16,12 +19,14 @@ interface Props {
       | "forgotpassword"
       | "verifyemail"
       | "verifyphone"
+      | "newpassword"
   ) => void;
 }
 
 export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
   const [otp, setOtp] = useState("");
   const maxLength = 6;
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   function handleOTPChange(value: string) {
@@ -30,11 +35,22 @@ export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
     setOtp(sanitized);
   }
 
-  function handleOTPSubmit(code: string) {
-    // Replace this with your actual submit logic
-    // e.g., call API or navigate to next step
-    alert(`OTP submitted:${code}`);
-    router.push("/auth/new-password");
+  async function handleOTPSubmit(code: string) {
+    setIsLoading(true);
+    try {
+      const email = localStorage.getItem("ajempire_signup_email");
+      if (!email) return toast("Couldn't verify token!");
+      const res = await verifyPasswordResetCode(email, code);
+      console.log("response: ", res);
+      if (res.error) return toast(res.error);
+      setIsLoading(false);
+      setScreen("newpassword");
+      toast("Token verified successfully!");
+    } catch (error) {
+      setIsLoading(false);
+      toast("Couldn't verify token!");
+    }
+    // router.push("/auth/new-password");
   }
 
   useEffect(() => {
@@ -45,6 +61,7 @@ export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      {isLoading && <Spinner />}
       <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
