@@ -10,7 +10,7 @@ const Footer = () => {
                     <Image src={whiteLogo} alt="logo" width={150} height={50} />
                 </div>
 
-                <div className="w-full flex items-center justify-between">
+                <div className="w-full flex items-center justify-between ">
                     {/* Shop Section */}
                     <div>
                         <FooterRout
@@ -54,7 +54,7 @@ const Footer = () => {
                     </div>
 
                     <div>
-                        <h1 className="font-semibold mb-2 text-[#FFFFFF] font-poppins">Subscribe</h1>
+                        <h1 className="font-semibold mb-2 text-[#FFFFFF] font-poppins text-[14px]">Subscribe</h1>
                         <div className="text-[#FFFFFF]  transition-colors duration-300 text-[14px]">
                             <div className="flex flex-col  mb-4">
                                 <p>Join our newsletter to stay updated on</p>

@@ -25,29 +25,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${poppins.variable}  antialiased`}
-      >
+      <body className={`${poppins.variable} antialiased`}>
         <div className="flex flex-col min-h-screen">
-          <header>
-            <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+          {/* Fixed Navbar */}
+          <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+            <Navbar />
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 pt-[0px] lg:pt-[100px] pb-[90px]">
+            {children}
+          </main>
+
+          {/* Footer Section */}
+          <footer>
+            {/* Mobile fixed nav */}
+            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
               <Navbar />
             </div>
 
-          </header>
-          <main className="flex-1 pt-[0px] lg:pt-[100px]">
-            {children}
-          </main>
-          <footer>
-            <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[20px]  flex items-center border justify-center text-center border-t-gray-300">
-              <Navbar />
-            </div>
-            <div className="hidden lg:block bg-brand_gradient_dark  ">
+            {/* Desktop footer */}
+            <div className="hidden lg:block bg-brand_gradient_dark">
               <Footer />
             </div>
           </footer>
         </div>
-
       </body>
     </html>
   );

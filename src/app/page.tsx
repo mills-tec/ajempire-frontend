@@ -8,13 +8,13 @@ import SearchBar from "./components/ui/SearchBar";
 
 export default function Home() {
   return (
-    <div className="w-full ">
+    <section className="w-full ">
       <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
         <SearchBar />
       </div>
       <div>
         <Categories />
-        <p>products will be displayed here</p>
+
       </div>
 
       <div className="relative px-4 lg:px-10 lg:bottom-[13rem]">
@@ -25,7 +25,7 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1352}
-            // fill
+          // fill
           />
         </div>
 
