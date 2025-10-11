@@ -45,7 +45,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
         }
     };
 
-    return (<div className="w-64 p-4 font-poppins text-[14px]"> <ul className="space-y-2">
+    return (<div className="w-64 p-4 font-poppins text-[14px]"> <ul className="space-y-3">
         {items.map((item) => (<li key={item.title}>
             {item.children ? (<div>
                 <Link href={item.route ?? "#"} onClick={(e) => handleParentClick(e, item)}>
