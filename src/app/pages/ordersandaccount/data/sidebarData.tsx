@@ -12,7 +12,7 @@ import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
 import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
-import { icons } from "lucide-react";
+
 
 
 export type SideBarItem = {
@@ -36,7 +36,25 @@ export const sidebarItems: SideBarItem[] = [
     ],
   },
   { title: "Returns", route: "/pages/ordersandaccount/returns", icon: <ChatStarIcon className="text-primaryhover" /> },
-  { title: "Coupons & Offers", route: "/pages/ordersandaccount/coupoonsandoffers", icon: <CouponsIcon className="text-primaryhover" /> },
+  {
+    title: "Coupons & Offers",
+    route: "/pages/ordersandaccount/coupoonsandoffers",
+    icon: <CouponsIcon className="text-primaryhover" />,
+    children: [
+      {
+        title: "Unused",
+        route: "/pages/ordersandaccount/coupoonsandoffers"
+      },
+      {
+        title: "Used",
+        route: "/pages/ordersandaccount/coupoonsandoffers/usedcoupon"
+      },
+      {
+        title: "Expired",
+        route: "/pages/ordersandaccount/coupoonsandoffers/expiredcoupons"
+      }
+    ]
+  },
   { title: "Address", route: "/pages/ordersandaccount/address", icon: <AddressIcon className="text-primaryhover" /> },
   { title: "My Usage", route: "/pages/ordersandaccount/myuseage", icon: <MyUsageIcon className="text-primaryhover" /> },
   { title: "Wish List", route: "/pages/ordersandaccount/wishlist", icon: <WishListIcon className="text-primaryhover" /> },

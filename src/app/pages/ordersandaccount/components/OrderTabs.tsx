@@ -35,7 +35,7 @@ export default function OrderTabs() {
                 </div>
 
             </div>
-            <ul className="lg:w-full flex items-center justify-around font-poppins lg:text-[14px] text-[12px]">
+            <ul className="lg:w-full flex items-center lg:justify-between justify-around font-poppins lg:text-[14px] text-[12px]">
                 {tabs.map((tab) => (
                     <li key={tab.path}>
                         <Link
