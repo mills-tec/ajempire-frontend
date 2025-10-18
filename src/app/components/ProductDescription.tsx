@@ -1,8 +1,9 @@
 "use client";
+import { Product } from "@/lib/types";
 import React from "react";
 
-export default function ProductDescription() {
-  const [rating, setRating] = React.useState(4);
+export default function ProductDescription({ product }: { product: Product }) {
+  // const [rating, setRating] = React.useState(4);
 
   const filledStar = (
     <svg
@@ -37,23 +38,23 @@ export default function ProductDescription() {
   );
   return (
     <div className="space-y-4">
-      <h1 className="font-medium text-sm lg:text-base">
-        AJ Empire Luxury Nail Care Kit – Magenta Edition
-      </h1>
+      <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
       <p className="text-brand_gray_dark text-sm lg:text-base">
-        Transform your nails with AJ Empire’s all-in-one luxury kit. Designed
-        for beginners and professionals, it brings salon-quality results
-        straight to your fingertips.
+        {product.description}
       </p>
 
       <div className="space-y-3">
         <div className="flex justify-between">
-          <p className="text-sm text-black/60">2,8k+ sold</p>
+          {product.itemsSold > 0 && (
+            <p className="text-sm text-black/60">{`${
+              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+            }`}</p>
+          )}
           <div className="flex items-center gap-2">
             {
               <div className="flex text-brand_gray_dark">
                 {[...Array(5)].map((_, i) =>
-                  i < rating ? (
+                  i < (product.averageRating || 0) ? (
                     <span key={i}>{filledStar}</span>
                   ) : (
                     <span key={i}>{unfilledStar}</span>
@@ -61,15 +62,17 @@ export default function ProductDescription() {
                 )}
               </div>
             }
-            <p className="text-black/60 text-xs">1,000</p>
+            <p className="text-black/60 text-xs">{product.reviews.length}</p>
           </div>
         </div>
 
         <div className="flex items-center">
           <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-            ₦3,500
+            ₦{product.price - product.discountedPrice}
           </h3>
-          <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
+          <h4 className="text-[10px] lg:text-xs ml-2 line-through">
+            ₦{product.price}
+          </h4>
 
           <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
             <p>93% OFF Limited time</p>
@@ -154,13 +157,11 @@ export default function ProductDescription() {
       <div className="p-6 border rounded-lg space-y-2">
         <h4 className=" text-sm lg:text-base">What’s Inside</h4>
         <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
-          <li className="list-disc">Nail buffer & file set</li>
-          <li className="list-disc">Cuticle care tool</li>
-          <li className="list-disc">
-            Premium polish in Magenta Pink (#FF008C)
-          </li>
-          <li className="list-disc">Quick-dry top coat</li>
-          <li className="list-disc">Compact storage pouch</li>
+          {product.whatsInside.map((item, key) => (
+            <li key={key} className="list-disc">
+              {item}
+            </li>
+          ))}
         </ul>
       </div>
 

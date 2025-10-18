@@ -16,7 +16,7 @@ interface AuthWrapperProps {
 }
 
 export default function AuthWrapper({ onClose }: AuthWrapperProps) {
-  const router = useRouter();
+  // const router = useRouter();
   const [screen, setScreen] = useState<
     | "intro"
     | "signin"

@@ -37,7 +37,7 @@ export default function EmailVerificationPage() {
 
     setIsVerifying(true);
     try {
-      const res = await emailVerification(email, otp);
+      await emailVerification(email, otp);
       toast.success("Email verified successfully!");
       router.push("/auth/signin");
     } catch (error) {

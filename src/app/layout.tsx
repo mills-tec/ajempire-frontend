@@ -25,19 +25,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${poppins.variable}  antialiased`}
-      >
-        <div className="flex flex-col min-h-screen">
+      <body className={`${poppins.variable}  antialiased`}>
+        <div className="">
           <header>
             <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
               <Navbar />
             </div>
-
           </header>
-          <main className="flex-1 pt-[0px] lg:pt-[100px]">
-            {children}
-          </main>
+          <Providers>
+            <main className="pt-[0px] lg:pt-[100px] h-max">{children}</main>
+          </Providers>
           <footer>
             <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[20px]  flex items-center border justify-center text-center border-t-gray-300">
               <Navbar />
@@ -47,7 +44,6 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
-
       </body>
     </html>
   );
