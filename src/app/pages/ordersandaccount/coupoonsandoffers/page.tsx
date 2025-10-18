@@ -37,7 +37,7 @@ export default function CouponsAndOffers() {
     ];
 
     return (
-        <div className="w-full mt-5 lg:block lg:px-5 font-poppins">
+        <div className="w-full  lg:block  font-poppins">
             <CouponsTab />
 
             <div className="mt-8 flex items-center gap-4">

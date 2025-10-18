@@ -139,15 +139,14 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
 
           <div className="bg-white">
             <button
-              className={`w-full !rounded-full text-base py-2 text-white hover:!text-white ${
-                isLoading ||
-                errors.email ||
-                errors.password ||
-                form.email.trim().length == 0 ||
-                form.password.trim().length == 0
+              className={`w-full !rounded-full text-base py-2 text-white hover:!text-white ${isLoading ||
+                  errors.email ||
+                  errors.password ||
+                  form.email.trim().length == 0 ||
+                  form.password.trim().length == 0
                   ? "!bg-brand_gradient_light"
                   : "!bg-brand_pink"
-              }`}
+                }`}
               type="submit"
               disabled={
                 isLoading ||

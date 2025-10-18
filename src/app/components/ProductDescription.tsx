@@ -1,9 +1,10 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
+import ShippingAdress from "./ShippingAdress";
 
 export default function ProductDescription() {
   const [rating, setRating] = React.useState(4);
-
+  const [isAdress, setIsadress] = useState(false)
   const filledStar = (
     <svg
       width="16"
@@ -235,9 +236,12 @@ export default function ProductDescription() {
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={() => setIsadress(true)}>
           Check Out
         </button>
+        {
+          isAdress && <ShippingAdress setIsadress={setIsadress} />
+        }
       </div>
     </div>
   );

@@ -35,7 +35,7 @@ export default function UsedCouPon() {
         },
     ];
     return (
-        <div className="w-full mt-5 lg:block lg:px-5 font-poppins">
+        <div className="w-full  lg:block  font-poppins">
             <CouponsTab />
             <div className="mt-8 flex items-center gap-4">
                 <div className="w-[300px] h-[40px] border-2 border-gray-300 px-3 rounded-md focus-within:border-brand_solid_gradient transition-all duration-200">

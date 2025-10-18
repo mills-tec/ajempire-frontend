@@ -1,5 +1,5 @@
 "use client"
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
@@ -7,8 +7,17 @@ import NavResponsive from "./ui/NavResponsive";
 
 const Navbar = () => {
     const [showIntro, setShowIntro] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(true);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const pathname = usePathname();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            setIsLoggedIn(true);
+        } else {
+            setIsLoggedIn(false);
+        }
+    }, []);
     const isActive = (path: string) => {
         if (path === "/") {
             return pathname === "/" ? "text-[#FF008C] opacity-100" : "opacity-70";

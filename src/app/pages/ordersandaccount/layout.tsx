@@ -62,11 +62,11 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                 </div>
 
-                <main className="w-full flex py-1">
+                <main className="w-full flex py-1 items-start">
                     <div className="w-[23%] hidden lg:block">
                         <SideNav />
                     </div>
-                    <div className="lg:w-[88%] w-full">{children}</div>
+                    <div className="lg:w-[88%] w-full lg:mt-4 lg:px-5">{children}</div>
                 </main>
             </div>
         </div>

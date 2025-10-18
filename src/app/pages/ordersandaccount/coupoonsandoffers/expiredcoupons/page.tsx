@@ -35,7 +35,7 @@ export default function ExpiredCoupons() {
         },
     ];
     return (
-        <div className="w-full mt-5 lg:block lg:px-5 font-poppins">
+        <div className="w-fulllg:block  font-poppins">
             <CouponsTab />
 
             <div className="mt-8 flex items-center gap-4">
