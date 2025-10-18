@@ -38,6 +38,7 @@ export interface Review {
   createdAt: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Variant {
   // Define fields if known later
 }
