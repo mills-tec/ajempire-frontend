@@ -1,5 +1,18 @@
+export interface ProductsResponse {
+  message: { products: Product[]; shippingFees: ShippingFeeInfo[] };
+}
+
 export interface ProductResponse {
-  message: Product[];
+  message: { product: Product; shippingFees: ShippingFeeInfo[] };
+}
+
+export interface ShippingFeeInfo {
+  deliveryFee: number;
+  deliveryTime: number;
+  freeShipping: number;
+  state: string;
+  __v: number;
+  _id: string;
 }
 
 export interface Product {
@@ -39,5 +52,9 @@ export interface Review {
 }
 
 export interface Variant {
-  // Define fields if known later
+  name: string;
+  price: number;
+  stock: number;
+  value: string;
+  _id: string;
 }

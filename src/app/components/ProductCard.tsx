@@ -6,14 +6,14 @@ import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
 
 export default function ProductCard({
-  setShowCartPopup,
+  //  setShowCartPopup,
   product,
 }: {
-  setShowCartPopup: React.Dispatch<React.SetStateAction<boolean>>;
+  // setShowCartPopup: React.Dispatch<React.SetStateAction<boolean>>;
   product: Product;
 }) {
   // const [rating, setRating] = React.useState(3);
-  const addItem = useCartStore((state) => state.addItem);
+  const setSelectedItem = useCartStore((state) => state.setSelectedItem);
 
   const filledStar = (
     <svg
@@ -47,20 +47,20 @@ export default function ProductCard({
     </svg>
   );
   return (
-    <section className="space-y-2 lg:w-[13rem] w-[10rem]">
+    <section className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-[11rem]">
       <Link href={"product/" + product._id}>
-        <div className="relative lg:w-[13rem] lg:h-[14rem] w-[10rem] h-[10rem] rounded-sm overflow-clip">
+        <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip">
           <Image
             src={product.cover_image}
             alt="product image"
             fill
-            className=""
+            className="transition-transform duration-300 ease-in-out group-hover:scale-110"
           />
         </div>
       </Link>
       <div className="space-y-1">
         <Link href={"product/2"}>
-          <h2 className="text-sm lg:text-lg">{product.name}</h2>
+          <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
         </Link>
         <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm">
           Seller Tag
@@ -84,7 +84,7 @@ export default function ProductCard({
             {product.numReviews}
           </p>
         </div>
-        <div className="flex w-max text-[7px] lg:text-xs rounded-sm border border-brand_pink">
+        <div className="flex w-full text-[7px] lg:text-[10px] rounded-sm border border-brand_pink">
           <p className="px-2 py-1 bg-brand_pink text-white">
             Save $15,000 extra
           </p>
@@ -92,10 +92,10 @@ export default function ProductCard({
         </div>
         <div className="flex items-center gap-2 pt-1 justify-between">
           <div className="flex  items-center gap-2">
-            <h3 className="text-[14px] lg:text-xl font-medium text-brand_pink">
+            <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
               N{product.price}
             </h3>
-            <p className="text-[10px] lg:text-sm text-black/60">1k+sold</p>
+            <p className="text-[10px] lg:text-xs text-black/60">1k+sold</p>
           </div>
           <div className="flex lg:gap-2 gap-1 items-center">
             <svg
@@ -117,8 +117,8 @@ export default function ProductCard({
               viewBox="0 0 44 30"
               fill="none"
               onClick={() => {
-                addItem({ ...product, quantity: 1 });
-                setShowCartPopup(true);
+                // addItem({ ...product, quantity: 1 });
+                setSelectedItem(product);
               }}
               className="cursor-pointer h-5"
               xmlns="http://www.w3.org/2000/svg"

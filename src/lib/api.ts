@@ -1,4 +1,4 @@
-import { Product, ProductResponse } from "./types";
+import { Product, ProductResponse, ProductsResponse } from "./types";
 
 // lib/api.ts
 const API_URL = "https://ajempire-backend.vercel.app/api";
@@ -111,15 +111,13 @@ export async function getSessionBackend() {
 }
 
 /// Product API
-export async function getProducts(): Promise<ProductResponse | null> {
+export async function getProducts(): Promise<ProductsResponse | null> {
   const res = await fetch(API_URL + "/product");
   if (!res.ok) return null;
   return res.json();
 }
 
-export async function getProduct(
-  id: string
-): Promise<{ message: Product } | null> {
+export async function getProduct(id: string): Promise<ProductResponse | null> {
   const res = await fetch(API_URL + "/product/" + id);
   if (!res.ok) return null;
   return res.json();

@@ -89,7 +89,7 @@ export default function EmailVerificationPage() {
                 Verifying your email adds an extra layer of Security and ensures
                 important notifications reach you <br />
                 <br />
-                We've sent a verification code to your email{" "}
+                We&lsquove sent a verification code to your email{" "}
                 <b className="text-black font-medium">
                   {email || "your email"}
                 </b>

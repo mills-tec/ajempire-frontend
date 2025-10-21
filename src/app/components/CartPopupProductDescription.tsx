@@ -1,6 +1,6 @@
 "use client";
 import { CartItem } from "@/lib/stores/cart-store";
-import React from "react";
+import React, { useState } from "react";
 
 export default function CartPopupProductDescription({
   item,
@@ -8,6 +8,15 @@ export default function CartPopupProductDescription({
   item: CartItem;
 }) {
   // const [rating, setRating] = React.useState(4);
+
+  const [quantity, setQuantity] = useState(1);
+
+  let size_variant =
+    item.variants.length > 0 &&
+    item.variants.filter((item) => item.name == "size" && item.stock > 0);
+  let color_variant =
+    item.variants.length > 0 &&
+    item.variants.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -89,16 +98,23 @@ export default function CartPopupProductDescription({
         <div className="flex gap-6">
           <div className="space-y-2">
             <p className="text-xs text-brand_gray_dark">
-              Select Property (Color): White
+              Select Property (Color):
             </p>
             <div>
               <div className="flex gap-2">
-                <div className="size-[2rem] relative rounded border border-[#BFBFBF] bg-[#FFFFFF]">
-                  <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                </div>
-                <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#000000]"></div>
-                <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#FF8D28]"></div>
-                <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#34C759]"></div>
+                {color_variant && color_variant.length > 0 ? (
+                  color_variant.map((variant) => (
+                    <div
+                      className={`size-[2rem] relative rounded border border-[#BFBFBF] bg-[${variant.value}]`}
+                    >
+                      <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-xs">
+                    This data is currently unavailable
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -108,21 +124,17 @@ export default function CartPopupProductDescription({
             </p>
             <div className="pt-1">
               <div className="flex flex-wrap gap-2">
-                <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                  S
-                </div>
-                <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                  M
-                </div>
-                <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                  L
-                </div>
-                <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                  XL
-                </div>
-                <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                  XXL
-                </div>
+                {size_variant && size_variant.length > 0 ? (
+                  size_variant.map((variant) => (
+                    <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
+                      {variant.value.toUpperCase()}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-xs">
+                    This data is currently unavailable
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -132,11 +144,19 @@ export default function CartPopupProductDescription({
       <div className="flex gap-5">
         <h3 className="text-lg">Qty</h3>
         <div className="flex gap-2 items-center">
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <button
+            onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             -
           </button>
-          <p className="text-sm">1</p>
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <p className="text-sm">{quantity}</p>
+          <button
+            onClick={() =>
+              setQuantity((prev) => Math.min(prev + 1, item.stock))
+            }
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             +
           </button>
         </div>

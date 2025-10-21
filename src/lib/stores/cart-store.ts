@@ -8,9 +8,12 @@ export type CartItem = Product & {
 
 type CartStore = {
   items: CartItem[];
+  selectedItem: Product | null; // keeps track of what product card add to cart icon has been clicked
+  setSelectedItem: (id: Product) => void;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
+  clearSelectedItem: () => void;
   increaseQuantity: (id: string) => void;
   decreaseQuantity: (id: string) => void;
   total: number;
@@ -20,6 +23,9 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      selectedItem: null,
+      setSelectedItem: (product: Product) => set({ selectedItem: product }),
+      clearSelectedItem: () => set({ selectedItem: null }),
       addItem: (item) => {
         const existing = get().items.find((i) => i._id === item._id);
         if (existing) {

@@ -3,13 +3,12 @@ import Image from "next/image";
 import CartPopupProductDescription from "./CartPopupProductDescription";
 import { useCartStore } from "@/lib/stores/cart-store";
 
-export default function CartPopup({
-  setShowCartPopup,
-}: {
-  setShowCartPopup: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
-  const { items } = useCartStore();
-  console.log("cart: ", items);
+export default function CartPopup() {
+  const { selectedItem } = useCartStore();
+  const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
+
+  console.log(selectedItem);
+
   return (
     <div
       className="lg:hidden fixed bottom-0 w-full shadow-2xl pb-[5rem] z-50 rounded-t-2xl bg-white h-[80vh] overflow-clip overflow-y-auto"
@@ -49,7 +48,7 @@ export default function CartPopup({
             viewBox="0 0 24 24"
             fill="none"
             onClick={() => {
-              setShowCartPopup(false);
+              clearSelectedItem();
             }}
             xmlns="http://www.w3.org/2000/svg"
           >
@@ -65,21 +64,21 @@ export default function CartPopup({
         <hr className="mt-4" />
       </div>
 
-      {items.map((item) => (
-        <div key={item._id}>
+      {selectedItem && (
+        <div key={selectedItem._id}>
           <div className="space-y-4 p-4  flex gap-3 items-end ">
             <div className="relative h-[144px] w-[196px] rounded-xl overflow-clip">
               <Image
-                src={item.cover_image}
+                src={selectedItem.cover_image}
                 alt="product image"
                 fill
                 className="absolute object-cover"
               />
             </div>
             <div className="flex gap-2 lg:gap-5">
-              {item.images.map((image) => (
+              {selectedItem.images.map((image) => (
                 <div
-                  key={item._id}
+                  key={selectedItem._id}
                   className="w-[51px] h-[38px] overflow-clip relative bg-gray-400 rounded-lg"
                 >
                   <Image
@@ -93,10 +92,12 @@ export default function CartPopup({
             </div>
           </div>
           <div className="lg:hidden p-4 ">
-            <CartPopupProductDescription item={item} />
+            <CartPopupProductDescription
+              item={{ ...selectedItem, quantity: 0 }}
+            />
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

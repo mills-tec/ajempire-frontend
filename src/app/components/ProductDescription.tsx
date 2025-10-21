@@ -1,9 +1,25 @@
 "use client";
-import { Product } from "@/lib/types";
-import React from "react";
+import { Product, ProductResponse } from "@/lib/types";
+import Image from "next/image";
+import React, { useState } from "react";
 
-export default function ProductDescription({ product }: { product: Product }) {
+export default function ProductDescription({
+  product_data,
+}: {
+  product_data: ProductResponse;
+}) {
   // const [rating, setRating] = React.useState(4);
+
+  let { product, shippingFees } = product_data.message;
+
+  const [quantity, setQuantity] = useState(1);
+
+  let size_variant =
+    product.variants.length > 0 &&
+    product.variants.filter((item) => item.name == "size" && item.stock > 0);
+  let color_variant =
+    product.variants.length > 0 &&
+    product.variants.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -92,11 +108,19 @@ export default function ProductDescription({ product }: { product: Product }) {
       <div className="flex gap-5">
         <h3 className="text-lg">Qty</h3>
         <div className="flex gap-2 items-center">
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <button
+            onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             -
           </button>
-          <p className="text-sm">1</p>
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <p className="text-sm">{quantity}</p>
+          <button
+            onClick={() =>
+              setQuantity((prev) => Math.min(prev + 1, product.stock))
+            }
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             +
           </button>
         </div>
@@ -105,26 +129,45 @@ export default function ProductDescription({ product }: { product: Product }) {
       <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Color: </h4>
         <div className="flex gap-2">
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
+          {product.images.length > 0 ? (
+            product.images.map((image) => (
+              <div className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
+                <Image
+                  src={image}
+                  alt="variant images"
+                  fill
+                  className="absolute object-cover"
+                />
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400 text-xs">
+              This data is currently unavailable
+            </p>
+          )}
         </div>
       </div>
 
       <div className="lg:flex gap-6">
         <div className="space-y-2">
           <p className="text-xs text-brand_gray_dark">
-            Select Property (Color): White
+            Select Property (Color):
           </p>
           <div>
             <div className="flex gap-2">
-              <div className="size-[2rem] relative rounded border border-[#BFBFBF] bg-[#FFFFFF]">
-                <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-              </div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#000000]"></div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#FF8D28]"></div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#34C759]"></div>
+              {color_variant && color_variant.length > 0 ? (
+                color_variant.map((variant) => (
+                  <div
+                    className={`size-[2rem] relative rounded border border-[#BFBFBF] bg-[${variant.value}]`}
+                  >
+                    <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-xs">
+                  This data is currently unavailable
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -132,23 +175,19 @@ export default function ProductDescription({ product }: { product: Product }) {
           <p className="text-xs text-brand_gray_dark">
             Select Property (Size):
           </p>
-          <div className="pt-1">
+          <div className="pt-1 lg:pt-0">
             <div className="flex gap-2">
-              <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                S
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                M
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                L
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                XL
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                XXL
-              </div>
+              {size_variant && size_variant.length > 0 ? (
+                size_variant.map((variant) => (
+                  <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
+                    {variant.value.toUpperCase()}
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-xs">
+                  This data is currently unavailable
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -157,11 +196,15 @@ export default function ProductDescription({ product }: { product: Product }) {
       <div className="p-6 border rounded-lg space-y-2">
         <h4 className=" text-sm lg:text-base">What’s Inside</h4>
         <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
-          {product.whatsInside.map((item, key) => (
-            <li key={key} className="list-disc">
-              {item}
-            </li>
-          ))}
+          {product.whatsInside.length > 0 ? (
+            product.whatsInside.map((item, key) => (
+              <li key={key} className="list-disc">
+                {item}
+              </li>
+            ))
+          ) : (
+            <p className="text-gray-400">This data is currently unavailable</p>
+          )}
         </ul>
       </div>
 

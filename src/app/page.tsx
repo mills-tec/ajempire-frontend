@@ -9,6 +9,12 @@ import CartPopup from "./components/CartPopup";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "@/lib/api";
 import Spinner from "./components/Spinner";
+import { useCartStore } from "@/lib/stores/cart-store";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Home() {
   const [showCartPopup, setShowCartPopup] = useState(false);
@@ -18,12 +24,12 @@ export default function Home() {
   });
 
   console.log("data: ", data);
+  const selectedItem = useCartStore((state) => state.selectedItem);
 
   return (
-    <section className="w-full ">
     <div className="w-full ">
       {isLoading && <Spinner />}
-      {showCartPopup && <CartPopup setShowCartPopup={setShowCartPopup} />}
+      {selectedItem && <CartPopup />}
       <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
         <SearchBar />
       </div>
@@ -40,30 +46,24 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1352}
-          // fill
+            // fill
           />
         </div>
 
         <div className="grid grid-cols-2 lg:flex justify-start flex-wrap gap-4 lg:gap-6 mx-auto mt-8">
           {data?.message &&
-            data.message.map((product) => (
-              <ProductCard
-                setShowCartPopup={setShowCartPopup}
-                key={product._id}
-                product={product}
-              />
+            data.message.products.map((product) => (
+              <Tooltip key={product._id}>
+                <TooltipTrigger>
+                  <div>
+                    <ProductCard product={product} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  <p>{product.name}</p>
+                </TooltipContent>
+              </Tooltip>
             ))}
-
-          {/* <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} />
-          <ProductCard setShowCartPopup={setShowCartPopup} /> */}
         </div>
 
         {data && (
