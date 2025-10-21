@@ -20,6 +20,7 @@ export default function Home() {
   console.log("data: ", data);
 
   return (
+    <section className="w-full ">
     <div className="w-full ">
       {isLoading && <Spinner />}
       {showCartPopup && <CartPopup setShowCartPopup={setShowCartPopup} />}
@@ -39,7 +40,7 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1352}
-            // fill
+          // fill
           />
         </div>
 

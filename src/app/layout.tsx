@@ -25,21 +25,28 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${poppins.variable}  antialiased`}>
-        <div className="">
-          <header>
-            <div className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
-              <Navbar />
-            </div>
+      <body className={`${poppins.variable} antialiased`}>
+        <div className="flex flex-col min-h-screen">
+          {/* Fixed Navbar */}
+          <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+            <Navbar />
           </header>
           <Providers>
-            <main className="pt-[0px] lg:pt-[100px] h-max">{children}</main>
+            {/* Main Content */}
+            <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
+              {children}
+            </main>
           </Providers>
+
+          {/* Footer Section */}
           <footer>
-            <div className="lg:hidden w-full fixed bottom-0 left-0  bg-white z-50 shadow-sm  h-[80px] px-[20px]  flex items-center border justify-center text-center border-t-gray-300">
+            {/* Mobile fixed nav */}
+            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
               <Navbar />
             </div>
-            <div className="hidden lg:block bg-brand_gradient_dark  ">
+
+            {/* Desktop footer */}
+            <div className="hidden lg:block bg-brand_gradient_dark">
               <Footer />
             </div>
           </footer>

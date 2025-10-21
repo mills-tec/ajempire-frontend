@@ -3,9 +3,9 @@ import OrderTabs from "../../components/OrderTabs";
 
 export default function ShippingOder() {
   return (
-    <div className="w-full mt-3">
+    <div className="lg:px-5 w-full mt-3  lg:block">
       <OrderTabs />
-      <OrdersContent title="Shipped" />
+      ShippingOder
     </div>
   );
 }

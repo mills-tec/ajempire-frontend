@@ -8,7 +8,7 @@ export default function ProductDescription({ product }: { product: Product }) {
   const filledStar = (
     <svg
       width="16"
-      height="16"
+      height="16  "
       className="size-4"
       viewBox="0 0 16 16"
       fill="none"

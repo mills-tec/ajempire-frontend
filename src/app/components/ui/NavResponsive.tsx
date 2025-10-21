@@ -19,30 +19,39 @@ const NavResponsive = ({ isLoggedIn, isActive, showIntro, setShowIntro }: NavRes
             <ul className="w-full  flex items-center  justify-between ">
                 <li>
                     <Link href="/" className={` ${isActive("/")} flex flex-col items-center`}>
-                        <HomeIcon size={26} className="opacity-75" />
+                        <HomeIcon size={30} className="opacity-80" />
                         <p className="mt-[-5px]">Home</p>
                     </Link>
                 </li>
 
                 <li>
                     <Link href={"/pages/categories"} className={` ${isActive("/pages/categories")} flex flex-col items-center`}>
-                        <CategoryIcon size={26} className="opacity-75" />
+                        <CategoryIcon size={30} className="opacity-75" />
                         <p className="mt-[-3px]">Categories</p>
                     </Link>
                 </li>
                 <li>
-                    <Link
-                        href="/pages/update"
-                        className={`flex flex-col items-center ${isActive("/pages/update")
-                            }`}
-                    >
-                        <div
-                            className={` w-[40px] h-[40px] flex items-center justify-center rounded-sm ${isActive("/pages/update") ? "bg-brand_gradient_dark" : "bg-brand_gradient_light opacity-70"
-                                }`}
-                        >
-                            <CustomImgLogo size={30} />
-                        </div>
-                    </Link>
+                    {
+                        isActive("/pages/update") ?
+                            <Link
+                                href="/pages/update"
+                                className={`flex flex-col items-center ${isActive("/pages/update")
+                                    }`}
+                            >
+                                <div
+                                    className={` w-[40px] h-[40px] flex items-center justify-center rounded-sm  bg-brand_gradient_dark "
+                                        }`}>
+                                    <CustomImgLogo size={30} />
+                                </div>
+                            </Link>
+                            :
+                            <div
+                                className={` w-[40px] h-[40px] flex items-center justify-center rounded-sm  bg-brand_gradient_light opacity-0
+                                    }`}>
+                                <CustomImgLogo size={30} />
+                            </div>
+                    }
+
                 </li>
 
                 <li>
@@ -60,7 +69,7 @@ const NavResponsive = ({ isLoggedIn, isActive, showIntro, setShowIntro }: NavRes
                             </Link>
                         )
                             : (
-                                <button className="flex flex-col items-center" onClick={() => setShowIntro(true)}>
+                                <button className="flex flex-col items-center opacity-80" onClick={() => setShowIntro(true)}>
                                     <UserIcon className="w-6" />
                                     <p className="mt-[-2px]">profile</p>
                                 </button>
