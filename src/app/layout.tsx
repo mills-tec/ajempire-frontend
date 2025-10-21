@@ -6,6 +6,7 @@ import Navbar from "@/app/components/Navbar";
 import SearchBar from "./components/ui/SearchBar";
 import Footer from "./components/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -31,11 +32,14 @@ export default function RootLayout({
           <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
           </header>
-
-          {/* Main Content */}
-          <main className="flex-1 pt-[0px] lg:pt-[100px] pb-[90px]">
-            {children}
-          </main>
+          <Providers>
+            {/* Main Content */}
+            <TooltipProvider>
+              <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
+                {children}
+              </main>
+            </TooltipProvider>
+          </Providers>
 
           {/* Footer Section */}
           <footer>

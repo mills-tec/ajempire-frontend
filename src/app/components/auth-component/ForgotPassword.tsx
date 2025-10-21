@@ -1,12 +1,9 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import z from "zod";
-import Link from "next/link";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { fogortPassword } from "@/lib/api";
 import { toast } from "sonner";
@@ -75,7 +72,7 @@ export default function ForgotPassword({
       setIsLoading(false);
       setScreen("verifypassresetcode");
       // router.push("/dashboard");
-    } catch (err) {
+    } catch (_err) {
       toast("Password reset failed");
       setIsLoading(false);
     }

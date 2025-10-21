@@ -1,8 +1,9 @@
 "use client";
 import { Progress } from "@/components/ui/progress";
+import { Product } from "@/lib/types";
 import React from "react";
 
-export default function ProductReview() {
+export default function ProductReview({ product }: { product: Product }) {
   const [rating, setRating] = React.useState(3);
 
   const filledStar = (
@@ -44,7 +45,7 @@ export default function ProductReview() {
           {
             <div className="flex text-brand_gray_dark">
               {[...Array(5)].map((_, i) =>
-                i < rating ? (
+                i < (product.averageRating || 0) ? (
                   <span key={i}>{filledStar}</span>
                 ) : (
                   <span key={i}>{unfilledStar}</span>
@@ -52,12 +53,13 @@ export default function ProductReview() {
               )}
             </div>
           }
-          <p className="text-black/60 text-xs">(1K)</p>
+          <p className="text-black/60 text-xs">({product.reviews.length})</p>
         </div>
       </div>
       <div className="flex gap-8 lg:w-[80%]">
         <h1 className="text-[4rem] font-medium">
-          4.5<span className="text-lg text-brand_gray">/5</span>
+          {product.averageRating}
+          <span className="text-lg text-brand_gray">/5</span>
         </h1>
         <div className="w-full">
           {[

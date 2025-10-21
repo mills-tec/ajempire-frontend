@@ -1,10 +1,10 @@
 "use client";
 import React from "react";
-import Profile from "@/assets/profile.png";
 import Image from "next/image";
+import { Review } from "@/lib/types";
 
-export default function CommentCard() {
-  const [rating, setRating] = React.useState(3);
+export default function CommentCard({ review }: { review: Review }) {
+  // const [rating, setRating] = React.useState(3);
   const filledStar = (
     <svg
       width="22"
@@ -38,13 +38,13 @@ export default function CommentCard() {
   );
   return (
     <div className="space-y-2">
-      <h3>Alex Mathio</h3>
+      <h3>{review.user}</h3>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           {
             <div className="flex text-brand_gray_dark">
               {[...Array(5)].map((_, i) =>
-                i < rating ? (
+                i < review.rating ? (
                   <span key={i}>{filledStar}</span>
                 ) : (
                   <span key={i}>{unfilledStar}</span>
@@ -54,12 +54,14 @@ export default function CommentCard() {
           }
           <p className="text-black/60 text-xs">13th Oct 2025</p>
         </div>
-        <p className="text-sm">
-          Absolutely love these nail kits! The quality is top-notch and very
-          affordable. My clients keep complimenting the colors.
-        </p>
+        <p className="text-sm">{review.comment}</p>
         <div className="size-8 rounded-full relative overflow-clip">
-          <Image src={Profile} alt="" className="object-cover absolute" fill />
+          <Image
+            src={review.image}
+            alt=""
+            className="object-cover absolute"
+            fill
+          />
         </div>
       </div>
     </div>

@@ -51,7 +51,7 @@ export default function SignInPage() {
       setErrors({});
       toast("Login successful!");
       // router.push("/dashboard");
-    } catch (err) {
+    } catch (_err) {
       toast("Login failed");
     }
   }

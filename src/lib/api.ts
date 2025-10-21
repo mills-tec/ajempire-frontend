@@ -1,8 +1,10 @@
+import { Product, ProductResponse, ProductsResponse } from "./types";
+
 // lib/api.ts
-const AUTH_API_URL = "https://ajempire-backend.vercel.app/api";
+const API_URL = "https://ajempire-backend.vercel.app/api";
 
 export async function loginBackend(email: string, password: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/login", {
+  const res = await fetch(API_URL + "/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -13,7 +15,7 @@ export async function loginBackend(email: string, password: string) {
 }
 
 export async function emailVerification(email: string, token: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/verify-email", {
+  const res = await fetch(API_URL + "/auth/verify-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
@@ -23,7 +25,7 @@ export async function emailVerification(email: string, token: string) {
 }
 
 export async function emailPasswordVerification(email: string, token: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/verify-reset-code", {
+  const res = await fetch(API_URL + "/auth/verify-reset-code", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
@@ -33,7 +35,7 @@ export async function emailPasswordVerification(email: string, token: string) {
 }
 
 export async function phoneNumberBackend(phone: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/send-otp", {
+  const res = await fetch(API_URL + "/auth/send-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone }),
@@ -43,7 +45,7 @@ export async function phoneNumberBackend(phone: string) {
 }
 
 export async function googleVerification(token: string) {
-  const res = await fetch(AUTH_API_URL + "/api/auth/google/", {
+  const res = await fetch(API_URL + "/api/auth/google/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
@@ -53,7 +55,7 @@ export async function googleVerification(token: string) {
 }
 
 export async function resendVerificationCode(email: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/resend-verification", {
+  const res = await fetch(API_URL + "/auth/resend-verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -62,8 +64,18 @@ export async function resendVerificationCode(email: string) {
   return res.json();
 }
 
+export async function verifyPasswordResetCode(email: string, token: string) {
+  const res = await fetch(API_URL + "/auth/verify-reset-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, token }),
+  });
+  if (!res.ok) throw new Error("Failed to resend verification code");
+  return res.json();
+}
+
 export async function fogortPassword(email: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/forgot-password", {
+  const res = await fetch(API_URL + "/auth/forgot-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -73,7 +85,7 @@ export async function fogortPassword(email: string) {
 }
 
 export async function signupBackend(email: string, password: string) {
-  const res = await fetch(AUTH_API_URL + "/auth/register", {
+  const res = await fetch(API_URL + "/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -84,16 +96,29 @@ export async function signupBackend(email: string, password: string) {
 }
 
 export async function logoutBackend() {
-  await fetch(process.env.AUTH_API_URL + "/logout", {
+  await fetch(API_URL + "/logout", {
     method: "POST",
     credentials: "include",
   });
 }
 
 export async function getSessionBackend() {
-  const res = await fetch(process.env.AUTH_API_URL + "/session", {
+  const res = await fetch(API_URL + "/session", {
     credentials: "include",
   });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/// Product API
+export async function getProducts(): Promise<ProductsResponse | null> {
+  const res = await fetch(API_URL + "/product");
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getProduct(id: string): Promise<ProductResponse | null> {
+  const res = await fetch(API_URL + "/product/" + id);
   if (!res.ok) return null;
   return res.json();
 }

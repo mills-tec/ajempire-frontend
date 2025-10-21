@@ -1,8 +1,25 @@
 "use client";
-import React from "react";
+import { Product, ProductResponse } from "@/lib/types";
+import Image from "next/image";
+import React, { useState } from "react";
 
-export default function ProductDescription() {
-  const [rating, setRating] = React.useState(4);
+export default function ProductDescription({
+  product_data,
+}: {
+  product_data: ProductResponse;
+}) {
+  // const [rating, setRating] = React.useState(4);
+
+  let { product, shippingFees } = product_data.message;
+
+  const [quantity, setQuantity] = useState(1);
+
+  let size_variant =
+    product.variants.length > 0 &&
+    product.variants.filter((item) => item.name == "size" && item.stock > 0);
+  let color_variant =
+    product.variants.length > 0 &&
+    product.variants.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -37,23 +54,23 @@ export default function ProductDescription() {
   );
   return (
     <div className="space-y-4">
-      <h1 className="font-medium text-sm lg:text-base">
-        AJ Empire Luxury Nail Care Kit – Magenta Edition
-      </h1>
+      <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
       <p className="text-brand_gray_dark text-sm lg:text-base">
-        Transform your nails with AJ Empire’s all-in-one luxury kit. Designed
-        for beginners and professionals, it brings salon-quality results
-        straight to your fingertips.
+        {product.description}
       </p>
 
       <div className="space-y-3">
         <div className="flex justify-between">
-          <p className="text-sm text-black/60">2,8k+ sold</p>
+          {product.itemsSold > 0 && (
+            <p className="text-sm text-black/60">{`${
+              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+            }`}</p>
+          )}
           <div className="flex items-center gap-2">
             {
               <div className="flex text-brand_gray_dark">
                 {[...Array(5)].map((_, i) =>
-                  i < rating ? (
+                  i < (product.averageRating || 0) ? (
                     <span key={i}>{filledStar}</span>
                   ) : (
                     <span key={i}>{unfilledStar}</span>
@@ -61,15 +78,17 @@ export default function ProductDescription() {
                 )}
               </div>
             }
-            <p className="text-black/60 text-xs">1,000</p>
+            <p className="text-black/60 text-xs">{product.reviews.length}</p>
           </div>
         </div>
 
         <div className="flex items-center">
           <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-            ₦3,500
+            ₦{product.price - product.discountedPrice}
           </h3>
-          <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
+          <h4 className="text-[10px] lg:text-xs ml-2 line-through">
+            ₦{product.price}
+          </h4>
 
           <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
             <p>93% OFF Limited time</p>
@@ -89,11 +108,19 @@ export default function ProductDescription() {
       <div className="flex gap-5">
         <h3 className="text-lg">Qty</h3>
         <div className="flex gap-2 items-center">
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <button
+            onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             -
           </button>
-          <p className="text-sm">1</p>
-          <button className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center">
+          <p className="text-sm">{quantity}</p>
+          <button
+            onClick={() =>
+              setQuantity((prev) => Math.min(prev + 1, product.stock))
+            }
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
             +
           </button>
         </div>
@@ -102,26 +129,45 @@ export default function ProductDescription() {
       <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Color: </h4>
         <div className="flex gap-2">
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
-          <div className="size-[4rem] bg-gray-400 rounded-xl"></div>
+          {product.images.length > 0 ? (
+            product.images.map((image) => (
+              <div className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
+                <Image
+                  src={image}
+                  alt="variant images"
+                  fill
+                  className="absolute object-cover"
+                />
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400 text-xs">
+              This data is currently unavailable
+            </p>
+          )}
         </div>
       </div>
 
       <div className="lg:flex gap-6">
         <div className="space-y-2">
           <p className="text-xs text-brand_gray_dark">
-            Select Property (Color): White
+            Select Property (Color):
           </p>
           <div>
             <div className="flex gap-2">
-              <div className="size-[2rem] relative rounded border border-[#BFBFBF] bg-[#FFFFFF]">
-                <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-              </div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#000000]"></div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#FF8D28]"></div>
-              <div className="size-[2rem] rounded border border-[#BFBFBF] bg-[#34C759]"></div>
+              {color_variant && color_variant.length > 0 ? (
+                color_variant.map((variant) => (
+                  <div
+                    className={`size-[2rem] relative rounded border border-[#BFBFBF] bg-[${variant.value}]`}
+                  >
+                    <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-xs">
+                  This data is currently unavailable
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -129,23 +175,19 @@ export default function ProductDescription() {
           <p className="text-xs text-brand_gray_dark">
             Select Property (Size):
           </p>
-          <div className="pt-1">
+          <div className="pt-1 lg:pt-0">
             <div className="flex gap-2">
-              <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                S
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                M
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                L
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                XL
-              </div>
-              <div className="h-[1.5rem] w-[2.5rem] rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                XXL
-              </div>
+              {size_variant && size_variant.length > 0 ? (
+                size_variant.map((variant) => (
+                  <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
+                    {variant.value.toUpperCase()}
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-xs">
+                  This data is currently unavailable
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -154,13 +196,15 @@ export default function ProductDescription() {
       <div className="p-6 border rounded-lg space-y-2">
         <h4 className=" text-sm lg:text-base">What’s Inside</h4>
         <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
-          <li className="list-disc">Nail buffer & file set</li>
-          <li className="list-disc">Cuticle care tool</li>
-          <li className="list-disc">
-            Premium polish in Magenta Pink (#FF008C)
-          </li>
-          <li className="list-disc">Quick-dry top coat</li>
-          <li className="list-disc">Compact storage pouch</li>
+          {product.whatsInside.length > 0 ? (
+            product.whatsInside.map((item, key) => (
+              <li key={key} className="list-disc">
+                {item}
+              </li>
+            ))
+          ) : (
+            <p className="text-gray-400">This data is currently unavailable</p>
+          )}
         </ul>
       </div>
 

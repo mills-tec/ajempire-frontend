@@ -11,10 +11,7 @@ export default function Spinner() {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <g
-          clip-path="url(#paint0_angular_1335_12193_clip_path)"
-          data-figma-skip-parse="true"
-        >
+        <g clipPath="url(#paint0_angular_1335_12193_clip_path)">
           <g transform="matrix(0 0.0335 -0.0335 0 33.5 33.5)">
             <foreignObject
               x="-1023.73"

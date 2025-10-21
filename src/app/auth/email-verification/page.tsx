@@ -4,27 +4,11 @@ import { emailVerification, resendVerificationCode } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import Spinner from "../Spinner";
 
-interface Props {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-      | "deals"
-  ) => void;
-}
-
-export default function VerifyEmailComp({ onClose, setScreen }: Props) {
+export default function EmailVerificationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  let email = searchParams.get("email");
+  const email = searchParams.get("email");
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
@@ -41,7 +25,6 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
   }, [resendTimer]);
 
   const handleVerification = async () => {
-    email = localStorage.getItem("ajempire_signup_email");
     if (!email) {
       toast.error("Email not found. Please try signing up again.");
       return;
@@ -54,11 +37,9 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
 
     setIsVerifying(true);
     try {
-      const res = await emailVerification(email, otp);
+      await emailVerification(email, otp);
       toast.success("Email verified successfully!");
-      //   router.push("/auth/signin");
-      setScreen("signin");
-      setScreen("deals");
+      router.push("/auth/signin");
     } catch (error) {
       console.log("error: ", error);
       toast.error("Invalid verification code. Please try again.");
@@ -87,8 +68,7 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
   };
 
   return (
-    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      {isVerifying && <Spinner />}
+    <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
       <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
@@ -109,11 +89,9 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
                 Verifying your email adds an extra layer of Security and ensures
                 important notifications reach you <br />
                 <br />
-                We've sent a verification code to your email{" "}
+                We&lsquove sent a verification code to your email{" "}
                 <b className="text-black font-medium">
-                  {localStorage.getItem("ajempire_signup_email") ||
-                    email ||
-                    "your email"}
+                  {email || "your email"}
                 </b>
               </p>
             </div>
