@@ -49,7 +49,7 @@ export default function SignUpPage() {
       setErrors({});
       alert("Form submitted successfully!");
       // router.push("/dashboard");
-    } catch (err) {
+    } catch (_err) {
       alert("Signup failed");
     }
   }

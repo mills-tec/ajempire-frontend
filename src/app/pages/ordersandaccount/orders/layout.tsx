@@ -1,13 +1,9 @@
 import { ReactNode } from "react";
 
 interface LayoutProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-    return (
-        <div>
-            <main>{children}</main>
-        </div>
-    );
+  return <section>{children}</section>;
 }
