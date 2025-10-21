@@ -3,9 +3,10 @@ import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
 import { emailVerification, resendVerificationCode } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import Spinner from "@/app/components/Spinner";
 
-export default function EmailVerificationPage() {
+function EmailVerificationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const email = searchParams.get("email");
@@ -174,5 +175,13 @@ export default function EmailVerificationPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function EmailVerificationPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <EmailVerificationContent />
+    </Suspense>
   );
 }
