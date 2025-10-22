@@ -2,6 +2,7 @@
 import { Product, ProductResponse } from "@/lib/types";
 import Image from "next/image";
 import React, { useState } from "react";
+import Shippingadress from "../pages/shippingadress/page";
 
 export default function ProductDescription({
   product_data,
@@ -13,6 +14,7 @@ export default function ProductDescription({
   let { product, shippingFees } = product_data.message;
 
   const [quantity, setQuantity] = useState(1);
+
 
   let size_variant =
     product.variants.length > 0 &&
@@ -62,9 +64,8 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${
-              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-            }`}</p>
+            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+              }`}</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -282,6 +283,7 @@ export default function ProductDescription({
         <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
           Check Out
         </button>
+
       </div>
     </div>
   );
