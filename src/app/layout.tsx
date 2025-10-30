@@ -35,7 +35,7 @@ export default function RootLayout({
           <Providers>
             {/* Main Content */}
             <TooltipProvider>
-              <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
+              <main className="pt-[0px] lg:pt-[100px] w-screen pb-[90px] h-max">
                 {children}
               </main>
             </TooltipProvider>

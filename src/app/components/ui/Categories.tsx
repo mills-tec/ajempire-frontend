@@ -62,13 +62,13 @@ const Categories = () => {
               key={category.slug}
               className="whitespace-nowrap text-xs flex flex-col items-center opacity-80 hover:opacity-100 transition "
             >
-              <div className="size-[3rem] rounded-2xl lg:rounded-full border flex items-center justify-center relative bg-white">
+              <div className="size-[3rem] rounded-full border flex items-center justify-center relative bg-white">
                 <Image
                   src={NewArr}
                   alt=""
-                  className="object-cover h-full w-full absolute"
-                  height={54}
-                  width={54}
+                  className="object-cover size-[2.4rem] absolute"
+                  height={44}
+                  width={44}
                 />
               </div>
               <p className="mt-1 text-[10px] lg:text-base text-black lg:text-white">
