@@ -60,7 +60,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
             <ul className="hidden w-[100%] lg:w-[90%] lg:flex items-center justify-between">
                 <li className="hidden lg:block">
-                    <Link href="/" className={`opacity-80 ${isActive("/")}`}>
+                    <Link href="/" className={`opacity-80 ${isActive("/")} hover:text-[#FF008C] transition-all duration-300`}>
                         shop
                     </Link>
                 </li>
@@ -68,7 +68,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li className="lg:block">
                     <Link
                         href="/pages/update"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/update")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/update")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <VideoIcon className="mt-[0.5px] w-[17px] font-bold" />
                         <p>updates</p>
@@ -85,7 +85,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                         {isLoggedIn ? (
                             <Link
                                 href="/pages/ordersandaccount"
-                                className={`flex items-center gap-1 opacity-80 ${isActive("/pages/ordersandaccount")}`}
+                                className={`flex items-center gap-1 opacity-80 ${isActive("/pages/ordersandaccount")} hover:text-[#FF008C] transition-all duration-300`}
                                 onMouseEnter={() => {
                                     cancelCloseTimer();
                                     setShowDropdown(true);
@@ -102,12 +102,11 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                         ) : (
                             <button
                                 onClick={() => setShowIntro(true)}
-                                className="flex items-center gap-1 text-[12.8px] opacity-80"
+                                className="flex items-center gap-1 text-[12.8px] opacity-80 hover:text-[#FF008C] transition-all duration-300"
                             >
                                 <UserIcon className="w-8" />
                                 <div>
-                                    <p>Orders &</p>
-                                    <p className="mt-[-5px]">Account</p>
+                                    <p>Sign Up</p>
                                 </div>
                             </button>
                         )}
@@ -130,7 +129,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li>
                     <Link
                         href="/pages/support"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/support")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/support")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <SupportIcon className="w-8" />
                         Support
@@ -140,7 +139,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li>
                     <Link
                         href="/pages/cart"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/cart")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/cart")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <CartIcon className="w-8 opacity-60" />
                     </Link>

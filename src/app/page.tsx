@@ -23,7 +23,7 @@ export default function Home() {
     queryFn: getProducts,
   });
 
-  console.log("data: ", data);
+  // console.log("data: ", data);
   const selectedItem = useCartStore((state) => state.selectedItem);
 
   return (
@@ -46,7 +46,7 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1352}
-            // fill
+          // fill
           />
         </div>
 

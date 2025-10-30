@@ -12,16 +12,13 @@ import Spinner from "@/app/components/Spinner";
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id;
-
-  console.log("id; ", id);
+  console.log("Product ID from params:", id);
 
   const { data, isLoading } = useQuery(
     ["product", id],
     () => (id ? getProduct(id as string) : null),
     { enabled: !!id }
   );
-
-  console.log(data);
 
   if (isLoading) <Spinner />;
 

@@ -2,7 +2,11 @@
 import { Product, ProductResponse } from "@/lib/types";
 import Image from "next/image";
 import React, { useState } from "react";
-import Shippingadress from "../pages/shippingadress/page";
+import Adress from "../pages/ordersandaccount/address/page";
+import ShippingAdressForm from "./ShippingAdressForm";
+import CheckoutWrapper from "./ui/CheckoutWrapper";
+import CheckoutRequirement from "./CheckoutRequirement";
+import { toast } from "sonner";
 
 export default function ProductDescription({
   product_data,
@@ -10,12 +14,21 @@ export default function ProductDescription({
   product_data: ProductResponse;
 }) {
   // const [rating, setRating] = React.useState(4);
+  const [isAdress, setIsAdress] = useState(false)
 
   let { product, shippingFees } = product_data.message;
 
   const [quantity, setQuantity] = useState(1);
+  const checkoutHandler = () => {
+    const token = localStorage.getItem("token");
+    console.log("token:", token);
+    if (!token) {
+      toast("Please log in to checkout");
+    } {
+      setIsAdress(true)
+    }
 
-
+  }
   let size_variant =
     product.variants.length > 0 &&
     product.variants.filter((item) => item.name == "size" && item.stock > 0);
@@ -258,7 +271,7 @@ export default function ProductDescription({
         </div>
       </div>
 
-      <div className="hidden lg:block w-[80%] space-y-4 pt-8">
+      <div className=" lg:block w-[80%] space-y-4 pt-8">
         <div className="flex gap-4 items-center">
           <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]">
             Add to Cart
@@ -280,10 +293,12 @@ export default function ProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
           Check Out
         </button>
-
+        {
+          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
+        }
       </div>
     </div>
   );

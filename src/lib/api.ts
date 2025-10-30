@@ -122,3 +122,5 @@ export async function getProduct(id: string): Promise<ProductResponse | null> {
   if (!res.ok) return null;
   return res.json();
 }
+
+
