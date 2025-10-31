@@ -1,6 +1,7 @@
 "use client";
-import { CartItem } from "@/lib/stores/cart-store";
-import React, { useState } from "react";
+import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { calcDiscountPrice } from "@/lib/utils";
+import React, { useEffect, useState } from "react";
 
 export default function CartPopupProductDescription({
   item,
@@ -8,8 +9,26 @@ export default function CartPopupProductDescription({
   item: CartItem;
 }) {
   // const [rating, setRating] = React.useState(4);
+  const {
+    addItem,
+    getItem,
+    removeItem,
+    increaseQuantity,
+    decreaseQuantity,
+    setQuantity: setCartItemQty,
+  } = useCartStore();
+  const cartItem = getItem(item._id);
 
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(
+    cartItem ? (cartItem.quantity == 0 ? 1 : cartItem.quantity) : 1
+  );
+
+  useEffect(() => {
+    if (quantity == 0) {
+      removeItem(item._id);
+    }
+    setCartItemQty(item._id, quantity);
+  }, [quantity]);
 
   let size_variant =
     item.variants.length > 0 &&
@@ -50,9 +69,9 @@ export default function CartPopupProductDescription({
     </svg>
   );
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <h1 className="font-medium text-sm lg:text-base">{item.name}</h1>
+    <div className="space-y-4 lg:space-y-8">
+      <div className="space-y-1 px-4">
+        <h1 className="font-medium text-sm lg:text-lg">{item.name}</h1>
 
         <div className="space-y-3">
           <div className="flex justify-between">
@@ -74,7 +93,7 @@ export default function CartPopupProductDescription({
           </div>
           <div className="flex items-center">
             <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              ₦{item.price}
+              ₦{calcDiscountPrice(item.price, item.discountedPrice)}
             </h3>
             <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
 
@@ -94,7 +113,28 @@ export default function CartPopupProductDescription({
         </div>
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex gap-5 px-4">
+        <h3 className="text-lg">Qty</h3>
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
+            -
+          </button>
+          <p className="text-sm">{quantity}</p>
+          <button
+            onClick={() =>
+              setQuantity((prev) => Math.min(prev + 1, item.stock))
+            }
+            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-between px-4">
         <div className="flex gap-6">
           <div className="space-y-2">
             <p className="text-xs text-brand_gray_dark">
@@ -141,37 +181,48 @@ export default function CartPopupProductDescription({
         </div>
       </div>
 
-      <div className="flex gap-5">
-        <h3 className="text-lg">Qty</h3>
+      <div className="w-full flex items-center sticky !bottom-0 pt-4 px-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8">
         <div className="flex gap-2 items-center">
-          <button
-            onClick={() => setQuantity((prev) => Math.max(prev - 1, 1))}
-            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
-          >
-            -
-          </button>
-          <p className="text-sm">{quantity}</p>
-          <button
-            onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, item.stock))
-            }
-            className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
-          >
-            +
-          </button>
-        </div>
-      </div>
+          {!cartItem ? (
+            <button
+              onClick={() => addItem({ ...item, quantity })}
+              className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
+            >
+              Add to Cart
+            </button>
+          ) : (
+            <div
+              // onClick={() => addItem({ ...item, quantity })}
+              className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
+            >
+              <button
+                onClick={() => {
+                  setQuantity((prev) => Math.max(prev - 1, 0));
+                  if (quantity == 0) {
+                    removeItem(item._id);
+                  }
+                }}
+                className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+              >
+                -
+              </button>
+              {quantity}
+              <button
+                onClick={() =>
+                  setQuantity((prev) => Math.min(prev + 1, item.stock))
+                }
+                className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+              >
+                +
+              </button>
+            </div>
+          )}
 
-      <div className="w-full flex items-center pt-4 pb-4 gap-8">
-        <div className="flex gap-2 items-center">
-          <button className="h-[2rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8">
-            Add to Cart
-          </button>
           <button className="">
             <svg
               width="42"
               height="42"
-              className="size-[2rem]"
+              className="size-[2rem] lg:size-[3rem]"
               viewBox="0 0 42 42"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -184,7 +235,7 @@ export default function CartPopupProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2rem] text-xs bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full">
           Check Out
         </button>
       </div>
