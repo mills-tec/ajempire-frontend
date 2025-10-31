@@ -3,7 +3,12 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { Product, ProductResponse } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useState,useEffect } from "react";
+import Adress from "../pages/ordersandaccount/address/page";
+import ShippingAdressForm from "./ShippingAdressForm";
+import CheckoutWrapper from "./ui/CheckoutWrapper";
+import CheckoutRequirement from "./CheckoutRequirement";
+import { toast } from "sonner";
 
 export default function ProductDescription({
   product_data,
@@ -11,6 +16,7 @@ export default function ProductDescription({
   product_data: ProductResponse;
 }) {
   // const [rating, setRating] = React.useState(4);
+  const [isAdress, setIsAdress] = useState(false)
 
   let { product, shippingFees } = product_data.message;
   const {
@@ -22,6 +28,17 @@ export default function ProductDescription({
     setQuantity: setCartItemQty,
   } = useCartStore();
 
+  const [quantity, setQuantity] = useState(1);
+  const checkoutHandler = () => {
+    const token = localStorage.getItem("token");
+    console.log("token:", token);
+    if (!token) {
+      toast("Please log in to checkout");
+    } {
+      setIsAdress(true)
+    }
+
+  }
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
@@ -294,7 +311,7 @@ export default function ProductDescription({
         </div>
       </div>
 
-      <div className="hidden lg:block w-[80%] space-y-4 pt-8">
+      <div className=" lg:block w-[80%] space-y-4 pt-8">
         <div className="flex gap-4 items-center">
           {!item ? (
             <button
@@ -341,10 +358,12 @@ export default function ProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
           Check Out
         </button>
-
+        {
+          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
+        }
       </div>
     </div>
   );
