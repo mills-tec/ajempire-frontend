@@ -1,29 +1,25 @@
 "use client";
 import { SearchIcon } from "@/components/svgs/SearchIcon";
 import Link from "../../../../../node_modules/next/link";
-import { useRef } from "react";
 import { usePathname } from "../../../../../node_modules/next/navigation";
 
-export default function OrderTabs() {
+export default function OrderTabs({
+  handleSearchInputChange,
+}: {
+  handleSearchInputChange: (value: string) => void;
+}) {
   const pathname = usePathname();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleSearchClick = () => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  };
 
   const tabs = [
     { name: "All Orders", path: "/pages/ordersandaccount/orders/all" },
     { name: "Processing", path: "/pages/ordersandaccount/orders/processing" },
-    { name: "Shipping", path: "/pages/ordersandaccount/orders/shipping" },
+    { name: "Shipped", path: "/pages/ordersandaccount/orders/shipped" },
     { name: "Delivered", path: "/pages/ordersandaccount/orders/delivered" },
     { name: "Reviews", path: "/pages/ordersandaccount/orders/reviews" },
   ];
 
   return (
-    <div className="">
+    <div className="mb-5">
       <div className="lg:hidden flex items-center px-4 mb-[20px]">
         <Link href={"/pages/ordersandaccount"}>
           <svg
@@ -67,10 +63,12 @@ export default function OrderTabs() {
             <input
               type="text"
               className="w-full outline-none bg-transparent placeholder:text-[13px] opacity-80 text-[14px]"
-              placeholder="Search Product"
-              ref={inputRef}
+              placeholder=" Product Name/Order Id"
+              onChange={(e) =>{
+                 handleSearchInputChange(e.target.value);
+              }}
             />
-            <div onClick={handleSearchClick}>
+            <div>
               <SearchIcon className="w-5 text-primaryhover" />
             </div>
           </div>

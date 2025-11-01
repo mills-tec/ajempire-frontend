@@ -7,6 +7,7 @@ import SearchBar from "./components/ui/SearchBar";
 import Footer from "./components/Footer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastContainer } from "react-toastify";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
+        <ToastContainer/>
         <div className="flex flex-col min-h-screen">
           {/* Fixed Navbar */}
           <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">

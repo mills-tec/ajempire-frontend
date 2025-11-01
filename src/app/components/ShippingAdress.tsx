@@ -125,7 +125,7 @@ export default function ShippingAdress({ setIsadress }: ShippingAdressProps) {
 
                 <div className="absolute top-6 right-6 cursor-pointer" onClick={() => setIsadress(false)}>
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75" stroke="black" stroke-width="1.5" strokeLinecap="round" stroke-linejoin="round" />
                     </svg>
                 </div>
             </div>

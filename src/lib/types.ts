@@ -43,12 +43,13 @@ export interface Product {
 }
 
 export interface Review {
-  user: string;
-  comment: string;
-  rating: number;
-  image: string;
-  _id: string;
-  createdAt: string;
+  user?: string;
+  comment?: string;
+  rating?: number;
+  image?: string;
+  _id?: string;
+  createdAt?: string;
+  product?: string;
 }
 
 export interface Variant {
@@ -57,4 +58,29 @@ export interface Variant {
   stock: number;
   value: string;
   _id: string;
+}
+
+export interface Order {
+  items: Product[];
+  orderStatus: string;
+  order_id: string;
+  createdAt: string;
+}
+
+export interface IItem {
+  product: string;
+  name: string;
+  variant: { name: string; value: string; _id: string };
+  price: number;
+  qty: number;
+  image: string;
+  discountedPrice: number;
+  review?:  Review
+}
+
+export interface IOrder {
+  items: IItem[];
+  orderStatus: string;
+  order_id: string;
+  createdAt: string;
 }

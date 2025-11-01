@@ -56,7 +56,7 @@ export default function CartPopup() {
               d="M6.75781 17.2438L12.0008 12.0008L17.2438 17.2438M17.2438 6.75781L11.9998 12.0008L6.75781 6.75781"
               stroke="black"
               stroke-width="1.5"
-              stroke-linecap="round"
+              strokeLinecap="round"
               stroke-linejoin="round"
             />
           </svg>

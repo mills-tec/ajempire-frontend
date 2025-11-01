@@ -67,7 +67,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                   )
                     .then((res) => {
                       if (res.data?.message) {
-                        localStorage.setItem("token", res.data.message)
+                        localStorage.setItem("token", res.data.message.token)
                         alert("sucessfully lodged in!")
                         setTimeout(() => {
                           onClose()
