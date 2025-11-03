@@ -1,8 +1,11 @@
 "use client";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { Product, ProductResponse } from "@/lib/types";
+import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import React, { useState } from "react";
-import Shippingadress from "../pages/shippingadress/page";
+import React, { useEffect, useState } from "react";
+import CheckoutRequirement from "./CheckoutRequirement";
+import { toast } from "sonner";
 
 export default function ProductDescription({
   product_data,
@@ -10,11 +13,58 @@ export default function ProductDescription({
   product_data: ProductResponse;
 }) {
   // const [rating, setRating] = React.useState(4);
+  const [isAdress, setIsAdress] = useState(false)
 
   let { product, shippingFees } = product_data.message;
+  const {
+    getItem,
+    addItem,
+    removeItem,
+    decreaseQuantity,
+    increaseQuantity,
+    setQuantity: setCartItemQty,
+  } = useCartStore();
 
-  const [quantity, setQuantity] = useState(1);
 
+  const checkoutHandler = () => {
+    const token = localStorage.getItem("token");
+    console.log("token:", token);
+    if (!token) {
+      toast("Please log in to checkout");
+    } {
+      setIsAdress(true)
+    }
+
+  }
+  const item = getItem(product._id);
+
+  const [quantity, setQuantity] = useState(() =>
+    item ? (item.quantity === 0 ? 1 : item.quantity) : 1
+  );
+
+  useEffect(() => {
+    // If the item no longer exists, do nothing
+    if (!item) return;
+
+    // Remove item if quantity is 0
+    if (quantity === 0) {
+      removeItem(item._id);
+      return;
+    }
+
+    // Update cart store with the new quantity
+    setCartItemQty(item._id, quantity);
+  }, [quantity, item?._id]);
+
+  useEffect(() => {
+    // If the item no longer exists, do nothing
+    if (!item) return;
+
+    // If the quantity in cart store diverges from this state, update local state
+    if (item.quantity !== quantity) {
+      setQuantity(item.quantity === 0 ? 1 : item.quantity);
+    }
+  }, [item?.quantity]);
 
   let size_variant =
     product.variants.length > 0 &&
@@ -85,14 +135,14 @@ export default function ProductDescription({
 
         <div className="flex items-center">
           <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-            ₦{product.price - product.discountedPrice}
+            ₦{calcDiscountPrice(product.price, product.discountedPrice)}
           </h3>
           <h4 className="text-[10px] lg:text-xs ml-2 line-through">
             ₦{product.price}
           </h4>
 
           <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-            <p>93% OFF Limited time</p>
+            <p>{product.discountedPrice}% OFF Limited time</p>
           </div>
         </div>
 
@@ -260,9 +310,34 @@ export default function ProductDescription({
 
       <div className="hidden lg:block w-[80%] space-y-4 pt-8">
         <div className="flex gap-4 items-center">
-          <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]">
-            Add to Cart
-          </button>
+          {!item ? (
+            <button
+              onClick={() => addItem({ ...product, quantity, selected: false })}
+              className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]"
+            >
+              Add to Cart
+            </button>
+          ) : (
+            <div
+              // onClick={() => addItem({ ...item, quantity })}
+              className="h-[2rem] lg:h-[2.5rem] flex font-bold justify-between text-xs border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] overflow-clip"
+            >
+              <button
+                onClick={() => decreaseQuantity(item._id)}
+                className="size-[2.5rem] rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+              >
+                -
+              </button>
+              {item?.quantity}
+              <button
+                onClick={() => increaseQuantity(item._id)}
+                className="size-[2.5rem] rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+              >
+                +
+              </button>
+            </div>
+          )}
+
           <button className="">
             <svg
               width="42"
@@ -280,10 +355,12 @@ export default function ProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
           Check Out
         </button>
-
+        {
+          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
+        }
       </div>
     </div>
   );

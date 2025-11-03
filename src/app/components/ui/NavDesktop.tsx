@@ -12,6 +12,9 @@ import Logo from "@/assets/logo.png";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
 import Userpopup from "./Userpopup";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { motion, AnimatePresence } from 'framer-motion';
+
 
 type NavDesktopProps = {
     isLoggedIn: boolean;
@@ -26,6 +29,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
     showIntro,
     setShowIntro,
 }) => {
+    const { items } = useCartStore();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
 
@@ -40,6 +44,11 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
+    };
+    const stepVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.4, delay: 0.1 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
     };
     return (
         <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
@@ -60,7 +69,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
             <ul className="hidden w-[100%] lg:w-[90%] lg:flex items-center justify-between">
                 <li className="hidden lg:block">
-                    <Link href="/" className={`opacity-80 ${isActive("/")}`}>
+                    <Link href="/" className={`opacity-80 ${isActive("/")} hover:text-[#FF008C] transition-all duration-300`}>
                         shop
                     </Link>
                 </li>
@@ -68,7 +77,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li className="lg:block">
                     <Link
                         href="/pages/update"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/update")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/update")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <VideoIcon className="mt-[0.5px] w-[17px] font-bold" />
                         <p>updates</p>
@@ -85,7 +94,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                         {isLoggedIn ? (
                             <Link
                                 href="/pages/ordersandaccount"
-                                className={`flex items-center gap-1 opacity-80 ${isActive("/pages/ordersandaccount")}`}
+                                className={`flex items-center gap-1 opacity-80 ${isActive("/pages/ordersandaccount")} hover:text-[#FF008C] transition-all duration-300`}
                                 onMouseEnter={() => {
                                     cancelCloseTimer();
                                     setShowDropdown(true);
@@ -102,26 +111,29 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                         ) : (
                             <button
                                 onClick={() => setShowIntro(true)}
-                                className="flex items-center gap-1 text-[12.8px] opacity-80"
+                                className="flex items-center gap-1 text-[12.8px] opacity-80 hover:text-[#FF008C] transition-all duration-300"
                             >
                                 <UserIcon className="w-8" />
                                 <div>
-                                    <p>Orders &</p>
-                                    <p className="mt-[-5px]">Account</p>
+                                    <p>Sign Up</p>
                                 </div>
                             </button>
                         )}
                         {
                             isLoggedIn && showDropdown &&
-                            <div className={`absolute right-8 top-[4.4rem]  duration-500 ease-out transform origin-top  ${showDropdown
-                                ? "  animate-dropdown-in"
-                                : " animate-dropdown-out"
-                                }`}
-                                onMouseEnter={cancelCloseTimer}
-                                onMouseLeave={startCloseTimer}
-                            >
-                                <Userpopup />
-                            </div>
+                            <AnimatePresence>
+                                <motion.div
+                                    key="userpopup"
+                                    variants={stepVariants}
+                                    initial="initial"
+                                    animate="animate"
+                                    exit="exit"
+                                    onMouseEnter={cancelCloseTimer}
+                                    onMouseLeave={startCloseTimer}
+                                    className={`absolute right-8 top-[4.4rem]  duration-500 ease-out transform origin-top-right `} >
+                                    <Userpopup />
+                                </motion.div>
+                            </AnimatePresence>
                         }
                     </div>
                     {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />}
@@ -130,7 +142,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li>
                     <Link
                         href="/pages/support"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/support")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/support")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <SupportIcon className="w-8" />
                         Support
@@ -140,7 +152,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                 <li>
                     <Link
                         href="/pages/cart"
-                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/cart")}`}
+                        className={`flex items-center gap-1 opacity-80 ${isActive("/pages/cart")} hover:text-[#FF008C] transition-all duration-300`}
                     >
                         <CartIcon className="w-8 opacity-60" />
                     </Link>

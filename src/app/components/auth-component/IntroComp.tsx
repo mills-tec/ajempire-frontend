@@ -66,14 +66,17 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                     },
                   )
                     .then((res) => {
-                      if (res.data?.message) {
-                        localStorage.setItem("token", res.data.message.token)
-                        alert("sucessfully lodged in!")
+                      if (res.data?.message?.token) {
+                        const token = res.data.message.token;
+                        const user = res.data.message.user;
+                        localStorage.setItem("token", token)
+                        localStorage.setItem("user", token)
+                        console.log("token", token)
+                        console.log("user", user)
+                        alert("Successfully logged in!");
                         setTimeout(() => {
-                          onClose()
+                          onClose();
                         }, 800);
-                      } else {
-
                       }
                     }
                     )

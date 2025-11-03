@@ -24,6 +24,7 @@ export interface Product {
   cover_image: string;
   images: string[];
   discountedPrice: number;
+  discount?: number; // percentage from API (fallback for discountedPrice)
   itemsSold: number;
   stock: number;
   whatsInside: string[];
