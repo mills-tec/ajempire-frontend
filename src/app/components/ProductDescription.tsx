@@ -3,10 +3,7 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { Product, ProductResponse } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import React, { useState,useEffect } from "react";
-import Adress from "../pages/ordersandaccount/address/page";
-import ShippingAdressForm from "./ShippingAdressForm";
-import CheckoutWrapper from "./ui/CheckoutWrapper";
+import React, { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
 
@@ -28,7 +25,7 @@ export default function ProductDescription({
     setQuantity: setCartItemQty,
   } = useCartStore();
 
-  const [quantity, setQuantity] = useState(1);
+
   const checkoutHandler = () => {
     const token = localStorage.getItem("token");
     console.log("token:", token);
@@ -311,7 +308,7 @@ export default function ProductDescription({
         </div>
       </div>
 
-      <div className=" lg:block w-[80%] space-y-4 pt-8">
+      <div className="hidden lg:block w-[80%] space-y-4 pt-8">
         <div className="flex gap-4 items-center">
           {!item ? (
             <button

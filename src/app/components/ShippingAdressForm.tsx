@@ -2,6 +2,7 @@
 import axios from "axios"
 import { useEffect, useState, } from "react"
 import Spinner from "./Spinner";
+import { toast } from "sonner";
 
 
 interface ShippingAdressProps {
@@ -16,9 +17,10 @@ interface ShippingAdressProps {
         postalCode: string;
     };
     onContinue?: () => void;
+    onAddressUpdated?: () => void;
 }
 
-export default function ShippingAdressForm({ setIsadress, existingAddress, onContinue }: ShippingAdressProps) {
+export default function ShippingAdressForm({ setIsadress, existingAddress, onContinue, onAddressUpdated }: ShippingAdressProps) {
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
     const [street, setStreet] = useState("");
@@ -29,6 +31,7 @@ export default function ShippingAdressForm({ setIsadress, existingAddress, onCon
     const [selectedState, setSelectedState] = useState("Delta");
     const [selectedCountry, setSelectedCountry] = useState("Nigeria");
     const [loading, setLoading] = useState(false);
+    const [singin, setSingin] = useState(false);
 
     const [showInitialSpinner, setShowInitialSpinner] = useState(false);
 
@@ -102,7 +105,8 @@ export default function ShippingAdressForm({ setIsadress, existingAddress, onCon
 
         const token = localStorage.getItem("token")
         if (!token) {
-            return alert("You must be logged in first!");
+            toast.error("User not authenticated. Please login to continue", { position: 'top-right' });
+            setLoading(false);
         }
         const data = {
             shippingAdress: {
@@ -122,11 +126,9 @@ export default function ShippingAdressForm({ setIsadress, existingAddress, onCon
                 { headers: { Authorization: `Bearer ${token}` } }
             )
             if (res.data) {
-                // console.log("✅ Response:", res.data);
-                if (onContinue) {
-                    // If provided, this is the Checkout Flow, so navigate.
-                    onContinue();
-                }
+                toast.success("Shipping address updated successfully", { position: 'top-right' });
+                if (onContinue) onContinue();
+                if (onAddressUpdated) onAddressUpdated();
             }
         } catch (error: any) {
             console.error("❌ Error updating address:", error);
@@ -134,9 +136,9 @@ export default function ShippingAdressForm({ setIsadress, existingAddress, onCon
 
             if (error.response) {
                 console.log("🧾 Server says:", error.response.data);
-                alert(error.response.data?.message || "Something went wrong!");
+                toast.error(error.response.data?.message || "Something went wrong!", { position: 'top-right' });
             } else {
-                alert("Network or unexpected error");
+                toast.error("Network or unexpected error", { position: 'top-right' });
             }
         } finally {
             setTimeout(() => {

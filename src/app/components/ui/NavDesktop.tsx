@@ -13,52 +13,59 @@ import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
 import Userpopup from "./Userpopup";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { motion, AnimatePresence } from 'framer-motion';
+
 
 type NavDesktopProps = {
-  isLoggedIn: boolean;
-  isActive: (path: string) => string;
-  showIntro: boolean;
-  setShowIntro: (val: boolean) => void;
+    isLoggedIn: boolean;
+    isActive: (path: string) => string;
+    showIntro: boolean;
+    setShowIntro: (val: boolean) => void;
 };
 
 const NavDesktop: React.FC<NavDesktopProps> = ({
-  isLoggedIn,
-  isActive,
-  showIntro,
-  setShowIntro,
+    isLoggedIn,
+    isActive,
+    showIntro,
+    setShowIntro,
 }) => {
-  const { items } = useCartStore();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+    const { items } = useCartStore();
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [showDropdown, setShowDropdown] = useState(false);
 
-  const startCloseTimer = () => {
-    timeoutRef.current = setTimeout(() => {
-      setShowDropdown(false);
-    }, 300); // 5 seconds
-  };
+    const startCloseTimer = () => {
+        timeoutRef.current = setTimeout(() => {
+            setShowDropdown(false);
+        }, 300); // 5 seconds
+    };
 
-  const cancelCloseTimer = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
-  return (
-    <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
-      {/* Logo */}
-      <div className="hidden lg:flex lg:w-[10%]">
-        <Link href="/" className="w-full">
-          <div className="mt-[-7px]">
-            <Image
-              src={Logo}
-              alt="logo"
-              width={120}
-              height={40}
-              className="object-contain"
-            />
-          </div>
-        </Link>
-      </div>
+    const cancelCloseTimer = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+    };
+    const stepVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.4, delay: 0.1 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
+    return (
+        <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
+            {/* Logo */}
+            <div className="hidden lg:flex lg:w-[10%]">
+                <Link href="/" className="w-full">
+                    <div className="mt-[-7px]">
+                        <Image
+                            src={Logo}
+                            alt="logo"
+                            width={120}
+                            height={40}
+                            className="object-contain"
+                        />
+                    </div>
+                </Link>
+            </div>
 
             <ul className="hidden w-[100%] lg:w-[90%] lg:flex items-center justify-between">
                 <li className="hidden lg:block">
@@ -77,9 +84,9 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                     </Link>
                 </li>
 
-        <li className="w-[50%]">
-          <SearchBar />
-        </li>
+                <li className="w-[50%]">
+                    <SearchBar />
+                </li>
 
                 <li>
                     <div className=" "
@@ -114,15 +121,19 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
                         )}
                         {
                             isLoggedIn && showDropdown &&
-                            <div className={`absolute right-8 top-[4.4rem]  duration-500 ease-out transform origin-top  ${showDropdown
-                                ? "  animate-dropdown-in"
-                                : " animate-dropdown-out"
-                                }`}
-                                onMouseEnter={cancelCloseTimer}
-                                onMouseLeave={startCloseTimer}
-                            >
-                                <Userpopup />
-                            </div>
+                            <AnimatePresence>
+                                <motion.div
+                                    key="userpopup"
+                                    variants={stepVariants}
+                                    initial="initial"
+                                    animate="animate"
+                                    exit="exit"
+                                    onMouseEnter={cancelCloseTimer}
+                                    onMouseLeave={startCloseTimer}
+                                    className={`absolute right-8 top-[4.4rem]  duration-500 ease-out transform origin-top-right `} >
+                                    <Userpopup />
+                                </motion.div>
+                            </AnimatePresence>
                         }
                     </div>
                     {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />}

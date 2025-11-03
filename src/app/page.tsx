@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+export const dynamic = "force-dynamic";
+import React from "react";
 import Image from "next/image";
 import ProductCard from "./components/ProductCard";
 import bannerImg from "@/assets/banner.png";
@@ -15,9 +16,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
 export default function Home() {
-  const [showCartPopup, setShowCartPopup] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
@@ -87,6 +87,7 @@ export default function Home() {
             </svg>
           </button>
         )}
+        
       </div>
     </div>
   );

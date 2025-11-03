@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import ShippingAdressForm from '../ShippingAdressForm';
 import PaymentMethod from '../PaymentMethod';
-import OrderSummaryPage from './OrderSummaryPage'; // Ensure this is the correct path
 import { useRouter } from 'next/navigation';
 import Spinner from '../Spinner';
 import { useCheckout } from '@/app/context/CheckoutContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // 1. Define the possible steps
 enum CheckoutStep {
@@ -20,12 +20,24 @@ interface CheckoutWrapperProps {
     setIsadress?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+
 export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     // You no longer need the router if you are staying on the same page
     const router = useRouter(); // <--- REMOVED UNLESS NEEDED ELSEWHERE
 
     const { selectedPaymentMethod } = useCheckout();
     const [currentStep, setCurrentStep] = useState<CheckoutStep>(CheckoutStep.ADDRESS_FORM);
+    useEffect(() => {
+        localStorage.setItem("checkoutStep", String(currentStep));
+    }, [currentStep]);
+
+    // Restore step on refresh
+    useEffect(() => {
+        const savedStep = localStorage.getItem("checkoutStep");
+        if (savedStep) {
+            setCurrentStep(Number(savedStep));
+        }
+    }, []);
 
     // 💡 REMOVED: This state is now managed globally by CheckoutContext
     // const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>(""); 
@@ -53,6 +65,12 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
             }, 300);
         }
     }, [currentStep, router]);
+    const goToPreviousStep = () => {
+        setCurrentStep(prevStep => {
+            if (prevStep === CheckoutStep.PAYMENT_METHOD) return CheckoutStep.ADDRESS_FORM;
+            return prevStep;
+        });
+    };
 
 
     // 💡 REMOVED: The redirecting spinner is no longer needed for navigation
@@ -65,15 +83,31 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
         );
     }
 
-
     // 3. Render the current step
+    const stepVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.4, delay: 0.1 } },
+        exit: { opacity: 0, transition: { duration: 0.3 } },
+    };
+
+    // Render step
     switch (currentStep) {
         case CheckoutStep.ADDRESS_FORM:
-            return <ShippingAdressForm onContinue={goToNextStep} setIsadress={setIsadress} />;
+            return (
+                <motion.div
+                    key="address"
+                    variants={stepVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="w-full"
+                >
+                    <ShippingAdressForm onContinue={goToNextStep} setIsadress={setIsadress} />
+                </motion.div>
+            );
 
         case CheckoutStep.PAYMENT_METHOD:
-            // PaymentMethod sets the state inside CheckoutContext
-            return <PaymentMethod onNext={goToNextStep} setIsadress={setIsadress} />;
+            return <PaymentMethod onNext={goToNextStep} setIsadress={setIsadress} goToPreviousStep={goToPreviousStep} />;
 
         default:
             return <div>Checkout Flow Error</div>;

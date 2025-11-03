@@ -18,20 +18,21 @@ const GetshippingAddress = () => {
     const [address, setAddress] = useState<Address | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [mounted, setMounted] = useState(false);
-
+    const fetchAddress = async () => {
+        const token = localStorage.getItem("token");
+        try {
+            const res = await axios.get("https://ajempire-backend.vercel.app/api/shipping-address", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setAddress(res.data.message);
+            console.log("Fetched address:", res.data.message);
+        } catch (err) {
+            console.error("Error fetching address:", err);
+        }
+    };
     useEffect(() => {
         setMounted(true);
-        const token = localStorage.getItem("token");
-        axios.get("https://ajempire-backend.vercel.app/api/shipping-address", {
-            headers: { Authorization: `Bearer ${token}` }
-
-        })
-
-            .then(res => {
-                setAddress(res.data.message)
-                console.log("Fetched address:", res.data.message);
-            })
-            .catch(err => console.error("Error fetching address:", err));
+        fetchAddress();
     }, []);
     const styleadress = "font-semibold opacity-75"
     // console.log("Fetched address:", address);
@@ -58,6 +59,7 @@ const GetshippingAddress = () => {
                                     <ShippingAdressForm
                                         setIsadress={setIsEditing} // lets form close itself
                                         existingAddress={address || undefined}  // prefill with current info
+                                        onAddressUpdated={fetchAddress}
                                     />
                                 </div>
                             )

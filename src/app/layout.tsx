@@ -5,8 +5,11 @@ import { Providers } from "./provider";
 import Navbar from "@/app/components/Navbar";
 import SearchBar from "./components/ui/SearchBar";
 import Footer from "./components/Footer";
-import { Toaster } from "@/components/ui/sonner";
+// import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from 'sonner';
+
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastContainer } from "react-toastify";
 import { CheckoutProvider } from "./context/CheckoutContext";
 
 const poppins = Poppins({
@@ -28,7 +31,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
-        <div className="flex flex-col min-h-screen">
+        <Toaster />
+        <div className="flex flex-col min-h-screen overflow-hidden">
           {/* Fixed Navbar */}
           <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
