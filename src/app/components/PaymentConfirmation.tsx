@@ -15,7 +15,9 @@ export default function PaymentConfirmation() {
     const [responseData, setResponseData] = useState<string>("");
     const [showModal, setShowModal] = useState(true);
 
+
     useEffect(() => {
+
         const verifyPayment = async () => {
             setIsLoading(true);
             const token = localStorage.getItem("token");
@@ -44,7 +46,6 @@ export default function PaymentConfirmation() {
                 if (response?.data?.message) {
                     toast.success("Payment verified successfully!");
                     setResponseData(response.data.message);
-                    console.log("Response Data:", response.data.message);
                 } else {
                     toast.error("Payment verification failed.");
                     router.push("/checkout");

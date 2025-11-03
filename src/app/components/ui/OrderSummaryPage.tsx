@@ -6,29 +6,40 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
+import { useCartStore } from "@/lib/stores/cart-store";
+
 
 export default function OrderSummaryPage() {
     const [isLoading, setIsLoading] = useState(true);
-
-
+    const { items, getSelectedItems } = useCartStore();
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 600);
         return () => clearTimeout(timer);
     }, []);
 
+    useEffect(() => {
+
+    })
+
     const initiateCheckout = async () => {
         setIsLoading(true);
         const token = localStorage.getItem("token");
         const paymentMethod = localStorage.getItem("paymentMethod");
-        console.log("Token from localStorage in OrderSummaryPage:", token, paymentMethod);
-
-        if (!token || !paymentMethod) {
-            toast("Missing token or payment method");
+        if (!token) {
+            toast.error("Please log in to continue", { position: 'top-right' });
+            setIsLoading(false);
             return;
         }
-        console.log({
-            paymentMethod: paymentMethod,
-        })
+        if (!paymentMethod) {
+            toast.error("Please select a payment method", { position: 'top-right' });
+            setIsLoading(false);
+            return;
+        }
+        if (!items || items.length === 0) {
+            toast.error("Your cart is empty", { position: "top-right" });
+            setIsLoading(false);
+            return;
+        }
         try {
             const response = await axios.post(
                 "https://ajempire-backend.vercel.app/api/checkout",
@@ -38,28 +49,25 @@ export default function OrderSummaryPage() {
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Content-Type": "application/json",
                     },
                 }
             );
             if (response?.data?.message?.url) {
                 window.location.href = response.data.message.url; // Redirect to payment URL
                 console.log("Payment URL set to:", response.data.message.url);
+            } else {
+                toast.error("Failed to initiate checkout. Please try again.", { position: 'top-right' });
             }
-            console.log("Checkout response:", response.data.message.url);
         } catch (error) {
-            console.error("Error initiating checkout:", error);
+            // console.error("Checkout error:", error.response?.data || error.message);
+            toast.error("An error occurred during checkout. Please try again.", { position: 'top-right' });
         } finally {
             setTimeout(() => {
                 setIsLoading(false);
             }, 800);
         }
     };
-
-
-
-
-
 
     return (
         <div className="w-full flex flex-col lg:flex-row items-start justify-between lg:px-[30px] lg:py-[30px] pt-6 px-4 font-poppins">

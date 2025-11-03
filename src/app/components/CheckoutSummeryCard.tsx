@@ -1,4 +1,5 @@
 "use client"
+import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
@@ -10,6 +11,9 @@ export default function CheckoutSummeryCard({ initiateCheckout }: CheckoutSummer
     const styleadress = "font-semibold opacity-75"
     const [mounted, setMounted] = useState(false);
     const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
+    const { orderSummary } = useCartStore();
+
+
 
     useEffect(() => {
         setMounted(true);
@@ -21,7 +25,7 @@ export default function CheckoutSummeryCard({ initiateCheckout }: CheckoutSummer
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 if (res?.data?.message) {
-                    console.log(res.data.message)
+
                     setTotals({
                         subtotal: res.data.message.total,
                         discount: res.data.message.discountedPrice,
@@ -36,7 +40,7 @@ export default function CheckoutSummeryCard({ initiateCheckout }: CheckoutSummer
         fetchTotal();
     }, []);
 
-    console.log("Totals:", totals);
+
 
     if (!mounted) {
         return (
@@ -62,20 +66,20 @@ export default function CheckoutSummeryCard({ initiateCheckout }: CheckoutSummer
                 <div className="flex flex-col gap-2 text-[14px]">
                     <div className="flex items-center justify-between">
                         <p className="text-[#999999]">Subtotal</p>
-                        <p className={`${styleadress}`}>₦{totals.subtotal}</p>
+                        <p className={`${styleadress}`}>₦{orderSummary().total}</p>
                     </div>
                     <div className="flex items-center justify-between">
                         <p className="text-[#999999]">Shipping Charge</p>
-                        <p className={`${styleadress}`}>₦0</p>
+                        <p className={`${styleadress}`}>₦{orderSummary().deliveryFee}</p>
                     </div>
                     <div className="flex items-center justify-between">
                         <p className="text-[#999999]">Discount</p>
-                        <p className={`${styleadress}`}>₦{totals.discount}</p>
+                        <p className={`${styleadress}`}>₦{orderSummary().discount}</p>
                     </div>
                     <hr />
                     <div className="flex items-center justify-between">
                         <p className={`${styleadress}`}>Total</p>
-                        <p className={`${styleadress}`}>₦{totals.total}</p>
+                        <p className={`${styleadress}`}>₦{orderSummary().finalTotal}</p>
                     </div>
                 </div>
             </div>
