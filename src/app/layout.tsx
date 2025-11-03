@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./provider";
+import Navbar from "@/app/components/Navbar";
+import SearchBar from "./components/ui/SearchBar";
+import Footer from "./components/Footer";
+// import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from 'sonner';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastContainer } from "react-toastify";
+import { CheckoutProvider } from "./context/CheckoutContext";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -24,10 +30,37 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${poppins.variable} antialiased`}>
+        <Toaster />
+        <div className="flex flex-col min-h-screen overflow-hidden">
+          {/* Fixed Navbar */}
+          <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
+            <Navbar />
+          </header>
+          <Providers>
+            {/* Main Content */}
+            <TooltipProvider>
+              <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
+                <CheckoutProvider>
+                  {children}
+                </CheckoutProvider>
+              </main>
+            </TooltipProvider>
+          </Providers>
+
+          {/* Footer Section */}
+          <footer>
+            {/* Mobile fixed nav */}
+            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
+              <Navbar />
+            </div>
+
+            {/* Desktop footer */}
+            <div className="hidden lg:block bg-brand_gradient_dark">
+              <Footer />
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );
