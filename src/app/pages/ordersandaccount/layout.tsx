@@ -54,8 +54,8 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="relative">
-  
-      <div className=" py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] h-auto bg-[#ffffff]">
+
+      <div className=" py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] lg:px-4 h-auto bg-[#ffffff]">
         <div>
           <div className="hidden mb-2 lg:flex">
             <BreadCrumb activeItem={activeItem} />

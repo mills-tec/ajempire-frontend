@@ -51,7 +51,7 @@ export default function RootLayout({
           {/* Footer Section */}
           <footer>
             {/* Mobile fixed nav */}
-            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
+            <div className="lg:hidden w-full fixed bottom-1 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
               <Navbar />
             </div>
 

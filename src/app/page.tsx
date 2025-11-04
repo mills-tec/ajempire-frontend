@@ -30,7 +30,7 @@ export default function Home() {
     <div className="w-full ">
       {isLoading && <Spinner />}
       {selectedItem && <CartPopup />}
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[30px] h-[90px] flex items-center">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center">
         <SearchBar />
       </div>
       <div className="mt-[5.8rem] lg:mt-0">
@@ -38,19 +38,19 @@ export default function Home() {
         {/* <p>products will be displayed here</p> */}
       </div>
 
-      <div className="relative px-4 lg:px-10 lg:bottom-[13rem]">
+      <div className="relative px-[20px] lg:px-10 lg:bottom-[13rem]">
         <div className="relative mx-auto rounded-xl lg:rounded-3xl overflow-clip mt-6 ">
           <Image
             src={bannerImg}
             alt="banner image"
             // className="absolute object-cover"
             height={379}
-            width={1352}
+            width={1440}
           // fill
           />
         </div>
 
-        <div className="grid grid-cols-2 lg:flex justify-start flex-wrap gap-4 lg:gap-6 mx-auto mt-8">
+        <div className="grid grid-cols-2 lg:flex justify-start flex-wrap gap-4  lg:gap-6 mx-auto mt-8">
           {data?.message &&
             data.message.products.map((product) => (
               <Tooltip key={product._id}>
@@ -87,7 +87,7 @@ export default function Home() {
             </svg>
           </button>
         )}
-        
+
       </div>
     </div>
   );

@@ -25,10 +25,11 @@ export default function CartPage() {
     console.log("Checkout button clicked");
     const token = localStorage.getItem("token");
     const seletedItem = items.filter((item) => item.selected);
-    setIsLoading(true);
+
     if (!token) {
       toast.error("Please log in to checkout", { position: 'top-right' });
       console.log("token", token)
+      setIsLoading(false);
       setTimeout(() => {
         setSingin(true);
       }, 500);
@@ -44,6 +45,7 @@ export default function CartPage() {
     if (token && seletedItem.length > 0 && items.length > 0) {
       setIsAdress(true);
       setSingin(false);
+      setIsLoading(true);
     }
     setTimeout(() => {
       setIsLoading(false);
@@ -241,7 +243,7 @@ export default function CartPage() {
                   ₦{orderSummary().discount} discount applied
                 </p>
               </div>
-              <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white">
+              <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white" onClick={checkoutHandler}>
                 Checkout
               </button>
             </div>

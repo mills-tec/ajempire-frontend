@@ -163,7 +163,7 @@ export default function ShippingAdressForm({ setIsadress, existingAddress, onCon
                     <Spinner />
                 )
             }
-            <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[600px] lg:px-10 px-5 py-8 overflow-y-scroll">
+            <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[700px] lg:px-10 px-5 py-8 overflow-y-scroll">
                 <p className="font-semibold text-[15px] opacity-80 text-center mb-5">Shipping Address</p>
                 <div className="lg:hidden flex items-center justify-between gap-1 mb-5">
                     <div className="flex items-center gap-1">
