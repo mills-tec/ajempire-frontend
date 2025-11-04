@@ -243,7 +243,7 @@ export default function CartPage() {
                   ₦{orderSummary().discount} discount applied
                 </p>
               </div>
-              <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white">
+              <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white" onClick={checkoutHandler}>
                 Checkout
               </button>
             </div>

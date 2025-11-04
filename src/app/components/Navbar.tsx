@@ -1,12 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
 
 const Navbar = () => {
   const [showIntro, setShowIntro] = useState(false);
-  const [isLoggedIn, _setIsLoggedIn] = useState(true);
+  const [isLoggedIn, _setIsLoggedIn] = useState(false);
   const pathname = usePathname();
   const isActive = (path: string) => {
     if (path === "/") {
@@ -16,6 +16,14 @@ const Navbar = () => {
       ? "text-[#FF008C] opacity-100"
       : "opacity-70";
   };
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      _setIsLoggedIn(true);
+    } else {
+      _setIsLoggedIn(false);
+    }
+  }, []);
 
   return (
     <div className=" w-full  text-[14px] font-poppins">
