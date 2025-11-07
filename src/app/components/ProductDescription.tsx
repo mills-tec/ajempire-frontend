@@ -6,6 +6,7 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
+import { getBearerToken } from "@/lib/api";
 
 export default function ProductDescription({
   product_data,
@@ -13,7 +14,7 @@ export default function ProductDescription({
   product_data: ProductResponse;
 }) {
   // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false)
+  const [isAdress, setIsAdress] = useState(false);
 
   let { product, shippingFees } = product_data.message;
   const {
@@ -26,17 +27,16 @@ export default function ProductDescription({
     setQuantity: setCartItemQty,
   } = useCartStore();
 
-
   const checkoutHandler = () => {
-    const token = localStorage.getItem("token");
+    const token = getBearerToken();
     console.log("token:", token);
     if (!token) {
       toast("Please log in to checkout");
-    } {
-      setIsAdress(true)
     }
-
-  }
+    {
+      setIsAdress(true);
+    }
+  };
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
@@ -140,8 +140,9 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-              }`}</p>
+            <p className="text-sm text-black/60">{`${
+              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+            }`}</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -478,12 +479,13 @@ export default function ProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+        <button
+          className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full"
+          onClick={checkoutHandler}
+        >
           Check Out
         </button>
-        {
-          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
-        }
+        {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
       </div>
     </div>
   );

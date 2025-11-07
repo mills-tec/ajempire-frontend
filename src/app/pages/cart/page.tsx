@@ -4,6 +4,7 @@ import CartCard from "@/app/components/CartCard";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import Spinner from "@/app/components/Spinner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
@@ -29,7 +30,7 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(false);
   const checkoutHandler = () => {
     console.log("Checkout button clicked");
-    const token = localStorage.getItem("token");
+    const token = getBearerToken();
     const seletedItem = items.filter((item) => item.selected);
 
     if (!token) {

@@ -4,11 +4,14 @@ import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { IOrder, Review } from "@/lib/types";
+import { getBearerToken } from "@/lib/api";
 let config = {};
-if (localStorage.getItem("token")) {
+
+const token = getBearerToken();
+if (token) {
   config = {
     headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
+      Authorization: `Bearer ${token}`,
     },
   };
 }
@@ -17,7 +20,7 @@ export const useOrders = () => {
   const [postLoading, setPostLoading] = useState(false);
   const config = {
     headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
+      Authorization: `Bearer ${token}`,
     },
   };
   const getAllOrders = async () => {

@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
