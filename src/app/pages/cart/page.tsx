@@ -4,42 +4,51 @@ import CartCard from "@/app/components/CartCard";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import Spinner from "@/app/components/Spinner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function CartPage() {
-
-  const { items, deselectAllCartItems, selectAllCartItems, orderSummary } =
-    useCartStore();
-  console.log("items: ", items);
+  const {
+    items,
+    deselectAllCartItems,
+    selectAllCartItems,
+    orderSummary,
+    selectedItem,
+    syncQueue,
+  } = useCartStore();
+  console.log("items: ", items, "syncQueue: ", syncQueue);
   const [expand, setExpand] = useState(false);
   const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const checkoutHandler = () => {
     console.log("Checkout button clicked");
-    const token = localStorage.getItem("token");
+    const token = getBearerToken();
     const seletedItem = items.filter((item) => item.selected);
 
     if (!token) {
-      toast.error("Please log in to checkout", { position: 'top-right' });
-      console.log("token", token)
+      toast.error("Please log in to checkout", { position: "top-right" });
+      console.log("token", token);
       setIsLoading(false);
       setTimeout(() => {
         setSingin(true);
       }, 500);
     }
     if (items.length === 0) {
-      toast.error("Your cart is empty", { position: 'top-right' });
+      toast.error("Your cart is empty", { position: "top-right" });
       return;
     }
     if (seletedItem.length === 0) {
-      toast.error("Please select at least one item to checkout", { position: 'top-right' });
+      toast.error("Please select at least one item to checkout", {
+        position: "top-right",
+      });
       return;
     }
     if (token && seletedItem.length > 0 && items.length > 0) {
@@ -50,18 +59,44 @@ export default function CartPage() {
     setTimeout(() => {
       setIsLoading(false);
     }, 300);
-  }
+  };
 
-  console.log("signin", signIn)
+  console.log("signin", signIn);
 
+  if (!items || items.length == 0)
+    return (
+      <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
+        <svg
+          width="227"
+          height="265"
+          viewBox="0 0 227 265"
+          className="mx-auto"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <ellipse cx="113.5" cy="117" rx="113.5" ry="117" fill="#D9D9D9" />
+          <rect x="55" y="58" width="118" height="118" rx="59" fill="white" />
+          <path
+            d="M126.083 131.501C123.4 131.501 121.249 133.651 121.249 136.334C121.249 137.616 121.759 138.845 122.665 139.752C123.571 140.658 124.801 141.167 126.083 141.167C127.365 141.167 128.594 140.658 129.5 139.752C130.407 138.845 130.916 137.616 130.916 136.334C130.916 135.052 130.407 133.823 129.5 132.916C128.594 132.01 127.365 131.501 126.083 131.501ZM87.416 92.834V97.6673H92.2493L100.949 116.01L97.6627 121.931C97.3002 122.607 97.0827 123.405 97.0827 124.251C97.0827 125.533 97.5919 126.762 98.4983 127.668C99.4048 128.575 100.634 129.084 101.916 129.084H130.916V124.251H102.931C102.771 124.251 102.617 124.187 102.504 124.074C102.391 123.96 102.327 123.807 102.327 123.646C102.327 123.526 102.351 123.429 102.399 123.356L104.574 119.417H122.579C124.391 119.417 125.986 118.402 126.808 116.928L135.459 101.292C135.629 100.906 135.749 100.495 135.749 100.084C135.749 99.443 135.495 98.8284 135.042 98.3751C134.588 97.9219 133.974 97.6673 133.333 97.6673H97.5902L95.3185 92.834M101.916 131.501C99.2335 131.501 97.0827 133.651 97.0827 136.334C97.0827 137.616 97.5919 138.845 98.4983 139.752C99.4048 140.658 100.634 141.167 101.916 141.167C103.198 141.167 104.427 140.658 105.334 139.752C106.24 138.845 106.749 137.616 106.749 136.334C106.749 135.052 106.24 133.823 105.334 132.916C104.427 132.01 103.198 131.501 101.916 131.501Z"
+            fill="#AAAAAA"
+          />
+        </svg>
+        <div className="space-y-2">
+          <p className="italic font-medium text-black/60">your cart is empty</p>
+          <div>
+            <Link href={"/"}>
+              <button className="flex gap-1 items-center w-[15rem] max-w-[80%] mx-auto justify-center py-2 rounded-full bg-brand_pink text-white">
+                Start Shopping
+              </button>
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9">
-      {
-        isLoading && <Spinner />
-      }
-      {
-        signIn && <AuthWrapper onClose={() => setSingin(false)} />
-      }
+      {isLoading && <Spinner />}
+      {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
       <div className="w-full lg:px-0 space-y-6">
         <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none">
           <div className="gap-1 flex items-center px-4 lg:px-0">
@@ -100,156 +135,162 @@ export default function CartPage() {
           <CartCard item={item} key={i} />
         ))}
       </div>
-      <div className="lg:h-{calc(100vh-8rem)}">
-        <div
-          className={clsx(
-            "fixed lg:sticky bottom-[5rem] lg:bottom-0 w-screen p-4 lg:top-[8rem] bg-white rounded-t-2xl border-t border-black/25 lg:border-none lg:p-0 lg:bg-transparent lg:rounded-none lg:w-min",
-            expand ? "block" : "hidden lg:block"
-          )}
-        >
-          <svg
-            width="24"
-            height="12"
-            viewBox="0 0 24 12"
-            fill="none"
+      {!selectedItem && (
+        <div className="lg:h-{calc(100vh-8rem)}">
+          <div
             className={clsx(
-              "flex justify-self-end mb-1 lg:hidden",
-              expand ? "rotate-180" : "-rotate-180"
+              "fixed lg:sticky bottom-[5rem] lg:bottom-0 w-screen p-4 lg:top-[8rem] bg-white rounded-t-2xl border-t border-black/25 lg:border-none lg:p-0 lg:bg-transparent lg:rounded-none lg:w-min",
+              expand ? "block" : "hidden lg:block"
             )}
-            onClick={() => setExpand(!expand)}
-            xmlns="http://www.w3.org/2000/svg"
           >
-            <g clip-path="url(#clip0_1335_19956)">
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
-                fill="black"
-              />
-            </g>
-            <defs>
-              <clipPath id="clip0_1335_19956">
-                <rect
-                  width="12"
-                  height="24"
-                  fill="white"
-                  transform="matrix(0 -1 1 0 0 12)"
+            <svg
+              width="24"
+              height="12"
+              viewBox="0 0 24 12"
+              fill="none"
+              className={clsx(
+                "flex justify-self-end mb-1 lg:hidden",
+                expand ? "rotate-180" : "-rotate-180"
+              )}
+              onClick={() => setExpand(!expand)}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g clip-path="url(#clip0_1335_19956)">
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
+                  fill="black"
                 />
-              </clipPath>
-            </defs>
-          </svg>
-          <p className="text-sm text-center pb-4">
-            <span className="font-medium text-base">Order Summary</span>(4
-            items) selected
-          </p>
-          <div className="flex gap-2">
-            {items
-              .filter((item) => item.selected == true)
-              .map((item, i) => (
-                <div key={i}>
-                  <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
-                    <Image
-                      src={item.cover_image}
-                      alt="product image"
-                      fill
-                      className="transition-transform duration-300 ease-in-out group-hover:scale-110"
-                    />
+              </g>
+              <defs>
+                <clipPath id="clip0_1335_19956">
+                  <rect
+                    width="12"
+                    height="24"
+                    fill="white"
+                    transform="matrix(0 -1 1 0 0 12)"
+                  />
+                </clipPath>
+              </defs>
+            </svg>
+            <p className="text-sm text-center pb-4">
+              <span className="font-medium text-base">Order Summary</span>(4
+              items) selected
+            </p>
+            <div className="flex gap-2">
+              {items
+                .filter((item) => item.selected == true)
+                .map((item, i) => (
+                  <div key={i}>
+                    <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
+                      <Image
+                        src={item.cover_image}
+                        alt="product image"
+                        fill
+                        className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                    <p className="text-xs text-black/75 mt-1">
+                      ₦{calcDiscountPrice(item.price, item.discountedPrice)}{" "}
+                      <span className="text-brand_pink">x{item.quantity}</span>
+                    </p>
                   </div>
-                  <p className="text-xs text-black/75 mt-1">
-                    ₦{calcDiscountPrice(item.price, item.discountedPrice)}{" "}
-                    <span className="text-brand_pink">x{item.quantity}</span>
+                ))}
+            </div>
+            <hr className="mt-4" />
+            <div className="text-sm space-y-1 py-1">
+              <div className="flex justify-between items-center">
+                <p>Item(s) total:</p>
+                <p className="font-medium">₦{orderSummary().total}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p>Item(s) discount:</p>
+                <p className="text-brand_pink">- ₦{orderSummary().discount}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p>Coupon applied</p>
+                <p className="text-brand_pink">-₦{orderSummary().coupon}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p>Delivery fee:</p>
+                <p className="font-medium">₦{orderSummary().deliveryFee}</p>
+              </div>
+            </div>
+            <hr />
+            <div className="mt-2">
+              <div className="text-xs flex justify-between text-black/60">
+                <div></div>
+                <p>Total payable</p>
+              </div>
+              <div className="flex justify-between text-sm items-center">
+                <p>Total:</p>
+                <p className="font-semibold">₦{orderSummary().finalTotal}</p>
+              </div>
+            </div>
+            <button
+              className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-4 lg:mb-24 py-2 rounded-full bg-brand_pink text-white"
+              onClick={checkoutHandler}
+            >
+              Checkout
+            </button>
+          </div>
+          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+          <div
+            className={clsx(
+              "fixed bottom-[5rem] w-screen p-4 z-50 h-min border-t border-black/25 lg:border-none bg-white rounded-t-2xl",
+              !expand ? "block lg:hidden" : "hidden lg:hidden"
+            )}
+          >
+            <svg
+              width="24"
+              height="12"
+              viewBox="0 0 24 12"
+              fill="none"
+              className="flex justify-self-end mb-1"
+              onClick={() => setExpand(!expand)}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g clip-path="url(#clip0_1335_19956)">
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
+                  fill="black"
+                />
+              </g>
+              <defs>
+                <clipPath id="clip0_1335_19956">
+                  <rect
+                    width="12"
+                    height="24"
+                    fill="white"
+                    transform="matrix(0 -1 1 0 0 12)"
+                  />
+                </clipPath>
+              </defs>
+            </svg>
+
+            <div>
+              <p className="font-medium text-sm">(4 items) selected</p>
+              <div className="flex justify-between items-end">
+                <div>
+                  <h3 className="font-medium">₦{orderSummary().total}</h3>
+                  <p className="text-xs text-brand_pink">
+                    ₦{orderSummary().discount} discount applied
                   </p>
                 </div>
-              ))}
-          </div>
-          <hr className="mt-4" />
-          <div className="text-sm space-y-1 py-1">
-            <div className="flex justify-between items-center">
-              <p>Item(s) total:</p>
-              <p className="font-medium">₦{orderSummary().total}</p>
-            </div>
-            <div className="flex justify-between items-center">
-              <p>Item(s) discount:</p>
-              <p className="text-brand_pink">- ₦{orderSummary().discount}</p>
-            </div>
-            <div className="flex justify-between items-center">
-              <p>Coupon applied</p>
-              <p className="text-brand_pink">-₦{orderSummary().coupon}</p>
-            </div>
-            <div className="flex justify-between items-center">
-              <p>Delivery fee:</p>
-              <p className="font-medium">₦{orderSummary().deliveryFee}</p>
-            </div>
-          </div>
-          <hr />
-          <div className="mt-2">
-            <div className="text-xs flex justify-between text-black/60">
-              <div></div>
-              <p>Total payable</p>
-            </div>
-            <div className="flex justify-between text-sm items-center">
-              <p>Total:</p>
-              <p className="font-semibold">₦{orderSummary().finalTotal}</p>
-            </div>
-          </div>
-          <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-4 lg:mb-24 py-2 rounded-full bg-brand_pink text-white" onClick={checkoutHandler}>
-            Checkout
-          </button>
-        </div>
-        {
-          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
-        }
-        <div
-          className={clsx(
-            "fixed bottom-[5rem] w-screen p-4 z-50 h-min border-t border-black/25 lg:border-none bg-white rounded-t-2xl",
-            !expand ? "block lg:hidden" : "hidden lg:hidden"
-          )}
-        >
-          <svg
-            width="24"
-            height="12"
-            viewBox="0 0 24 12"
-            fill="none"
-            className="flex justify-self-end mb-1"
-            onClick={() => setExpand(!expand)}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <g clip-path="url(#clip0_1335_19956)">
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
-                fill="black"
-              />
-            </g>
-            <defs>
-              <clipPath id="clip0_1335_19956">
-                <rect
-                  width="12"
-                  height="24"
-                  fill="white"
-                  transform="matrix(0 -1 1 0 0 12)"
-                />
-              </clipPath>
-            </defs>
-          </svg>
-
-          <div>
-            <p className="font-medium text-sm">(4 items) selected</p>
-            <div className="flex justify-between items-end">
-              <div>
-                <h3 className="font-medium">₦{orderSummary().total}</h3>
-                <p className="text-xs text-brand_pink">
-                  ₦{orderSummary().discount} discount applied
-                </p>
+                <button
+                  className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white"
+                  onClick={checkoutHandler}
+                >
+                  Checkout
+                </button>
               </div>
-              <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white">
-                Checkout
-              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
+import { getBearerToken } from "@/lib/api";
 
 export default function ProductDescription({
   product_data,
@@ -13,7 +14,7 @@ export default function ProductDescription({
   product_data: ProductResponse;
 }) {
   // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false)
+  const [isAdress, setIsAdress] = useState(false);
 
   let { product, shippingFees } = product_data.message;
   const {
@@ -22,24 +23,28 @@ export default function ProductDescription({
     removeItem,
     decreaseQuantity,
     increaseQuantity,
+    setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
   } = useCartStore();
 
-
   const checkoutHandler = () => {
-    const token = localStorage.getItem("token");
+    const token = getBearerToken();
     console.log("token:", token);
     if (!token) {
       toast("Please log in to checkout");
-    } {
-      setIsAdress(true)
     }
-
-  }
+    {
+      setIsAdress(true);
+    }
+  };
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
     item ? (item.quantity === 0 ? 1 : item.quantity) : 1
+  );
+
+  const [selectedVariants, setSelectedVariants] = useState(
+    () => item?.selectedVariants ?? null
   );
 
   useEffect(() => {
@@ -65,6 +70,25 @@ export default function ProductDescription({
       setQuantity(item.quantity === 0 ? 1 : item.quantity);
     }
   }, [item?.quantity]);
+
+  const variant_set = new Set<string>();
+
+  for (const variant of product.variants) {
+    variant_set.add(variant.name);
+  }
+
+  function getAllVariantItems(variant_name: string) {
+    return product.variants.length > 0
+      ? product.variants.filter(
+          (item) => item.name == variant_name && item.stock > 0
+        )
+      : [];
+  }
+
+  useEffect(() => {
+    if (!selectedVariants || selectedVariants.length === 0) return;
+    setCartSelectedVariants(product._id, selectedVariants);
+  }, [selectedVariants]);
 
   let size_variant =
     product.variants.length > 0 &&
@@ -104,6 +128,8 @@ export default function ProductDescription({
       />
     </svg>
   );
+
+  console.log("selectedVariants", selectedVariants);
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
@@ -114,8 +140,9 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-              }`}</p>
+            <p className="text-sm text-black/60">{`${
+              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+            }`}</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -178,7 +205,7 @@ export default function ProductDescription({
       </div>
 
       <div className="space-y-2 hidden lg:block">
-        <h4 className="text-xs text-brand_gray_dark">Color: </h4>
+        <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
           {product.images.length > 0 ? (
             product.images.map((image) => (
@@ -200,7 +227,7 @@ export default function ProductDescription({
       </div>
 
       <div className="lg:flex gap-6">
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <p className="text-xs text-brand_gray_dark">
             Select Property (Color):
           </p>
@@ -241,7 +268,97 @@ export default function ProductDescription({
               )}
             </div>
           </div>
-        </div>
+        </div> */}
+        {[...variant_set].map((variant) => (
+          <div className="space-y-2  mt-4 lg:mt-0">
+            <p className="text-xs text-brand_gray_dark capitalize">
+              Select Property ({variant}):
+            </p>
+            <div className="pt-1 lg:pt-0">
+              <div className="flex gap-2">
+                {getAllVariantItems(variant).map((variantItem, idx) => {
+                  if (
+                    typeof variant === "string" &&
+                    variant.toLowerCase() === "size"
+                  ) {
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSelectedVariants((prev) => {
+                            // If prev is null, start with empty array
+                            const selectedArr = prev ?? [];
+                            // Check if item is already in arr by name+value
+                            const exists = selectedArr.some(
+                              (v) =>
+                                v.name === variantItem.name &&
+                                v.value === variantItem.value
+                            );
+                            if (exists) {
+                              return selectedArr.filter(
+                                (v) =>
+                                  !(
+                                    v.name === variantItem.name &&
+                                    v.value === variantItem.value
+                                  )
+                              );
+                            } else {
+                              return [...selectedArr, variantItem];
+                            }
+                          });
+                        }}
+                        className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]"
+                      >
+                        {variantItem.value?.toUpperCase?.() ?? ""}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSelectedVariants((prev) => {
+                            // If prev is null, start with empty array
+                            const selectedArr = prev ?? [];
+                            // Check if item is already in arr by name+value
+                            const exists = selectedArr.some(
+                              (v) =>
+                                v.name === variantItem.name &&
+                                v.value === variantItem.value
+                            );
+                            if (exists) {
+                              return selectedArr.filter(
+                                (v) =>
+                                  !(
+                                    v.name === variantItem.name &&
+                                    v.value === variantItem.value
+                                  )
+                              );
+                            } else {
+                              return [...selectedArr, variantItem];
+                            }
+                          });
+                        }}
+                        className={`size-[2rem] relative rounded border border-[#BFBFBF]`}
+                        style={{
+                          background: variantItem.value
+                            ? `${variantItem.value}`
+                            : undefined,
+                        }}
+                      >
+                        {selectedVariants?.some(
+                          (v) => v._id === variantItem._id
+                        ) && (
+                          <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                        )}
+                      </div>
+                    );
+                  }
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="p-6 border rounded-lg space-y-2">
@@ -312,7 +429,14 @@ export default function ProductDescription({
         <div className="flex gap-4 items-center">
           {!item ? (
             <button
-              onClick={() => addItem({ ...product, quantity, selected: false })}
+              onClick={() =>
+                addItem({
+                  ...product,
+                  quantity,
+                  selected: false,
+                  selectedVariants: selectedVariants ?? [],
+                })
+              }
               className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]"
             >
               Add to Cart
@@ -355,12 +479,13 @@ export default function ProductDescription({
             </svg>
           </button>
         </div>
-        <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+        <button
+          className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full"
+          onClick={checkoutHandler}
+        >
           Check Out
         </button>
-        {
-          isAdress && <CheckoutRequirement setIsadress={setIsAdress} />
-        }
+        {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
       </div>
     </div>
   );

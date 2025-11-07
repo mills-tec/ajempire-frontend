@@ -11,6 +11,7 @@ import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { loginBackend } from "@/lib/api";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -33,6 +34,8 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
     {}
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  const { setIsLoggedIn, setUser } = useAuthStore();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -58,7 +61,12 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
       const res = await loginBackend(email, password);
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
       if (res?.message) {
-        localStorage.setItem("token", res.message);
+        res.message.token ? setIsLoggedIn(true) : setIsLoggedIn(false);
+        setUser({ email: res.message.user.email, name: "" });
+        localStorage.setItem(
+          "ajempire_signin_user",
+          JSON.stringify(res.message)
+        );
       }
       console.log("res: ", res);
       setErrors({});

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function ProductCard({
   //  setShowCartPopup,
@@ -13,6 +14,8 @@ export default function ProductCard({
   // setShowCartPopup: React.Dispatch<React.SetStateAction<boolean>>;
   product: Product;
 }) {
+  const router = useRouter();
+
   // const [rating, setRating] = React.useState(3);
   const setSelectedItem = useCartStore((state) => state.setSelectedItem);
   const { getItem } = useCartStore();
@@ -49,7 +52,10 @@ export default function ProductCard({
     </svg>
   );
   return (
-    <section className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-[11rem]">
+    <section
+      onClick={() => router.push(`product/${product._id}`)}
+      className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full"
+    >
       <Link href={"product/" + product._id}>
         <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip">
           <Image
@@ -61,9 +67,7 @@ export default function ProductCard({
         </div>
       </Link>
       <div className="space-y-1">
-        <Link href={"product/2"}>
-          <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
-        </Link>
+        <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
         <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm">
           Seller Tag
         </p>
@@ -97,7 +101,7 @@ export default function ProductCard({
             <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
               N{calcDiscountPrice(product.price, product.discountedPrice)}
             </h3>
-            <p className="text-[10px] lg:text-xs text-black/60">1k+sold</p>
+            <p className="text-[7px] lg:text-xs text-black/60">1k+sold</p>
           </div>
           <div className="flex lg:gap-2 gap-1 items-center">
             <svg
@@ -124,8 +128,9 @@ export default function ProductCard({
                 height="30"
                 viewBox="0 0 44 30"
                 fill="none"
-                onClick={() => {
+                onClick={(e) => {
                   // addItem({ ...product, quantity: 1 });
+                  e.stopPropagation();
                   setSelectedItem(product);
                 }}
                 className="cursor-pointer h-5"

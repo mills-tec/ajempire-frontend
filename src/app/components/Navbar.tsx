@@ -3,10 +3,11 @@ import { useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const Navbar = () => {
   const [showIntro, setShowIntro] = useState(false);
-  const [isLoggedIn, _setIsLoggedIn] = useState(true);
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
   const isActive = (path: string) => {
     if (path === "/") {
@@ -17,8 +18,10 @@ const Navbar = () => {
       : "opacity-70";
   };
 
+  const { isLoggedIn } = useAuthStore();
+
   return (
-    <div className=" w-full  text-[14px] font-poppins">
+    <div className=" w-full text-[14px] font-poppins">
       <div className="hidden lg:flex">
         <NavDesktop
           isLoggedIn={isLoggedIn}

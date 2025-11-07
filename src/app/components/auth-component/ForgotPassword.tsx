@@ -64,7 +64,7 @@ export default function ForgotPassword({
       const res = await fogortPassword(email);
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
       if (res?.message) {
-        localStorage.setItem("ajempire_signup_email", email);
+        localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
       }
       console.log("res: ", res);
       setErrors({});

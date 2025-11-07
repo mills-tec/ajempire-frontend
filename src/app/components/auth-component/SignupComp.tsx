@@ -63,7 +63,7 @@ export default function SignupComp({ onClose, setScreen }: SignupCompProps) {
     try {
       const { email, password } = form;
       const res = await signupBackend(email, password);
-      localStorage.setItem("ajempire_signup_email", email);
+      localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
       console.log("res: ", res);
       setErrors({});
       toast("Form submitted successfully!");

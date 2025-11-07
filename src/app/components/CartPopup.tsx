@@ -36,7 +36,7 @@ export default function CartPopup() {
       }}
     >
       <div
-        className="w-full shadow-2xl relative lg:w-[40rem] lg:pb-0 z-50 rounded-t-2xl bg-white h-min max-h-[36rem] lg:max-h-[40rem] lg:rounded-2xl lg:top-20 overflow-clip overscroll-contain overflow-y-auto"
+        className="w-full shadow-2xl relative lg:w-[40rem] lg:pb-0 z-50 rounded-t-2xl bg-white h-min max-h-[70vh] lg:max-h-[80vh] lg:rounded-2xl lg:top-[10%] overflow-clip overscroll-contain overflow-y-auto"
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
@@ -84,6 +84,7 @@ export default function CartPopup() {
               onClick={() => {
                 clearSelectedItem();
               }}
+              className="cursor-pointer"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
@@ -127,7 +128,12 @@ export default function CartPopup() {
             </div>
             <div className=" ">
               <CartPopupProductDescription
-                item={{ ...selectedItem, quantity: 0, selected: false }}
+                item={{
+                  ...selectedItem,
+                  quantity: 0,
+                  selected: false,
+                  selectedVariants: [],
+                }}
               />
             </div>
           </div>
