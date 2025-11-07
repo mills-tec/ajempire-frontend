@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const Navbar = () => {
   const [showIntro, setShowIntro] = useState(false);
-  const [isLoggedIn, _setIsLoggedIn] = useState(false);
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
   const isActive = (path: string) => {
     if (path === "/") {
@@ -16,17 +17,11 @@ const Navbar = () => {
       ? "text-[#FF008C] opacity-100"
       : "opacity-70";
   };
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      _setIsLoggedIn(true);
-    } else {
-      _setIsLoggedIn(false);
-    }
-  }, []);
+
+  const { isLoggedIn } = useAuthStore();
 
   return (
-    <div className=" w-full  text-[14px] font-poppins">
+    <div className=" w-full text-[14px] font-poppins">
       <div className="hidden lg:flex">
         <NavDesktop
           isLoggedIn={isLoggedIn}

@@ -1,10 +1,11 @@
 "use client";
 import { Progress } from "@/components/ui/progress";
 import { Product } from "@/lib/types";
+import { getRatingStats } from "@/lib/utils";
 import React from "react";
 
 export default function ProductReview({ product }: { product: Product }) {
-  const [rating, setRating] = React.useState(3);
+  const ratingStats = getRatingStats(product.reviews);
 
   const filledStar = (
     <svg
@@ -62,13 +63,7 @@ export default function ProductReview({ product }: { product: Product }) {
           <span className="text-lg text-brand_gray">/5</span>
         </h1>
         <div className="w-full">
-          {[
-            { lvl: 5, progress: 100 },
-            { lvl: 4, progress: 40 },
-            { lvl: 3, progress: 10 },
-            { lvl: 2, progress: 3 },
-            { lvl: 1, progress: 0 },
-          ].map((val, i) => (
+          {[1, 2, 3, 4, 5].map((val, i) => (
             <div key={i} className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <svg
@@ -83,10 +78,17 @@ export default function ProductReview({ product }: { product: Product }) {
                     fill="#FEBC2F"
                   />
                 </svg>
-                <p>{val.lvl}</p>
+                <p>{val}</p>
               </div>
 
-              <Progress value={val.progress} className="!h-1" />
+              <Progress
+                value={
+                  ratingStats.normalized[
+                    val as keyof typeof ratingStats.normalized
+                  ]
+                }
+                className="!h-1"
+              />
             </div>
           ))}
         </div>
