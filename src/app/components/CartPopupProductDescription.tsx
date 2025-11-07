@@ -13,14 +13,18 @@ export default function CartPopupProductDescription({
     addItem,
     getItem,
     removeItem,
-    increaseQuantity,
-    decreaseQuantity,
     setQuantity: setCartItemQty,
+    setSelectedVariants: setCartSelectedVariants,
+    items,
   } = useCartStore();
   const cartItem = getItem(item._id);
 
   const [quantity, setQuantity] = useState(
     cartItem ? (cartItem.quantity == 0 ? 1 : cartItem.quantity) : 1
+  );
+
+  const [selectedVariants, setSelectedVariants] = useState(
+    () => cartItem?.selectedVariants ?? null
   );
 
   useEffect(() => {
@@ -30,6 +34,31 @@ export default function CartPopupProductDescription({
     setCartItemQty(item._id, quantity);
   }, [quantity]);
 
+  const variant_set = new Set<string>();
+
+  for (const variant of item.variants) {
+    variant_set.add(variant.name);
+  }
+
+  function getAllVariantItems(variant_name: string) {
+    return item.variants.length > 0
+      ? item.variants.filter(
+          (variant) => variant.name == variant_name && variant.stock > 0
+        )
+      : [];
+  }
+
+  useEffect(() => {
+    if (!selectedVariants || selectedVariants.length === 0) return;
+    setCartSelectedVariants(item._id, selectedVariants);
+  }, [selectedVariants]);
+
+  console.log(
+    "selectedVariants",
+    selectedVariants,
+    item?.selectedVariants,
+    items
+  );
   let size_variant =
     item.variants.length > 0 &&
     item.variants.filter((item) => item.name == "size" && item.stock > 0);
@@ -136,48 +165,96 @@ export default function CartPopupProductDescription({
 
       <div className="flex justify-between px-4">
         <div className="flex gap-6">
-          <div className="space-y-2">
-            <p className="text-xs text-brand_gray_dark">
-              Select Property (Color):
-            </p>
-            <div>
-              <div className="flex gap-2">
-                {color_variant && color_variant.length > 0 ? (
-                  color_variant.map((variant) => (
-                    <div
-                      className={`size-[2rem] relative rounded border border-[#BFBFBF] bg-[${variant.value}]`}
-                    >
-                      <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-400 text-xs">
-                    This data is currently unavailable
-                  </p>
-                )}
+          {[...variant_set].map((variant) => (
+            <div className="space-y-2  mt-4 lg:mt-0">
+              <p className="text-xs text-brand_gray_dark capitalize">
+                Select Property ({variant}):
+              </p>
+              <div className="pt-1 lg:pt-0">
+                <div className="flex gap-2">
+                  {getAllVariantItems(variant).map((variantItem, idx) => {
+                    if (
+                      typeof variant === "string" &&
+                      variant.toLowerCase() === "size"
+                    ) {
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedVariants((prev) => {
+                              // If prev is null, start with empty array
+                              const selectedArr = prev ?? [];
+                              // Check if item is already in arr by name+value
+                              const exists = selectedArr.some(
+                                (v) =>
+                                  v.name === variantItem.name &&
+                                  v.value === variantItem.value
+                              );
+                              if (exists) {
+                                return selectedArr.filter(
+                                  (v) =>
+                                    !(
+                                      v.name === variantItem.name &&
+                                      v.value === variantItem.value
+                                    )
+                                );
+                              } else {
+                                return [...selectedArr, variantItem];
+                              }
+                            });
+                          }}
+                          className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]"
+                        >
+                          {variantItem.value?.toUpperCase?.() ?? ""}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedVariants((prev) => {
+                              // If prev is null, start with empty array
+                              const selectedArr = prev ?? [];
+                              // Check if item is already in arr by name+value
+                              const exists = selectedArr.some(
+                                (v) =>
+                                  v.name === variantItem.name &&
+                                  v.value === variantItem.value
+                              );
+                              if (exists) {
+                                return selectedArr.filter(
+                                  (v) =>
+                                    !(
+                                      v.name === variantItem.name &&
+                                      v.value === variantItem.value
+                                    )
+                                );
+                              } else {
+                                return [...selectedArr, variantItem];
+                              }
+                            });
+                          }}
+                          className={`size-[2rem] relative rounded border border-[#BFBFBF]`}
+                          style={{
+                            background: variantItem.value
+                              ? `${variantItem.value}`
+                              : undefined,
+                          }}
+                        >
+                          {selectedVariants?.some(
+                            (v) => v._id === variantItem._id
+                          ) && (
+                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                          )}
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="space-y-2 lg:mt-0">
-            <p className="text-xs text-brand_gray_dark">
-              Select Property (Size):
-            </p>
-            <div className="pt-1">
-              <div className="flex flex-wrap gap-2">
-                {size_variant && size_variant.length > 0 ? (
-                  size_variant.map((variant) => (
-                    <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                      {variant.value.toUpperCase()}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-400 text-xs">
-                    This data is currently unavailable
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -185,7 +262,13 @@ export default function CartPopupProductDescription({
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
-              onClick={() => addItem({ ...item, quantity })}
+              onClick={() =>
+                addItem({
+                  ...item,
+                  quantity,
+                  selectedVariants: selectedVariants ?? [],
+                })
+              }
               className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
             >
               Add to Cart
