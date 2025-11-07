@@ -5,8 +5,12 @@ import { Providers } from "./provider";
 import Navbar from "@/app/components/Navbar";
 import SearchBar from "./components/ui/SearchBar";
 import Footer from "./components/Footer";
-import { Toaster } from "@/components/ui/sonner";
+// import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from 'sonner';
+
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastContainer } from "react-toastify";
+import { CheckoutProvider } from "./context/CheckoutContext";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -27,7 +31,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
-        <div className="flex flex-col min-h-screen">
+        <Toaster />
+        <div className="flex flex-col min-h-screen overflow-hidden">
           {/* Fixed Navbar */}
           <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
             <Navbar />
@@ -35,8 +40,10 @@ export default function RootLayout({
           <Providers>
             {/* Main Content */}
             <TooltipProvider>
-              <main className="pt-[0px] lg:pt-[100px] w-screen pb-[90px] h-max">
-                {children}
+              <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
+                <CheckoutProvider>
+                  {children}
+                </CheckoutProvider>
               </main>
             </TooltipProvider>
           </Providers>
@@ -44,7 +51,7 @@ export default function RootLayout({
           {/* Footer Section */}
           <footer>
             {/* Mobile fixed nav */}
-            <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
+            <div className="lg:hidden w-full fixed bottom-1 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
               <Navbar />
             </div>
 

@@ -1,10 +1,19 @@
 import Image from "next/image";
 import butterflyImage from "@/assets/butterfly.png";
 import Logo from "@/assets/logo.png";
-import GoogleLogo from "@/assets/google.png";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import Link from "next/link";
+
+import { GoogleLogin, GoogleOAuthProvider, useGoogleOneTapLogin } from '@react-oauth/google';
+import { useEffect, useState } from "react";
+import GoogleButton from "./GoogleButton";
+import axios from "axios";
+import { headers } from "next/headers";
+import { error } from "console";
+import { toast } from "sonner";
+import Spinner from "../Spinner";
+
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
   setScreen: (
@@ -13,8 +22,13 @@ type IntroCompProps = {
 };
 
 export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
+  const [isLoading, setIsLoading] = useState(false)
+
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      {
+        isLoading && <Spinner />
+      }
       <div className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl">
         <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
           <Image
@@ -36,30 +50,53 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
           />
 
           <div className="w-[80%] space-y-4 mx-auto">
-            <div>
-              <Link href={""}>
-                <Button
-                  variant={"outline"}
-                  className="relative !rounded-full w-full text-sm flex items-center justify-center gap-4"
-                >
-                  <span className="relative w-6 h-6">
-                    <Image
-                      src={GoogleLogo}
-                      alt="Google logo"
-                      fill
-                      className="object-contain"
-                      sizes="24px"
-                      priority
-                    />
-                  </span>
-                  Continue with Google
-                </Button>
-              </Link>
-            </div>
+            <GoogleOAuthProvider clientId="97080942381-seubabjh0nq15hdv2nhgj0ij4vjafoh5.apps.googleusercontent.com">
+              <GoogleLogin
+                theme="outline"
+                shape="circle"
+                logo_alignment="center"
+                size="medium"
+                onSuccess={(credentialResponse) => {
+                  const token = credentialResponse.credential;
+                  setIsLoading(true)
+                  axios.post(
+                    "https://ajempire-backend.vercel.app/api/auth/google/",
+                    {
+                      token: token
+                    },
+                  )
+                    .then((res) => {
+                      if (res.data?.message?.token) {
+                        const token = res.data.message.token;
+                        const user = res.data.message.user;
+                        localStorage.setItem("token", token)
+                        localStorage.setItem("user", token)
+                        console.log("token", token)
+                        console.log("user", user)
+                        alert("Successfully logged in!");
+                        setTimeout(() => {
+                          onClose();
+                        }, 800);
+                      }
+                    }
+                    )
+                    .catch((err) => {
+                      console.error("Auth error:", err.response?.data || err.message);
+                    })
+                    .finally(() => {
+                      setIsLoading(false) // stop loading in both success & error
+                    });
+                }}
+                onError={() => {
+                  console.log('Login Failed');
+                }}
+                useOneTap
+              />
+            </GoogleOAuthProvider>
             <div>
               <Button
                 variant={"outline"}
-                className="relative !rounded-full w-full text-sm flex items-center justify-center gap-4"
+                className="relative !rounded-full w-full text-sm  flex items-center justify-center gap-[2px] font-extralight"
                 onClick={() => setScreen("signin")}
               >
                 <span className="relative flex items-center justify-center w-6 h-6">
@@ -94,7 +131,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             <div>
               <Button
                 variant={"outline"}
-                className="relative !rounded-full w-full text-sm flex items-center justify-center gap-4"
+                className="relative !rounded-full w-full text-sm flex items-center justify-center gap-[2px] font-extralight"
                 onClick={() => setScreen("phonenumber")}
               >
                 <span className="relative flex items-center justify-center w-6 h-6">
@@ -142,5 +179,6 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
         </div>
       </div>
     </section>
+
   );
 }

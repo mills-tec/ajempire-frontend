@@ -48,6 +48,10 @@ export default function SignInPage() {
       const { email, password } = form;
       const res = await loginBackend(email, password);
       console.log("res: ", res);
+      if (res.message) {
+        localStorage.setItem("token", res.message);
+        console.log("Token saved:", res.message);
+      }
       setErrors({});
       toast("Login successful!");
       // router.push("/dashboard");

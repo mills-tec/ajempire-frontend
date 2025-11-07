@@ -1,12 +1,17 @@
 "use client";
+import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
+import CheckoutRequirement from "@/app/components/CheckoutRequirement";
+import Spinner from "@/app/components/Spinner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
+
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function CartPage() {
   const {
@@ -19,6 +24,44 @@ export default function CartPage() {
   } = useCartStore();
   console.log("items: ", items, "syncQueue: ", syncQueue);
   const [expand, setExpand] = useState(false);
+  const [isAdress, setIsAdress] = useState(false);
+  const [signIn, setSingin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const checkoutHandler = () => {
+    console.log("Checkout button clicked");
+    const token = localStorage.getItem("token");
+    const seletedItem = items.filter((item) => item.selected);
+
+    if (!token) {
+      toast.error("Please log in to checkout", { position: "top-right" });
+      console.log("token", token);
+      setIsLoading(false);
+      setTimeout(() => {
+        setSingin(true);
+      }, 500);
+    }
+    if (items.length === 0) {
+      toast.error("Your cart is empty", { position: "top-right" });
+      return;
+    }
+    if (seletedItem.length === 0) {
+      toast.error("Please select at least one item to checkout", {
+        position: "top-right",
+      });
+      return;
+    }
+    if (token && seletedItem.length > 0 && items.length > 0) {
+      setIsAdress(true);
+      setSingin(false);
+      setIsLoading(true);
+    }
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+  };
+
+  console.log("signin", signIn);
+
   if (!items || items.length == 0)
     return (
       <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
@@ -51,6 +94,8 @@ export default function CartPage() {
     );
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9">
+      {isLoading && <Spinner />}
+      {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
       <div className="w-full lg:px-0 space-y-6">
         <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none">
           <div className="gap-1 flex items-center px-4 lg:px-0">
@@ -85,8 +130,8 @@ export default function CartPage() {
             />
           </svg>
         </div>
-        {items.map((item) => (
-          <CartCard item={item} />
+        {items.map((item, i) => (
+          <CartCard item={item} key={i} />
         ))}
       </div>
       {!selectedItem && (
@@ -135,8 +180,8 @@ export default function CartPage() {
             <div className="flex gap-2">
               {items
                 .filter((item) => item.selected == true)
-                .map((item) => (
-                  <div>
+                .map((item, i) => (
+                  <div key={i}>
                     <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
                       <Image
                         src={item.cover_image}
@@ -182,10 +227,14 @@ export default function CartPage() {
                 <p className="font-semibold">₦{orderSummary().finalTotal}</p>
               </div>
             </div>
-            <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-4 lg:mb-24 py-2 rounded-full bg-brand_pink text-white">
+            <button
+              className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-4 lg:mb-24 py-2 rounded-full bg-brand_pink text-white"
+              onClick={checkoutHandler}
+            >
               Checkout
             </button>
           </div>
+          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
           <div
             className={clsx(
               "fixed bottom-[5rem] w-screen p-4 z-50 h-min border-t border-black/25 lg:border-none bg-white rounded-t-2xl",
@@ -230,7 +279,10 @@ export default function CartPage() {
                     ₦{orderSummary().discount} discount applied
                   </p>
                 </div>
-                <button className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white">
+                <button
+                  className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white"
+                  onClick={checkoutHandler}
+                >
                   Checkout
                 </button>
               </div>

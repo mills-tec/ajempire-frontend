@@ -6,6 +6,7 @@ import BreadCrumb from "./components/BreadCrumb";
 import { usePathname, useRouter } from "next/navigation";
 import { SideBarItem, sidebarItems } from "./data/sidebarData";
 import Spinner from "@/app/components/Spinner"; // Import your Spinner component
+import { ToastContainer } from "react-toastify";
 
 interface LayoutProps {
   children: ReactNode;
@@ -53,7 +54,8 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="relative">
-      <div className="bg:px-[30px] px-[20px] py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] h-auto bg-[#ffffff]">
+
+      <div className=" py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] lg:px-4 h-auto bg-[#ffffff]">
         <div>
           <div className="hidden mb-2 lg:flex">
             <BreadCrumb activeItem={activeItem} />
