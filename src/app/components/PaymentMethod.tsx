@@ -70,7 +70,7 @@ export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }:
                     <div className="flex items-center gap-1">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect width="24" height="24" rx="12" fill="#AEAEAE" />
-                            <path d="M11 7V13.6667L14 17" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M11 7V13.6667L14 17" stroke="white" strokeWidth="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         <p className="text-[#A3A3A3]">Review</p>
                     </div>

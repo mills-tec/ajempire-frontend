@@ -216,7 +216,7 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                stroke-width="1.5"
+                strokeWidth="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
@@ -250,7 +250,7 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                stroke-width="1.5"
+                strokeWidth="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
@@ -382,17 +382,16 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
-              !fullName ||
-              !phone ||
-              !street ||
-              !city ||
-              !selectedState ||
-              !selectedCountry ||
-              !postalCode
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
+                !phone ||
+                !street ||
+                !city ||
+                !selectedState ||
+                !selectedCountry ||
+                !postalCode
                 ? "opacity-50 cursor-not-allowed"
                 : ""
-            }`}
+              }`}
             disabled={
               !fullName ||
               !phone ||
@@ -423,7 +422,7 @@ export default function ShippingAdressForm({
             <path
               d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75"
               stroke="black"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             />

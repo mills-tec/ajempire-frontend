@@ -28,9 +28,10 @@ export default function CartPage() {
   const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
   const checkoutHandler = () => {
-    console.log("Checkout button clicked");
     const token = getBearerToken();
+    console.log(token)
     const seletedItem = items.filter((item) => item.selected);
 
     if (!token) {

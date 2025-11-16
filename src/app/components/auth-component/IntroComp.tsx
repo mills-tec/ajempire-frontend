@@ -3,17 +3,14 @@ import butterflyImage from "@/assets/butterfly.png";
 import Logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
-import Link from "next/link";
+
 
 import { GoogleLogin, GoogleOAuthProvider, useGoogleOneTapLogin } from '@react-oauth/google';
-import { useEffect, useState } from "react";
-import GoogleButton from "./GoogleButton";
+import { useState } from "react";
 import axios from "axios";
-import { headers } from "next/headers";
-import { error } from "console";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
-
+import { useAuthStore } from "@/lib/stores/auth-store";
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
   setScreen: (
@@ -23,6 +20,7 @@ type IntroCompProps = {
 
 export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const { setIsLoggedIn, setUser } = useAuthStore();
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -69,11 +67,16 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                       if (res.data?.message?.token) {
                         const token = res.data.message.token;
                         const user = res.data.message.user;
-                        localStorage.setItem("token", token)
-                        localStorage.setItem("user", token)
-                        console.log("token", token)
-                        console.log("user", user)
-                        alert("Successfully logged in!");
+                        // localStorage.setItem("token", token)
+                        // localStorage.setItem("user", token)
+                        localStorage.setItem(
+                          "ajempire_signin_user",
+                          JSON.stringify({ token, user })
+                        );
+                        setIsLoggedIn(true);
+                        setUser(user);
+
+                        toast.success("Logged in successfully!", { position: "top-right" });
                         setTimeout(() => {
                           onClose();
                         }, 800);

@@ -17,12 +17,13 @@ export default function OrderSummaryPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {});
-
+  useEffect(() => { });
   const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
+
     const paymentMethod = localStorage.getItem("paymentMethod");
+
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
       setIsLoading(false);
@@ -46,8 +47,8 @@ export default function OrderSummaryPage() {
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${getBearerToken()}`,
+            "Content-Type": "application/x-www-form-urlencoded",
           },
         }
       );
@@ -160,7 +161,7 @@ export default function OrderSummaryPage() {
             <path
               d="M11 7V13.6667L14 17"
               stroke="white"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             />
