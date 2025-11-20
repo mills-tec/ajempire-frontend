@@ -383,14 +383,14 @@ export default function ShippingAdressForm({
           </div>
           <button
             className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
-                !phone ||
-                !street ||
-                !city ||
-                !selectedState ||
-                !selectedCountry ||
-                !postalCode
-                ? "opacity-50 cursor-not-allowed"
-                : ""
+              !phone ||
+              !street ||
+              !city ||
+              !selectedState ||
+              !selectedCountry ||
+              !postalCode
+              ? "opacity-50 cursor-not-allowed"
+              : ""
               }`}
             disabled={
               !fullName ||

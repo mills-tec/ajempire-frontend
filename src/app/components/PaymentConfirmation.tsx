@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../components/Spinner";
 import { getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 
 export default function PaymentConfirmation() {
   const searchParams = useSearchParams();
@@ -45,10 +46,68 @@ export default function PaymentConfirmation() {
         if (response?.data?.message) {
           toast.success("Payment verified successfully!");
           setResponseData(response.data.message);
+
+          // 2️⃣ Clear cart on backend
+          const selectedItems = useCartStore.getState().getSelectedItems();
+          if (selectedItems.length > 0) {
+            await axios.delete(
+              "https://ajempire-backend.vercel.app/api/cart/",
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                data: {
+                  items: selectedItems.map(item => ({
+                    productId: item._id,
+                    qty: item.quantity,
+                  })),
+                },
+              }
+            );
+
+            // 3️⃣ Clear local cart state
+            useCartStore.getState().clearCart();
+            toast.success("Cart cleared!");
+          }
+
         } else {
           toast.error("Payment verification failed.");
           router.push("/checkout");
         }
+        if (response?.data?.message) {
+          toast.success("Payment verified successfully!");
+          setResponseData(response.data.message);
+
+          // 2️⃣ Clear cart on backend
+          const selectedItems = useCartStore.getState().getSelectedItems();
+          if (selectedItems.length > 0) {
+            await axios.delete(
+              "https://ajempire-backend.vercel.app/api/cart/",
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                data: {
+                  items: selectedItems.map(item => ({
+                    productId: item._id,
+                    qty: item.quantity,
+                  })),
+                },
+              }
+            );
+
+            // 3️⃣ Clear local cart state
+            useCartStore.getState().clearCart();
+            toast.success("Cart cleared!");
+          }
+
+        } else {
+          toast.error("Payment verification failed.");
+          router.push("/checkout");
+        }
+
       } catch (error) {
         console.error("Error verifying payment:", error);
         toast.error("An error occurred during payment verification.");

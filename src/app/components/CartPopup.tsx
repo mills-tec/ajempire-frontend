@@ -41,7 +41,7 @@ export default function CartPopup() {
         onTouchMove={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 sticky top-0 rounded-t-2xl z-40 bg-white">
+        <div className="p-4 sticky top-0 rounded-t-2xl z-30 bg-white">
           <div className="flex items-center justify-between">
             <Link href={"/pages/cart"} className="relative">
               <svg

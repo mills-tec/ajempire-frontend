@@ -13,7 +13,7 @@ export default function CheckoutSummeryCard({
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
   const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
-  const { orderSummary } = useCartStore();
+  const { orderSummary, } = useCartStore();
 
   useEffect(() => {
     setMounted(true);

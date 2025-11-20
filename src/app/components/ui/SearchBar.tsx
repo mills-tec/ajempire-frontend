@@ -2,7 +2,6 @@
 import { CameraIcon } from "@/components/svgs/CameraIcon"
 import { CameraSnap } from "@/components/svgs/CameraSnap"
 import { SearchIcon } from "@/components/svgs/SearchIcon"
-import { SupportIcon } from "@/components/svgs/SupportIcon"
 import { useRef } from "react"
 
 const SearchBar = () => {

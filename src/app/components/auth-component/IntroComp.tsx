@@ -5,12 +5,18 @@ import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 
 
-import { GoogleLogin, GoogleOAuthProvider, useGoogleOneTapLogin } from '@react-oauth/google';
-import { useState } from "react";
+import {
+  GoogleLogin,
+  GoogleOAuthProvider,
+  useGoogleOneTapLogin,
+} from "@react-oauth/google";
+import { useEffect, useState } from "react";
+import GoogleButton from "./GoogleButton";
 import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
+
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
   setScreen: (
@@ -19,14 +25,12 @@ type IntroCompProps = {
 };
 
 export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
   const { setIsLoggedIn, setUser } = useAuthStore();
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      {
-        isLoading && <Spinner />
-      }
+      {isLoading && <Spinner />}
       <div className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl">
         <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
           <Image
@@ -56,42 +60,46 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                 size="medium"
                 onSuccess={(credentialResponse) => {
                   const token = credentialResponse.credential;
-                  setIsLoading(true)
-                  axios.post(
-                    "https://ajempire-backend.vercel.app/api/auth/google/",
-                    {
-                      token: token
-                    },
-                  )
+                  setIsLoading(true);
+                  axios
+                    .post(
+                      "https://ajempire-backend.vercel.app/api/auth/google/",
+                      {
+                        token: token,
+                      }
+                    )
                     .then((res) => {
                       if (res.data?.message?.token) {
                         const token = res.data.message.token;
                         const user = res.data.message.user;
-                        // localStorage.setItem("token", token)
-                        // localStorage.setItem("user", token)
+                        localStorage.setItem("token", token);
+                        localStorage.setItem("user", token);
+                        console.log("token", token);
+                        console.log("user", user);
+                        setUser({ email: user.email, name: "" });
                         localStorage.setItem(
                           "ajempire_signin_user",
                           JSON.stringify({ token, user })
                         );
                         setIsLoggedIn(true);
-                        setUser(user);
-
-                        toast.success("Logged in successfully!", { position: "top-right" });
+                        alert("Successfully logged in!");
                         setTimeout(() => {
                           onClose();
                         }, 800);
                       }
-                    }
-                    )
+                    })
                     .catch((err) => {
-                      console.error("Auth error:", err.response?.data || err.message);
+                      console.error(
+                        "Auth error:",
+                        err.response?.data || err.message
+                      );
                     })
                     .finally(() => {
-                      setIsLoading(false) // stop loading in both success & error
+                      setIsLoading(false); // stop loading in both success & error
                     });
                 }}
                 onError={() => {
-                  console.log('Login Failed');
+                  console.log("Login Failed");
                 }}
                 useOneTap
               />
@@ -182,6 +190,5 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
         </div>
       </div>
     </section>
-
   );
 }
