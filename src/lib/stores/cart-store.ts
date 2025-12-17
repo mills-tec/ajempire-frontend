@@ -254,7 +254,10 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "cart-storage",
-      partialize: (state) => ({ items: state.items }), // only persist items
+      partialize: (state) => ({
+        items: state.items,
+        syncQueue: state.syncQueue,
+      }), // only persist items
     }
   )
 );

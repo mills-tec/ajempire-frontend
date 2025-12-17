@@ -1,16 +1,15 @@
 import Link from "next/link";
+import ProfileName from "./ProfileName";
 
 export default function Userpopup() {
     return (
         <div className="">
             <div className=" mt-6 h-full flex items-start justify-end z-50">
                 <div className="bg-white  px-5 py-5 font-poppins size-full h-[400px] w-[20rem] shadow-xl rounded-md ">
-                    <div className="flex items-center gap-3 shrink-0">
-                        <div className="bg-brand_gradient_dark rounded-full w-[60px] h-[60px] text-center flex items-center justify-center">
-                            JB
-                        </div>
-                        <h1>Prince Mills</h1>
-                    </div>
+
+                    <Link href={'/pages/ordersandaccount/settings/profile'}>
+                        <ProfileName />
+                    </Link>
                     <hr className="mt-4 opacity-80 mb-4" />
 
                     <ul className="flex-1 w-full h-[250px] flex flex-col gap-1 opacity-80 overflow-y-scroll">

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
+import ListOfLogistics from "./ListOfLogistics";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -227,9 +228,8 @@ export default function OrderSummaryPage() {
       <p className="lg:hidden  text-[16px] mb-6 mt-5">
         Please Confirm and submit your order
       </p>
-      <div className="w-full flex flex-col lg:flex-row  lg:items-start justify-center lg:gap-6 gap-8">
+      <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <GetshippingAddress />
-        <SelectedpaymentMethod />
         <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
       </div>
     </div>

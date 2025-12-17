@@ -25,6 +25,7 @@ export default function ProductDescription({
     increaseQuantity,
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
+    selectAllCartItems,
   } = useCartStore();
 
 
@@ -35,16 +36,17 @@ export default function ProductDescription({
       return;
     }
 
-    // // Add item to cart if missing
-    // if (!item) {
-    //   addItem({
-    //     ...product,
-    //     quantity,
-    //     selectedVariants: selectedVariants ?? [],
-    //   });
-    // }
+    // Add item to cart if missing
+    if (!item) {
+      addItem({
+        ...product,
+        quantity,
+        selectedVariants: selectedVariants ?? [],
+      });
+    }
 
     // Now open checkout
+    // selectAllCartItems();
     setIsAdress(true);
   };
 
