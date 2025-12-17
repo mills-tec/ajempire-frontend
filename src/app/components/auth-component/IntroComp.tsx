@@ -3,7 +3,7 @@ import butterflyImage from "@/assets/butterfly.png";
 import Logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
-import Link from "next/link";
+
 
 import {
   GoogleLogin,
@@ -13,8 +13,6 @@ import {
 import { useEffect, useState } from "react";
 import GoogleButton from "./GoogleButton";
 import axios from "axios";
-import { headers } from "next/headers";
-import { error } from "console";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";

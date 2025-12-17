@@ -1,9 +1,8 @@
-"use client"
+"use client";
+import AboutThisAppCom from "../../components/AboutThisAppCom";
 import { useRef } from "react";
-import AboutTab from "../../components/AboutTab";
-import AboutUsComp from "../../components/AboutUsCom";
 
-export default function About() {
+export default function AboutThisApp() {
     const topRef = useRef<HTMLDivElement | null>(null);
     return (
         <div>
@@ -19,7 +18,7 @@ export default function About() {
 
             <div ref={topRef} className="bg-[#F5F5F5] lg:bg-white lg:h-[700px] overflow-y-auto px-5 lg:px-0 lg:mt-4 w-full scroll-smooth">
 
-                <AboutUsComp topRef={topRef} />
+                <AboutThisAppCom topRef={topRef} />
             </div>
         </div>
     )

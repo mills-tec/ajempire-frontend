@@ -116,10 +116,20 @@ export default function ShippingAdressForm({
       });
       setLoading(false);
     }
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(phone)) {
+      toast.error("Please enter a valid 11-digit Nigerian phone number", {
+        position: "top-right",
+      });
+      setLoading(false);
+      return;
+    }
+    // Convert to +234 format
+    const formattedPhone = "+234" + phone.substring(1);
     const data = {
       shippingAdress: {
         fullName,
-        phone,
+        phone: formattedPhone,
         street,
         city,
         state: selectedState,
@@ -216,7 +226,7 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                stroke-width="1.5"
+                strokeWidth="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
@@ -250,7 +260,7 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                stroke-width="1.5"
+                strokeWidth="1.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
@@ -279,19 +289,20 @@ export default function ShippingAdressForm({
           <div className="flex flex-col gap-2">
             <label htmlFor="phone">Phone</label>
             <div className="flex items-center border border-gray-300 focus-within:border-primaryhover rounded-sm w-full h-[40px] px-3 transition-all duration-300">
-              <span className="text-gray-600 text-[14px] mr-2">+234</span>
+              {/* <span className="text-gray-600 text-[14px] mr-2">+234</span> */}
               <input
                 id="phone"
-                type="number"
+                type="text"
+                maxLength={11}
                 placeholder="Enter phone number"
                 className="w-full placeholder:text-[14px] text-[13px] outline-none h-auto [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 required
-                onInput={(e: React.FormEvent<HTMLInputElement>) => {
-                  const input = e.currentTarget;
-                  input.value = input.value.replace(/^0+/, "");
-                }}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  // Allow only numbers
+                  const value = e.target.value.replace(/\D/g, "");
+                  setPhone(value);
+                }}
               />
             </div>
           </div>
@@ -339,13 +350,13 @@ export default function ShippingAdressForm({
                 <option value="" className="text-[#292929]" disabled>
                   Select State
                 </option>
-                {/* {states.map((state) => (
-                                    <option key={state} value={state} className="text-[#292929]">
-                                        {state}
-                                    </option>
-                                ))} */}
-                <option value="Delta">Delta</option>
-                <option value="Enugu">Enugu</option>
+                {states.map((state) => (
+                  <option key={state} value={state} className="text-[#292929]">
+                    {state}
+                  </option>
+                ))}
+                {/* <option value="Delta">Delta</option>
+                <option value="Enugu">Enugu</option> */}
               </select>
             </div>
           </div>
@@ -382,17 +393,16 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
-              !fullName ||
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
               !phone ||
               !street ||
               !city ||
               !selectedState ||
               !selectedCountry ||
               !postalCode
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+              }`}
             disabled={
               !fullName ||
               !phone ||
@@ -423,7 +433,7 @@ export default function ShippingAdressForm({
             <path
               d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75"
               stroke="black"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             />

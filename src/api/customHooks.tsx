@@ -7,7 +7,7 @@ import { IOrder, Review } from "@/lib/types";
 import { getBearerToken } from "@/lib/api";
 let config = {};
 
-const token = getBearerToken();
+const token = typeof window !== "undefined" ? localStorage.getItem('user') : null;
 if (token) {
   config = {
     headers: {
@@ -26,7 +26,9 @@ export const useOrders = () => {
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
+      console.log("config", config);
       let req = await getData("/orders/", config);
+      console.log(req)
       const orderRequest = req.data.message;
       req = await getData("/review/", config);
       const reviews: Review[] = req.data.message;
@@ -37,7 +39,6 @@ export const useOrders = () => {
           review: reviews.find((review) => review.product == item.product),
         })),
       }));
-
       return orders;
     } catch (err) {
       console.error(err);

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
+import ListOfLogistics from "./ListOfLogistics";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,12 +18,64 @@ export default function OrderSummaryPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {});
+  useEffect(() => { });
+  const syncCartToBackend = async () => {
+    const token = getBearerToken();
+    if (!token) return;
 
+    const selectedItems = getSelectedItems();
+
+    if (!selectedItems || selectedItems.length === 0) {
+      toast.error("No selected items to sync for testing.");
+      return;
+    }
+
+    try {
+      await axios.delete(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          data: {
+            // Map to backend format
+            items: selectedItems.map(item => ({
+              productId: item._id,
+              qty: item.quantity,
+            })),
+          },
+        }
+      );
+
+      // Optionally, you can also POST items to cart if DELETE clears it first
+      await axios.post(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          items: selectedItems.map(item => ({
+            productId: item._id,
+            qty: item.quantity,
+          })),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Cart synced to backend for testing!");
+    } catch (error) {
+      console.error("Error syncing cart:", error);
+      toast.error("Failed to sync cart for testing.");
+    }
+  };
   const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = localStorage.getItem("paymentMethod");
+
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
       setIsLoading(false);
@@ -33,26 +86,32 @@ export default function OrderSummaryPage() {
       setIsLoading(false);
       return;
     }
-    if (!items || items.length === 0) {
-      toast.error("Your cart is empty", { position: "top-right" });
-      setIsLoading(false);
+
+    const selectedItems = getSelectedItems();
+    console.log("Selected items for checkout:", selectedItems);
+
+    if (!selectedItems || selectedItems.length === 0) {
+      toast.error("Your cart is empty");
       return;
     }
+
+    // For testing: sync cart to backend
+    await syncCartToBackend();
+
     try {
       const response = await axios.post(
         "https://ajempire-backend.vercel.app/api/checkout",
-        {
-          paymentMethod: paymentMethod,
-        },
+        { paymentMethod },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${getBearerToken()}`,
+            "Content-Type": "application/x-www-form-urlencoded",
           },
         }
       );
+
       if (response?.data?.message?.url) {
-        window.location.href = response.data.message.url; // Redirect to payment URL
+        window.location.href = response.data.message.url;
         console.log("Payment URL set to:", response.data.message.url);
       } else {
         toast.error("Failed to initiate checkout. Please try again.", {
@@ -60,14 +119,11 @@ export default function OrderSummaryPage() {
         });
       }
     } catch (error) {
-      // console.error("Checkout error:", error.response?.data || error.message);
       toast.error("An error occurred during checkout. Please try again.", {
         position: "top-right",
       });
     } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
+      setTimeout(() => setIsLoading(false), 800);
     }
   };
 
@@ -160,7 +216,7 @@ export default function OrderSummaryPage() {
             <path
               d="M11 7V13.6667L14 17"
               stroke="white"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             />
@@ -172,9 +228,8 @@ export default function OrderSummaryPage() {
       <p className="lg:hidden  text-[16px] mb-6 mt-5">
         Please Confirm and submit your order
       </p>
-      <div className="w-full flex flex-col lg:flex-row  lg:items-start justify-center lg:gap-6 gap-8">
+      <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <GetshippingAddress />
-        <SelectedpaymentMethod />
         <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
       </div>
     </div>
