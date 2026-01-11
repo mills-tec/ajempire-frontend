@@ -175,11 +175,11 @@ export default function ShippingAdressForm({
     <div className="fixed inset-0  bg-[#FFFFFF] flex lg:items-center items-start   lg:justify-center  z-50">
       {loading && <Spinner />}
       {showInitialSpinner && <Spinner />}
-      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[700px] lg:px-10 px-5 py-8 overflow-y-scroll">
+      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[600px] lg:px-10 px-5 py-8 overflow-y-scroll">
         <p className="font-semibold text-[15px] opacity-80 text-center mb-5">
           Shipping Address
         </p>
-        <div className="lg:hidden flex items-center justify-between gap-1 mb-5">
+        <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
           <div className="flex items-center gap-1">
             <svg
               width="24"
@@ -232,6 +232,43 @@ export default function ShippingAdressForm({
               />
             </svg>
             <p className="text-[#A3A3A3]">Payment</p>
+          </div>
+          <div>
+            <svg
+              width="22"
+              height="1"
+              viewBox="0 0 22 1"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M0.5 0.5H21.5"
+                stroke="#CFCFCF"
+                stroke-linecap="square"
+              />
+            </svg>
+          </div>
+          <div className="flex items-center gap-1">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M0 12C0 5.37258 5.37258 0 12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C5.37258 24 0 18.6274 0 12Z"
+                fill="#AEAEAE"
+              />
+              <path
+                d="M11 7V13.6667L14 17"
+                stroke="white"
+                strokeWidth="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <p className="text-[#A3A3A3]">Logistics</p>
           </div>
           <div>
             <svg
@@ -421,8 +458,7 @@ export default function ShippingAdressForm({
           className="absolute top-9 right-6 cursor-pointer "
           onClick={() => {
             setIsadress && setIsadress(false);
-          }}
-        >
+          }}>
           <svg
             width="15"
             height="15"

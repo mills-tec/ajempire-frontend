@@ -9,6 +9,12 @@ import ListOfLogistics from "./ui/ListOfLogistics";
 interface CheckoutSummeryCardProps {
   initiateCheckout: () => void;
 }
+interface SelectedLogistic {
+  courier_id: string;
+  courier_name: string;
+  total: number;
+  delivery_eta: string;
+}
 export default function CheckoutSummeryCard({
   initiateCheckout,
 }: CheckoutSummeryCardProps) {
@@ -16,6 +22,7 @@ export default function CheckoutSummeryCard({
   const [mounted, setMounted] = useState(false);
   const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
   const { orderSummary, } = useCartStore();
+  const { selectedLogistic } = useCartStore();
 
   useEffect(() => {
     setMounted(true);
@@ -81,7 +88,7 @@ export default function CheckoutSummeryCard({
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Shipping Charge</p>
-            <p className={`${styleadress}`}>₦{orderSummary().deliveryFee}</p>
+            <p className={`${styleadress}`}> ₦{orderSummary().deliveryFee}</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Discount</p>

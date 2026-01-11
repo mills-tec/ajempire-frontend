@@ -25,8 +25,9 @@ export const UseAgeComponent = () => {
           }
         )
         if (res.data.message.stats) {
-          console.log("Fetched usage data:", res.data.message.stats);
+
           setUsageData(res.data.message.stats);
+          console.log("Fetched usage data:", res.data.message.stats);
         }
       } catch (err) {
         console.error("Error fetching usage data:", err);
