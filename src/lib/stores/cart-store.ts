@@ -11,6 +11,21 @@ export type CartItem = Product & {
   selected: boolean;
   synced?: boolean;
 };
+interface SelectedLogistic {
+  courier_id: string;
+  courier_name: string;
+  courier_image: string;
+  delivery_eta: string;
+  total: number;
+}
+
+export enum CheckoutStep {
+  ADDRESS_FORM,
+  PAYMENT_METHOD,
+  LOGISTICS,
+  ORDER_SUMMARY,
+}
+
 
 type SyncAction =
   | { type: "add"; item: CartItem }
@@ -36,6 +51,19 @@ type CartStore = {
   getItem: (id: string) => CartItem | undefined;
   setSelectedVariants: (id: string, variants: Variant[]) => void;
   getSelectedItems: () => CartItem[]; // Should be used for CHECKOUT. It is used to retrieve all items that has been selected in the cart
+  /* LOGISTICS */
+  selectedLogistic: SelectedLogistic | null;
+  setSelectedLogistic: (logistic: SelectedLogistic) => void;
+  clearSelectedLogistic: () => void;
+  requestToken: string | null;
+  setRequestToken: (token: string) => void;
+  clearRequestToken: () => void;
+
+  /* CHECKOUT FLOW */
+  checkoutStep: CheckoutStep;
+  setCheckoutStep: (step: CheckoutStep) => void;
+  resetCheckoutFlow: () => void;
+
   orderSummary: () => {
     total: number;
     discount: number;
@@ -54,6 +82,30 @@ export const useCartStore = create<CartStore>()(
       syncQueue: [],
       setSelectedItem: (product: Product) => set({ selectedItem: product }),
       clearSelectedItem: () => set({ selectedItem: null }),
+      /* LOGISTICS */
+      /* LOGISTICS */
+      selectedLogistic: null,
+      requestToken: null,
+
+      /* CHECKOUT FLOW */
+      checkoutStep: CheckoutStep.ADDRESS_FORM,
+
+      setCheckoutStep: (step) => set({ checkoutStep: step }),
+
+      resetCheckoutFlow: () =>
+        set({
+          checkoutStep: CheckoutStep.ADDRESS_FORM,
+          selectedLogistic: null,
+          requestToken: null,
+        }),
+
+      setSelectedLogistic: (logistic) => set({ selectedLogistic: logistic }),
+
+      setRequestToken: (token: string) => set({ requestToken: token }),
+
+      clearSelectedLogistic: () => set({ selectedLogistic: null }),
+
+      clearRequestToken: () => set({ requestToken: null }),
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
       addItem: (item) => {
@@ -186,7 +238,11 @@ export const useCartStore = create<CartStore>()(
           console.log("err", error);
         }
       },
-      clearCart: () => set({ items: [] }),
+      clearCart: () =>
+        set({
+          items: [],
+          selectedLogistic: null,
+        }),
       increaseQuantity: (id) =>
         set({
           items: get().items.map((i) =>
@@ -205,22 +261,29 @@ export const useCartStore = create<CartStore>()(
         }),
       orderSummary: () => {
         const items = get().items.filter((i) => i.selected);
+
         const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
         const discount = items.reduce(
           (sum, i) =>
             sum + calcDiscount(i.price, i.discountedPrice) * i.quantity,
           0
         );
+
         const coupon = 0;
-        const deliveryFee = 0;
+
+        // 👇 pull logistics from the global store
+        const deliveryFee = get().selectedLogistic?.total ?? 0;
+
         return {
           total,
           discount,
           coupon,
           deliveryFee,
-          finalTotal: total - (discount + coupon + deliveryFee),
+          finalTotal: total - discount - coupon + deliveryFee,
         };
       },
+
       retrySync: async () => {
         const { syncQueue } = get();
         if (syncQueue.length === 0) return;
@@ -254,7 +317,13 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "cart-storage",
-      partialize: (state) => ({ items: state.items }), // only persist items
+      partialize: (state) => ({
+        items: state.items,
+        syncQueue: state.syncQueue,
+        selectedLogistic: state.selectedLogistic,
+        requestToken: state.requestToken,
+        checkoutStep: state.checkoutStep,
+      }),
     }
   )
 );

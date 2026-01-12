@@ -1,10 +1,19 @@
 "use client";
+import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
+import ListOfLogistics from "./ui/ListOfLogistics";
 
 interface CheckoutSummeryCardProps {
   initiateCheckout: () => void;
+}
+interface SelectedLogistic {
+  courier_id: string;
+  courier_name: string;
+  total: number;
+  delivery_eta: string;
 }
 export default function CheckoutSummeryCard({
   initiateCheckout,
@@ -12,7 +21,8 @@ export default function CheckoutSummeryCard({
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
   const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
-  const { orderSummary } = useCartStore();
+  const { orderSummary, } = useCartStore();
+  const { selectedLogistic } = useCartStore();
 
   useEffect(() => {
     setMounted(true);
@@ -43,12 +53,19 @@ export default function CheckoutSummeryCard({
 
   if (!mounted) {
     return (
-      <div className="w-[350px] h-[280px] bg-gray-100  animate-pulse  rounded-md"></div>
+      <div className="w-full h-screen bg-gray-100  animate-pulse  rounded-md"></div>
     );
   }
   return (
-    <div className="w-[350px] font-poppins text-[14px]">
-      <div className="w-full shadow-md rounded-md border border-gray-200 px-4  py-4">
+    <div className="w-full  font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-start gap-4  p-4">
+      <p className="font-medium text-[17px]">Your Order</p>
+      <div className="w-full">
+        <ListOfLogistics />
+      </div>
+      <div className="w-full">
+        <SelectedpaymentMethod />
+      </div>
+      <div className="w-full shadow-sm rounded-md   px-4  py-4">
         <p className="text-[17px] font-semibold opacity-75 mb-4">
           Order Summary
         </p>
@@ -71,7 +88,7 @@ export default function CheckoutSummeryCard({
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Shipping Charge</p>
-            <p className={`${styleadress}`}>₦{orderSummary().deliveryFee}</p>
+            <p className={`${styleadress}`}> ₦{orderSummary().deliveryFee}</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Discount</p>
@@ -84,6 +101,7 @@ export default function CheckoutSummeryCard({
           </div>
         </div>
       </div>
+
       <button
         className="w-full text-center mt-4 bg-primaryhover text-white h-[35px] rounded-full"
         onClick={initiateCheckout}

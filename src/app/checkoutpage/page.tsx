@@ -1,6 +1,3 @@
-// src/app/checkoutpage/page.tsx (Example Final Route)
-"use client"
-import React from 'react';
 import OrderSummaryPage from '../components/ui/OrderSummaryPage';
 
 
@@ -8,5 +5,4 @@ import OrderSummaryPage from '../components/ui/OrderSummaryPage';
 // or a higher shared layout that wraps this route.
 export default function CheckoutRoute() {
     return <OrderSummaryPage />;
-
-}
+} 

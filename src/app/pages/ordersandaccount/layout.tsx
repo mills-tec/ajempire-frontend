@@ -66,7 +66,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="w-[23%] hidden lg:block">
             <SideNav />
           </div>
-          <div className="lg:w-[88%] w-full">{children}</div>
+          <div className="lg:w-[88%] w-full  lg:px-0">{children}</div>
         </main>
       </div>
     </div>
