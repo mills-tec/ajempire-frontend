@@ -68,6 +68,10 @@ export default function PaymentConfirmation() {
 
             // 3️⃣ Clear local cart state
             useCartStore.getState().clearCart();
+            useCartStore.getState().resetCheckoutFlow();
+            // Clear persisted step/paymentMethod if needed
+            localStorage.removeItem("checkoutStep");
+            localStorage.removeItem("paymentMethod");
             toast.success("Cart cleared!");
           }
 

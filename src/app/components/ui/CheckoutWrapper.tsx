@@ -1,115 +1,90 @@
-// CheckoutWrapper.tsx (REWRITTEN)
-"use client"
-import React, { useState, useEffect } from 'react';
-import ShippingAdressForm from '../ShippingAdressForm';
-import PaymentMethod from '../PaymentMethod';
-import { useRouter } from 'next/navigation';
-import Spinner from '../Spinner';
-import { useCheckout } from '@/app/context/CheckoutContext';
-import { motion, AnimatePresence } from 'framer-motion';
+"use client";
 
-// 1. Define the possible steps
-enum CheckoutStep {
-    ADDRESS_FORM,
-    PAYMENT_METHOD,
-    ORDER_SUMMARY, // <-- Final step
-}
+import ShippingAdressForm from "../ShippingAdressForm";
+import PaymentMethod from "../PaymentMethod";
+import SelectLogistics from "../SelectLogistics";
+import Spinner from "../Spinner";
 
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useCartStore, CheckoutStep } from "@/lib/stores/cart-store";
+
+// import { useCartStore, CheckoutStep } from "@/store/cartStore";
 
 interface CheckoutWrapperProps {
     setIsadress?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-
 export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
-    // You no longer need the router if you are staying on the same page
-    const router = useRouter(); // <--- REMOVED UNLESS NEEDED ELSEWHERE
+    const router = useRouter();
+    // const {} = useCartStore();
+    const checkoutStep = useCartStore((s) => s.checkoutStep);
+    const setCheckoutStep = useCartStore((s) => s.setCheckoutStep);
 
-    const { selectedPaymentMethod } = useCheckout();
-    const [currentStep, setCurrentStep] = useState<CheckoutStep>(CheckoutStep.ADDRESS_FORM);
-    useEffect(() => {
-        localStorage.setItem("checkoutStep", String(currentStep));
-    }, [currentStep]);
-
-    // Restore step on refresh
-    useEffect(() => {
-        const savedStep = localStorage.getItem("checkoutStep");
-        if (savedStep) {
-            setCurrentStep(Number(savedStep));
-        }
-    }, []);
-
-    // 💡 REMOVED: This state is now managed globally by CheckoutContext
-    // const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>(""); 
-
-    // 💡 REMOVED: No more redirecting/loading spinner for navigation
-    const [isRedirecting, setIsRedirecting] = useState(false);
-
-    // 2. Navigation Function
     const goToNextStep = () => {
-        setCurrentStep(prevStep => {
-            if (prevStep === CheckoutStep.ADDRESS_FORM) return CheckoutStep.PAYMENT_METHOD;
-            if (prevStep === CheckoutStep.PAYMENT_METHOD) return CheckoutStep.ORDER_SUMMARY;
-            return prevStep; // Stay put if already at the end
-        });
+        setCheckoutStep(
+            checkoutStep === CheckoutStep.ADDRESS_FORM
+                ? CheckoutStep.PAYMENT_METHOD
+                : checkoutStep === CheckoutStep.PAYMENT_METHOD
+                    ? CheckoutStep.LOGISTICS
+                    : CheckoutStep.ORDER_SUMMARY
+        );
     };
 
-    // 💡 REMOVED: The useEffect that performs the router.push is gone!
-
-    useEffect(() => {
-        if (currentStep === CheckoutStep.ORDER_SUMMARY) {
-            setIsRedirecting(true);
-            console.log("Final Selected Payment Method:", selectedPaymentMethod);
-            setTimeout(() => {
-                router.push('/checkoutpage');
-            }, 300);
-        }
-    }, [currentStep, router]);
     const goToPreviousStep = () => {
-        setCurrentStep(prevStep => {
-            if (prevStep === CheckoutStep.PAYMENT_METHOD) return CheckoutStep.ADDRESS_FORM;
-            return prevStep;
-        });
+        setCheckoutStep(
+            checkoutStep === CheckoutStep.LOGISTICS
+                ? CheckoutStep.PAYMENT_METHOD
+                : CheckoutStep.ADDRESS_FORM
+        );
     };
 
-
-    // 💡 REMOVED: The redirecting spinner is no longer needed for navigation
-
-    if (isRedirecting) {
+    // Redirect only when we HIT final step
+    if (checkoutStep === CheckoutStep.ORDER_SUMMARY) {
+        router.push("/checkoutpage");
         return (
-            <div className="flex justify-center items-center h-screen">
+            <div className="flex h-screen items-center justify-center">
                 <Spinner />
             </div>
         );
     }
 
-    // 3. Render the current step
     const stepVariants = {
         initial: { opacity: 0 },
-        animate: { opacity: 1, transition: { duration: 0.4, delay: 0.1 } },
+        animate: { opacity: 1, transition: { duration: 0.4 } },
         exit: { opacity: 0, transition: { duration: 0.3 } },
     };
 
-    // Render step
-    switch (currentStep) {
+    switch (checkoutStep) {
         case CheckoutStep.ADDRESS_FORM:
             return (
-                <motion.div
-                    key="address"
-                    variants={stepVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="w-full"
-                >
-                    <ShippingAdressForm onContinue={goToNextStep} setIsadress={setIsadress} />
+                <motion.div {...stepVariants}>
+                    <ShippingAdressForm
+                        onContinue={goToNextStep}
+                        setIsadress={setIsadress}
+                    />
                 </motion.div>
             );
 
         case CheckoutStep.PAYMENT_METHOD:
-            return <PaymentMethod onNext={goToNextStep} setIsadress={setIsadress} goToPreviousStep={goToPreviousStep} />;
+            return (
+                <PaymentMethod
+                    onNext={goToNextStep}
+                    goToPreviousStep={goToPreviousStep}
+                    setIsadress={setIsadress}
+                />
+            );
+
+        case CheckoutStep.LOGISTICS:
+            return (
+                <SelectLogistics
+                    onContinue={goToNextStep}
+                    onBack={goToPreviousStep}
+                    setIsadress={setIsadress}
+                />
+            );
 
         default:
-            return <div>Checkout Flow Error</div>;
+            return <div>Checkout flow error</div>;
     }
 }
