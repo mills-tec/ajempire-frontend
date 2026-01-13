@@ -66,12 +66,13 @@ export default function PaymentConfirmation() {
               }
             );
 
-            // 3️⃣ Clear local cart state
-            useCartStore.getState().clearCart();
-            useCartStore.getState().resetCheckoutFlow();
-            // Clear persisted step/paymentMethod if needed
-            localStorage.removeItem("checkoutStep");
-            localStorage.removeItem("paymentMethod");
+            const store = useCartStore.getState();
+
+            store.clearCart();
+            store.resetCheckoutFlow();
+
+            // 🔥 force persist update
+            useCartStore.persist?.clearStorage?.();
             toast.success("Cart cleared!");
           }
 

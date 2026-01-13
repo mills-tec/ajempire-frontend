@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function ContactForm() {
     return (
-        <div className="font-poppins lg:h-[600px] h-full overflow-y-scroll">
+        <div className="font-poppins  h-full overflow-y-scroll">
             <div className="">
-                <div className="relative flex items-center lg:items-start lg:justify-start justify-center bg-white shadow-sm lg:shadow-none h-[60px] w-full mb-7">
+                <div className="relative flex items-center lg:items-start lg:justify-start justify-center bg-white shadow-sm lg:shadow-none  w-full mb-7">
                     <Link href={"/pages/ordersandaccount"} className="lg:hidden  absolute left-0 mr-5">
                         <div className="">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

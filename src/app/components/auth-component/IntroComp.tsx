@@ -82,7 +82,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                           JSON.stringify({ token, user })
                         );
                         setIsLoggedIn(true);
-                        alert("Successfully logged in!");
+                        toast.success("Logged in successfully!", { duration: 3000 });
                         setTimeout(() => {
                           onClose();
                         }, 800);
