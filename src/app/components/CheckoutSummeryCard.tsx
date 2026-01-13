@@ -20,35 +20,35 @@ export default function CheckoutSummeryCard({
 }: CheckoutSummeryCardProps) {
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
-  const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
+  // const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
   const { orderSummary, } = useCartStore();
-  const { selectedLogistic } = useCartStore();
+  // const { selectedLogistic } = useCartStore();
 
   useEffect(() => {
     setMounted(true);
-    const fetchTotal = async () => {
-      const token = getBearerToken();
-      if (!token) return;
-      try {
-        const res = await axios.get(
-          "https://ajempire-backend.vercel.app/api/cart/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (res?.data?.message) {
-          setTotals({
-            subtotal: res.data.message.total,
-            discount: res.data.message.discountedPrice,
-            total: res.data.message.totalPrice,
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching totals:", err);
-      }
-    };
+    // const fetchTotal = async () => {
+    //   const token = getBearerToken();
+    //   if (!token) return;
+    //   try {
+    //     const res = await axios.get(
+    //       "https://ajempire-backend.vercel.app/api/cart/",
+    //       {
+    //         headers: { Authorization: `Bearer ${token}` },
+    //       }
+    //     );
+    //     if (res?.data?.message) {
+    //       setTotals({
+    //         subtotal: res.data.message.total,
+    //         discount: res.data.message.discountedPrice,
+    //         total: res.data.message.totalPrice,
+    //       });
+    //     }
+    //   } catch (err) {
+    //     console.error("Error fetching totals:", err);
+    //   }
+    // };
 
-    fetchTotal();
+    // fetchTotal();
   }, []);
 
   if (!mounted) {
