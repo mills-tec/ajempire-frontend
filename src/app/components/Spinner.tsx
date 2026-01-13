@@ -1,8 +1,14 @@
+import clsx from "clsx";
 import React from "react";
 
-export default function Spinner() {
+export default function Spinner({ fixed = true }: { fixed?: boolean }) {
   return (
-    <div className="h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center">
+    <div
+      className={clsx(
+        "h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center",
+        fixed ? "fixed" : "relative"
+      )}
+    >
       <svg
         width="67"
         height="67"
