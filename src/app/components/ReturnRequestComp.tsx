@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import Spinner from "./Spinner";
+import axios from "axios";
+import { getBearerToken } from "@/lib/api";
 
 export default function ReturnRequestComp() {
     const listofReasons = [
@@ -14,6 +17,100 @@ export default function ReturnRequestComp() {
     const isitemused = [
         "yes", "No"
     ]
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [evidenceImage, setEvidenceImage] = useState(null);
+    const [imageError, setImageError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [notes, setNotes] = useState("");
+    const [phone, setPhone] = useState("");
+    const [otherNote, setOtherNote] = useState("");
+
+    const isFormValid =
+        selectedReason &&
+        useitemcondition &&
+        phone.length === 10;
+
+
+
+    const onSubmit = async () => {
+        if (!isFormValid) return;
+        setIsLoading(true);
+        try {
+            const formData = new FormData();
+
+            formData.append("reason", selectedReason);
+            formData.append(
+                "itemUsed",
+                useitemcondition.toLowerCase() === "yes" ? "true" : "false"
+            );
+            formData.append("additionalNotes", notes || "");
+            formData.append("phoneNumber", `+234${phone}`);
+            formData.append("order", "68ecfd8fcb64141975176a4e");
+            formData.append("product[]", "68e4803d50376c02f5462385");
+
+            if (evidenceImage) {
+                formData.append("imageEvidence", evidenceImage);
+            }
+            const debugFormData: Record<string, any> = {};
+
+            for (const [key, value] of formData.entries()) {
+                debugFormData[key] = value;
+            }
+
+            console.log(debugFormData);
+            const token = getBearerToken();
+            const res = axios.post("https://ajempire-backend.vercel.app/api//return", {
+                formData,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            })
+            if (res) {
+                console.log("Return request submitted successfully:", res);
+            }
+        }
+        catch (error) {
+            console.error("Error submitting return request:", error);
+        }
+        finally {
+            setIsLoading(false);
+        }
+    }
+
+    const validateImageFile = (file: any) => {
+        if (!file) return false;
+
+        const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
+        const allowedMimeTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        const extension = file.name.split(".").pop().toLowerCase();
+
+        return (
+            allowedExtensions.includes(extension) &&
+            allowedMimeTypes.includes(file.type)
+        );
+    };
+
+    const handleImageChange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!validateImageFile(file)) {
+            setImageError("Only JPG, PNG or WEBP images are allowed");
+            e.target.value = "";
+            return;
+        }
+
+        setImageError("");
+        setEvidenceImage(file);
+    };
+
+
     return (
 
         <div className="text-[14px] font-poppins fixed bottom-0 flex items-end lg:items-center  pb-[5rem] lg:pb-0 z-50 lg:justify-around h-full !w-[1000px] bg-black/20 overflow-hidden">
@@ -35,7 +132,7 @@ export default function ReturnRequestComp() {
                             <br /> Return Policy</span>
                         </p>
                     </div>
-
+                    {/* reason for return */}
                     <div className=" flex flex-col gap-3 ">
                         <p className="text-[17px] font-medium">Why are you returning this item?</p>
                         <div>
@@ -59,7 +156,8 @@ export default function ReturnRequestComp() {
                                         <div className=" border border-gray-200 w-[400px] h-[80px]">
                                             <textarea
                                                 placeholder="Please specify"
-                                                className="outline-brand_solid_gradient rounded w-full h-full px-2 py-2 resize-none placeholder:text-[14px] placeholder:text-[#888888] "
+                                                className="outline-brand_solid_gradient rounded w-full h-full px-2 py-2 resize-none placeholder:text-[14px] placeholder:text-[#888888]"
+                                                onChange={(e) => setOtherNote(e.target.value)}
                                             />
                                         </div>
 
@@ -68,6 +166,7 @@ export default function ReturnRequestComp() {
                             ))}
                         </div>
                     </div>
+                    {/* item condition */}
                     <div>
                         <p className="text-[17px] font-medium">Item condition</p>
                         <p>Is the item unused and in it’s original packaging?</p>
@@ -88,10 +187,47 @@ export default function ReturnRequestComp() {
                             ))}
                         </div>
                     </div>
+                    {/* phone Number */}
+                    <div>
+                        <p className="text-[17px] font-medium">Phone number</p>
+                        <div className="flex items-center border border-gray-200 w-[200px] h-[40px] rounded-sm overflow-hidden">
+                            <span className="px-3 bg-gray-100 text-gray-600 text-sm">+234</span>
+
+                            <input
+                                type="tel"
+                                inputMode="numeric"
+                                placeholder="9062325092"
+                                className="flex-1 h-full px-2 outline-none"
+                                value={phone}
+                                onChange={(e) => {
+                                    // allow digits only
+                                    const value = e.target.value.replace(/\D/g, "");
+                                    setPhone(value);
+                                }}
+                                maxLength={10}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Upload Evidence Section */}
                     <div>
                         <p className="text-[17px] font-medium ">Upload Evidence</p>
                         <p>Helps us process faster</p>
-                        <div className="flex items-center  gap-3 border border-gray-200 px-2 w-[167px] h-[40px] rounded-sm">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleImageChange}
+                        />
+                        <div
+                            onClick={
+                                () => {
+                                    fileInputRef.current?.click()
+                                    setIsLoading(true);
+                                }
+                            }
+                            className="relative  flex items-center  gap-3 border border-gray-200 px-2 w-[167px] h-[40px] rounded-sm cursor-pointer">
                             <div className="text-[#888888] text-[14px]">
                                 upload image
                             </div>
@@ -105,7 +241,21 @@ export default function ReturnRequestComp() {
                                 </svg>
                             </div>
                         </div>
+                        {evidenceImage && (
+                            <img
+                                src={URL.createObjectURL(evidenceImage)}
+                                alt="Evidence preview"
+                                className="mt-2 w-[120px] h-[120px] object-cover rounded border"
+                            />
+                        )}
+                        {imageError && (
+                            <p className="text-red-500 text-[12px] mt-1">
+                                {imageError}
+                            </p>
+                        )}
                     </div>
+
+                    {/* Additional Notes Section */}
                     <div>
                         <p className="text-[17px] font-medium">Additional Notes</p>
                         <p>Any additional details?</p>
@@ -113,13 +263,19 @@ export default function ReturnRequestComp() {
                             <textarea
                                 placeholder="Please specify"
                                 className="outline-brand_solid_gradient rounded w-full h-full px-2 py-2 resize-none placeholder:text-[14px] placeholder:text-[#888888] "
+                                onChange={(e) => setNotes(e.target.value)}
                             />
                         </div>
                     </div>
 
+                    {/* Submit and Go to Returns buttons */}
                     <div className="flex items-center gap-5">
-                        <button className="bg-primaryhover w-[200px] h-[40px] text-[14px] text-white rounded-sm">Submit Request</button>
-                        <button className="border border-gray-400 w-[200px] h-[40px] text-[14px] text-black rounded-sm ">
+                        <button
+                            onClick={onSubmit}
+                            className={`bg-primaryhover w-[200px] h-[40px] text-[14px] text-white rounded-sm  ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            Submit Request
+                        </button>
+                        <button className="border border-gray-400 w-[200px] h-[40px] text-[14px] text-black rounded-sm">
                             Go to Returns
                         </button>
                     </div>
