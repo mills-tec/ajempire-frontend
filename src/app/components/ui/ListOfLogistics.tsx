@@ -44,7 +44,7 @@ export default function ListOfLogistics() {
             setLoading(false);
         }
     };
-
+    console.log("Logistics State:", logistics);
     return (
         <div className="flex flex-col gap-4">
             {loading &&

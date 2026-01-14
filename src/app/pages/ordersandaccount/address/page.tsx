@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function Adress() {
     return (
-        <div className="w-full  lg:block font-poppins lg:mt-4 mt-0 px-4 flex flex-col gap-10">
+        <div className="w-full  lg:block font-poppins  mt-0 px-4 flex flex-col gap-10">
             <div className="hidden lg:flex items-center justify-between mb-6">
                 <p className=" font-semibold  text-[17px]">Address</p>
             </div>

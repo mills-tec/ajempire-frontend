@@ -89,6 +89,7 @@ export default function OrderSummaryPage() {
       return;
     }
 
+
     const selectedItems = getSelectedItems();
     console.log("Selected items for checkout:", selectedItems);
 
@@ -100,6 +101,7 @@ export default function OrderSummaryPage() {
       toast.error("Please select a delivery option before checkout", {
         position: "top-right",
       });
+      setIsLoading(false);
       return;
     }
 
@@ -128,6 +130,10 @@ export default function OrderSummaryPage() {
       if (response?.data?.message?.url) {
         window.location.href = response.data.message.url;
         console.log("Payment URL set to:", response.data.message.url);
+        const store = useCartStore.getState();
+
+        store.resetCheckoutFlow();
+        console.log("Checkout step after reset:", store.checkoutStep);
       } else {
         toast.error("Failed to initiate checkout. Please try again.", {
           position: "top-right",

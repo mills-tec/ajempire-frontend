@@ -48,7 +48,6 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1440}
-          // fill
           />
         </div>
 

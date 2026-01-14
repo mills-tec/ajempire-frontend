@@ -56,7 +56,7 @@ export default function Orders({
     setSearchInput(value);
   };
   return (
-    <div className="lg:px-5 w-full mt-3  lg:block overflow-hidden ">
+    <div className="lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden ">
       <OrderTabs handleSearchInputChange={handleSearchInputChange} />
       {isLoading ? (
         <div className="h-[60vh]  flex items-center justify-center">
@@ -123,8 +123,8 @@ export default function Orders({
                   />
                 </>
               ) : data.filtered.filter(
-                  (order) => order.orderStatus == orderStatus
-                ).length > 0 ? (
+                (order) => order.orderStatus == orderStatus
+              ).length > 0 ? (
                 <>
                   {data.filtered
                     .filter((order) => order.orderStatus == orderStatus)
