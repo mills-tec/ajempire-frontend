@@ -26,7 +26,6 @@ export default function Orders({
   useEffect(() => {
     (async () => {
       const orders = await getAllOrders();
-
       setData({ original: orders, filtered: orders });
       setOrderStatus((await params).status);
     })();
@@ -116,7 +115,7 @@ export default function Orders({
                     items={[
                       ...new Map(
                         data.original
-                          .filter((order) => order.orderStatus === "delivered")
+                          .filter((order) => order.orderStatus === "processing")
                           .flatMap((order) => order.items)
                           .map((item) => [item.product, item])
                       ).values(),

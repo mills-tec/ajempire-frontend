@@ -103,12 +103,12 @@ export default function ProductDescription({
     setCartSelectedVariants(product._id, selectedVariants);
   }, [selectedVariants]);
 
-  let size_variant =
-    product.variants.length > 0 &&
-    product.variants.filter((item) => item.name == "size" && item.stock > 0);
-  let color_variant =
-    product.variants.length > 0 &&
-    product.variants.filter((item) => item.name == "color" && item.stock > 0);
+  // let size_variant =
+  //   product.variants.length > 0 &&
+  //   product.variants.filter((item) => item.name == "size" && item.stock > 0);
+  // let color_variant =
+  //   product.variants.length > 0 &&
+  //   product.variants.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -220,8 +220,8 @@ export default function ProductDescription({
         <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
           {product.images.length > 0 ? (
-            product.images.map((image) => (
-              <div className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
+            product.images.map((image, key) => (
+              <div key={key} className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
                 <Image
                   src={image}
                   alt="variant images"
@@ -281,8 +281,8 @@ export default function ProductDescription({
             </div>
           </div>
         </div> */}
-        {[...variant_set].map((variant) => (
-          <div className="space-y-2  mt-4 lg:mt-0">
+        {[...variant_set].map((variant, key) => (
+          <div key={key} className="space-y-2  mt-4 lg:mt-0">
             <p className="text-xs text-brand_gray_dark capitalize">
               Select Property ({variant}):
             </p>

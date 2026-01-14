@@ -7,7 +7,8 @@ import { IOrder, Review } from "@/lib/types";
 import { getBearerToken } from "@/lib/api";
 let config = {};
 
-const token = typeof window !== "undefined" ? localStorage.getItem('user') : null;
+const token =
+  typeof window !== "undefined" ? localStorage.getItem("user") : null;
 if (token) {
   config = {
     headers: {
@@ -26,9 +27,7 @@ export const useOrders = () => {
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
-      console.log("config", config);
       let req = await getData("/orders/", config);
-      console.log(req)
       const orderRequest = req.data.message;
       req = await getData("/review/", config);
       const reviews: Review[] = req.data.message;
@@ -95,7 +94,8 @@ export const useReviews = () => {
     if (!loading) {
       setLoading(true);
       try {
-        await postData(`/review/${product}`, data, config);
+        const req = await postData(`/review/${product}`, data, config);
+
         return true;
       } catch (err: unknown) {
         let message;
@@ -104,6 +104,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
+        console.log(err);
         toast(message, { type: "error" });
       } finally {
         setLoading(false);

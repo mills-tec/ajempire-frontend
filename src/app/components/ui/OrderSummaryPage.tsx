@@ -254,7 +254,7 @@ export default function OrderSummaryPage() {
               stroke="white"
               strokeWidth="1.5"
               stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeLinejoin="round"
             />
           </svg>
 

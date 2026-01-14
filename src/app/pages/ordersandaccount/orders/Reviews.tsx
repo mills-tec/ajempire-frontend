@@ -75,9 +75,8 @@ export default function Reviews({ items }: { items: IItem[] }) {
     setIsEdit(false);
   };
 
- 
   return (
-    <div className="h-screen md:p-6 md:ml-8  rounded-xl my-8  bg-white p-4">
+    <div className="h-screen md:p-6 md:ml-8  rounded-xl my-8  bg-white">
       {products.map((item, index: number) => {
         return (
           <div key={index} className="pr-5 grid md:grid-cols-2  mb-10">
