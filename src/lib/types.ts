@@ -19,27 +19,27 @@ export interface Product {
   _id: string;
   name: string;
   description: string;
-  category: string;
+  category?: string;
   price: number;
-  cover_image: string;
-  images: string[];
-  discountedPrice: number;
+  cover_image?: string;
+  images?: string[];
+  discountedPrice?: number;
   discount?: number; // percentage from API (fallback for discountedPrice)
-  itemsSold: number;
-  stock: number;
-  whatsInside: string[];
-  rating: number;
-  numReviews: number;
-  deliveryFee: number;
-  deliveryTime: number;
-  productStatus: string;
-  isFeatured: boolean;
-  isActive: boolean;
-  reviews: Review[];
-  variants: Variant[];
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
+  itemsSold?: number;
+  stock?: number;
+  whatsInside?: string[];
+  rating?: number;
+  numReviews?: number;
+  deliveryFee?: number;
+  deliveryTime?: number;
+  productStatus?: string;
+  isFeatured?: boolean;
+  isActive?: boolean;
+  reviews?: Review[];
+  variants?: Variant[];
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
   averageRating?: number; // optional, since one object had it missing
 }
 
@@ -76,7 +76,7 @@ export interface IItem {
   qty: number;
   image: string;
   discountedPrice: number;
-  review?:  Review
+  review?: Review;
 }
 
 export interface IOrder {
@@ -84,4 +84,37 @@ export interface IOrder {
   orderStatus: string;
   order_id: string;
   createdAt: string;
+}
+
+export interface Comment {
+  likes: string[];
+  text: string;
+  user: string;
+  parentId: string | null;
+  depth?: number;
+  replies: Comment[];
+  _id: string;
+  createdAt: string;
+  viewReply?: boolean;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  image: string;
+}
+
+export interface IFeed {
+  comments: Comment[];
+  likes: string[];
+  mediaType: string;
+  mediaUrl: string;
+  productId: {
+    description: string;
+    name: string;
+    _id: string;
+    price: number;
+  };
+  shares: number;
+  _id: string;
 }

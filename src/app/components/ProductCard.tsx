@@ -72,7 +72,7 @@ export default function ProductCard({
       <Link href={"product/" + product._id}>
         <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip">
           <Image
-            src={product.cover_image}
+            src={product.cover_image ?? ""}
             alt="product image"
             fill
             className="transition-transform duration-300 ease-in-out group-hover:scale-110"
@@ -112,7 +112,7 @@ export default function ProductCard({
         <div className="flex items-center gap-2 pt-1 justify-between">
           <div className="flex  items-center gap-2">
             <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
-              N{calcDiscountPrice(product.price, product.discountedPrice)}
+              N{calcDiscountPrice(product.price, product.discountedPrice ?? 0)}
             </h3>
             <p className="text-[7px] lg:text-xs text-black/60">1k+sold</p>
           </div>
