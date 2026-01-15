@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 export default function Home() {
 
+  const [searchQuery, setSearchQuery] = React.useState("");
   const { data, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
@@ -25,6 +26,7 @@ export default function Home() {
 
   // console.log("data: ", data);
   const selectedItem = useCartStore((state) => state.selectedItem);
+
 
   return (
     <div className="w-full ">
@@ -46,7 +48,6 @@ export default function Home() {
             // className="absolute object-cover"
             height={379}
             width={1440}
-          // fill
           />
         </div>
 

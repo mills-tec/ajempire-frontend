@@ -1,7 +1,10 @@
 import clsx from "clsx";
 import React from "react";
+type spinnerProps = {
+  size?: number;
+};
 
-export default function Spinner({ fixed = true }: { fixed?: boolean }) {
+export default function Spinner({ size = 67 }: spinnerProps) {
   return (
     <div
       className={clsx(
@@ -10,8 +13,8 @@ export default function Spinner({ fixed = true }: { fixed?: boolean }) {
       )}
     >
       <svg
-        width="67"
-        height="67"
+        width={size}
+        height={size}
         viewBox="0 0 67 67"
         className="animate-spin"
         fill="none"

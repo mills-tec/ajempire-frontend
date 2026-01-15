@@ -25,18 +25,31 @@ export default function ProductDescription({
     increaseQuantity,
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
+    selectAllCartItems,
   } = useCartStore();
+
 
   const checkoutHandler = () => {
     const token = getBearerToken();
-    console.log("token:", token);
     if (!token) {
-      toast("Please log in to checkout");
+      toast.error("Please log in to checkout");
+      return;
     }
-    {
-      setIsAdress(true);
+
+    // Add item to cart if missing
+    if (!item) {
+      addItem({
+        ...product,
+        quantity,
+        selectedVariants: selectedVariants ?? [],
+      });
     }
+
+    // Now open checkout
+    // selectAllCartItems();
+    setIsAdress(true);
   };
+
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
@@ -80,8 +93,8 @@ export default function ProductDescription({
   function getAllVariantItems(variant_name: string) {
     return product.variants.length > 0
       ? product.variants.filter(
-          (item) => item.name == variant_name && item.stock > 0
-        )
+        (item) => item.name == variant_name && item.stock > 0
+      )
       : [];
   }
 
@@ -140,9 +153,8 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${
-              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-            }`}</p>
+            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+              }`}</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -349,8 +361,8 @@ export default function ProductDescription({
                         {selectedVariants?.some(
                           (v) => v._id === variantItem._id
                         ) && (
-                          <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                        )}
+                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                          )}
                       </div>
                     );
                   }
