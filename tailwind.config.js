@@ -75,9 +75,17 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        placeholderFromBottom: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "50%": { opacity: "0.5", transform: "translateY(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
       animation: {
         "dropdown-in": "dropdown-open 200ms ease-out forwards",
         "dropdown-out": "dropdown-close 150ms ease-in forwards",
+        placeholderFromBottom: "placeholderFromBottom 0.5s ease-out",
       },
     },
   },
