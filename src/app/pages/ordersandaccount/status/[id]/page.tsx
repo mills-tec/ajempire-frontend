@@ -253,8 +253,6 @@ export default function Status() {
           toggleShow={toggleShowReview}
         />
       )}
-
-
     </section>
   );
 }
