@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
-import { toast } from "react-toastify";
-import { AxiosError } from "axios";
+import { toast } from "sonner";
+import axios, { AxiosError } from "axios";
 import { IOrder, Review } from "@/lib/types";
-import { getBearerToken } from "@/lib/api";
+import { useRouter } from "next/router";
+
 let config = {};
 
-const token = typeof window !== "undefined" ? localStorage.getItem('user') : null;
+const token =
+  typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ajempire_signin_user")!).token : null;
 if (token) {
   config = {
     headers: {
@@ -26,9 +28,7 @@ export const useOrders = () => {
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
-      console.log("config", config);
       let req = await getData("/orders/", config);
-      console.log(req)
       const orderRequest = req.data.message;
       req = await getData("/review/", config);
       const reviews: Review[] = req.data.message;
@@ -95,7 +95,8 @@ export const useReviews = () => {
     if (!loading) {
       setLoading(true);
       try {
-        await postData(`/review/${product}`, data, config);
+        const req = await postData(`/review/${product}`, data, config);
+
         return true;
       } catch (err: unknown) {
         let message;
@@ -104,7 +105,8 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message, { type: "error" });
+        console.log(err);
+        toast(message);
       } finally {
         setLoading(false);
       }
@@ -124,7 +126,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message, { type: "error" });
+        toast(message);
       } finally {
         setLoading(false);
       }
@@ -150,7 +152,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message, { type: "error" });
+        toast(message);
       } finally {
         setLoading(false);
       }
@@ -171,7 +173,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message, { type: "error" });
+        toast(message);
       } finally {
         setLoading(false);
       }
@@ -180,3 +182,53 @@ export const useReviews = () => {
 
   return { postReview, getUserReviews, updateReview, deleteReview, loading };
 };
+
+export const useIssueReturn = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const postIssueReturn = async (data: any) => {
+
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
+        // const req = await postData(`/return/`, data, config);
+        toast.success("Return request submitted successfully");
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        console.log(err);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const getReturnRequests = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(`/return/`, config);
+        return req.data.message;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  return { postIssueReturn, loading, getReturnRequests };
+}
+

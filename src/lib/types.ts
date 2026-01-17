@@ -44,7 +44,7 @@ export interface Product {
 }
 
 export interface Review {
-  user?: string;
+  user?: any;
   comment?: string;
   rating?: number;
   image?: string;
@@ -76,7 +76,7 @@ export interface IItem {
   qty: number;
   image: string;
   discountedPrice: number;
-  review?: Review;
+  review?: Review
 }
 
 export interface IOrder {

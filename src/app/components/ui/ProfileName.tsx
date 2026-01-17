@@ -41,9 +41,9 @@ export default function ProfileName({ email }: ProfileNameProps) {
         <p className=" bg-gray-50 w-[100px] h-[10px]"></p>
     </div>;
 
-    const fullName = profile?.shippingAddress?.fullName;
+    const fullName = profile.fullname || profile?.shippingAddress?.fullName;
     const initials = getInitials(fullName);
-
+    console.log(profile);
     return (
         <div className="flex items-center gap-3 font-poppins">
             <div className="w-[65px] h-[65px] rounded-full bg-brand_solid_gradient flex items-center justify-center font-semibold cursor-pointer">

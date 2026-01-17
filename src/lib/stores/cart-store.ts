@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Product, Variant } from "../types";
 import { calcDiscount } from "../utils";
-import { addToCart, removeCartItem } from "../api";
+import { addToCart, getBearerToken, removeCartItem } from "../api";
 import { toast } from "sonner";
 
 export type CartItem = Product & {
@@ -75,6 +75,9 @@ type CartStore = {
 };
 
 export const useCartStore = create<CartStore>()(
+
+
+
   persist(
     (set, get) => ({
       items: [],
@@ -128,6 +131,7 @@ export const useCartStore = create<CartStore>()(
         // Try to sync
         addToCart(newItems)
           .then(() => {
+
             // mark all as synced
             set({
               items: newItems.map((i) => ({ ...i, synced: true })),

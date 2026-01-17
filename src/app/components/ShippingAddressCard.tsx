@@ -8,7 +8,7 @@ interface IShippingAddress{
 }
 export default function ShippingAddressCard(shippingAddress: IShippingAddress) {
   return (
-    <div className="w-full border border-black/60 rounded-xl space-y-4 p-5">
+    <div className="w-full border border-black/60 rounded-xl space-y-4 p-5 capitalize">
       <h2 className="font-semibold">Shipping address</h2>
       <div className="text-sm space-y-1">
         <div className="flex justify-between items-center">

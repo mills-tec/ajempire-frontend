@@ -18,11 +18,11 @@ export default function OrderCard({
 }) {
   return (
     <div className="flex gap-5 border-b pb-3 md:border-b-0 ">
-     <div>
-       <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-clip">
-        <Image src={image} alt={title} width={200} height={200} />
+      <div>
+        <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
+          <Image src={image} alt={title} fill className="object-cover" />
+        </div>
       </div>
-     </div>
       <div className="space-y-1 mt-2 col-span-2 ">
         <h2 className="text-sm">{title}</h2>
         <h4 className="text-xs font-light">{variant}</h4>
