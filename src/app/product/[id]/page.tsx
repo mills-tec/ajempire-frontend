@@ -116,7 +116,7 @@ export default function ProductDetailPage() {
           <div className="lg:hidden h-[200px] overflow-y-auto ">
             {data?.message && <ProductReview product={data?.message.product} />}
             {data?.message &&
-              data.message.product.reviews.map((review) => (
+              data.message.product.reviews?.map((review) => (
                 <CommentCard key={review._id} review={review} />
               ))}
           </div>
@@ -127,7 +127,7 @@ export default function ProductDetailPage() {
               )}
             </div>
             {data?.message &&
-              data.message.product.reviews.map((review) => (
+              data.message.product.reviews?.map((review) => (
                 <CommentCard key={review._id} review={review} />
               ))}
           </div>
@@ -171,7 +171,7 @@ export default function ProductDetailPage() {
                   />
                   <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
                     <Image
-                      src={item.cover_image}
+                      src={item.cover_image ?? ""}
                       alt="product image"
                       fill
                       className="transition-transform duration-300 ease-in-out group-hover:scale-110"
@@ -238,7 +238,7 @@ export default function ProductDetailPage() {
               {quantity}
               <button
                 onClick={() =>
-                  setQuantity((prev) => Math.min(prev + 1, item.stock))
+                  setQuantity((prev) => Math.min(prev + 1, item.stock ?? 0))
                 }
                 className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
               >

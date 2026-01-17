@@ -1,29 +1,32 @@
 import React from "react";
 import SearchBar from "./ui/SearchBar";
+import Link from "next/link";
 
 export default function UpdateMenu() {
   return (
     <div className="px-8 space-y-8 py-20">
       <SearchBar showCam={false} />
       <div>
-        <div className="flex cursor-pointer items-center gap-3 py-4 text-brand_pink">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 30 30"
-            className="size-4"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2.59277 14.8271L9.33594 21.8145L9.50293 21.9883L9.33496 22.1621L7.63184 23.9248L7.45215 24.1104L7.27246 23.9248L0.517578 16.9375L0.348633 16.7627L0.518555 16.5889L2.23438 14.8262L2.41406 14.6416L2.59277 14.8271ZM27.2539 6.81348L28.9697 8.57617L29.1396 8.75L28.9707 8.9248L14.4707 23.9248L14.291 24.1104L14.1113 23.9248L7.35645 16.9375L7.18848 16.7637L7.35645 16.5898L9.06055 14.8271L9.24023 14.6416L9.41992 14.8271L14.29 19.8525L26.8955 6.81445L27.0742 6.62891L27.2539 6.81348ZM20.4277 6.81445L22.1318 8.57715L22.2998 8.75098L22.1318 8.9248L14.4707 16.8496L14.291 17.0352L14.1113 16.8496L12.4072 15.0869L12.2393 14.9131L12.4072 14.7393L20.0684 6.81445L20.248 6.62891L20.4277 6.81445Z"
-              fill="#FF008C"
-              stroke="#FF008C"
-              stroke-width="0.5"
-            />
-          </svg>
-          <p className="font-medium">All</p>
-        </div>
+        <Link href={"/pages/update"}>
+          <div className="flex cursor-pointer items-center gap-3 py-4 text-brand_pink">
+            <svg
+              width="30"
+              height="30"
+              viewBox="0 0 30 30"
+              className="size-4"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M2.59277 14.8271L9.33594 21.8145L9.50293 21.9883L9.33496 22.1621L7.63184 23.9248L7.45215 24.1104L7.27246 23.9248L0.517578 16.9375L0.348633 16.7627L0.518555 16.5889L2.23438 14.8262L2.41406 14.6416L2.59277 14.8271ZM27.2539 6.81348L28.9697 8.57617L29.1396 8.75L28.9707 8.9248L14.4707 23.9248L14.291 24.1104L14.1113 23.9248L7.35645 16.9375L7.18848 16.7637L7.35645 16.5898L9.06055 14.8271L9.24023 14.6416L9.41992 14.8271L14.29 19.8525L26.8955 6.81445L27.0742 6.62891L27.2539 6.81348ZM20.4277 6.81445L22.1318 8.57715L22.2998 8.75098L22.1318 8.9248L14.4707 16.8496L14.291 17.0352L14.1113 16.8496L12.4072 15.0869L12.2393 14.9131L12.4072 14.7393L20.0684 6.81445L20.248 6.62891L20.4277 6.81445Z"
+                fill="#FF008C"
+                stroke="#FF008C"
+                stroke-width="0.5"
+              />
+            </svg>
+            <p className="font-medium">All</p>
+          </div>
+        </Link>
         <div className="flex cursor-pointer items-center gap-3 py-4 text-brand_pink">
           <svg
             width="28"
@@ -114,8 +117,9 @@ export default function UpdateMenu() {
             />
           </svg>
 
-          <p className="font-medium">Gallery</p>
-        </div>
+            <p className="font-medium">Gallery</p>
+          </div>
+        </Link>
       </div>
     </div>
   );
