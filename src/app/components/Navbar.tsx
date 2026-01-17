@@ -19,10 +19,10 @@ const Navbar = () => {
   };
 
   const { isLoggedIn } = useAuthStore();
-  // export const hi = "";
   return (
     <div className=" w-full text-[14px] font-poppins">
       <div className="hidden lg:flex">
+
         <NavDesktop
           isLoggedIn={isLoggedIn}
           isActive={isActive}

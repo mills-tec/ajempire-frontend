@@ -7,6 +7,7 @@ import Spinner from "@/app/components/Spinner";
 import Reviews from "../Reviews";
 import { IOrder } from "@/lib/types";
 import { toast } from "react-toastify";
+import EmptyList from "@/components/EmptyList";
 
 export default function Orders({
   params,
@@ -63,7 +64,7 @@ export default function Orders({
           <Spinner />
         </div>
       ) : data.filtered.length > 0 ? (
-        <div className=" overflow-auto h-screen">
+        <div className="overflow-auto h-screen">
           {orderStatus == "all" || searchInput.length > 0 ? (
             <>
               {data.filtered
@@ -149,13 +150,9 @@ export default function Orders({
           )}
         </div>
       ) : (
-        <div className="h-[60vh] flex items-center justify-center">
-          <h1>
-            {searchInput.length > 0
-              ? "Couldn't find any order with that Id"
-              : "You do not have any order yet."}
-          </h1>
-        </div>
+        <EmptyList message={searchInput.length > 0
+          ? "Couldn't find any order with that Id"
+          : "You do not have any order yet."} />
       )}
     </div>
   );

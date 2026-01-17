@@ -113,14 +113,13 @@ export default function ProductDetailPage() {
             {data?.message && <ProductDescription product_data={data} />}
           </div>
 
-          <div className="lg:hidden">
+          <div className="lg:hidden h-[200px] overflow-y-auto ">
             {data?.message && <ProductReview product={data?.message.product} />}
             {data?.message &&
               data.message.product.reviews.map((review) => (
                 <CommentCard key={review._id} review={review} />
               ))}
           </div>
-
           <div>
             <div className="hidden lg:block">
               {data?.message && (
