@@ -88,7 +88,7 @@ export default function OrdersContent({
           
             <button
               onClick={handleBuyAgain}
-              className="rounded-full text-sm text-brand_pink py-1 px-3  md:px-6 w-max border-2 border-brand_pink flex items-center justify-center h-8"
+              className="rounded-full text-sm text-brand_pink py-1 px-3  md:px-6 w-max border border-brand_pink flex items-center justify-center h-8"
             >
               {postLoading ? (
                 <ImSpinner8 className="animate-spin" />

@@ -8,21 +8,76 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
+import ListOfLogistics from "./ListOfLogistics";
+import Link from "next/link";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const { items, getSelectedItems } = useCartStore();
+  const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {});
+  useEffect(() => { });
+  const syncCartToBackend = async () => {
+    const token = getBearerToken();
+    if (!token) return;
 
+    const selectedItems = getSelectedItems();
+
+    if (!selectedItems || selectedItems.length === 0) {
+      toast.error("No selected items to sync for testing.");
+      return;
+    }
+
+
+    try {
+      await axios.delete(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          data: {
+            // Map to backend format
+            items: selectedItems.map(item => ({
+              productId: item._id,
+              qty: item.quantity,
+            })),
+          },
+        }
+      );
+
+      // Optionally, you can also POST items to cart if DELETE clears it first
+      await axios.post(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          items: selectedItems.map(item => ({
+            productId: item._id,
+            qty: item.quantity,
+          })),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Cart synced to backend for testing!");
+    } catch (error) {
+      console.error("Error syncing cart:", error);
+      toast.error("Failed to sync cart for testing.");
+    }
+  };
   const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = localStorage.getItem("paymentMethod");
+
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
       setIsLoading(false);
@@ -33,49 +88,74 @@ export default function OrderSummaryPage() {
       setIsLoading(false);
       return;
     }
-    if (!items || items.length === 0) {
-      toast.error("Your cart is empty", { position: "top-right" });
+
+
+    const selectedItems = getSelectedItems();
+    console.log("Selected items for checkout:", selectedItems);
+
+    if (!selectedItems || selectedItems.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+    if (!selectedLogistic) {
+      toast.error("Please select a delivery option before checkout", {
+        position: "top-right",
+      });
       setIsLoading(false);
       return;
     }
+
+    // For testing: sync cart to backend
+    await syncCartToBackend();
+
     try {
       const response = await axios.post(
         "https://ajempire-backend.vercel.app/api/checkout",
         {
-          paymentMethod: paymentMethod,
+          paymentMethod,
+          logistics: {
+            request_token: requestToken,
+            courier_id: selectedLogistic.courier_id,
+            service_code: selectedLogistic.courier_id,
+          },
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${getBearerToken()}`,
             "Content-Type": "application/json",
           },
         }
       );
+
       if (response?.data?.message?.url) {
-        window.location.href = response.data.message.url; // Redirect to payment URL
+        window.location.href = response.data.message.url;
         console.log("Payment URL set to:", response.data.message.url);
+        const store = useCartStore.getState();
+
+        store.resetCheckoutFlow();
+        console.log("Checkout step after reset:", store.checkoutStep);
       } else {
         toast.error("Failed to initiate checkout. Please try again.", {
           position: "top-right",
         });
       }
     } catch (error) {
-      // console.error("Checkout error:", error.response?.data || error.message);
       toast.error("An error occurred during checkout. Please try again.", {
         position: "top-right",
+
       });
+      console.log("order summary error", error)
     } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
+      setTimeout(() => setIsLoading(false), 800);
     }
   };
 
   return (
     <div className="w-full flex flex-col lg:flex-row items-start justify-between lg:px-[30px] lg:py-[30px] pt-6 px-4 font-poppins">
       {isLoading && <Spinner />}
-      <div className="lg:hidden w-full flex items-center text-center">
-        <div>
+      <div className="lg:hidden w-full flex items-center text-center mb-8 lg:mb-0">
+
+        <Link href={"/pages/cart"}>
           <svg
             width="24"
             height="24"
@@ -88,13 +168,15 @@ export default function OrderSummaryPage() {
               fill="black"
             />
           </svg>
-        </div>
+        </Link>
+
         <p className="lg:hidden text-[20px]  w-full text-center">
           Order Summary{" "}
         </p>
       </div>
-      <div className="lg:hidden w-full flex items-center justify-between gap-1 mb-5 mt-5">
-        <div className="flex items-center gap-1">
+      {/* Progress indicators */}
+      <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scroll-smooth scrollbar-hide">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <svg
             width="24"
             height="24"
@@ -121,7 +203,7 @@ export default function OrderSummaryPage() {
           </svg>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <svg
             width="24"
             height="24"
@@ -148,21 +230,37 @@ export default function OrderSummaryPage() {
             <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
           </svg>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0 ">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z" fill="#FFCC00" />
+          </svg>
+          <p className="text-[#A3A3A3]">Logistics</p>
+        </div>
+        <div>
+          <svg
+            width="22"
+            height="1"
+            viewBox="0 0 22 1"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
+          </svg>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
           <svg
             width="24"
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+            xmlns="http://www.w3.org/2000/svg">
             <rect width="24" height="24" rx="12" fill="#FF008C" />
             <path
               d="M11 7V13.6667L14 17"
               stroke="white"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeLinejoin="round"
             />
           </svg>
 
@@ -172,9 +270,8 @@ export default function OrderSummaryPage() {
       <p className="lg:hidden  text-[16px] mb-6 mt-5">
         Please Confirm and submit your order
       </p>
-      <div className="w-full flex flex-col lg:flex-row  lg:items-start justify-center lg:gap-6 gap-8">
+      <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <GetshippingAddress />
-        <SelectedpaymentMethod />
         <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
       </div>
     </div>

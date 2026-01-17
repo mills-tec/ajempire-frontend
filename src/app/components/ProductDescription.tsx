@@ -25,18 +25,31 @@ export default function ProductDescription({
     increaseQuantity,
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
+    selectAllCartItems,
   } = useCartStore();
+
 
   const checkoutHandler = () => {
     const token = getBearerToken();
-    console.log("token:", token);
     if (!token) {
-      toast("Please log in to checkout");
+      toast.error("Please log in to checkout");
+      return;
     }
-    {
-      setIsAdress(true);
+
+    // Add item to cart if missing
+    if (!item) {
+      addItem({
+        ...product,
+        quantity,
+        selectedVariants: selectedVariants ?? [],
+      });
     }
+
+    // Now open checkout
+    // selectAllCartItems();
+    setIsAdress(true);
   };
+
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
@@ -80,8 +93,8 @@ export default function ProductDescription({
   function getAllVariantItems(variant_name: string) {
     return product.variants.length > 0
       ? product.variants.filter(
-          (item) => item.name == variant_name && item.stock > 0
-        )
+        (item) => item.name == variant_name && item.stock > 0
+      )
       : [];
   }
 
@@ -90,12 +103,12 @@ export default function ProductDescription({
     setCartSelectedVariants(product._id, selectedVariants);
   }, [selectedVariants]);
 
-  let size_variant =
-    product.variants.length > 0 &&
-    product.variants.filter((item) => item.name == "size" && item.stock > 0);
-  let color_variant =
-    product.variants.length > 0 &&
-    product.variants.filter((item) => item.name == "color" && item.stock > 0);
+  // let size_variant =
+  //   product.variants.length > 0 &&
+  //   product.variants.filter((item) => item.name == "size" && item.stock > 0);
+  // let color_variant =
+  //   product.variants.length > 0 &&
+  //   product.variants.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -140,9 +153,8 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${
-              product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-            }`}</p>
+            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
+              }`}</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -208,8 +220,8 @@ export default function ProductDescription({
         <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
           {product.images.length > 0 ? (
-            product.images.map((image) => (
-              <div className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
+            product.images.map((image, key) => (
+              <div key={key} className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
                 <Image
                   src={image}
                   alt="variant images"
@@ -269,8 +281,8 @@ export default function ProductDescription({
             </div>
           </div>
         </div> */}
-        {[...variant_set].map((variant) => (
-          <div className="space-y-2  mt-4 lg:mt-0">
+        {[...variant_set].map((variant, key) => (
+          <div key={key} className="space-y-2  mt-4 lg:mt-0">
             <p className="text-xs text-brand_gray_dark capitalize">
               Select Property ({variant}):
             </p>
@@ -349,8 +361,8 @@ export default function ProductDescription({
                         {selectedVariants?.some(
                           (v) => v._id === variantItem._id
                         ) && (
-                          <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                        )}
+                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                          )}
                       </div>
                     );
                   }

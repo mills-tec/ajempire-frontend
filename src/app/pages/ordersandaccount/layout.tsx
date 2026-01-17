@@ -53,20 +53,20 @@ export default function Layout({ children }: LayoutProps) {
   }, [pathname]);
 
   return (
-    <div className="relative">
-
-      <div className=" py-[20px] lg:bg-[#F9F9F9] lg:py-[30px] lg:px-4 h-auto bg-[#ffffff]">
-        <div>
-          <div className="hidden mb-2 lg:flex">
-            <BreadCrumb activeItem={activeItem} />
-          </div>
-        </div>
-
-        <main className="w-full flex py-1">
+    <div className="relative ">
+      <div className=" py-[20px] lg:bg-[#F9F9F9]  lg:px-4 h-auto bg-[#ffffff]">
+        <main className="w-full flex ">
           <div className="w-[23%] hidden lg:block">
+            <div className="hidden mb-2 lg:flex">
+              <BreadCrumb activeItem={activeItem} />
+            </div>
             <SideNav />
           </div>
-          <div className="lg:w-[88%] w-full">{children}</div>
+          <div className="lg:w-[88%] w-full max-h-full lg:mb-10 lg:px-0">
+            <div>
+              {children}
+            </div>
+          </div>
         </main>
       </div>
     </div>

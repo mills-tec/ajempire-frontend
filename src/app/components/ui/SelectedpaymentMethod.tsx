@@ -22,14 +22,14 @@ export default function SelectedpaymentMethod() {
     }
 
     return (
-        <div className="lg:w-[390px] w-[350px] h-[269px] shadow-md rounded-md border border-gray-200 p-4  font-poppins">
-            <h1 className="text-[17px] font-semibold opacity-75 mb-4">Payment Method</h1>
+        <div className="w-full pt-6 h-[269px]  font-poppins">
+            <h1 className="text-[14px] font-medium  mb-4">Selected Payment Method</h1>
             <div className="space-y-4 w-full flex items-center flex-col">
 
                 {/* Paystack Option */}
                 <div
                     // 💡 Use Context state for conditional styling
-                    className={`w-full flex items-center justify-between border px-6 py-3 rounded-lg cursor-pointer ${selectedPaymentMethod === "paystack" ? "border-primaryhover bg-pink-50" : "border-gray-300 bg-gray-50 opacity-50"
+                    className={`w-full flex items-center justify-between border p-4 rounded-lg cursor-pointer ${selectedPaymentMethod === "paystack" ? "border-primaryhover bg-pink-50" : "border-gray-300 bg-gray-50 opacity-50"
                         }`}
                     onClick={() => setSelectedPaymentMethod("paystack")}
                 >
@@ -50,7 +50,7 @@ export default function SelectedpaymentMethod() {
                 {/* Flutterwave Option */}
                 <div
                     // 💡 Use Context state for conditional styling
-                    className={`w-full flex items-center justify-between border px-6 py-3 rounded-lg cursor-pointer ${selectedPaymentMethod === "flutter" ? "border-primaryhover bg-pink-50" : " border-gray-300 bg-gray-50 opacity-50"
+                    className={`w-full flex items-center justify-between border p-4 rounded-lg cursor-pointer ${selectedPaymentMethod === "flutter" ? "border-primaryhover bg-pink-50" : " border-gray-300 bg-gray-50 opacity-50"
                         }`}
                     onClick={() => setSelectedPaymentMethod("flutter")}
                 >
