@@ -27,7 +27,7 @@ export function getRatingStats(arr: Review[]) {
   const counts: Record<Rating, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
   arr.forEach(({ rating }) => {
-    if (rating! >= 1 && rating! <= 5) counts[rating as Rating]++;
+    if (rating >= 1 && rating <= 5) counts[rating as Rating]++;
   });
 
   const normalized: Record<Rating, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -37,26 +37,4 @@ export function getRatingStats(arr: Review[]) {
   }
 
   return { counts, normalized };
-}
-
-
-
-export const saveAccounts = (account: { token: string, user: any, email: string }) => {
-  if (localStorage.getItem("savedAccounts")) {
-    const savedAccounts: { token: string, user: any, email: string }[] = JSON.parse(localStorage.getItem("savedAccounts")!);
-    if (!savedAccounts.some(savedAccount => savedAccount.email == account.email)) {
-      localStorage.setItem("savedAccounts", JSON.stringify([...savedAccounts, account]));
-    }
-  } else {
-    localStorage.setItem("savedAccounts", JSON.stringify([account]));
-
-  }
-};
-
-export function getInitials(name?: string) {
-  if (!name) return "U";
-  const parts = name.trim().split(" ");
-  const first = parts[0]?.[0] || "";
-  const second = parts[1]?.[0] || "";
-  return (first + second).toUpperCase();
 }

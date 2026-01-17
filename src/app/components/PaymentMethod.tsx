@@ -31,6 +31,7 @@ export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }:
             onNext();
         }, 700);
     };
+
     console.log(selectedPaymentMethod)
     return (
         <div className="fixed inset-0 bg-[#FFFFFF] flex lg:items-center lg:justify-center z-50">
@@ -40,8 +41,8 @@ export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }:
                 )
             }
             <div className="w-full relative shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] lg:px-10 px-5 py-8">
-                <p className="text-center font-semibold opacity-75 mb-6">Payment Method</p>
-                <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                <p className="text-center font-semibold opacity-75">Payment Method</p>
+                <div className="lg:hidden flex items-center justify-between gap-1 mb-5 mt-5">
                     <div className="flex items-center gap-1">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z" fill="#0085FF" />
@@ -69,19 +70,7 @@ export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }:
                     <div className="flex items-center gap-1">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect width="24" height="24" rx="12" fill="#AEAEAE" />
-                            <path d="M11 7V13.6667L14 17" stroke="white" strokeWidth="1.5" stroke-linecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <p className="text-[#A3A3A3]">Logistics</p>
-                    </div>
-                    <div>
-                        <svg width="22" height="1" viewBox="0 0 22 1" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
-                        </svg>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="24" height="24" rx="12" fill="#AEAEAE" />
-                            <path d="M11 7V13.6667L14 17" stroke="white" strokeWidth="1.5" stroke-linecap="round" strokeLinejoin="round" />
+                            <path d="M11 7V13.6667L14 17" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         <p className="text-[#A3A3A3]">Review</p>
                     </div>

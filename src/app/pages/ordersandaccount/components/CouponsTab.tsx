@@ -9,7 +9,7 @@ export default function CouponsTab() {
         { name: "Expired", path: "/pages/ordersandaccount/coupoonsandoffers/expiredcoupons" },
     ];
     return (
-        <div className="">
+        <div>
             <div className="lg:hidden flex items-center  mb-[20px]">
                 <Link href={"/pages/ordersandaccount"}>
                     <svg width="9" height="17" viewBox="0 0 9 17" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -21,7 +21,7 @@ export default function CouponsTab() {
                 </div>
 
             </div>
-            <ul className="w-full flex !items-center justify-around lg:justify-around  font-poppins lg:text-[14px] text-[12px]">
+            <ul className="w-full flex items-center justify-around lg:justify-start lg:gap-10 font-poppins lg:text-[14px] text-[12px]">
                 {tabs.map((tab) => (
                     <li key={tab.path}>
                         <Link

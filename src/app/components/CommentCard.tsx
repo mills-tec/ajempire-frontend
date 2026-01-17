@@ -2,7 +2,6 @@
 import React from "react";
 import Image from "next/image";
 import { Review } from "@/lib/types";
-import { getInitials } from "@/lib/utils";
 
 export default function CommentCard({ review }: { review: Review }) {
   // const [rating, setRating] = React.useState(3);
@@ -37,23 +36,15 @@ export default function CommentCard({ review }: { review: Review }) {
       />
     </svg>
   );
-
   return (
-    <div className="space-y-2 font-poppins">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 bg-primaryhover rounded-full text-white flex items-center justify-center text-xs">
-          <p>{getInitials(review.user.fullname)}</p>
-        </div>
-
-        <h3 className="text-sm">{review.user.fullname}</h3>
-      </div>
-
+    <div className="space-y-2">
+      <h3>{review.user}</h3>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           {
             <div className="flex text-brand_gray_dark">
               {[...Array(5)].map((_, i) =>
-                i < review.rating! ? (
+                i < review.rating ? (
                   <span key={i}>{filledStar}</span>
                 ) : (
                   <span key={i}>{unfilledStar}</span>
@@ -61,21 +52,16 @@ export default function CommentCard({ review }: { review: Review }) {
               )}
             </div>
           }
-          <p className="text-black/60 text-xs">{new Date(review.createdAt!).toLocaleDateString("en-us", { day: "numeric", month: "short", year: "numeric" })}</p>
+          <p className="text-black/60 text-xs">13th Oct 2025</p>
         </div>
         <p className="text-sm">{review.comment}</p>
-
-
         <div className="size-8 rounded-full relative overflow-clip">
-
-          {review.image && (
-            <Image
-              src={review.image}
-              alt=""
-              className="object-cover absolute"
-              fill
-            />
-          )}
+          <Image
+            src={review.image}
+            alt=""
+            className="object-cover absolute"
+            fill
+          />
         </div>
       </div>
     </div>

@@ -42,13 +42,13 @@ const GetshippingAddress = () => {
   // console.log("Fetched address:", address);
   if (!mounted) {
     return (
-      <div className="w-full h-screen bg-gray-100  animate-pulse  rounded-md"></div>
+      <div className="w-[350px] h-[280px] bg-gray-100  animate-pulse  rounded-md"></div>
     );
   }
   return (
-    <div className="w-full">
+    <div className="w-[350px]">
       {address && (
-        <div className="w-full h-[400px] flex flex-col p-4 font-poppins text-[15px]  rounded-md border border-gray-200">
+        <div className="w-full  px-4 py-4 font-poppins text-[15px] shadow-md rounded-md border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[17px] font-semibold opacity-75">
               Shipping address
@@ -78,7 +78,7 @@ const GetshippingAddress = () => {
               </div>
             )}
           </div>
-          <div className="h-full flex flex-col gap-2 justify-around text-[14px]">
+          <div className="flex flex-col gap-2 text-[14px]">
             <div className="flex items-center justify-between">
               <p className="text-[#999999]">Name</p>
               <p className={`${styleadress}`}>{address.fullName}</p>

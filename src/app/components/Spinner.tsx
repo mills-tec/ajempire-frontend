@@ -1,14 +1,11 @@
 import React from "react";
-type spinnerProps = {
-  size?: number;
-};
 
-export default function Spinner({ size = 67 }: spinnerProps) {
+export default function Spinner() {
   return (
     <div className="h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center">
       <svg
-        width={size}
-        height={size}
+        width="67"
+        height="67"
         viewBox="0 0 67 67"
         className="animate-spin"
         fill="none"

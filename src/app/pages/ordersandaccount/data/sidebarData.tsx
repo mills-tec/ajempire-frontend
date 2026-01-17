@@ -13,6 +13,8 @@ import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
 
+
+
 export type SideBarItem = {
   title: string;
   route?: string;
@@ -56,27 +58,7 @@ export const sidebarItems: SideBarItem[] = [
   { title: "Address", route: "/pages/ordersandaccount/address", icon: <AddressIcon className="text-primaryhover" /> },
   { title: "My Usage", route: "/pages/ordersandaccount/myuseage", icon: <MyUsageIcon className="text-primaryhover" /> },
   { title: "Wish List", route: "/pages/ordersandaccount/wishlist", icon: <WishListIcon className="text-primaryhover" /> },
-  {
-    title: "Notifications", route: "/pages/ordersandaccount/notifications", icon: <NotificationsIcon className="text-primaryhover" />,
-    children: [
-      {
-        title: "All",
-        route: "/pages/ordersandaccount/notifications"
-      },
-      {
-        title: "Flash Sales",
-        route: "/pages/ordersandaccount/notifications/flashsale"
-      },
-      {
-        title: "Order",
-        route: "/pages/ordersandaccount/notifications/order"
-      },
-      {
-        title: "System",
-        route: "/pages/ordersandaccount/notifications/system"
-      }
-    ]
-  },
+  { title: "Notifications", route: "/pages/ordersandaccount/notifications", icon: <NotificationsIcon className="text-primaryhover" /> },
   {
     title: "Help & Support",
     route: "/pages/ordersandaccount/support",
@@ -87,15 +69,13 @@ export const sidebarItems: SideBarItem[] = [
         route: "/pages/ordersandaccount/support/about"
       },
       {
-        title: "About this App",
-        route: "/pages/ordersandaccount/support/aboutthisapp"
-      },
-
-      {
         title: "Contact Us",
         route: "/pages/ordersandaccount/support/contact"
       },
-
+      {
+        title: "Share this App",
+        route: ""
+      },
       {
         title: "Legal terms and priorities",
         route: ""
@@ -105,14 +85,11 @@ export const sidebarItems: SideBarItem[] = [
   {
     title: "Settings",
     icon: <SettingsIcon />,
-    route: "/pages/ordersandaccount/settings",
+    route: "/pages/ordersandaccount/support/settings",
     children: [
-      { title: "Profile Settings", route: "/pages/ordersandaccount/settings/profile" },
+      { title: "Profile Settings", route: "/settings/profile" },
       { title: "Security", route: "/settings/security" },
-      {
-        title: "Share this App",
-        route: ""
-      },
     ],
   },
+
 ];

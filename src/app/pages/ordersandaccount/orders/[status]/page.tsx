@@ -7,7 +7,6 @@ import Spinner from "@/app/components/Spinner";
 import Reviews from "../Reviews";
 import { IOrder } from "@/lib/types";
 import { toast } from "react-toastify";
-import EmptyList from "@/components/EmptyList";
 
 export default function Orders({
   params,
@@ -27,6 +26,7 @@ export default function Orders({
   useEffect(() => {
     (async () => {
       const orders = await getAllOrders();
+
       setData({ original: orders, filtered: orders });
       setOrderStatus((await params).status);
     })();
@@ -57,14 +57,14 @@ export default function Orders({
     setSearchInput(value);
   };
   return (
-    <div className="lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden ">
+    <div className="lg:px-5 w-full mt-3  lg:block overflow-hidden ">
       <OrderTabs handleSearchInputChange={handleSearchInputChange} />
       {isLoading ? (
         <div className="h-[60vh]  flex items-center justify-center">
           <Spinner />
         </div>
       ) : data.filtered.length > 0 ? (
-        <div className="overflow-auto h-screen">
+        <div className=" overflow-auto h-screen">
           {orderStatus == "all" || searchInput.length > 0 ? (
             <>
               {data.filtered
@@ -116,7 +116,7 @@ export default function Orders({
                     items={[
                       ...new Map(
                         data.original
-                          .filter((order) => order.orderStatus === "processing")
+                          .filter((order) => order.orderStatus === "delivered")
                           .flatMap((order) => order.items)
                           .map((item) => [item.product, item])
                       ).values(),
@@ -124,8 +124,8 @@ export default function Orders({
                   />
                 </>
               ) : data.filtered.filter(
-                (order) => order.orderStatus == orderStatus
-              ).length > 0 ? (
+                  (order) => order.orderStatus == orderStatus
+                ).length > 0 ? (
                 <>
                   {data.filtered
                     .filter((order) => order.orderStatus == orderStatus)
@@ -150,9 +150,13 @@ export default function Orders({
           )}
         </div>
       ) : (
-        <EmptyList message={searchInput.length > 0
-          ? "Couldn't find any order with that Id"
-          : "You do not have any order yet."} />
+        <div className="h-[60vh] flex items-center justify-center">
+          <h1>
+            {searchInput.length > 0
+              ? "Couldn't find any order with that Id"
+              : "You do not have any order yet."}
+          </h1>
+        </div>
       )}
     </div>
   );

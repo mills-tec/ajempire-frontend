@@ -116,20 +116,10 @@ export default function ShippingAdressForm({
       });
       setLoading(false);
     }
-    const phoneRegex = /^0\d{10}$/;
-    if (!phoneRegex.test(phone)) {
-      toast.error("Please enter a valid 11-digit Nigerian phone number", {
-        position: "top-right",
-      });
-      setLoading(false);
-      return;
-    }
-    // Convert to +234 format
-    const formattedPhone = "+234" + phone.substring(1);
     const data = {
       shippingAdress: {
         fullName,
-        phone: formattedPhone,
+        phone,
         street,
         city,
         state: selectedState,
@@ -175,11 +165,11 @@ export default function ShippingAdressForm({
     <div className="fixed inset-0  bg-[#FFFFFF] flex lg:items-center items-start   lg:justify-center  z-50">
       {loading && <Spinner />}
       {showInitialSpinner && <Spinner />}
-      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[600px] lg:px-10 px-5 py-8 overflow-y-scroll">
+      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[700px] lg:px-10 px-5 py-8 overflow-y-scroll">
         <p className="font-semibold text-[15px] opacity-80 text-center mb-5">
           Shipping Address
         </p>
-        <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <div className="lg:hidden flex items-center justify-between gap-1 mb-5">
           <div className="flex items-center gap-1">
             <svg
               width="24"
@@ -226,49 +216,12 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                strokeWidth="1.5"
+                stroke-width="1.5"
                 stroke-linecap="round"
-                strokeLinejoin="round"
+                stroke-linejoin="round"
               />
             </svg>
             <p className="text-[#A3A3A3]">Payment</p>
-          </div>
-          <div>
-            <svg
-              width="22"
-              height="1"
-              viewBox="0 0 22 1"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M0.5 0.5H21.5"
-                stroke="#CFCFCF"
-                stroke-linecap="square"
-              />
-            </svg>
-          </div>
-          <div className="flex items-center gap-1">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M0 12C0 5.37258 5.37258 0 12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C5.37258 24 0 18.6274 0 12Z"
-                fill="#AEAEAE"
-              />
-              <path
-                d="M11 7V13.6667L14 17"
-                stroke="white"
-                strokeWidth="1.5"
-                stroke-linecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-[#A3A3A3]">Logistics</p>
           </div>
           <div>
             <svg
@@ -297,9 +250,9 @@ export default function ShippingAdressForm({
               <path
                 d="M11 7V13.6667L14 17"
                 stroke="white"
-                strokeWidth="1.5"
+                stroke-width="1.5"
                 stroke-linecap="round"
-                strokeLinejoin="round"
+                stroke-linejoin="round"
               />
             </svg>
             <p className="text-[#A3A3A3]">Review</p>
@@ -326,20 +279,19 @@ export default function ShippingAdressForm({
           <div className="flex flex-col gap-2">
             <label htmlFor="phone">Phone</label>
             <div className="flex items-center border border-gray-300 focus-within:border-primaryhover rounded-sm w-full h-[40px] px-3 transition-all duration-300">
-              {/* <span className="text-gray-600 text-[14px] mr-2">+234</span> */}
+              <span className="text-gray-600 text-[14px] mr-2">+234</span>
               <input
                 id="phone"
-                type="text"
-                maxLength={11}
+                type="number"
                 placeholder="Enter phone number"
                 className="w-full placeholder:text-[14px] text-[13px] outline-none h-auto [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 required
-                value={phone}
-                onChange={(e) => {
-                  // Allow only numbers
-                  const value = e.target.value.replace(/\D/g, "");
-                  setPhone(value);
+                onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                  const input = e.currentTarget;
+                  input.value = input.value.replace(/^0+/, "");
                 }}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
           </div>
@@ -387,13 +339,13 @@ export default function ShippingAdressForm({
                 <option value="" className="text-[#292929]" disabled>
                   Select State
                 </option>
-                {states.map((state) => (
-                  <option key={state} value={state} className="text-[#292929]">
-                    {state}
-                  </option>
-                ))}
-                {/* <option value="Delta">Delta</option>
-                <option value="Enugu">Enugu</option> */}
+                {/* {states.map((state) => (
+                                    <option key={state} value={state} className="text-[#292929]">
+                                        {state}
+                                    </option>
+                                ))} */}
+                <option value="Delta">Delta</option>
+                <option value="Enugu">Enugu</option>
               </select>
             </div>
           </div>
@@ -430,16 +382,17 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
+              !fullName ||
               !phone ||
               !street ||
               !city ||
               !selectedState ||
               !selectedCountry ||
               !postalCode
-              ? "opacity-50 cursor-not-allowed"
-              : ""
-              }`}
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             disabled={
               !fullName ||
               !phone ||
@@ -458,7 +411,8 @@ export default function ShippingAdressForm({
           className="absolute top-9 right-6 cursor-pointer "
           onClick={() => {
             setIsadress && setIsadress(false);
-          }}>
+          }}
+        >
           <svg
             width="15"
             height="15"
@@ -469,9 +423,9 @@ export default function ShippingAdressForm({
             <path
               d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75"
               stroke="black"
-              strokeWidth="1.5"
+              stroke-width="1.5"
               stroke-linecap="round"
-              strokeLinejoin="round"
+              stroke-linejoin="round"
             />
           </svg>
         </div>

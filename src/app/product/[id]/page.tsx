@@ -97,8 +97,8 @@ export default function ProductDetailPage() {
               />
             </div>
             <div className="flex gap-2 lg:gap-5">
-              {data?.message.product.images.map((image, key) => (
-                <div key={key} className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl">
+              {data?.message.product.images.map((image) => (
+                <div className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl">
                   <Image
                     src={image}
                     alt="product image"
@@ -113,13 +113,14 @@ export default function ProductDetailPage() {
             {data?.message && <ProductDescription product_data={data} />}
           </div>
 
-          <div className="lg:hidden h-[200px] overflow-y-auto ">
+          <div className="lg:hidden">
             {data?.message && <ProductReview product={data?.message.product} />}
             {data?.message &&
               data.message.product.reviews.map((review) => (
                 <CommentCard key={review._id} review={review} />
               ))}
           </div>
+
           <div>
             <div className="hidden lg:block">
               {data?.message && (
@@ -160,8 +161,8 @@ export default function ProductDetailPage() {
                 />
                 <p>Select all ({items.length})</p>
               </div>
-              {items.map((item, key) => (
-                <div className="w-[8rem] mx-auto flex flex-col relative items-center" key={key}>
+              {items.map((item) => (
+                <div className="w-[8rem] mx-auto flex flex-col relative items-center">
                   <Checkbox
                     checked={item?.selected}
                     onCheckedChange={() => {

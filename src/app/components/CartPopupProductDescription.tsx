@@ -1,10 +1,7 @@
 "use client";
-import { getBearerToken } from "@/lib/api";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
-import CheckoutRequirement from "./CheckoutRequirement";
 
 export default function CartPopupProductDescription({
   item,
@@ -12,34 +9,6 @@ export default function CartPopupProductDescription({
   item: CartItem;
 }) {
   // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false);
-  const { items: selectedItem, selectAllCartItems } = useCartStore();
-
-  const checkoutHandler = () => {
-    const token = getBearerToken();
-    if (!token) {
-      toast.error("Please log in to checkout");
-      return;
-    }
-
-    if (!cartItem) {
-      addItem({
-        ...item,
-        quantity,
-        selectedVariants: selectedVariants ?? [],
-      });
-    }
-
-    selectAllCartItems();
-    setIsAdress(true);
-    setTimeout(() => {
-      console.log("Selected items:", selectedItem);
-    }, 50);
-
-  };
-
-
-
   const {
     addItem,
     getItem,
@@ -74,8 +43,8 @@ export default function CartPopupProductDescription({
   function getAllVariantItems(variant_name: string) {
     return item.variants.length > 0
       ? item.variants.filter(
-        (variant) => variant.name == variant_name && variant.stock > 0
-      )
+          (variant) => variant.name == variant_name && variant.stock > 0
+        )
       : [];
   }
 
@@ -84,12 +53,12 @@ export default function CartPopupProductDescription({
     setCartSelectedVariants(item._id, selectedVariants);
   }, [selectedVariants]);
 
-  // console.log(
-  //   "selectedVariants",
-  //   selectedVariants,
-  //   item?.selectedVariants,
-  //   items
-  // );
+  console.log(
+    "selectedVariants",
+    selectedVariants,
+    item?.selectedVariants,
+    items
+  );
   let size_variant =
     item.variants.length > 0 &&
     item.variants.filter((item) => item.name == "size" && item.stock > 0);
@@ -276,8 +245,8 @@ export default function CartPopupProductDescription({
                           {selectedVariants?.some(
                             (v) => v._id === variantItem._id
                           ) && (
-                              <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                            )}
+                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                          )}
                         </div>
                       );
                     }
@@ -349,12 +318,9 @@ export default function CartPopupProductDescription({
             </svg>
           </button>
         </div>
-        <div className="w-full">
-          <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
-            Check Out
-          </button>
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
-        </div>
+        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full">
+          Check Out
+        </button>
       </div>
     </div>
   );
