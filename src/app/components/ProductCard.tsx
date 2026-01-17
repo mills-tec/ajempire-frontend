@@ -75,7 +75,7 @@ export default function ProductCard({
             src={product.cover_image ?? ""}
             alt="product image"
             fill
-            className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+            className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
           />
         </div>
       </Link>

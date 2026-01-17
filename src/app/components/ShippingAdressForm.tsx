@@ -228,7 +228,7 @@ export default function ShippingAdressForm({
                 stroke="white"
                 strokeWidth="1.5"
                 stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinejoin="round"
               />
             </svg>
             <p className="text-[#A3A3A3]">Payment</p>
@@ -265,7 +265,7 @@ export default function ShippingAdressForm({
                 stroke="white"
                 strokeWidth="1.5"
                 stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinejoin="round"
               />
             </svg>
             <p className="text-[#A3A3A3]">Logistics</p>
@@ -299,7 +299,7 @@ export default function ShippingAdressForm({
                 stroke="white"
                 strokeWidth="1.5"
                 stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinejoin="round"
               />
             </svg>
             <p className="text-[#A3A3A3]">Review</p>
@@ -471,7 +471,7 @@ export default function ShippingAdressForm({
               stroke="black"
               strokeWidth="1.5"
               stroke-linecap="round"
-              stroke-linejoin="round"
+              strokeLinejoin="round"
             />
           </svg>
         </div>

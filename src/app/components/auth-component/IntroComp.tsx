@@ -16,6 +16,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { saveAccounts } from "@/lib/utils";
 
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
@@ -74,9 +75,10 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                         const user = res.data.message.user;
                         localStorage.setItem("token", token);
                         localStorage.setItem("user", token);
-                        console.log("token", token);
-                        console.log("user", user);
+
                         setUser({ email: user.email, name: "" });
+                        // storing accounts so its easier to switch account
+                        saveAccounts({ email: user.email, token, user: user })
                         localStorage.setItem(
                           "ajempire_signin_user",
                           JSON.stringify({ token, user })
@@ -89,9 +91,11 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                       }
                     })
                     .catch((err) => {
+                      const message = err.response?.data || err.message;
+                      toast.error(message, { duration: 3000 });
                       console.error(
                         "Auth error:",
-                        err.response?.data || err.message
+                        message
                       );
                     })
                     .finally(() => {

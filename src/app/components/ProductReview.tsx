@@ -38,6 +38,7 @@ export default function ProductReview({ product }: { product: Product }) {
       />
     </svg>
   );
+
   return (
     <div className="space-y-2">
       <div className="flex justify-center lg:justify-start gap-2">
@@ -92,6 +93,14 @@ export default function ProductReview({ product }: { product: Product }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="py-10">
+        {product.reviews.length > 0 ? (
+          <div></div>
+        ) : (
+          <h1 className="text-lg">No review for this product</h1>
+        )}
       </div>
     </div>
   );
