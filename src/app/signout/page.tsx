@@ -7,7 +7,9 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 export default function SignOut() {
     const { setIsLoggedIn } = useAuthStore();
     const router = useRouter();
-    localStorage.clear();
+    if (typeof window !== "undefined") {
+        localStorage.clear();
+    }
 
     useEffect(() => {
         setIsLoggedIn(false);

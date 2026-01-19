@@ -7,14 +7,16 @@ import React, { useState } from 'react'
 
 export default function SwitchAccount() {
 
-    const savedAccounts = localStorage.getItem("savedAccounts")
+    const savedAccounts = typeof window !== "undefined" ? localStorage.getItem("savedAccounts") : null
     const accounts = savedAccounts ? JSON.parse(savedAccounts) : []
     const [showIntro, setShowIntro] = useState(false);
     const { setUser, user } = useAuthStore()
 
     const handleSwitchAccount = (account: any) => {
-        localStorage.setItem("ajempire_signin_user", JSON.stringify({ token: account.token, user: account.user }));
-        setUser({ email: account.email, name: account.user.fullname })
+        if (typeof window !== "undefined") {
+            localStorage.setItem("ajempire_signin_user", JSON.stringify({ token: account.token, user: account.user }));
+            setUser({ email: account.email, name: account.user.fullname })
+        }
     }
 
     return (
@@ -44,7 +46,6 @@ export default function SwitchAccount() {
                         ))
                     }
 
-
                     <div onClick={() => setShowIntro(true)} className='md:col-span-2 p-4 bg-white border border-[#00000033] flex gap-5 items-center justify-between cursor-pointer'>
                         <div className='flex gap-5 items-center'>
                             <div className='w-10 h-10 bg-[#D9D9D9]  rounded-full flex items-center justify-center'>
@@ -53,8 +54,6 @@ export default function SwitchAccount() {
                             <p className='text-sm opacity-80'>Add Account</p>
 
                         </div>
-
-
                     </div>
 
                     {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />}
