@@ -70,12 +70,12 @@ export default function ProductCard({
       className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full"
     >
       <Link href={"product/" + product._id}>
-        <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip">
+        <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip ">
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
             fill
-            className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
+            className="transition-transform duration-300 ease-in-out group-hover:scale-110 lg:bg-[#f9f8f8] lg:p-2"
           />
         </div>
       </Link>

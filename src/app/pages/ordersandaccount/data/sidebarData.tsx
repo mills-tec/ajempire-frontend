@@ -95,10 +95,11 @@ export const sidebarItems: SideBarItem[] = [
       },
       {
         title: "Switch accounts",
-        route: "/pages/ordersandaccount/settings/swtichaccount"
+        route: "/pages/ordersandaccount/switchaccount"
       },
       {
         title: "Logout",
+        route: "/signout"
       }
     ],
   },

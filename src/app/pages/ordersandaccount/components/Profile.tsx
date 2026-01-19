@@ -6,8 +6,10 @@ import Link from "next/link";
 export default function Profile() {
     return (
         <div>
-            <Link href={"#"} className="w-full flex justify-between">
-                <ProfileName />
+            <div className="w-full flex justify-between">
+                <Link href={"/pages/ordersandaccount/settings/profile"}>
+                    <ProfileName />
+                </Link>
                 <div className="flex items-center gap-2">
                     <Link href={"#"}>
                         <NotificationsIcon className="text-black" />
@@ -16,7 +18,7 @@ export default function Profile() {
                         <SettingsIcon />
                     </Link>
                 </div>
-            </Link>
+            </div>
         </div>
     )
 }

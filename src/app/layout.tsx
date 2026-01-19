@@ -2,14 +2,10 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./provider";
-import Navbar from "@/app/components/Navbar";
-import SearchBar from "./components/ui/SearchBar";
-import Footer from "./components/Footer";
-// import { Toaster } from "@/components/ui/sonner";
-import { Toaster, toast } from "sonner";
-
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CheckoutProvider } from "./context/CheckoutContext";
+import LayoutWrapper from "./components/LayoutWrapper";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -24,41 +20,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
         <Toaster />
-        <div className="flex flex-col min-h-screen overflow-hidden">
-          {/* Fixed Navbar */}
-          <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
-            <Navbar />
-          </header>
-          <Providers>
-            {/* Main Content */}
-            <TooltipProvider>
-              <main className="pt-[0px] lg:pt-[100px] pb-[90px] h-max">
-                <CheckoutProvider>{children}</CheckoutProvider>
-              </main>
-            </TooltipProvider>
-          </Providers>
-
-          {/* Footer Section */}
-          <footer>
-            {/* Mobile fixed nav */}
-            <div className="lg:hidden w-full fixed bottom-1 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center border justify-center text-center border-t-gray-300">
-              <Navbar />
-            </div>
-
-            {/* Desktop footer */}
-            <div className="hidden lg:block bg-brand_gradient_dark">
-              <Footer />
-            </div>
-          </footer>
-        </div>
+        <Providers>
+          <TooltipProvider>
+            <CheckoutProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </CheckoutProvider>
+          </TooltipProvider>
+        </Providers>
       </body>
     </html>
   );
 }
+

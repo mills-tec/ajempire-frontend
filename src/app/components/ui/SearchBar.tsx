@@ -1,39 +1,99 @@
-"use client"
-import { CameraIcon } from "@/components/svgs/CameraIcon"
-import { CameraSnap } from "@/components/svgs/CameraSnap"
-import { SearchIcon } from "@/components/svgs/SearchIcon"
-import { useRef } from "react"
+"use client";
+import { useRef, useState, useEffect } from "react";
+import { useSearchStore } from "@/lib/search-store";
+import SearchDropdown from "./SearchDropdown";
+import { SearchIcon } from "@/components/svgs/SearchIcon";
+import { CameraIcon } from "@/components/svgs/CameraIcon";
+import { CameraSnap } from "@/components/svgs/CameraSnap";
 
 const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const handleSearchClick = () => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+  const [open, setOpen] = useState(false);
+  const { query, setQuery, submitSearch } = useSearchStore();
+  const handleSubmit = () => {
+    submitSearch();          // ✅ saves to recent + locks search
+    setOpen(false);          // ✅ close dropdown
+    inputRef.current?.blur();
   };
-  return (
-    <div className="w-full flex gap-2 items-center border  rounded-full  h-[40px] px-[14px] focus-within:border-brand_solid_gradient transition-all duration-200  ">
-      <input
-        type="text"
-        className="w-full outline-none bg-transparent placeholder:text-[13px] opacity-80 text-[14px]"
-        placeholder="Search Product"
-        ref={inputRef}
-      />
-      {showCam && (
-        <div className="">
-          <div className="hidden lg:block">
-            <CameraIcon className="w-6" />
-          </div>
-          <CameraSnap className="w-6 lg:hidden" />
-        </div>
-      )}
+  const [placeholderClass, setPlaceholderClass] = useState("placeholder:animate-placeholderFromBottom");
 
-      <div
-        className="bg-brand_gradient_dark w-[50px] h-[30px] flex items-center justify-center  rounded-[20px]"
-        onClick={handleSearchClick}
-      >
-        <SearchIcon className="w-5 text-[#FFFFFF]" />
+  // ✅ click outside to close dropdown
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const placeholders = [
+    "Super deals 🔥",
+    "New stock arrivals",
+    "Discounted products ",
+  ];
+
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % placeholders.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    if (!placeholders[index]) return;
+
+    // remove & re-add animation to restart it
+    setPlaceholderClass("");
+    const timeout = setTimeout(() => {
+      setPlaceholderClass("placeholder:animate-placeholderFromBottom");
+    }, 10); // 10ms is enough to reset
+
+    return () => clearTimeout(timeout);
+  }, [index]);
+
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] focus-within:border-brand_solid_gradient">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}   // 🔹 typing only
+          onFocus={() => setOpen(true)}               // 🔹 open dropdown
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          placeholder={placeholders[index]}
+          className={`w-full outline-none bg-transparent text-[14px] ${placeholderClass}`}
+        />
+
+        {/* ✅ CAMERA ICONS (UNCHANGED) */}
+        {showCam && (
+          <div>
+            <div className="hidden lg:block">
+              <CameraIcon className="w-6" />
+            </div>
+            <CameraSnap className="w-6 lg:hidden" />
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          className="bg-brand_gradient_dark w-[50px] h-[30px] rounded-[20px] flex items-center justify-center"
+        >
+          <SearchIcon className="w-5 text-white" />
+        </button>
       </div>
+
+      {/* Dropdown */}
+      {open && <SearchDropdown onClose={() => setOpen(false)} />}
     </div>
   );
 };
