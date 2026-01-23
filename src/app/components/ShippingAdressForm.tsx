@@ -137,6 +137,7 @@ export default function ShippingAdressForm({
         postalCode,
       },
     };
+    console.log("shipping adress data:", data)
     try {
       const res = await axios.patch(
         "https://ajempire-backend.vercel.app/api/shipping-address",
@@ -149,6 +150,7 @@ export default function ShippingAdressForm({
         });
         if (onContinue) onContinue();
         if (onAddressUpdated) onAddressUpdated();
+        console.log("responds data", res.data)
       }
     } catch (error: any) {
       console.error("❌ Error updating address:", error);

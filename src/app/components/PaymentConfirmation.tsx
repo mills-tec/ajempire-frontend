@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Spinner from "../components/Spinner";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useCheckoutStore } from "../context/CheckoutContext";
 
 export default function PaymentConfirmation() {
   const searchParams = useSearchParams();
@@ -21,7 +22,7 @@ export default function PaymentConfirmation() {
     const verifyPayment = async () => {
       setIsLoading(true);
       const token = getBearerToken();
-      const paymentMethod = localStorage.getItem("paymentMethod");
+      const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
       if (!token) {
         toast("User not authenticated");
         router.push("/login");
@@ -44,7 +45,7 @@ export default function PaymentConfirmation() {
         );
         console.log("Payment verification response:", response.data);
         if (response?.data?.message) {
-          toast.success("Payment verified successfully!");
+          console.log("Payment verified successfully!");
           setResponseData(response.data.message);
 
           // 2️⃣ Clear cart on backend
@@ -73,7 +74,7 @@ export default function PaymentConfirmation() {
 
             // 🔥 force persist update
             useCartStore.persist?.clearStorage?.();
-            toast.success("Cart cleared!");
+
           }
 
         } else {
@@ -138,7 +139,10 @@ export default function PaymentConfirmation() {
           <div className="p-6  lg:h-[400px] h-screen bg-white rounded shadow text-center items-center flex flex-col ">
             <div
               className="w-full flex justify-end items-center mb-6 cursor-pointer"
-              onClick={() => setShowModal(false)}
+              onClick={() => {
+                setShowModal(false)
+                router.push("/");
+              }}
             >
               <p className="lg:hidden w-full text-[16px]">
                 Payment Confirmation

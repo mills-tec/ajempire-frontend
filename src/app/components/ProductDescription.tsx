@@ -36,20 +36,34 @@ export default function ProductDescription({
       return;
     }
 
-    // Add item to cart if missing
-    if (!item) {
+    const { getItem, addItem, selectAllCartItems, getSelectedItems } =
+      useCartStore.getState();
+
+    // 1️⃣ Check if product already exists in cart
+    const existingItem = getItem(item._id);
+
+    // 2️⃣ If not in cart, add it
+    if (!existingItem) {
       addItem({
-        ...product,
+        ...item,
         quantity,
         selectedVariants: selectedVariants ?? [],
+        selected: true, // IMPORTANT
       });
     }
 
-    // Now open checkout
-    // selectAllCartItems();
-    setIsAdress(true);
-  };
+    // 3️⃣ Select ALL cart items
+    selectAllCartItems();
 
+    // 4️⃣ Wait for state update, then get selected items
+    setTimeout(() => {
+      const selectedItems = getSelectedItems();
+      console.log("Selected items:", selectedItems);
+
+      // 5️⃣ Proceed to checkout
+      setIsAdress(true);
+    }, 0);
+  };
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>

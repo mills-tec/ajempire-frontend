@@ -29,6 +29,19 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+@keyframes fast-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.animate-fast-pulse {
+  animation: fast-pulse 0.8s ease-in-out infinite;
+}
 
 * {
   margin: 0;

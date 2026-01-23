@@ -1,67 +1,111 @@
+// "use client";
+
+// import {
+//     createContext,
+//     useContext,
+//     useState,
+//     useEffect,
+//     useMemo,
+//     ReactNode,
+// } from "react";
+
+// // ---------------- TYPES ----------------
+// export type PaymentMethod = "paystack" | "flutter";
+
+// interface CheckoutContextType {
+//     selectedPaymentMethod: PaymentMethod | null;
+//     setSelectedPaymentMethod: (method: PaymentMethod | null) => void;
+// }
+
+// // ---------------- CONTEXT ----------------
+// const CheckoutContext = createContext<CheckoutContextType | undefined>(
+//     undefined
+// );
+
+// // ---------------- PROVIDER ----------------
+// interface CheckoutProviderProps {
+//     children: ReactNode;
+// }
+
+// export const CheckoutProvider = ({ children }: CheckoutProviderProps) => {
+//     const [selectedPaymentMethod, setSelectedPaymentMethod] =
+//         useState<PaymentMethod | null>(null);
+
+//     // Load from localStorage on mount
+//     useEffect(() => {
+//         if (typeof window === "undefined") return;
+
+//         const storedMethod = localStorage.getItem("checkout.paymentMethod");
+
+//         if (storedMethod === "paystack" || storedMethod === "flutter") {
+//             setSelectedPaymentMethod(storedMethod);
+//         }
+//     }, []);
+
+//     // Persist to localStorage
+//     useEffect(() => {
+//         if (typeof window === "undefined") return;
+
+//         if (selectedPaymentMethod) {
+//             localStorage.setItem(
+//                 "checkout.paymentMethod",
+//                 selectedPaymentMethod
+//             );
+//         } else {
+//             localStorage.removeItem("checkout.paymentMethod");
+//         }
+//     }, [selectedPaymentMethod]);
+
+//     const value = useMemo(
+//         () => ({
+//             selectedPaymentMethod,
+//             setSelectedPaymentMethod,
+//         }),
+//         [selectedPaymentMethod]
+//     );
+
+//     return (
+//         <CheckoutContext.Provider value={value}>
+//             {children}
+//         </CheckoutContext.Provider>
+//     );
+// };
+
+// // ---------------- HOOK ----------------
+// export const useCheckout = (): CheckoutContextType => {
+//     const context = useContext(CheckoutContext);
+
+//     if (!context) {
+//         throw new Error("useCheckout must be used within CheckoutProvider");
+//     }
+
+//     return context;
+// };
+
 "use client";
-import React, { createContext, useContext, useState, useMemo, ReactNode } from "react";
 
-// --- 1. Define Types ---
-interface CheckoutContextType {
-    selectedPaymentMethod: string | null;
-    setSelectedPaymentMethod: (method: string) => void;
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+export type PaymentMethod = "paystack" | "flutter";
+
+interface CheckoutStore {
+    selectedPaymentMethod: PaymentMethod;
+    setSelectedPaymentMethod: (method: PaymentMethod) => void;
 }
 
-// --- 2. Create Context ---
-// We use 'undefined' as the default value to clearly indicate when the hook 
-// is used outside the provider (the 'if (!context)' check).
-const CheckoutContext = createContext<CheckoutContextType | undefined>(undefined);
+export const useCheckoutStore = create<CheckoutStore>()(
+    persist(
+        (set) => ({
+            // ✅ default is paystack
+            selectedPaymentMethod: "paystack",
 
-// --- 3. Define Provider Component ---
-interface CheckoutProviderProps {
-    children: ReactNode;
-}
-
-export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({ children }) => {
-
-    // 1. Initialize state from Local Storage or default to null
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(() => {
-        if (typeof window !== 'undefined') { // Check if running in browser
-            return localStorage.getItem('paymentMethod') || null;
+            setSelectedPaymentMethod: (method) =>
+                set({ selectedPaymentMethod: method }),
+        }),
+        {
+            name: "checkout.paymentMethod", // localStorage key
         }
-        return null;
-    });
+    )
+);
 
-    // 2. Save state to Local Storage whenever it changes
-    // This is the key to surviving the refresh!
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (selectedPaymentMethod) {
-                localStorage.setItem('paymentMethod', selectedPaymentMethod);
-            } else {
-                localStorage.removeItem('paymentMethod');
-            }
-        }
-    }, [selectedPaymentMethod]);
-
-    console.log("CheckoutProvider state on render:", selectedPaymentMethod);
-
-    const contextValue = useMemo(() => ({
-        selectedPaymentMethod,
-        setSelectedPaymentMethod,
-    }), [selectedPaymentMethod]);
-
-    return (
-        <CheckoutContext.Provider value={contextValue}>
-            {children}
-        </CheckoutContext.Provider>
-    );
-};
-
-// --- 4. Define Custom Hook ---
-// This hook is exported as a NAMED EXPORT
-export const useCheckout = (): CheckoutContextType => {
-    const context = useContext(CheckoutContext);
-
-    // Check to ensure the hook is used within the Provider
-    if (!context) {
-        throw new Error("useCheckout must be used inside CheckoutProvider");
-    }
-
-    return context;
-};

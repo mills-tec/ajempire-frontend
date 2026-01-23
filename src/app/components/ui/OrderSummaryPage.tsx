@@ -10,6 +10,7 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
 import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
+import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -76,7 +77,9 @@ export default function OrderSummaryPage() {
   const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
-    const paymentMethod = localStorage.getItem("paymentMethod");
+    const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
+    console.log("selected payment method", paymentMethod)
+
 
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
@@ -94,7 +97,8 @@ export default function OrderSummaryPage() {
     console.log("Selected items for checkout:", selectedItems);
 
     if (!selectedItems || selectedItems.length === 0) {
-      toast.error("Your cart is empty");
+      toast.error("Select an item to continue", { position: "top-right" });
+      setIsLoading(false)
       return;
     }
     if (!selectedLogistic) {
