@@ -235,7 +235,6 @@ export async function addToWishlistAPI(productId: string) {
 
   const wishlistIDs = wishlist.message.map((item) => item.product._id);
 
-  console.log("wishlist: ", wishlist);
 
   const res = await fetch(`${API_URL}/wishlist`, {
     method: "POST",

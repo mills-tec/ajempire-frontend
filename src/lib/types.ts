@@ -80,6 +80,7 @@ export interface IItem {
 }
 
 export interface IOrder {
+  _id: string;
   items: IItem[];
   orderStatus: string;
   order_id: string;

@@ -8,11 +8,12 @@ import Reviews from "../Reviews";
 import { IOrder } from "@/lib/types";
 import { toast } from "react-toastify";
 import EmptyList from "@/components/EmptyList";
+import { getUser } from "@/lib/api";
 
 export default function Orders({
   params,
 }: {
-  params: Promise<{ status: string }>;
+  params: Promise<{ type: string }>;
 }) {
   const { getAllOrders, isLoading } = useOrders();
   const [data, setData] = useState<{
@@ -24,11 +25,37 @@ export default function Orders({
   });
   const [orderStatus, setOrderStatus] = useState<string>("");
   const [searchInput, setSearchInput] = useState<string>("");
+
+
+
+  const setUpdatedReviews = (review: any) => {
+    const { product, ...rest } = review;
+    let updated = data.original.map((order) => ({
+      ...order,
+      items: order.items.map((item) =>
+        (item.product as any)._id === product
+          ? {
+            ...item,
+            product: {
+              ...(item.product as any),
+              reviews: (item.product as any).reviews.map((rev: any) =>
+                rev._id === review._id ? { product, ...rest } : rev
+              ),
+            },
+          }
+          : item
+      ),
+    }))
+
+    setData({ original: updated, filtered: updated })
+
+  }
   useEffect(() => {
     (async () => {
       const orders = await getAllOrders();
+
       setData({ original: orders, filtered: orders });
-      setOrderStatus((await params).status);
+      setOrderStatus((await params).type);
     })();
   }, []);
   // handling users order id search
@@ -56,9 +83,12 @@ export default function Orders({
     }));
     setSearchInput(value);
   };
+
+
+
   return (
-    <div className="lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden ">
-      <OrderTabs handleSearchInputChange={handleSearchInputChange} />
+    <div className="lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden font-poppins">
+      <OrderTabs handleSearchInputChange={handleSearchInputChange} text="Your Orders" />
       {isLoading ? (
         <div className="h-[60vh]  flex items-center justify-center">
           <Spinner />
@@ -68,42 +98,48 @@ export default function Orders({
           {orderStatus == "all" || searchInput.length > 0 ? (
             <>
               {data.filtered
-                .filter((order) => order.orderStatus == "processing")
+                .filter((order) => order.orderStatus.toLowerCase() == "processing")
                 .map((order, index: number) => {
                   return (
                     <OrdersContent
+                      id={order._id}
                       order_id={order.order_id}
                       items={order.items}
                       key={index}
                       title={order?.orderStatus}
                       dateCreated={order?.createdAt}
+                      setUpdatedReviews={setUpdatedReviews}
                     />
                   );
                 })}
               {data.filtered
-                .filter((order) => order.orderStatus == "shipped")
+                .filter((order) => order.orderStatus.toLowerCase() == "shipped")
                 .map((order, index: number) => {
                   return (
                     <OrdersContent
+                      id={order._id}
                       order_id={order.order_id}
                       items={order.items}
                       key={index}
                       title={order?.orderStatus}
                       dateCreated={order?.createdAt}
+                      setUpdatedReviews={setUpdatedReviews}
                     />
                   );
                 })}
 
               {data.filtered
-                .filter((order) => order.orderStatus == "delivered")
+                .filter((order) => order.orderStatus.toLowerCase() == "delivered")
                 .map((order, index: number) => {
                   return (
                     <OrdersContent
+                      id={order._id}
                       order_id={order.order_id}
                       items={order.items}
                       key={index}
                       title={order?.orderStatus}
                       dateCreated={order?.createdAt}
+                      setUpdatedReviews={setUpdatedReviews}
                     />
                   );
                 })}
@@ -113,30 +149,26 @@ export default function Orders({
               {orderStatus.includes("review") ? (
                 <>
                   <Reviews
-                    items={[
-                      ...new Map(
-                        data.original
-                          .filter((order) => order.orderStatus === "processing")
-                          .flatMap((order) => order.items)
-                          .map((item) => [item.product, item])
-                      ).values(),
-                    ]}
+                    items={data.filtered.flatMap((order) => order.items).filter((item) => (item.product as any).reviews.length > 0 && (item.product as any).reviews.some((review: any) => review.user === getUser()._id))}
+                    setUpdatedReviews={setUpdatedReviews}
                   />
                 </>
               ) : data.filtered.filter(
-                (order) => order.orderStatus == orderStatus
+                (order) => order.orderStatus.toLowerCase() == orderStatus
               ).length > 0 ? (
                 <>
                   {data.filtered
-                    .filter((order) => order.orderStatus == orderStatus)
+                    .filter((order) => order.orderStatus.toLowerCase() == orderStatus)
                     .map((order, index: number) => {
                       return (
                         <OrdersContent
+                          id={order._id}
                           order_id={order.order_id}
                           items={order.items}
                           key={index}
                           title={order?.orderStatus}
                           dateCreated={order?.createdAt}
+                          setUpdatedReviews={setUpdatedReviews}
                         />
                       );
                     })}
