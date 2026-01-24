@@ -18,7 +18,7 @@ export default function NotificationTable() {
                     </svg>
                 </Link>
                 <div className=" w-full text-center font-semibold text-black/70">
-                    <p>Your Oders</p>
+                    <p>Notification</p>
                 </div>
             </div>
             <ul className="w-full flex items-center justify-between lg:justify-around lg:gap-10 font-poppins lg:text-[14px] text-[12px]">

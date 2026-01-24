@@ -353,9 +353,11 @@ export default function CartPopupProductDescription({
           <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
             Check Out
           </button>
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+
         </div>
+
       </div>
+      {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
     </div>
   );
 }

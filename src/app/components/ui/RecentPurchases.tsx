@@ -74,15 +74,15 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
 
 
     return (
-        <div>
+        <div className="w-full">
             <p className="mb-5"> Recent Purchases </p>
-            <div className="flex flex-col gap-5 w-[45%]">
+            <div className="flex flex-col gap-5 lg:w-[45%]">
                 {recentPurchases &&
                     recentPurchases.length > 0 &&
                     recentPurchases.map((purchase, index) => (
                         <div
                             key={index}
-                            className="w-full flex items-center  border border-gray-300 rounded-md  p-3 text-[14px] font-extralight"
+                            className="w-full flex items-center gap-2  border border-gray-300 rounded-md  p-3 text-[14px] font-extralight"
                         >
                             <div className="w-[30%]">
 

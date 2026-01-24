@@ -11,10 +11,10 @@ export default function Profile() {
                     <ProfileName />
                 </Link>
                 <div className="flex items-center gap-2">
-                    <Link href={"#"}>
+                    <Link href={"/pages/ordersandaccount/notifications"}>
                         <NotificationsIcon className="text-black" />
                     </Link>
-                    <Link href={"#"}>
+                    <Link href={"/pages/ordersandaccount/settings"}>
                         <SettingsIcon />
                     </Link>
                 </div>

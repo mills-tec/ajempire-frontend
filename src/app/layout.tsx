@@ -4,7 +4,6 @@ import "./globals.css";
 import { Providers } from "./provider";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { CheckoutProvider } from "./context/CheckoutContext";
 import LayoutWrapper from "./components/LayoutWrapper";
 
 const poppins = Poppins({
@@ -29,13 +28,10 @@ export default function RootLayout({
         <Toaster />
         <Providers>
           <TooltipProvider>
-            <CheckoutProvider>
-              <LayoutWrapper>{children}</LayoutWrapper>
-            </CheckoutProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
           </TooltipProvider>
         </Providers>
       </body>
     </html>
   );
 }
-

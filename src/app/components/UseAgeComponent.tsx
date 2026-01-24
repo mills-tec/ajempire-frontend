@@ -36,16 +36,16 @@ export const UseAgeComponent = () => {
     useAgeData();
   }, [])
   return (
-    <div className='w-full relative'>
-      <div className='font-poppins flex flex-col lg:flex-row justify-around '>
+    <div className='w-full lg:relative lg:flex-row lg:gap-0 flex flex-col gap-10'>
+      <div className='w-full font-poppins flex flex-col gap-16 lg:flex-row justify-around '>
         <div className='flex flex-col items-start gap-5'>
           <h1 className='text-[24px] font-medium'>My Uage</h1>
-          <div className='flex items-center gap-1 '>
+          <div className='flex items-center gap-1 w-full '>
             <ProfileName />
           </div>
           {
             usageData && (
-              <div className='flex gap-3'>
+              <div className='flex gap-3 w-full '>
                 <div className='font-poppins bg-brand_light_pink w-[120px] h-[110px] flex flex-col items-center pt-3 gap-2  rounded-sm'>
                   <div className='text-center opacity-60'>
                     <p className='text-[14px]'>Orders </p>
@@ -69,11 +69,11 @@ export const UseAgeComponent = () => {
           }
         </div>
 
-        <div className=''>
+        <div className='w-full'>
           <UserUsageChart trendData={usageData?.spendingTrendData} />
         </div>
       </div>
-      <div className='absolute w-full top-72'>
+      <div className='lg:absolute w-full lg:top-72'>
         <RecentPurchases recentPurchases={usageData?.recentPurchases} />
       </div>
     </div>
