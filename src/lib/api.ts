@@ -129,6 +129,10 @@ export function getBearerToken() {
   return userStr ? JSON.parse(userStr)?.token : null;
 }
 
+export function getUser() {
+  const userStr = typeof window != "undefined" ? localStorage.getItem("ajempire_signin_user") : null;
+  return userStr ? JSON.parse(userStr)?.user : null;
+}
 // Cart API
 export async function addToCart(products: CartItem[]) {
   const token = getBearerToken();
@@ -176,7 +180,6 @@ export async function addToWishlistAPI(productId: string) {
 
   const wishlistIDs = wishlist.message.map((item) => item.product._id);
 
-  console.log("wishlist: ", wishlist);
 
   const res = await fetch(`${API_URL}/wishlist`, {
     method: "POST",

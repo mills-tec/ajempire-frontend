@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
-import { IOrder, Review } from "@/lib/types";
-import { useRouter } from "next/router";
+import { AxiosError } from "axios";
+import { Review } from "@/lib/types";
+
 
 let config = {};
 
@@ -30,16 +30,8 @@ export const useOrders = () => {
     try {
       let req = await getData("/orders/", config);
       const orderRequest = req.data.message;
-      req = await getData("/review/", config);
-      const reviews: Review[] = req.data.message;
-      const orders = orderRequest.map((order: IOrder) => ({
-        ...order,
-        items: order.items.map((item) => ({
-          ...item,
-          review: reviews.find((review) => review.product == item.product),
-        })),
-      }));
-      return orders;
+
+      return orderRequest;
     } catch (err) {
       console.error(err);
     } finally {
@@ -96,8 +88,8 @@ export const useReviews = () => {
       setLoading(true);
       try {
         const req = await postData(`/review/${product}`, data, config);
-
-        return true;
+        toast.success("Review submitted successfully");
+        return req.data;
       } catch (err: unknown) {
         let message;
         if (err instanceof AxiosError) {
@@ -106,7 +98,7 @@ export const useReviews = () => {
           message = "Something went wrong.";
         }
         console.log(err);
-        toast(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -126,7 +118,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -143,7 +135,8 @@ export const useReviews = () => {
     if (!loading) {
       setLoading(true);
       try {
-        await updateData(`/review/${product}`, data, config);
+        let req = await updateData(`/review/${product}`, data, config);
+        console.log(req)
         return true;
       } catch (err: unknown) {
         let message;
@@ -152,7 +145,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -173,7 +166,7 @@ export const useReviews = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -191,8 +184,9 @@ export const useIssueReturn = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
-        // const req = await postData(`/return/`, data, config);
+        // const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
+        const req = await postData(`/return/`, data, config);
+
         toast.success("Return request submitted successfully");
         return true;
       } catch (err: unknown) {
@@ -223,7 +217,7 @@ export const useIssueReturn = () => {
         } else {
           message = "Something went wrong.";
         }
-        toast(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }

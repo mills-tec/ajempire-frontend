@@ -7,14 +7,16 @@ import React, { useState } from 'react'
 
 export default function SwitchAccount() {
 
-    const savedAccounts = localStorage.getItem("savedAccounts")
+    const savedAccounts = typeof window !== "undefined" ? localStorage.getItem("savedAccounts") : null
     const accounts = savedAccounts ? JSON.parse(savedAccounts) : []
     const [showIntro, setShowIntro] = useState(false);
     const { setUser, user } = useAuthStore()
 
     const handleSwitchAccount = (account: any) => {
-        localStorage.setItem("ajempire_signin_user", JSON.stringify({ token: account.token, user: account.user }));
-        setUser({ email: account.email, name: account.user.fullname })
+        if (typeof window !== "undefined") {
+            localStorage.setItem("ajempire_signin_user", JSON.stringify({ token: account.token, user: account.user }));
+            setUser({ email: account.email, name: account.user.fullname })
+        }
     }
 
     return (

@@ -60,3 +60,5 @@ export function getInitials(name?: string) {
   const second = parts[1]?.[0] || "";
   return (first + second).toUpperCase();
 }
+
+
