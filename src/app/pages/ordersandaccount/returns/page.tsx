@@ -1,11 +1,12 @@
 "use client";
 import { useIssueReturn } from "@/api/customHooks";
 import { useEffect, useState } from "react";
+import OrderTabs from "../components/OrderTabs";
 
 
 export default function Returns() {
   const { getReturnRequests } = useIssueReturn();
-  const [returns, setReturns] = useState([]);
+  const [returns, setReturns] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchReturns = async () => {
@@ -14,10 +15,20 @@ export default function Returns() {
     };
     fetchReturns();
   }, []);
-  console.log(returns)
 
   return (
-    <div className="rounded-2xl p-8 bg-white space-y-8">
+    <div className="lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden font-poppins">
+
+      {returns.map((returnItem: any) => (
+        <div className="bg-white rounded-2xl p-8 space-y-8">
+          <div key={returnItem._id}>
+            <p className="text-sm">Order #{returnItem.order.order_id}</p>
+            {/* <p>{returnItem.dateCreated}</p>
+            <p>{returnItem.status}</p> */}
+          </div>
+        </div>
+      ))}
+      {/* <OrderTabs handleSearchInputChange={() => { }} text="Your Orders" /> */}
 
     </div>
   );

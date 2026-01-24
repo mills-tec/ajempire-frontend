@@ -149,7 +149,7 @@ export default function Orders({
               {orderStatus.includes("review") ? (
                 <>
                   <Reviews
-                    items={data.filtered.flatMap((order) => order.items).filter((item) => (item.product as any).reviews.length > 0 && (item.product as any).reviews.some((review: any) => review.user === getUser()._id))}
+                    items={data.filtered.flatMap((order) => order.items).filter((item) => (item.product as any).reviews.length > 0 && (item.product as any).reviews.some((review: any) => review.user === getUser()?._id))}
                     setUpdatedReviews={setUpdatedReviews}
                   />
                 </>
