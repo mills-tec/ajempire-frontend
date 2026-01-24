@@ -1,5 +1,11 @@
 import { CartItem } from "./stores/cart-store";
-import { Product, ProductResponse, ProductsResponse } from "./types";
+import {
+  Category,
+  Comment,
+  Product,
+  ProductResponse,
+  ProductsResponse,
+} from "./types";
 
 // lib/api.ts
 const API_URL = "https://ajempire-backend.vercel.app/api";
@@ -118,6 +124,14 @@ export async function getProducts(): Promise<ProductsResponse | null> {
   return res.json();
 }
 
+export async function getProductsByCategory(
+  category: string
+): Promise<ProductsResponse | null> {
+  const res = await fetch(API_URL + "/category/" + category + "/product");
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function getProduct(id: string): Promise<ProductResponse | null> {
   const res = await fetch(API_URL + "/product/" + id);
   if (!res.ok) return null;
@@ -129,10 +143,51 @@ export function getBearerToken() {
   return userStr ? JSON.parse(userStr)?.token : null;
 }
 
-export function getUser() {
-  const userStr = typeof window != "undefined" ? localStorage.getItem("ajempire_signin_user") : null;
+export function getUser(): { _id: string; email: string } | null {
+  if (typeof window === "undefined") return null;
+  const userStr = localStorage.getItem("ajempire_signin_user");
   return userStr ? JSON.parse(userStr)?.user : null;
 }
+
+const collectDescendants = (root: Comment): Comment[] => {
+  const out: Comment[] = [];
+
+  const dfs = (node: Comment) => {
+    // iterate over direct children of `node`
+    for (const child of node.replies ?? []) {
+      // push a shallow copy with replies cleared and parentId set to direct parent
+      out.push({ ...child, replies: [], parentId: node._id });
+      // recurse to collect child's descendants
+      dfs(child);
+    }
+  };
+
+  dfs(root);
+  return out;
+};
+
+export const flattenAllComments = (comments: Comment[]): Comment[] => {
+  return comments.map((c) => ({
+    ...c,
+    // keep top-level comment's parentId as-is (probably null),
+    // replies becomes a flat array of all descendants
+    replies: collectDescendants(c),
+  }));
+};
+
+//make both comments and replies single arr without first level nesting
+export const oneDflattenAllComments = (comments: Comment[]): Comment[] => {
+  const flat: Comment[] = [];
+
+  const traverse = (c: Comment) => {
+    flat.push({ ...c, replies: [] });
+    c.replies.forEach(traverse);
+  };
+
+  comments.forEach(traverse);
+  return flat;
+};
+
 // Cart API
 export async function addToCart(products: CartItem[]) {
   const token = getBearerToken();
@@ -225,5 +280,73 @@ export async function removeFromWishlistAPI(productId: string) {
   });
 
   if (!res.ok) throw new Error("Failed to remove item from wishlist");
+  return res.json();
+}
+
+//FEED API
+export async function fetchFeed() {
+  const token = getBearerToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const res = await fetch(`${API_URL}/feeds`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch feed");
+  return res.json();
+}
+
+export async function likeFeedPost(postId: string) {
+  const token = getBearerToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const res = await fetch(`${API_URL}/feeds/${postId}/like`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to like post");
+  return res.json();
+}
+
+export async function likeFeedCommentPost(postId: string) {
+  const token = getBearerToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const res = await fetch(`${API_URL}/feeds/${postId}/comment/like`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to like post");
+  return res.json();
+}
+
+// get categories
+
+// {{base_url}}/
+export async function getCategories(): Promise<{ message: Category[] }> {
+  const token = getBearerToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const res = await fetch(`${API_URL}/category`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      // Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to get categories");
   return res.json();
 }

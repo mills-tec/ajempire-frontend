@@ -79,40 +79,27 @@ export const sidebarItems: SideBarItem[] = [
   },
   {
     title: "Help & Support",
-    route: "/pages/ordersandaccount/support",
+    route: "/pages/support",
     icon: <HelpIcon />,
-    children: [
-      {
-        title: "About",
-        route: "/pages/ordersandaccount/support/about"
-      },
-      {
-        title: "About this App",
-        route: "/pages/ordersandaccount/support/aboutthisapp"
-      },
-
-      {
-        title: "Contact Us",
-        route: "/pages/ordersandaccount/support/contact"
-      },
-
-      {
-        title: "Legal terms and priorities",
-        route: ""
-      }
-    ]
   },
   {
     title: "Settings",
     icon: <SettingsIcon />,
-    route: "/pages/ordersandaccount/settings",
+    route: "/pages/ordersandaccount/settings/profile",
     children: [
       { title: "Profile Settings", route: "/pages/ordersandaccount/settings/profile" },
-      { title: "Security", route: "/settings/security" },
+      { title: "About ", route: "/pages/ordersandaccount/settings/firstabout" },
       {
-        title: "Share this App",
-        route: ""
+        title: "Contact Us",
+        route: "/pages/ordersandaccount/support/contact"
       },
+      {
+        title: "Switch accounts",
+        route: "/pages/ordersandaccount/settings/swtichaccount"
+      },
+      {
+        title: "Logout",
+      }
     ],
   },
 ];

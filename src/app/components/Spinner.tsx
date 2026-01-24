@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import React from "react";
 type spinnerProps = {
   size?: number;
@@ -5,7 +6,12 @@ type spinnerProps = {
 
 export default function Spinner({ size = 67 }: spinnerProps) {
   return (
-    <div className="h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center">
+    <div
+      className={clsx(
+        "h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center",
+        fixed ? "fixed" : "relative"
+      )}
+    >
       <svg
         width={size}
         height={size}
