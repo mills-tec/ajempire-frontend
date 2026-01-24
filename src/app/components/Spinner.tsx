@@ -8,8 +8,8 @@ export default function Spinner({ size = 67 }: spinnerProps) {
   return (
     <div
       className={clsx(
-        "h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center",
-        fixed ? "fixed" : "relative"
+        "h-full w-full fixed  z-50 top-0 right-0 flex items-center justify-center bg-white",
+        // fixed ? "fixed" : "relative"
       )}
     >
       <svg
