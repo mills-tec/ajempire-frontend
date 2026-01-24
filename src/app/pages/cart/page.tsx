@@ -1,6 +1,7 @@
 "use client";
 import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
+import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import Spinner from "@/app/components/Spinner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,6 +29,16 @@ export default function CartPage() {
   const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Simulate fetching cart items
+    setIsLoading(false);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
 
   const checkoutHandler = () => {
     const token = getBearerToken();
@@ -64,9 +75,19 @@ export default function CartPage() {
 
   console.log("signin", signIn);
 
-  if (!items || items.length == 0)
+  // Show skeleton while loading
+  {
+    isLoading ? <div className="w-full lg:px-0 space-y-6 mt-10">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <CartCardSkeleton key={i} />
+      ))}
+    </div> : null
+  }
+
+  if (!items || items.length == 0 && !isLoading)
     return (
       <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
+
         <svg
           width="227"
           height="265"
@@ -96,7 +117,6 @@ export default function CartPage() {
     );
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9">
-      {isLoading && <Spinner />}
       {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
       <div className="w-full lg:px-0 space-y-6">
         <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none">

@@ -9,6 +9,7 @@ type SideBarItem = {
     route?: string;
     icon?: React.ReactNode;
     children?: SideBarItem[];
+    onClick?: () => void;
 };
 
 type SideBarCompProps = {
@@ -89,17 +90,29 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                     <ul className="ml-4 mt-1 space-y-1">
                         {item.children.map((child) => (
                             <li key={child.title}>
-                                <Link
-                                    href={child.route || "#"}
-                                    className={`block text-[13px] p-2 px-6 rounded-md transition-all duration-300 ${pathname === child.route
-                                        ? "bg-[#FFD9EE] text-[#525252]"
-                                        : "hover:bg-pink-50 text-[#525252]"
-                                        }`}
-                                >
-                                    {child.title}
-                                </Link>
+                                {child.onClick ? (
+                                    // ✅ handle buttons like "Share this app"
+                                    <button
+                                        onClick={child.onClick}
+                                        className="block w-full text-left text-[13px] p-2 px-6 rounded-md hover:bg-pink-50 text-[#525252] transition-all duration-300"
+                                    >
+                                        {child.title}
+                                    </button>
+                                ) : (
+                                    // ✅ normal navigation links
+                                    <Link
+                                        href={child.route || "#"}
+                                        className={`block text-[13px] p-2 px-6 rounded-md transition-all duration-300 ${pathname === child.route
+                                            ? "bg-[#FFD9EE] text-[#525252]"
+                                            : "hover:bg-pink-50 text-[#525252]"
+                                            }`}
+                                    >
+                                        {child.title}
+                                    </Link>
+                                )}
                             </li>
                         ))}
+
                     </ul>
                 )}
             </div>

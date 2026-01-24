@@ -6,11 +6,17 @@ import CommentCard from "@/app/components/CommentCard";
 import ProductDescription from "@/app/components/ProductDescription";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getProduct } from "@/lib/api";
+import { getBearerToken, getProduct } from "@/lib/api";
 import Spinner from "@/app/components/Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
+import { toast } from "sonner";
+import CheckoutRequirement from "@/app/components/CheckoutRequirement";
+import { Product } from "@/lib/types";
+
+
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -27,8 +33,11 @@ export default function ProductDetailPage() {
     addItem,
     getItem,
     removeItem,
+    selectedItem,
     setQuantity: setCartItemQty,
   } = useCartStore();
+
+  const [isAdress, setIsAdress] = useState(false);
 
   const { data, isLoading } = useQuery(
     ["product", id],
@@ -44,6 +53,52 @@ export default function ProductDetailPage() {
     cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1
   );
 
+  const [currentItem, setCurrentItem] = useState<Product | null>(null);
+
+  useEffect(() => {
+    if (data?.message?.product) {
+      setCurrentItem(data.message.product);
+    }
+  }, [data]);
+
+
+  const checkoutHandler = () => {
+    const token = getBearerToken();
+    if (!token) {
+      toast.error("Please log in to checkout");
+      return;
+    }
+
+    // ✅ Read fresh data from React Query
+    const currentItem = data?.message?.product;
+    if (!currentItem || !currentItem._id) {
+      toast.error("Product not loaded yet");
+      return;
+    }
+
+    console.log("Proceeding to checkout with item:", currentItem);
+
+    const store = useCartStore.getState();
+    const existingItem = store.getItem(currentItem._id);
+    console.log("Existing item:", existingItem);
+
+    if (!existingItem) {
+      store.addItem({
+        ...currentItem,
+        quantity,
+        selectedVariants: [],
+        selected: true,
+      });
+    }
+
+    store.selectAllCartItems();
+    setIsAdress(true);
+  };
+
+
+
+
+
   // 🧩 Update quantity safely
   useEffect(() => {
     if (!item) return; // don’t run until item exists
@@ -55,8 +110,13 @@ export default function ProductDetailPage() {
     }
   }, [quantity, item]);
 
-  // 🌀 Handle states
-  if (isLoading) return <Spinner />;
+  if (isLoading) return <ProductDetailSkeleton />;
+
+  if (!item) {
+    // product not loaded yet
+    return <ProductDetailSkeleton />;
+  }
+
 
   if (!data || !item)
     return (
@@ -64,6 +124,7 @@ export default function ProductDetailPage() {
         This data is currently unavailable
       </p>
     );
+
 
   return (
     <section className="">
@@ -97,16 +158,21 @@ export default function ProductDetailPage() {
               />
             </div>
             <div className="flex gap-2 lg:gap-5">
-              {data?.message.product.images.map((image, key) => (
-                <div key={key} className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl">
-                  <Image
-                    src={image}
-                    alt="product image"
-                    fill
-                    className="absolute object-cover"
-                  />
-                </div>
-              ))}
+              {data?.message?.product?.images?.length ? (
+                data.message.product.images.map((image, key) => (
+                  <div
+                    key={key}
+                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl"
+                  >
+                    <Image
+                      src={image}
+                      alt="product image"
+                      fill
+                      className="absolute object-cover"
+                    />
+                  </div>
+                ))
+              ) : null}
             </div>
           </div>
           <div className="lg:hidden">
@@ -138,11 +204,14 @@ export default function ProductDetailPage() {
         {items.length > 0 && (
           <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
             <div className="sticky top-0 space-y-2">
-              <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full">
+              <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
                 Check Out
               </button>
+
               <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
-                Go to cart
+                <Link href="/pages/cart">
+                  Go to cart
+                </Link>
               </button>
             </div>
             <div className="space-y-3 w-full">
@@ -202,6 +271,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
         )}
+        {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
       </div>
       <div className="w-full flex items-center sticky left-0 bottom-20 pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
         <div className="flex gap-2 items-center">
@@ -264,9 +334,10 @@ export default function ProductDetailPage() {
             </svg>
           </button>
         </div>
-        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full">
+        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
           Check Out
         </button>
+
       </div>
     </section>
   );

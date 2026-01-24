@@ -98,7 +98,7 @@ export default function UserUsageChart({ trendData }: UserUsageChartProps) {
 
 
     return (
-        <Card className="relative w-[400px] h-[400px] flex items-center justify-center p-4">
+        <Card className="lg:relative lg:w-[400px] w-full lg:h-[400px] flex items-center justify-center p-4">
             <CardContent className="p-4">
                 <div className="relative flex items-center justify-center p-6">
 

@@ -1,4 +1,6 @@
 // sidebarItems.ts
+"use client";
+
 
 import { ReactNode } from "react";
 import { DocumentIcon } from "@/components/svgs/DocumentIcon";
@@ -12,13 +14,31 @@ import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
 import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
+import { toast, Toaster } from "sonner";
 
 export type SideBarItem = {
   title: string;
   route?: string;
   icon?: ReactNode;
   children?: SideBarItem[];
+  onClick?: () => void;
 };
+
+const handleShareApp = async () => {
+  const url = window.location.origin;
+
+  if (navigator.share) {
+    await navigator.share({
+      title: "Check out this app!",
+      text: "Discover premium cosmetics and beauty essentials at AJ Empire ✨ Shop original products, great prices, and fast delivery. Try it now 👇",
+      url,
+    });
+  } else {
+    await navigator.clipboard.writeText(url);
+    toast.success("copied app link", { position: "top-right" })
+  }
+};
+
 
 export const sidebarItems: SideBarItem[] = [
   {
@@ -28,7 +48,7 @@ export const sidebarItems: SideBarItem[] = [
     children: [
       { title: "All Orders", route: "/pages/ordersandaccount/orders/all" },
       { title: "Processing", route: "/pages/ordersandaccount/orders/processing" },
-      { title: "Shipped", route: "/pages/ordersandaccount/orders/shipping" },
+      { title: "Shipped", route: "/pages/ordersandaccount/orders/shipped" },
       { title: "Delivered", route: "/pages/ordersandaccount/orders/delivered" },
       { title: "Reviews", route: "/pages/ordersandaccount/orders/reviews" },
     ],
@@ -92,6 +112,14 @@ export const sidebarItems: SideBarItem[] = [
       {
         title: "Contact Us",
         route: "/pages/ordersandaccount/support/contact"
+      },
+      {
+        title: "Legal terms",
+        route: "/pages/ordersandaccount/settings/legalterms"
+      },
+      {
+        title: "Share this app",
+        onClick: handleShareApp,
       },
       {
         title: "Switch accounts",
