@@ -85,6 +85,7 @@ export default function UpdateMenu() {
 
           <p className="font-medium">Education</p>
         </div>
+
         <div className="flex cursor-pointer items-center gap-3 py-4 text-brand_pink">
           <svg
             width="27"
@@ -117,9 +118,8 @@ export default function UpdateMenu() {
             />
           </svg>
 
-            <p className="font-medium">Gallery</p>
-          </div>
-        </Link>
+          <p className="font-medium">Gallery</p>
+        </div>
       </div>
     </div>
   );
