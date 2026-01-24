@@ -25,7 +25,7 @@ interface UserProfile {
 
 export default function ProfileSettingsPage() {
     const [profileData, setProfileData] = useState<UserProfile | null>(null);
-    console.log("ProfileSettingsPage loaded", profileData?.shippingAddress?.fullName);
+
     const styleadress = "font-semibold opacity-75";
     useEffect(() => {
         const token = getBearerToken();
@@ -39,6 +39,7 @@ export default function ProfileSettingsPage() {
                 )
                 console.log("Fetched profile settings:", res.data.message);
                 setProfileData(res.data.message);
+
             }
             catch (err) {
                 console.error("Error fetching profile settings:", err);
@@ -47,14 +48,20 @@ export default function ProfileSettingsPage() {
         profileSettingsPage();
     }, [])
     return (
-        <div className="w-full lg:px-6 mt-6 font-poppins">
-            <h2 className="text-[18px] font-semibold mb-6">Profile Settings</h2>
+        <div className="w-full lg:px-6 lg:mt-6 mt-1 font-poppins">
+
+            <div>
+                <h2 className="hidden lg:block text-[18px] font-semibold mb-6">Profile Settings</h2>
+                <div className="lg:hidden">
+                    <h2 className=" text-[18px] font-semibold mb-6">Profile Settings</h2>
+                </div>
+            </div>
 
             <div className="flex gap-6">
 
                 {/* LEFT – PROFILE SUMMARY */}
                 {profileData && (
-                    <div className="w-[45%] bg-white p-5 rounded-md border">
+                    <div className=" w-full lg:w-[45%] bg-white p-5 rounded-md border">
                         <ProfileName email={profileData.email} />
                         <p className="text-[13px] text-gray-500 mt-2">
                             Manage your personal information and delivery details. Your data is safe and secure.

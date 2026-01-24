@@ -14,6 +14,7 @@ import SearchBar from "./SearchBar";
 import Userpopup from "./Userpopup";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchStore } from "@/lib/search-store";
 
 type NavDesktopProps = {
   isLoggedIn: boolean;
@@ -49,11 +50,13 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
     animate: { opacity: 1, transition: { duration: 0.4, delay: 0.1 } },
     exit: { opacity: 0, transition: { duration: 0.3 } },
   };
+
+  const { clearSearch } = useSearchStore();
   return (
     <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
       {/* Logo */}
       <div className="hidden lg:flex lg:w-[10%]">
-        <Link href="/" className="w-full">
+        <Link href="/" className="w-full" onClick={clearSearch}>
           <div className="mt-[-7px]">
             <Image
               src={Logo}
@@ -73,6 +76,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
             className={`opacity-80 ${isActive(
               "/"
             )} hover:text-[#FF008C] transition-all duration-300`}
+            onClick={clearSearch}
           >
             shop
           </Link>
