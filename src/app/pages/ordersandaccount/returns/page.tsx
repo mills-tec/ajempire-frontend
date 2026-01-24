@@ -14,7 +14,7 @@ export default function Returns() {
     };
     fetchReturns();
   }, []);
-
+  console.log(returns)
 
   return (
     <div className="rounded-2xl p-8 bg-white space-y-8">

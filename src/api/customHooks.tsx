@@ -3,7 +3,6 @@ import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import { Review } from "@/lib/types";
 
 
 let config = {};
@@ -28,7 +27,7 @@ export const useOrders = () => {
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
-      let req = await getData("/orders/", config);
+      const req = await getData("/orders/", config);
       const orderRequest = req.data.message;
 
       return orderRequest;
@@ -135,8 +134,7 @@ export const useReviews = () => {
     if (!loading) {
       setLoading(true);
       try {
-        let req = await updateData(`/review/${product}`, data, config);
-        console.log(req)
+         await updateData(`/review/${product}`, data, config);
         return true;
       } catch (err: unknown) {
         let message;
@@ -179,7 +177,7 @@ export const useReviews = () => {
 export const useIssueReturn = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
-  const postIssueReturn = async (data: any) => {
+  const postIssueReturn = async (data: unknown) => {
 
     if (!loading) {
       setLoading(true);
