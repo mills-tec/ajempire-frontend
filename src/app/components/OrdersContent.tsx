@@ -84,7 +84,7 @@ export default function OrdersContent({
           ))}
         </div>
         <div className="flex justify-between my-5  items-end">
-          {/* <div /> */}
+
 
           <div className="relative">
             {title.includes("delivered") && (
@@ -166,7 +166,7 @@ export default function OrdersContent({
               <h1 className="mb-10">Choose a product you want to review</h1>
 
               {items.map((item, key) => {
-                const review = (item.product as any).reviews.find((review: any) => review.user == getUser()._id);
+                const review = (item.product as any).reviews.find((review: any) => review.user == getUser()?._id);
 
 
                 return <div

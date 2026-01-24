@@ -206,14 +206,14 @@ export default function CartPage() {
                   <div key={i}>
                     <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
                       <Image
-                        src={item.cover_image}
+                        src={item.cover_image!}
                         alt="product image"
                         fill
                         className="transition-transform duration-300 ease-in-out group-hover:scale-110"
                       />
                     </div>
                     <p className="text-xs text-black/75 mt-1">
-                      ₦{calcDiscountPrice(item.price, item.discountedPrice)}{" "}
+                      ₦{calcDiscountPrice(item.price, item.discountedPrice!)}{" "}
                       <span className="text-brand_pink">x{item.quantity}</span>
                     </p>
                   </div>
