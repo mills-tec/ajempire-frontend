@@ -3,7 +3,7 @@ import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
 import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
-import Spinner from "@/app/components/Spinner";
+import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
@@ -40,6 +40,11 @@ export default function CartPage() {
   }, []);
 
 
+  const selectedItems = items.filter(item => item.selected);
+  const selectedCount = selectedItems.length;
+
+
+
   const checkoutHandler = () => {
     const token = getBearerToken();
     console.log(token)
@@ -74,15 +79,14 @@ export default function CartPage() {
   };
 
   console.log("signin", signIn);
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+  const handleImageLoad = (id: string) => {
+    setLoadedImages(prev => ({ ...prev, [id]: true }));
+  };
+
 
   // Show skeleton while loading
-  {
-    isLoading ? <div className="w-full lg:px-0 space-y-6 mt-10">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <CartCardSkeleton key={i} />
-      ))}
-    </div> : null
-  }
+
 
   if (!items || items.length == 0 && !isLoading)
     return (
@@ -133,8 +137,9 @@ export default function CartPage() {
 
             <p className="text-sm">All</p>
           </div>
-          <p className="font-medium lg:hidden">
-            Cart({items.length} {items.length > 1 ? "items" : "item"})
+          <p className="font-medium lg:hidden  ">
+            Cart
+            ({selectedCount} {selectedCount === 1 ? "item" : "items"})
           </p>
           <svg
             width="28"
@@ -195,30 +200,66 @@ export default function CartPage() {
                 </clipPath>
               </defs>
             </svg>
-            <p className="text-sm text-center pb-4">
-              <span className="font-medium text-base">Order Summary</span>(4
-              items) selected
+
+            <p className=" text-sm text-center pb-4">
+              <span className="font-medium text-base">Order Summary</span>
+              ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
             </p>
-            <div className="flex gap-2">
+
+            {/* <div className="flex gap-2">
               {items
                 .filter((item) => item.selected == true)
                 .map((item, i) => (
                   <div key={i}>
                     <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
                       <Image
-                        src={item.cover_image}
+                        src={item.cover_image!}
                         alt="product image"
                         fill
                         className="transition-transform duration-300 ease-in-out group-hover:scale-110"
                       />
                     </div>
                     <p className="text-xs text-black/75 mt-1">
-                      ₦{calcDiscountPrice(item.price, item.discountedPrice)}{" "}
+                      ₦{calcDiscountPrice(item.price, item.discountedPrice!)}{" "}
                       <span className="text-brand_pink">x{item.quantity}</span>
                     </p>
                   </div>
                 ))}
+            </div> */}
+            <div className="flex gap-2 min-h-[5rem] transition-all duration-300">
+              {selectedItems.map((item) => {
+                const isLoaded = loadedImages[item._id];
+
+                return (
+                  <div key={item._id} className="transition-all duration-300">
+                    <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
+
+
+                      {isLoaded && (
+                        <SelectedItemSkeleton />
+                      )}
+
+                      <Image
+                        src={item.cover_image!}
+                        alt="product image"
+                        fill
+                        className={clsx(
+                          "object-cover transition-opacity duration-500",
+                          isLoaded ? "opacity-100" : "opacity-0"
+                        )}
+                        onLoad={() => handleImageLoad(item._id)}
+                      />
+                    </div>
+
+                    <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
+                      ₦{calcDiscountPrice(item.price, item.discountedPrice!)}
+                      <span className="text-brand_pink"> x{item.quantity}</span>
+                    </p>
+                  </div>
+                );
+              })}
             </div>
+
             <hr className="mt-4" />
             <div className="text-sm space-y-1 py-1">
               <div className="flex justify-between items-center">
@@ -293,7 +334,9 @@ export default function CartPage() {
             </svg>
 
             <div>
-              <p className="font-medium text-sm">(4 items) selected</p>
+              <p className=" text-sm font-medium pb-4">
+                ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
+              </p>
               <div className="flex justify-between items-end">
                 <div>
                   <h3 className="font-medium">₦{orderSummary().total}</h3>
