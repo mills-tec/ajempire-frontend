@@ -67,13 +67,13 @@ export default function CartPopupProductDescription({
 
   const variant_set = new Set<string>();
 
-  for (const variant of item.variants) {
+  for (const variant of item?.variants!) {
     variant_set.add(variant.name);
   }
 
   function getAllVariantItems(variant_name: string) {
-    return item.variants.length > 0
-      ? item.variants.filter(
+    return item.variants!.length > 0
+      ? item.variants!.filter(
         (variant) => variant.name == variant_name && variant.stock > 0
       )
       : [];
@@ -91,11 +91,11 @@ export default function CartPopupProductDescription({
   //   items
   // );
   let size_variant =
-    item.variants.length > 0 &&
-    item.variants.filter((item) => item.name == "size" && item.stock > 0);
+    item.variants!.length > 0 &&
+    item.variants!.filter((item) => item.name == "size" && item.stock > 0);
   let color_variant =
-    item.variants.length > 0 &&
-    item.variants.filter((item) => item.name == "color" && item.stock > 0);
+    item.variants!.length > 0 &&
+    item.variants!.filter((item) => item.name == "color" && item.stock > 0);
 
   const filledStar = (
     <svg
@@ -148,12 +148,12 @@ export default function CartPopupProductDescription({
                   )}
                 </div>
               }
-              <p className="text-black/60 text-xs">{item.reviews.length}</p>
+              <p className="text-black/60 text-xs">{item.reviews!.length}</p>
             </div>
           </div>
           <div className="flex items-center">
             <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              ₦{calcDiscountPrice(item.price, item.discountedPrice)}
+              ₦{calcDiscountPrice(item.price, item.discountedPrice!)}
             </h3>
             <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
 
@@ -185,7 +185,7 @@ export default function CartPopupProductDescription({
           <p className="text-sm">{quantity}</p>
           <button
             onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, item.stock))
+              setQuantity((prev) => Math.min(prev + 1, item.stock!))
             }
             className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
           >
@@ -323,7 +323,7 @@ export default function CartPopupProductDescription({
               {quantity}
               <button
                 onClick={() =>
-                  setQuantity((prev) => Math.min(prev + 1, item.stock))
+                  setQuantity((prev) => Math.min(prev + 1, item.stock!))
                 }
                 className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
               >

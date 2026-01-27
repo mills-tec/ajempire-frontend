@@ -18,6 +18,8 @@ import Reviews from "../../Reviews";
 
 
 export default function Status() {
+    const params = useParams();
+    return;
     const { getOrder } = useOrders();
     const [data, setData] = useState<{
         _id: string;
@@ -64,7 +66,6 @@ export default function Status() {
         shippedAt: null,
         deliveredAt: null,
     });
-    const params = useParams();
     const [postLoading] = useState(false);
     const [chooseProductModal, setChooseProductModal] = useState<boolean>(false);
     const [showReview, setShowReview] = useState(false);
@@ -259,6 +260,7 @@ export default function Status() {
 
                 <IssueReturn data={{ _id: data._id, items: data.items }} returnModal={returnModal} setReturnModal={(modal: boolean) => setReturnModal(modal)} />
 
+                {/* <LeaveReview  selectedProduct={}/> */}
                 {/* <LeaveReview items={data.items} show={showReviewModal} toggleShow={() => setShowReviewModal(!showReviewModal)} chooseProductModal={chooseProductModal} toggleChooseProductModal={() => setChooseProductModal(!chooseProductModal)} /> */}
 
 
