@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
+import CartPopup from "./CartPopup";
 
 export default function LayoutWrapper({
     children,
@@ -47,6 +48,8 @@ export default function LayoutWrapper({
                     </div>
                 </footer>
             )}
+
+            <CartPopup />
         </div>
     );
 }

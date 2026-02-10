@@ -44,6 +44,14 @@ export default function ListOfLogistics() {
             setLoading(false);
         }
     };
+
+    const formatPrice = (amount: number) => {
+        return new Intl.NumberFormat("en-NG", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(Math.round(amount));
+    };
+
     console.log("Logistics State:", logistics);
     return (
         <div className="flex flex-col gap-4">
@@ -76,7 +84,7 @@ export default function ListOfLogistics() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <p className="font-medium">₦{logistic.total}</p>
+                                <p className="font-medium">₦{formatPrice(logistic.total)}</p>
                                 <input
                                     type="radio"
                                     checked={isSelected}

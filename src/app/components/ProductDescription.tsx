@@ -6,7 +6,8 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
-import { getBearerToken } from "@/lib/api";
+import { getBearerToken, getUsersWishlist } from "@/lib/api";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
 
 export default function ProductDescription({
   product_data,
@@ -28,6 +29,16 @@ export default function ProductDescription({
     selectAllCartItems,
   } = useCartStore();
 
+  const { items: wishlistItems, addItem: addWishlistItem, removeItem: removeWishlistItem, isInWishlist } = useWishlistStore();
+
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      const wishlist = await getUsersWishlist();
+      // You might want to do something with wishlist here
+      console.log("wishlist: ", wishlist);
+    };
+    fetchWishlist();
+  }, []);
 
   const checkoutHandler = () => {
     const token = getBearerToken();
@@ -40,12 +51,12 @@ export default function ProductDescription({
       useCartStore.getState();
 
     // 1️⃣ Check if product already exists in cart
-    const existingItem = getItem(item._id);
+    const existingItem = getItem(product._id);
 
     // 2️⃣ If not in cart, add it
     if (!existingItem) {
       addItem({
-        ...item,
+        ...product,
         quantity,
         selectedVariants: selectedVariants ?? [],
         selected: true, // IMPORTANT
@@ -100,13 +111,13 @@ export default function ProductDescription({
 
   const variant_set = new Set<string>();
 
-  for (const variant of product.variants) {
+  for (const variant of product?.variants || []) {
     variant_set.add(variant.name);
   }
 
   function getAllVariantItems(variant_name: string) {
-    return product.variants.length > 0
-      ? product.variants.filter(
+    return product?.variants.length > 0
+      ? product?.variants.filter(
         (item) => item.name == variant_name && item.stock > 0
       )
       : [];
@@ -166,7 +177,7 @@ export default function ProductDescription({
 
       <div className="space-y-3">
         <div className="flex justify-between">
-          {product.itemsSold > 0 && (
+          {product?.itemsSold > 0 && (
             <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
               }`}</p>
           )}
@@ -182,13 +193,13 @@ export default function ProductDescription({
                 )}
               </div>
             }
-            <p className="text-black/60 text-xs">{product.reviews.length}</p>
+            <p className="text-black/60 text-xs">{product?.reviews.length}</p>
           </div>
         </div>
 
         <div className="flex items-center">
           <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-            ₦{calcDiscountPrice(product.price, product.discountedPrice)}
+            ₦{calcDiscountPrice(product.price, product?.discountedPrice)}
           </h3>
           <h4 className="text-[10px] lg:text-xs ml-2 line-through">
             ₦{product.price}
@@ -221,7 +232,7 @@ export default function ProductDescription({
           <p className="text-sm">{quantity}</p>
           <button
             onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, product.stock))
+              setQuantity((prev) => Math.min(prev + 1, product?.stock || 1))
             }
             className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
           >
@@ -233,8 +244,8 @@ export default function ProductDescription({
       <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
-          {product.images.length > 0 ? (
-            product.images.map((image, key) => (
+          {product?.images.length > 0 ? (
+            product?.images.map((image, key) => (
               <div key={key} className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
                 <Image
                   src={image}
@@ -390,8 +401,8 @@ export default function ProductDescription({
       <div className="p-6 border rounded-lg space-y-2">
         <h4 className=" text-sm lg:text-base">What’s Inside</h4>
         <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
-          {product.whatsInside.length > 0 ? (
-            product.whatsInside.map((item, key) => (
+          {product?.whatsInside.length > 0 ? (
+            product?.whatsInside.map((item, key) => (
               <li key={key} className="list-disc">
                 {item}
               </li>
@@ -487,8 +498,8 @@ export default function ProductDescription({
               </button>
             </div>
           )}
-
-          <button className="">
+          {/* Wishlist button */}
+          {/* <button className="">
             <svg
               width="42"
               height="42"
@@ -503,6 +514,30 @@ export default function ProductDescription({
                 fill="black"
               />
             </svg>
+          </button> */}
+          <button
+            onClick={() => {
+              if (isInWishlist(product._id)) removeWishlistItem(product._id);
+              else addWishlistItem(product);
+            }}
+          >
+            {isInWishlist(product._id) ? (
+              <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
+                <path
+                  d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154Z"
+                  fill="#FF008C"
+                />
+              </svg>
+            ) : (
+              <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                <circle cx="21" cy="21" r="20.5" stroke="#999999" />
+                <path
+                  d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154Z"
+                  fill="black"
+                />
+              </svg>
+            )}
           </button>
         </div>
         <button

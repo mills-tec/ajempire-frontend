@@ -7,6 +7,18 @@ import {
   ProductsResponse,
 } from "./types";
 
+export type Coupon = {
+  _id: string;
+  code: string;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  title: string;
+  expiry: string;
+  isExpired: boolean;
+  users: string[];
+};
+
+
 // lib/api.ts
 const API_URL = "https://ajempire-backend.vercel.app/api";
 
@@ -124,13 +136,7 @@ export async function getProducts(): Promise<ProductsResponse | null> {
   return res.json();
 }
 
-export async function getProductsByCategory(
-  category: string
-): Promise<ProductsResponse | null> {
-  const res = await fetch(API_URL + "/category/" + category + "/product");
-  if (!res.ok) return null;
-  return res.json();
-}
+
 
 export async function getProduct(id: string): Promise<ProductResponse | null> {
   const res = await fetch(API_URL + "/product/" + id);
@@ -350,3 +356,91 @@ export async function getCategories(): Promise<{ message: Category[] }> {
   if (!res.ok) throw new Error("Failed to get categories");
   return res.json();
 }
+
+
+// export async function getProductsByCategory(
+//   category: string
+// ): Promise<ProductsResponse | null> {
+//   const res = await fetch(API_URL + "/category/" + category + "/product");
+//   if (!res.ok) return null;
+//   return res.json();
+
+// }
+// export async function getProductsByCategory(category: string): Promise<ProductsResponse | null> {
+//   console.log("Fetching products for category:", category); // <--- log here
+//   const res = await fetch(API_URL + "/category/" + category + "/product");
+//   if (!res.ok) return null;
+//   const data = await res.json();
+//   console.log("Response data:", data); // <--- log API response
+//   return data;
+// }
+
+// export const getProductsByCategory = async (slug: any) => {
+//   const response = await fetch(`/api/products?category=${slug}`);
+//   console.log("Fetching products for category slug:", slug); // Log the slug being used
+//   console.log("Response status:", response);
+//   return response.json();
+// };
+
+// export async function getProductsByCategory(category: string) {
+//   try {
+//     console.log("➡️ getProductsByCategory called");
+//     console.log("➡️ category received:", category);
+
+//     const url = `${API_URL}/category/${category}/product`;
+//     console.log("➡️ Fetching URL:", url);
+
+//     const response = await fetch(url);
+
+//     console.log("➡️ Response status:", response.status);
+//     console.log("➡️ Response ok?:", response.ok);
+
+//     if (!response.ok) {
+//       console.error("❌ Request failed");
+//       return null;
+//     }
+
+//     const data = await response.json();
+
+//     console.log("✅ Raw API response:", data);
+//     console.log("✅ Products array:", data?.message?.products);
+
+//     return data;
+//   } catch (error) {
+//     console.error("🔥 Fetch error:", error);
+//     return null;
+//   }
+// }
+
+export async function getProductsByCategory(
+  category: string
+): Promise<Product[]> {
+  const res = await fetch(`${API_URL}/category/${category}/product`);
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  console.log("Products by category response data:", data);
+  return data.message.products;
+}
+
+// COUPON API
+export async function getCoupons(): Promise<{ message: Coupon[] } | null> {
+  try {
+    const res = await fetch(`${API_URL}/coupons`);
+
+    if (!res.ok) {
+      console.error("Failed to fetch coupons");
+      return null;
+    }
+
+    const data = await res.json();
+    console.log("Coupons response:", data);
+
+    return data;
+  } catch (error) {
+    console.error("Coupon fetch error:", error);
+    return null;
+  }
+}
+
+

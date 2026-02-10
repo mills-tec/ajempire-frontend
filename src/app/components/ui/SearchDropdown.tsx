@@ -14,8 +14,6 @@ const SearchDropdown = ({ onClose }: { onClose?: () => void }) => {
             </div>
         );
     }
-
-
     return (
         <div className="absolute top-[48px] left-0 w-full bg-white rounded-2xl shadow-xl border z-50 p-4">
 

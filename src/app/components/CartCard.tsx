@@ -4,6 +4,7 @@ import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
+import { useRouter } from "next/navigation";
 
 function CartCard({ item }: { item: CartItem }) {
   const {
@@ -19,22 +20,33 @@ function CartCard({ item }: { item: CartItem }) {
   const cartItem = getItem(item._id);
 
   useEffect(() => resetSelectedItem(), []);
+  const router = useRouter();
 
   return (
     <section>
       {selectedItem && <CartPopup />}
-      <div className="flex items-start relative w-full px-4 lg:px-0">
-        <Checkbox
-          checked={cartItem?.selected}
-          onCheckedChange={() => {
-            toggleItemSelect(item._id);
-          }}
-          className="mr-2 !rounded-full"
-        />
+      <div className="flex items-start relative w-full px-4 lg:px-0 cursor-pointer" onClick={
+        (e) => {
+          // Navigate to product detail page
+          e.stopPropagation();
+          router.push(`/product/${item._id}`);
+
+        }
+      }>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={cartItem?.selected}
+            onCheckedChange={() => toggleItemSelect(item._id)}
+            className="mr-2 !rounded-full"
+          />
+        </div>
         <div className="flex gap-x-2 w-full border-b border-b-black/30 lg:border-none pb-4">
           <div className="relative bg-gray-400 h-[6rem] lg:!h-[8.5rem] min-w-[6rem] lg:min-w-[8.5rem] w-[6rem] lg:w-[8.5rem] rounded-xl overflow-clip">
             <Image
-              src={item.cover_image}
+              src={item.cover_image || "/placeholder.png"}
               alt="product image"
               fill
               className="transition-transform duration-300 ease-in-out group-hover:scale-110"
@@ -72,7 +84,7 @@ function CartCard({ item }: { item: CartItem }) {
                   ₦{item.price}
                 </p>
                 <p className="text-brand_pink">
-                  ₦{calcDiscountPrice(item.price, item.discountedPrice)}
+                  ₦{calcDiscountPrice(item.price, item.discountedPrice ?? 0)}
                 </p>
               </div>
 
@@ -102,7 +114,10 @@ function CartCard({ item }: { item: CartItem }) {
           viewBox="0 0 17 17"
           className="absolute right-4"
           fill="none"
-          onClick={() => removeItem(item._id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeItem(item._id)
+          }}
           xmlns="http://www.w3.org/2000/svg"
         >
           <g clip-path="url(#clip0_1644_12855)">

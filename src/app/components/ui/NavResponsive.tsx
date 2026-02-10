@@ -7,6 +7,7 @@ import { CartIcon } from "@/components/svgs/CartIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useSearchStore } from "@/lib/search-store";
 
 type NavResponsiveProps = {
   isLoggedIn: boolean;
@@ -21,6 +22,7 @@ const NavResponsive = ({
   setShowIntro,
 }: NavResponsiveProps) => {
   const { items } = useCartStore();
+  const { clearSearch } = useSearchStore();
   return (
     <div className="w-full h-[70px]  text-[11px] font-poppins flex items-center">
       <ul className="w-full  flex items-center  justify-between ">
@@ -28,6 +30,7 @@ const NavResponsive = ({
           <Link
             href="/"
             className={` ${isActive("/")} flex flex-col items-center`}
+            onClick={clearSearch}
           >
             <HomeIcon size={30} className="opacity-80" />
             <p className="mt-[-5px]">Home</p>
@@ -36,9 +39,9 @@ const NavResponsive = ({
 
         <li>
           <Link
-            href={"/pages/categories"}
+            href={"/categories"}
             className={` ${isActive(
-              "/pages/categories"
+              "/categories"
             )} flex flex-col items-center`}
           >
             <CategoryIcon size={30} className="opacity-75" />

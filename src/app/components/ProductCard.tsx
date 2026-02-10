@@ -33,6 +33,14 @@ export default function ProductCard({
     fetchWishlist();
   }, []);
 
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+  };
+
+
   const filledStar = (
     <svg
       width="16"
@@ -66,10 +74,10 @@ export default function ProductCard({
   );
   return (
     <section
-      onClick={() => router.push(`product/${product._id}`)}
+      onClick={() => router.push(`/product/${product._id}`)}
       className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full"
     >
-      <Link href={"product/" + product._id}>
+      <Link href={"/product/" + product._id}>
         <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip ">
           <Image
             src={product.cover_image ?? ""}
@@ -112,7 +120,7 @@ export default function ProductCard({
         <div className="flex items-center gap-2 pt-1 justify-between">
           <div className="flex  items-center gap-2">
             <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
-              N{calcDiscountPrice(product.price, product.discountedPrice ?? 0)}
+              N{formatPrice(calcDiscountPrice(product.price, product.discountedPrice ?? 0))}
             </h3>
             <p className="text-[7px] lg:text-xs text-black/60">1k+sold</p>
           </div>
@@ -203,6 +211,6 @@ export default function ProductCard({
           </div>
         </div>
       </div>
-    </section>
+    </section >
   );
 }

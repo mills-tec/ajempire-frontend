@@ -4,11 +4,18 @@ type SearchStore = {
   query: string;
   searchedQuery: string;
   recent: string[];
+   minPrice: number | null;
+  maxPrice: number | null;  
   resetToken: number;
 
   setQuery: (q: string) => void;
   submitSearch: () => void;
   clearSearch: () => void;
+
+  // ✅ PRICE ACTIONS
+  setPriceRange: (min: number | null, max: number | null) => void;
+  clearPriceRange: () => void;
+
   removeRecent: (q: string) => void;
   clearRecent: () => void;
 };
@@ -21,6 +28,11 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("recentSearches") || "[]")
       : [],
+
+  // 🔥 PRICE FILTER STATE
+  minPrice: null,
+  maxPrice: null,
+
   resetToken: 0,
 
   setQuery: (query) => set({ query }),
@@ -48,8 +60,21 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     set((state) => ({
       query: "",
       searchedQuery: "",
-      resetToken: state.resetToken + 1, // 🔥 trigger
+      resetToken: state.resetToken + 1,
     })),
+
+  // 🔥 PRICE ACTIONS
+  setPriceRange: (min, max) =>
+    set({
+      minPrice: min,
+      maxPrice: max,
+    }),
+
+  clearPriceRange: () =>
+    set({
+      minPrice: null,
+      maxPrice: null,
+    }),
 
   removeRecent: (q) =>
     set((state) => {

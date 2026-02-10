@@ -11,6 +11,12 @@ export type CartItem = Product & {
   selected: boolean;
   synced?: boolean;
 };
+type AppliedCoupon = {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+};
+
 interface SelectedLogistic {
   courier_id: string;
   courier_name: string;
@@ -59,6 +65,12 @@ type CartStore = {
   setRequestToken: (token: string) => void;
   clearRequestToken: () => void;
 
+  /* COUPON */
+appliedCoupon: AppliedCoupon | null;
+applyCoupon: (coupon: AppliedCoupon) => void;
+removeCoupon: () => void;
+
+
   /* CHECKOUT FLOW */
   checkoutStep: CheckoutStep;
   setCheckoutStep: (step: CheckoutStep) => void;
@@ -71,6 +83,8 @@ type CartStore = {
     deliveryFee: number;
     finalTotal: number;
   };
+
+  
   retrySync: () => Promise<void>;
 };
 
@@ -89,6 +103,14 @@ export const useCartStore = create<CartStore>()(
       /* LOGISTICS */
       selectedLogistic: null,
       requestToken: null,
+
+      /* COUPON */
+appliedCoupon: null,
+
+applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
+
+removeCoupon: () => set({ appliedCoupon: null }),
+
 
       /* CHECKOUT FLOW */
       checkoutStep: CheckoutStep.ADDRESS_FORM,
@@ -274,7 +296,25 @@ export const useCartStore = create<CartStore>()(
           0
         );
 
-        const coupon = 0;
+        // const coupon = 0;
+      const appliedCoupon = get().appliedCoupon;
+let coupon = 0;
+
+if (appliedCoupon) {
+  const discountedSubtotal = total - discount;
+
+  if (appliedCoupon.type === "percent") {
+    coupon = Math.round(
+      (appliedCoupon.value / 100) * discountedSubtotal
+    );
+  }
+
+  if (appliedCoupon.type === "fixed") {
+    coupon = Math.min(appliedCoupon.value, discountedSubtotal);
+  }
+}
+
+
 
         // 👇 pull logistics from the global store
         const deliveryFee = get().selectedLogistic?.total ?? 0;
