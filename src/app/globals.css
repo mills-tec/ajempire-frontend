@@ -21,6 +21,12 @@
   }
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+  touch-action: pan-x pan-y;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

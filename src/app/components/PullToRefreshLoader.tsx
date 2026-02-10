@@ -1,5 +1,5 @@
 "use client";
-import { usePullToRefresh } from "./PullToRefreshProvider";
+import { usePullToRefresh } from "./pull-to-refresh/PullToRefreshProvider";
 
 export default function PullToRefreshLoader() {
     const { pull, refreshing } = usePullToRefresh();
