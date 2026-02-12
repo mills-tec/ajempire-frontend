@@ -119,3 +119,92 @@ export interface IFeed {
   shares: number;
   _id: string;
 }
+
+export interface IReturnRequest {
+  _id: string;
+  reason: string;
+  itemUsed: boolean;
+  imageEvidence: string;
+  additionalNotes: string;
+  phoneNumber: string;
+
+  order: {
+    _id: string;
+    order_id: string;
+  };
+
+  user: string;
+
+  product: Array<{
+    _id: string;
+    product: string;
+    name: string;
+    qty: number;
+    price: number;
+    discountedPrice: number;
+    image: string;
+    variants: {
+      options: any[];
+    };
+  }>;
+
+  status: "processing" | "approved" | "rejected" | string;
+  total: number;
+
+  createdAt: string; // ISO date
+  updatedAt: string; // ISO date
+  __v: number;
+}
+
+
+export interface CommentData {
+  _id: string;
+  user: {
+    _id: string;
+    fullname: string;
+    email: string;
+  };
+  text: string;
+  parentId: string | null;
+  likes: string[];
+  createdAt: string;
+  updatedAt: string;
+  replies: CommentData[]; // Recursive reference
+  showReplies?: boolean;
+}
+
+export interface Feed {
+
+  _id: string;
+  title: string;
+  description: string;
+  price?: number;
+  product: Product;
+  mediaUrl: string;
+  mediaType: "image" | "video";
+  type: "flashsale" | "education" | "gallery";
+  image: string;
+  likes?: string[]; // user IDs
+  comments?: CommentData[];
+  startDate?: string;
+  endDate?: string;
+  flashPrice?: number;
+
+
+}
+
+export interface Notification {
+  _id: string;
+  userId: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  type: string;
+  data?: {
+    product: Product;
+    discount: number;
+    endTime: string;
+  };
+  readBy: string[];
+  hide?: string[];
+}

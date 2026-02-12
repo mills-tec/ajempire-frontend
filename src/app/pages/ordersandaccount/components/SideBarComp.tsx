@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { getUser } from "@/lib/api";
 
 type SideBarItem = {
     title: string;
@@ -21,6 +23,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
     const pathname = usePathname();
     const router = useRouter();
 
+    const { getUnreadNotifications } = useNotificationStore();
     // Automatically open the parent that matches current pathname
     useEffect(() => {
         const foundParent = items.find(
@@ -46,6 +49,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
         }
     };
 
+    const user = getUser();
     return (<div className="w-64 p-4 font-poppins text-[14px]"> <ul className="space-y-3">
         {items.map((item) => (<li key={item.title}>
             {item.children ? (<div>
@@ -56,7 +60,13 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                             : "bg-white hover:bg-pink-50"
                             }`}
                     > <span className="flex items-center gap-3">
-                            {item.icon} {item.title} </span> <span>
+                            {item.icon} {item.title}
+                            {item.title === "Notifications" && !pathname.includes("notifications") && <div className="bg-primaryhover text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                {getUnreadNotifications(user!._id)}
+                            </div>}
+
+                        </span>
+                        <span>
                             {openRoute === item.route ? (<svg
                                 width="11"
                                 height="10"

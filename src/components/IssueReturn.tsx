@@ -89,17 +89,17 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     d="M16.7923 23.2913H11.3757C7.2904 23.2913 5.24723 23.2913 3.97865 22.0217C2.71007 20.752 2.70898 18.7099 2.70898 14.6247V7.04134M2.70898 7.04134H23.2923M2.70898 7.04134L3.35898 6.17467C4.63515 4.47384 5.27323 3.62342 6.18757 3.16517C7.10298 2.70801 8.16573 2.70801 10.2923 2.70801H15.709C17.8356 2.70801 18.8983 2.70801 19.8137 3.16517C20.7281 3.62342 21.3662 4.47384 22.6423 6.17467L23.2923 7.04134M23.2923 7.04134V14.6247"
                     stroke="black"
                     stroke-opacity="0.8"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
                 <path
                     d="M17.3333 14.624C17.3333 14.624 14.625 16.6184 14.625 17.3324C14.625 18.0463 17.3333 20.0407 17.3333 20.0407M15.1667 17.3324H20.3125C21.1028 17.3324 21.8607 17.6463 22.4195 18.2051C22.9783 18.7639 23.2922 19.5218 23.2922 20.3121C23.2922 21.1023 22.9783 21.8602 22.4195 22.419C21.8607 22.9778 21.1028 23.2918 20.3125 23.2918"
                     stroke="black"
                     stroke-opacity="0.8"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
             </svg>
             <p className="text-sm font-normal opacity-80">

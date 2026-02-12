@@ -143,7 +143,7 @@ export function getBearerToken() {
   return userStr ? JSON.parse(userStr)?.token : null;
 }
 
-export function getUser(): { _id: string; email: string } | null {
+export function getUser(): { _id: string; email: string, fullname: string } | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("ajempire_signin_user");
   return userStr ? JSON.parse(userStr)?.user : null;

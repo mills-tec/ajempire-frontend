@@ -45,7 +45,7 @@ export default function Deals() {
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <g clip-path="url(#clip0_1476_8124)">
+                <g clipPath="url(#clip0_1476_8124)">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -87,7 +87,7 @@ export default function Deals() {
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <g clip-path="url(#clip0_1476_8124)">
+                <g clipPath="url(#clip0_1476_8124)">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -130,7 +130,7 @@ export default function Deals() {
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <g clip-path="url(#clip0_1476_8124)">
+                <g clipPath="url(#clip0_1476_8124)">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"

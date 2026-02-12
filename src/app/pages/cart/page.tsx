@@ -24,7 +24,7 @@ export default function CartPage() {
     selectedItem,
     syncQueue,
   } = useCartStore();
-  console.log("items: ", items, "syncQueue: ", syncQueue);
+
   const [expand, setExpand] = useState(false);
   const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
@@ -181,7 +181,7 @@ export default function CartPage() {
               onClick={() => setExpand(!expand)}
               xmlns="http://www.w3.org/2000/svg"
             >
-              <g clip-path="url(#clip0_1335_19956)">
+              <g clipPath="url(#clip0_1335_19956)">
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"
@@ -313,7 +313,7 @@ export default function CartPage() {
               onClick={() => setExpand(!expand)}
               xmlns="http://www.w3.org/2000/svg"
             >
-              <g clip-path="url(#clip0_1335_19956)">
+              <g clipPath="url(#clip0_1335_19956)">
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"

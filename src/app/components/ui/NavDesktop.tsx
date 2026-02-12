@@ -84,7 +84,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
         <li className="lg:block">
           <Link
-            href="/pages/update"
+            href="/pages/update/all/"
             className={`flex items-center gap-1 opacity-80 ${isActive(
               "/pages/update"
             )} hover:text-[#FF008C] transition-all duration-300`}

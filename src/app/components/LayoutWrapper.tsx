@@ -36,7 +36,8 @@ export default function LayoutWrapper({
             {/* Footer */}
             {!hideLayout && (
                 <footer>
-                    {/* Mobile nav */}
+
+
                     <div className="lg:hidden w-full fixed bottom-1 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center justify-center border-t border-gray-300">
                         <Navbar />
                     </div>
