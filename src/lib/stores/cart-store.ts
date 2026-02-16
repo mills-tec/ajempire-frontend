@@ -44,7 +44,8 @@ type CartStore = {
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
   addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void;
+  removeItem: (id: string) => void; 
+  removePurchasedItems: (ids: string[]) => void;
   resetSelectedItem: () => void;
   clearCart: () => void;
   setQuantity: (id: string, quantity: number) => void;
@@ -264,6 +265,12 @@ removeCoupon: () => set({ appliedCoupon: null }),
           console.log("err", error);
         }
       },
+      removePurchasedItems: (ids: string[]) => {
+  set({
+    items: get().items.filter((item) => !ids.includes(item._id)),
+  });
+},
+
       clearCart: () =>
         set({
           items: [],
@@ -273,7 +280,7 @@ removeCoupon: () => set({ appliedCoupon: null }),
         set({
           items: get().items.map((i) =>
             i._id === id
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) }
+              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
               : i
           ),
         }),
@@ -292,7 +299,7 @@ removeCoupon: () => set({ appliedCoupon: null }),
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.discountedPrice) * i.quantity,
+            sum + calcDiscount(i.price, i.discountedPrice || 0 ) * i.quantity,
           0
         );
 

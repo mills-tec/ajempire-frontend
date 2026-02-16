@@ -8,6 +8,7 @@ import { UserIcon } from "@/components/svgs/UserIcon";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useSearchStore } from "@/lib/search-store";
+import { useRef } from "react";
 
 type NavResponsiveProps = {
   isLoggedIn: boolean;
@@ -23,6 +24,7 @@ const NavResponsive = ({
 }: NavResponsiveProps) => {
   const { items } = useCartStore();
   const { clearSearch } = useSearchStore();
+  const cartRef = useRef<HTMLAnchorElement>(null);
   return (
     <div className="w-full h-[70px]  text-[11px] font-poppins flex items-center">
       <ul className="w-full  flex items-center  justify-between ">

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import CartPopupProductDescription from "./CartPopupProductDescription";
 import { useCartStore } from "@/lib/stores/cart-store";
 import Link from "next/link";
@@ -8,18 +8,24 @@ import Link from "next/link";
 export default function CartPopup() {
   const { selectedItem, items } = useCartStore();
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
+  const cartRef = useRef<HTMLAnchorElement>(null);
 
-  // 1️⃣ body scroll lock
+  // local state for animation
+  const [isVisible, setIsVisible] = useState(false);
+
+  // whenever selectedItem changes, trigger animation
   useEffect(() => {
-    if (!selectedItem) return;
-
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = originalStyle;
-    };
+    if (selectedItem) {
+      setIsVisible(true); // fade in
+      document.body.style.overflow = "hidden";
+    } else {
+      // fade out first
+      setIsVisible(false);
+      document.body.style.overflow = "auto";
+    }
   }, [selectedItem]);
+
+
 
   // 2️⃣ debug effect — MUST be before return
   useEffect(() => {
@@ -30,6 +36,11 @@ export default function CartPopup() {
 
   // 3️⃣ conditional render AFTER hooks
   if (!selectedItem) return null
+
+  console.log("🧠 selectedItem:", selectedItem);
+  console.log("🧠 items:", items);
+
+
 
   return (
     <div
@@ -43,13 +54,20 @@ export default function CartPopup() {
     >
       <div
         className="w-full shadow-2xl relative lg:w-[40rem] lg:pb-0 z-50 rounded-t-2xl bg-white h-min max-h-[70vh] lg:max-h-[80vh] lg:rounded-2xl lg:top-[10%] overflow-clip overscroll-contain overflow-y-auto"
-        onWheel={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
+        // onWheel={(e) => e.stopPropagation()}
+        // onTouchMove={(e) => e.stopPropagation()}
+        // onClick={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
       >
         <div className="p-4 sticky top-0 rounded-t-2xl z-30 bg-white">
           <div className="flex items-center justify-between">
-            <Link href={"/pages/cart"} className="relative">
+            <Link
+              href="/pages/cart"
+              ref={cartRef}
+              className="relative"
+            >
               <svg
                 width="65"
                 height="65"
@@ -80,7 +98,6 @@ export default function CartPopup() {
                   <p>{items.length}</p>
                 </div>
               )}
-
             </Link>
 
             <svg
@@ -120,7 +137,7 @@ export default function CartPopup() {
               </div>
               {Array.isArray(selectedItem.images) && (
                 <div className="flex gap-2 lg:gap-5">
-                  {selectedItem.images.map((image, index) => (
+                  {selectedItem.images?.filter(Boolean).map((image, index) => (
                     <div
                       key={index}
                       className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
@@ -135,7 +152,6 @@ export default function CartPopup() {
                   ))}
                 </div>
               )}
-
             </div>
             <div className=" ">
               <CartPopupProductDescription
@@ -145,6 +161,7 @@ export default function CartPopup() {
                   selected: false,
                   selectedVariants: [],
                 }}
+                cartRef={cartRef}
               />
             </div>
           </div>

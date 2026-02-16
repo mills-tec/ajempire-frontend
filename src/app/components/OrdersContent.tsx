@@ -12,6 +12,8 @@ import { Dot, Ellipsis } from "lucide-react";
 import Modal from "@/components/Modal";
 import Image from "next/image";
 import { getUser } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { toast } from "sonner";
 
 export default function OrdersContent({
   title,
@@ -19,6 +21,7 @@ export default function OrdersContent({
   dateCreated,
   order_id,
   id,
+
   setUpdatedReviews,
 }: {
   title: string;
@@ -30,6 +33,8 @@ export default function OrdersContent({
     qty: number;
     image: string;
     discountedPrice: number;
+
+
   }[];
   dateCreated: string;
   order_id: string;
@@ -38,20 +43,44 @@ export default function OrdersContent({
 }) {
   const date = new Date(dateCreated);
   const { postLoading, addOrderToCart } = useOrders();
-  const handleBuyAgain = async () => {
-    if (!postLoading) {
-      try {
-        const data = items.map((item) => ({
-          productId: item.product,
-          qty: item.qty,
-          variant: item.variant?._id ?? undefined,
-        }));
-        await addOrderToCart(data);
-      } catch (err) {
-        console.log(err);
-      }
-    }
+
+
+  // const handleBuyAgain = async () => {
+  //   if (!postLoading) {
+  //     try {
+  //       const data = items.map((item) => ({
+  //         productId: item.product,
+  //         qty: item.qty,
+  //         variant: item.variant?._id ?? undefined,
+  //       }));
+  //       await addOrderToCart(data);
+  //     } catch (err) {
+  //       console.log(err);
+  //     }
+  //   }
+  // };
+
+  const { addItem, getItem } = useCartStore(); // <-- grab cart functions
+
+  const handleBuyAgain = () => {
+    items.forEach((item) => {
+      addItem({
+        _id: item.product,              // match CartItem _id
+        name: item.name,
+        price: item.price,
+        discountedPrice: item.discountedPrice,
+        stock: 9999, // or pull actual stock if available
+        image: item.image,
+        quantity: item.qty,             // keep same quantity
+        selectedVariants: item.variant ? [item.variant] : [], // preserve selected variant
+        selected: true,                 // mark selected in cart
+      });
+    });
+
+    toast.success("Items added to cart!");
   };
+
+
   const pathname = usePathname();
   const [showIssueModal, setShowIssueModal] = useState<boolean>(false);
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);

@@ -9,9 +9,7 @@ import SearchBar from "./components/ui/SearchBar";
 import CartPopup from "./components/CartPopup";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts, getProductsByCategory } from "@/lib/api";
-import Spinner from "./components/Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
-import Ajbanner from "@/assets/Ajbanner.png";
 import {
   Tooltip,
   TooltipContent,
@@ -22,6 +20,7 @@ import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefres
 import PullToRefreshLoader from "./components/PullToRefreshLoader";
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
+import HomeHeroSlider from "./components/HomeHeroSlider";
 export default function Home() {
 
   const { data, isLoading, refetch } = useQuery({
@@ -112,24 +111,28 @@ export default function Home() {
             <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center">
               <SearchBar />
             </div>
-            {/* <div className="mt-[5.8rem] lg:mt-0">
-        <Categories />
-      </div> */}
+
             <div className="mt-[5.8rem] lg:mt-0 px-[20px] lg:px-10">
               {/* Banner */}
-              {!searchActive && <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
-                {uiLoading || isLoading ? (
-                  <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
-                ) : (
-                  <Image
-                    src={Ajbanner}
-                    alt="banner image"
-                    priority
-                    className="w-full lg:h-[379px] h-auto object-cover"
+              {
+                !searchActive && <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
+                  {uiLoading || isLoading ? (
+                    <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
+                  ) : (
 
-                  />
-                )}
-              </div>
+                    // <Image
+                    //   src={Ajbanner}
+                    //   alt="banner image"
+                    //   priority
+                    //   className="w-full lg:h-[379px] h-auto object-cover"
+
+                    // />
+                    <HomeHeroSlider
+                      products={data?.message?.products ?? []}
+                      loading={uiLoading || isLoading}
+                    />
+                  )}
+                </div>
               }
 
               {/* Categories */}
@@ -175,7 +178,7 @@ export default function Home() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
+                  <div className=" grid  grid-cols-2  gap-2  sm:grid-cols-3  md:grid-cols-4  lg:grid-cols-5 lg:gap-6">
                     {filteredProducts.map((product) => (
                       <Tooltip key={product._id}>
                         <TooltipTrigger asChild>

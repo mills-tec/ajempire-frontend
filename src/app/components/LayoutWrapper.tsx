@@ -11,11 +11,16 @@ export default function LayoutWrapper({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    console.log("LayoutWrapper children:", children);
+
 
     // Routes where navbar & footer should be hidden
     const hideLayout =
         pathname.startsWith("/admin") ||
         pathname === "/admin-login";
+
+    console.log("pathname:", pathname, "hideLayout:", hideLayout);
+
 
     return (
         <div className="flex flex-col min-h-screen overflow-hidden">
@@ -38,7 +43,7 @@ export default function LayoutWrapper({
             {!hideLayout && (
                 <footer>
                     {/* Mobile nav */}
-                    <div className="lg:hidden w-full fixed bottom-1 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center justify-center border-t border-gray-300">
+                    <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center justify-center border-t border-gray-300">
                         <Navbar />
                     </div>
 
@@ -49,7 +54,8 @@ export default function LayoutWrapper({
                 </footer>
             )}
 
-            <CartPopup />
+            {typeof window !== "undefined" && <CartPopup />}
+
         </div>
     );
 }

@@ -198,7 +198,7 @@ export default function ProductDetailPage() {
               ))}
           </div>
         </div>
-        <div className="w-1/2 h-full hidden lg:block">
+        <div className="w-1/2  hidden lg:block overflow-y-scroll h-[600px] scrollbar-hide">
           {data?.message && <ProductDescription product_data={data} />}
         </div>
         {items.length > 0 && (

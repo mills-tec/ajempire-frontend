@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import Image from "next/image";
 import { calcDiscountPrice } from "@/lib/utils";
@@ -21,26 +21,13 @@ export default function WishlistProductsPage() {
     const router = useRouter();
 
 
+
     useEffect(() => {
         initWishlist(); // ✅ load wishlist into Zustand store
         setTimeout(() => setLoading(false), 500); // optional delay for smooth UX
     }, []);
 
-    const handleAddToCart = (product: any, e: React.MouseEvent) => {
-        e.stopPropagation();
 
-        // Add to Cart
-        const existingCartItem = getCartItem(product._id);
-        if (existingCartItem) {
-            // If already in cart, just increase quantity by 1
-            addToCart({ ...product, quantity: 1 });
-            toast.success("Increased quantity in cart");
-        } else {
-            // If not in cart, add with quantity = 1
-            addToCart({ ...product, quantity: 1 });
-            toast.success("Added to cart");
-        }
-    };
 
     if (loading) return <WishlistSkeleton />;
     if (!items) return <p>Loading wishlist...</p>;
@@ -176,9 +163,10 @@ export default function WishlistProductsPage() {
                                 {/* add to cart icon */}
                                 <div className="cursor-pointer relative" onClick={(e) => {
                                     e.stopPropagation();
-                                    console.log("🛒 setting selected item:", product._id);
+
                                     setSelectedItem(product);
                                 }}>
+
 
                                     <svg
                                         width="105" height="26" viewBox="0 0 105 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -187,11 +175,30 @@ export default function WishlistProductsPage() {
                                     </svg>
                                 </div>
                             </div>
-                            <div className="lg:hidden flex items-end" onClick={((e) => handleAddToCart(product, e))}>
-                                <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="0.35" y="0.35" width="28.4667" height="18.9667" rx="9.48333" stroke="black" stroke-width="0.7" />
-                                    <path d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.5613 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667" stroke="black" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
+                            {/* mobile cancel/addtocart icon */}
+                            <div className="lg:hidden flex flex-col justify-between  items-center ">
+                                <div className=" cursor-pointer" onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeItem(product._id!)
+                                }}>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M14 7C14 5.61553 13.5895 4.26216 12.8203 3.11101C12.0511 1.95987 10.9579 1.06266 9.67879 0.532846C8.3997 0.003033 6.99224 -0.13559 5.63437 0.134506C4.2765 0.404603 3.02922 1.07129 2.05026 2.05026C1.07129 3.02922 0.404603 4.2765 0.134506 5.63437C-0.13559 6.99224 0.003033 8.3997 0.532846 9.67879C1.06266 10.9579 1.95987 12.0511 3.11101 12.8203C4.26216 13.5895 5.61553 14 7 14C8.85652 14 10.637 13.2625 11.9498 11.9498C13.2625 10.637 14 8.85652 14 7ZM9.7475 8.91334C9.85615 9.02263 9.91713 9.17048 9.91713 9.32459C9.91713 9.4787 9.85615 9.62654 9.7475 9.73584C9.69328 9.79051 9.62876 9.83391 9.55767 9.86352C9.48659 9.89314 9.41034 9.90839 9.33334 9.90839C9.25633 9.90839 9.18009 9.89314 9.109 9.86352C9.03792 9.83391 8.9734 9.79051 8.91917 9.73584L7.105 7.92167C7.07708 7.89626 7.04068 7.88217 7.00292 7.88217C6.96516 7.88217 6.92876 7.89626 6.90084 7.92167L5.08667 9.73584C4.97508 9.8314 4.83153 9.88134 4.68472 9.87567C4.53791 9.87 4.39865 9.80914 4.29476 9.70525C4.19087 9.60136 4.13001 9.4621 4.12434 9.31528C4.11867 9.16847 4.1686 9.02493 4.26417 8.91334L6.07834 7.09917C6.10375 7.07125 6.11784 7.03485 6.11784 6.99709C6.11784 6.95933 6.10375 6.92293 6.07834 6.895L4.26417 5.08084C4.2095 5.02661 4.1661 4.96209 4.13648 4.89101C4.10687 4.81992 4.09162 4.74368 4.09162 4.66667C4.09162 4.58966 4.10687 4.51342 4.13648 4.44233C4.1661 4.37125 4.2095 4.30673 4.26417 4.2525C4.37346 4.14386 4.52131 4.08287 4.67542 4.08287C4.82953 4.08287 4.97738 4.14386 5.08667 4.2525L6.90084 6.06667C6.91393 6.08062 6.92974 6.09174 6.9473 6.09934C6.96486 6.10694 6.98379 6.11086 7.00292 6.11086C7.02205 6.11086 7.04098 6.10694 7.05854 6.09934C7.0761 6.09174 7.09191 6.08062 7.105 6.06667L8.91917 4.2525C8.97356 4.19811 9.03813 4.15497 9.10919 4.12554C9.18025 4.0961 9.25642 4.08095 9.33334 4.08095C9.41026 4.08095 9.48642 4.0961 9.55748 4.12554C9.62854 4.15497 9.69311 4.19811 9.7475 4.2525C9.80189 4.30689 9.84504 4.37146 9.87447 4.44252C9.90391 4.51359 9.91906 4.58975 9.91906 4.66667C9.91906 4.74359 9.90391 4.81975 9.87447 4.89082C9.84504 4.96188 9.80189 5.02645 9.7475 5.08084L7.93334 6.895C7.91939 6.9081 7.90827 6.92391 7.90067 6.94147C7.89307 6.95903 7.88914 6.97795 7.88914 6.99709C7.88914 7.01622 7.89307 7.03515 7.90067 7.05271C7.90827 7.07026 7.91939 7.08608 7.93334 7.09917L9.7475 8.91334Z" fill="black" fill-opacity="0.5" />
+                                    </svg>
+                                </div>
+                                <div className=" relative lg:hidden flex items-end" onClick={((e) => {
+                                    e.stopPropagation();
+                                    setSelectedItem(product);
+                                })}>
+                                    {getItem(product._id) && (
+                                        <div className="absolute size-4 rounded-full left-5 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
+                                            <p>{getItem(product._id)?.quantity}</p>
+                                        </div>
+                                    )}
+                                    <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="0.35" y="0.35" width="28.4667" height="18.9667" rx="9.48333" stroke="black" stroke-width="0.7" />
+                                        <path d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.5613 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667" stroke="black" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </div>
                             </div>
                         </motion.div>
                     )

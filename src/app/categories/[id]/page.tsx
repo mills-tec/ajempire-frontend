@@ -12,6 +12,8 @@ import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useSearchStore } from "@/lib/search-store";
 import React from "react";
+import { useRouter } from "next/navigation";
+
 
 
 export default function CategoryPage() {
@@ -23,6 +25,9 @@ export default function CategoryPage() {
         queryFn: () => getProductsByCategory(categoryName),
     });
     const { addItem: addToCart, getItem: getCartItem, } = useCartStore();
+    const setSelectedItem = useCartStore((state) => state.setSelectedItem);
+    const router = useRouter();
+    const { getItem } = useCartStore();
 
     const { searchedQuery, } = useSearchStore();
     // const searchActive = Boolean(searchedQuery);
@@ -133,66 +138,81 @@ export default function CategoryPage() {
                         :
                         (
                             filteredProducts?.map((product) => (
-                                <Link
-                                    key={product._id}
-                                    href={`/product/${product._id}`} >
-                                    <div>
-                                        <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
 
-                                            {/* LEFT SIDE (image + info) */}
-                                            <div className="flex gap-3 flex-1">
+                                <div
+                                    onClick={
+                                        (e) => {
+                                            // Navigate to product detail page
+                                            e.stopPropagation();
+                                            router.push(`/product/${product._id}`);
+                                            ;
+                                        }
+                                    }
+                                >
+                                    <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
 
-                                                {/* Image */}
-                                                <div className="relative w-[90px] h-auto flex-shrink-0 rounded-md overflow-hidden border">
-                                                    <Image
-                                                        src={product.cover_image || "/placeholder.png"}
-                                                        alt={product.name}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
+                                        {/* LEFT SIDE (image + info) */}
+                                        <div className="flex gap-3 flex-1">
+
+                                            {/* Image */}
+                                            <div className="relative w-[90px] h-auto flex-shrink-0 rounded-md overflow-hidden border">
+                                                <Image
+                                                    src={product.cover_image || "/placeholder.png"}
+                                                    alt={product.name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+
+                                            {/* Text */}
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-sm font-medium leading-tight">{product.name}</p>
+
+                                                <p className="text-[0.65rem] text-brand_purple">
+                                                    Only {product.stock} left
+                                                </p>
+
+                                                <div className="flex items-center gap-1">
+                                                    <div className="flex">
+                                                        {[...Array(5)].map((_, i) =>
+                                                            i < (product.averageRating ? +product.averageRating : 0) ? (
+                                                                <span key={i}>{filledStar}</span>
+                                                            ) : (
+                                                                <span key={i}>{unfilledStar}</span>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-black/60">
+                                                        {product.numReviews}
+                                                    </p>
                                                 </div>
 
-                                                {/* Text */}
-                                                <div className="flex flex-col gap-1">
-                                                    <p className="text-sm font-medium leading-tight">{product.name}</p>
-
-                                                    <p className="text-[0.65rem] text-brand_purple">
-                                                        Only {product.stock} left
-                                                    </p>
-
-                                                    <div className="flex items-center gap-1">
-                                                        <div className="flex">
-                                                            {[...Array(5)].map((_, i) =>
-                                                                i < (product.averageRating ? +product.averageRating : 0) ? (
-                                                                    <span key={i}>{filledStar}</span>
-                                                                ) : (
-                                                                    <span key={i}>{unfilledStar}</span>
-                                                                )
-                                                            )}
-                                                        </div>
-                                                        <p className="text-[10px] text-black/60">
-                                                            {product.numReviews}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="text-sm font-semibold text-brand_pink">
-                                                            N{formatPrice(calcDiscountPrice(product.price, product.discountedPrice ?? 0))}
-                                                        </h3>
-                                                        <p className="text-[9px] text-black/60">1k+ sold</p>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-sm font-semibold text-brand_pink">
+                                                        N{formatPrice(calcDiscountPrice(product.price, product.discountedPrice ?? 0))}
+                                                    </h3>
+                                                    <p className="text-[9px] text-black/60">1k+ sold</p>
                                                 </div>
                                             </div>
-                                            {/* RIGHT SIDE (cart icon) */}
-                                            <button className="flex-shrink-0 flex items-end cursor-pointer" onClick={((e) => handleAddToCart(product, e))}>
-                                                <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <rect x="0.35" y="0.35" width="28.4667" height="18.9667" rx="9.48333" stroke="black" strokeWidth="0.7" />
-                                                    <path d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.5613 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667" stroke="black" strokeWidth="0.7" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </button>
                                         </div>
+                                        {/* RIGHT SIDE (cart icon) */}
+                                        <button className="relative  flex-shrink-0 flex items-end cursor-pointer" onClick={((e) => {
+                                            e.stopPropagation();
+                                            setSelectedItem(product)
+                                        })}>
+                                            {getItem(product._id) && (
+                                                <div className="absolute size-4 rounded-full left-5 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
+                                                    <p>{getItem(product._id)?.quantity}</p>
+                                                </div>
+                                            )}
+                                            <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <rect x="0.35" y="0.35" width="28.4667" height="18.9667" rx="9.48333" stroke="black" strokeWidth="0.7" />
+                                                <path d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.5613 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667" stroke="black" strokeWidth="0.7" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                </Link>
+                                </div>
+
                             ))
                         )
                 }

@@ -132,10 +132,10 @@ export default function CartPage() {
       </section>
     );
   return (
-    <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9">
+    <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
       {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
-      <div className="w-full lg:px-0 space-y-6">
-        <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none">
+      <div className="w-full lg:px-0 space-y-6 lg:overflow-y-scroll scrollbar-hide lg:h-[calc(100vh-8rem)]">
+        <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none ">
           <div className="gap-1 flex items-center px-4 lg:px-0">
             <Checkbox
               checked={items.length > 0 && items.every((item) => item.selected)}

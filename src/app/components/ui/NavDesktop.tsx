@@ -15,6 +15,11 @@ import Userpopup from "./Userpopup";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchStore } from "@/lib/search-store";
+import { useCartIcon } from "@/app/contextanimation/CartIconContext";
+
+
+
+
 
 type NavDesktopProps = {
   isLoggedIn: boolean;
@@ -32,6 +37,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   const { items } = useCartStore();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const { cartRef } = useCartIcon();
 
   const startCloseTimer = () => {
     timeoutRef.current = setTimeout(() => {
@@ -167,6 +173,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
             className={`flex items-center gap-1 relative opacity-80 ${isActive(
               "/pages/cart"
             )} hover:text-[#FF008C] transition-all duration-300`}
+            ref={cartRef}
           >
             {items && (
               <div className="absolute size-4 rounded-full left-5 bottom-5 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">

@@ -90,14 +90,20 @@ function CartCard({ item }: { item: CartItem }) {
 
               <div className="flex gap-2 items-center text-sm">
                 <div
-                  onClick={() => decreaseQuantity(item._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    decreaseQuantity(item._id)
+                  }}
                   className="border size-[1.2rem] lg:size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                 >
                   -
                 </div>
                 <div>{cartItem?.quantity}</div>
                 <div
-                  onClick={() => increaseQuantity(item._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    increaseQuantity(item._id)
+                  }}
                   className="border size-[1.2rem] lg:size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                 >
                   +

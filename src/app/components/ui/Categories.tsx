@@ -36,8 +36,6 @@ const Categories = ({ cat, categories }: CategoriesProps) => {
     });
   };
 
-
-
   if (!finalCategories) {
     // Skeleton loader for categories
     return (
