@@ -14,7 +14,7 @@ const Categories = () => {
     queryFn: getCategories,
   });
 
-  console.log("categories: ", data);
+  // console.log("categories: ", data);
   // const categories = [
   //   { name: "Gel Polishes", slug: "gel-polishes" },
   //   { name: "Nail Decorations", slug: "nail-decorations" },

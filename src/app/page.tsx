@@ -1,9 +1,8 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import ProductCard from "./components/ProductCard";
-import bannerImg from "@/assets/banner.png";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
 import CartPopup from "./components/CartPopup";
@@ -18,7 +17,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSearchStore } from "@/lib/search-store";
+import { generateToken } from "@/lib/firebase";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { useNotification } from "@/api/customHooks";
+
 export default function Home() {
+
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["products"],
@@ -31,7 +36,8 @@ export default function Home() {
   const searchActive = Boolean(searchedQuery);
   const [searchLoading, setSearchLoading] = React.useState(false);
 
-
+  const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
+  const { updatePushToken } = useNotification()
   React.useEffect(() => {
     if (resetToken === 0) return; // ignore first render
 
@@ -68,7 +74,18 @@ export default function Home() {
   }, [searchedQuery, data]);
 
 
-
+  useEffect(() => {
+    // saving push token id on user
+    (async () => {
+      if (user && !isPushTokenSet) {
+        const token = await generateToken();
+        let req = await updatePushToken(token!)
+        if (req) {
+          setIsPushTokenSet(true)
+        }
+      }
+    })()
+  }, [user]);
 
   return (
     <div className="w-full ">
@@ -125,13 +142,11 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
-              {filteredProducts.map((product) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
+              {filteredProducts.map((product, index) => (
                 <Tooltip key={product._id}>
                   <TooltipTrigger asChild>
-                    <div>
-                      <ProductCard product={product} />
-                    </div>
+                    <ProductCard product={product} index={index} />
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center">
                     <p>{product.name}</p>

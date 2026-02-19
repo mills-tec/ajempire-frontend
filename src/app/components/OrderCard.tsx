@@ -29,11 +29,11 @@ export default function OrderCard({
         <div className="text-xs font-light grid md:grid-cols-3  gap-4 w-[200px]">
           <div className="md:col-span-2 flex justify-between">
             <p className="font-semibold">
-              ₦{(discount ? discount : price).toFixed(2)}
+              {Number((discount ? discount : price).toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
             </p>
 
             <p className="text-black/50 line-through">
-              {discount ? `₦${price.toFixed(2)}` : ""}
+              {discount ? Number(price.toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" }) : ""}
             </p>
           </div>
           <p className="text-right text-sm">x{qty}</p>

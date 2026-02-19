@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "../../../node_modules/next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
@@ -7,6 +7,8 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 
 const Navbar = () => {
   const [showIntro, setShowIntro] = useState(false);
+
+
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
   const isActive = (path: string) => {
@@ -19,6 +21,7 @@ const Navbar = () => {
   };
 
   const { isLoggedIn } = useAuthStore();
+
   return (
     <div className=" w-full text-[14px] font-poppins">
       <div className="hidden lg:flex">

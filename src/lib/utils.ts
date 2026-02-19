@@ -113,3 +113,18 @@ export const openSocialApp = (type: string, href: string) => {
       break;
   }
 }
+
+export function getCountdown(targetDate: string | Date) {
+  const now = new Date().getTime();
+  const target = new Date(targetDate).getTime();
+  const diffMs = target - now;
+
+  const totalSeconds = Math.max(Math.floor(diffMs / 1000), 0);
+
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const hours = Math.floor(totalSeconds / (60 * 60)) % 24;
+  const days = Math.floor(totalSeconds / (60 * 60 * 24));
+
+  return { days, hours, minutes, seconds };
+}

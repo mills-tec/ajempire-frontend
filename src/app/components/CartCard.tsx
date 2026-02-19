@@ -4,6 +4,7 @@ import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
+import CountdownTimer from "@/components/CountDownTimer";
 
 function CartCard({ item }: { item: CartItem }) {
   const {
@@ -34,10 +35,10 @@ function CartCard({ item }: { item: CartItem }) {
         <div className="flex gap-x-2 w-full border-b border-b-black/30 lg:border-none pb-4">
           <div className="relative bg-gray-400 h-[6rem] lg:!h-[8.5rem] min-w-[6rem] lg:min-w-[8.5rem] w-[6rem] lg:w-[8.5rem] rounded-xl overflow-clip">
             <Image
-              src={item.cover_image}
+              src={item.cover_image!}
               alt="product image"
               fill
-              className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+              className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
             />
           </div>
           <div className="flex w-full flex-col justify-between overflow-clip">
@@ -57,23 +58,33 @@ function CartCard({ item }: { item: CartItem }) {
               <div className="px-[0.2rem] bg-brand_purple w-max text-white py-[0.12rem] rounded-sm text-[0.6rem]">
                 Seller Tag
               </div>
-              <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
+              {item.flashSales && <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
                 <p className="text-brand_pink font-semibold">
-                  Extra ₦2,019 off applied
+                  Save {Number(item.price - calcDiscountPrice(item.price, item.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} extra
                 </p>
                 <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
-                  03:05:36
+                  <CountdownTimer endTime={item.flashSales?.endTime!} />
                 </p>
-              </div>
+              </div>}
             </div>
             <div className="space-x-2 flex items-baseline justify-between w-full mt-6">
               <div className="flex items-center gap-1">
-                <p className="text-black/60 text-xs line-through">
-                  ₦{item.price}
-                </p>
-                <p className="text-brand_pink">
-                  ₦{calcDiscountPrice(item.price, item.discountedPrice)}
-                </p>
+                {
+                  item.flashSales ? (
+                    <>
+                      <p className="text-black/60 text-xs line-through">
+                        {Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                      </p>
+                      <p className="text-brand_pink">
+                        {Number(calcDiscountPrice(item.price, item.flashSales?.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-brand_pink">
+                      ₦{item.price}
+                    </p>
+                  )
+                }
               </div>
 
               <div className="flex gap-2 items-center text-sm">

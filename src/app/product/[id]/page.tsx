@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ProductReview from "@/app/components/ProductReview";
 import CommentCard from "@/app/components/CommentCard";
 import ProductDescription from "@/app/components/ProductDescription";
@@ -15,6 +15,7 @@ import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/Produ
 import { toast } from "sonner";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import { Product } from "@/lib/types";
+import VideoPlayer from "@/components/VideoPlayer";
 
 
 
@@ -53,11 +54,13 @@ export default function ProductDetailPage() {
     cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1
   );
 
-  const [currentItem, setCurrentItem] = useState<Product | null>(null);
+  const [currentCoverItem, setCurrentCoverItem] = useState({
+    src: "",
+    type: ""
+  });
 
   useEffect(() => {
     if (data?.message?.product) {
-      setCurrentItem(data.message.product);
     }
   }, [data]);
 
@@ -76,11 +79,9 @@ export default function ProductDetailPage() {
       return;
     }
 
-    console.log("Proceeding to checkout with item:", currentItem);
 
     const store = useCartStore.getState();
     const existingItem = store.getItem(currentItem._id);
-    console.log("Existing item:", existingItem);
 
     if (!existingItem) {
       store.addItem({
@@ -95,8 +96,36 @@ export default function ProductDetailPage() {
     setIsAdress(true);
   };
 
+  const [video, setVideo] = useState({
+    showPlay: true,
+    muted: true,
+  })
+
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+
+  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
+
+  const handleVideoPlay = (id: string) => {
+    setPlayingMap((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+
+    setVideo((prev) => ({
+      ...prev,
+      showPlay: true,
+    }));
+
+    const video = videoRefs.current[id];
+    if (video?.paused) {
+      video.play();
+    } else {
+      video?.pause()
+    }
+  };
 
 
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
 
 
   // 🧩 Update quantity safely
@@ -108,6 +137,12 @@ export default function ProductDetailPage() {
     } else {
       setCartItemQty(item._id, quantity);
     }
+
+    setCurrentCoverItem({
+      src: item.video ? item.video : item?.cover_image!,
+      type: item.video ? "video" : "image"
+    })
+
   }, [quantity, item]);
 
   if (isLoading) return <ProductDetailSkeleton />;
@@ -125,7 +160,7 @@ export default function ProductDetailPage() {
       </p>
     );
 
-
+  console.log(video)
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -150,19 +185,46 @@ export default function ProductDetailPage() {
         <div className="lg:w-1/2 h-full space-y-8">
           <div className="space-y-4">
             <div className="relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip">
-              <Image
-                src={data?.message.product.cover_image || ""}
-                alt="product image"
-                fill
-                className="absolute object-cover"
-              />
+              {
+                currentCoverItem.type === "image" ? (
+                  <Image
+                    src={currentCoverItem.src || ""}
+                    alt="product image"
+                    fill
+                    className="absolute object-cover"
+                  />
+                ) : (
+                  <div className="absolute w-full h-full">
+
+
+                    <VideoPlayer
+                      handleVideoPlay={handleVideoPlay}
+                      item={item}
+                      video={video}
+                      playingMap={playingMap}
+                      videoRefs={videoRefs}
+                      src={currentCoverItem.src}
+                      setPlayingMap={setPlayingMap}
+                      handleSetVideo={(data) => setVideo(prev => ({ ...prev, ...data }))}
+                    />
+
+
+                  </div>
+                )
+              }
             </div>
             <div className="flex gap-2 lg:gap-5">
-              {data?.message?.product?.images?.length ? (
-                data.message.product.images.map((image, key) => (
+              {item.images!.length > 0 ? <>
+                {[...item.images!, item.cover_image!].map((image, key) => (
                   <div
                     key={key}
-                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl"
+                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                    onClick={() => {
+                      setCurrentCoverItem({
+                        src: image,
+                        type: "image"
+                      })
+                    }}
                   >
                     <Image
                       src={image}
@@ -171,12 +233,45 @@ export default function ProductDetailPage() {
                       className="absolute object-cover"
                     />
                   </div>
-                ))
-              ) : null}
+                ))}
+
+                {item.video && (
+                  <div
+                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                    onClick={() => {
+                      setCurrentCoverItem({
+                        src: item.video!,
+                        type: "video"
+                      })
+                    }}
+                  >
+                    <video
+                      ref={setVideoRef}
+                      src={item.video}
+                      className="absolute object-cover h-full w-full"
+                      onLoadedMetadata={(e) => {
+                        e.currentTarget.currentTime = 0; // start at 3 seconds
+                      }}
+                      muted
+                      onMouseEnter={() => {
+                        videoRef?.play();
+                      }}
+                      onMouseLeave={() => {
+                        videoRef?.pause();
+                      }}
+                    />
+                  </div>
+                )}
+              </> : null}
             </div>
           </div>
           <div className="lg:hidden">
-            {data?.message && <ProductDescription product_data={data} />}
+            {data?.message && <ProductDescription handleSelectCover={(src: string, type: string) => {
+              setCurrentCoverItem({
+                src,
+                type
+              })
+            }} product_data={data} />}
           </div>
 
           <div className="lg:hidden h-[200px] overflow-y-auto ">
@@ -199,7 +294,12 @@ export default function ProductDetailPage() {
           </div>
         </div>
         <div className="w-1/2 h-full hidden lg:block">
-          {data?.message && <ProductDescription product_data={data} />}
+          {data?.message && <ProductDescription product_data={data} handleSelectCover={(src: string, type: string) => {
+            setCurrentCoverItem({
+              src,
+              type
+            })
+          }} />}
         </div>
         {items.length > 0 && (
           <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">

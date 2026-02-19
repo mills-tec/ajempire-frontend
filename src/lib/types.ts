@@ -37,10 +37,16 @@ export interface Product {
   isActive?: boolean;
   reviews?: Review[];
   variants?: Variant[];
+  flashSales?: {
+    startTime: string;
+    endTime: string;
+    discount: number;
+  };
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
-  averageRating?: number; // optional, since one object had it missing
+  averageRating?: number;
+  video?: string;
 }
 
 export interface Review {
@@ -205,6 +211,6 @@ export interface Notification {
     discount: number;
     endTime: string;
   };
-  readBy: string[];
+  readBy: { userId: string }[];
   hide?: string[];
 }

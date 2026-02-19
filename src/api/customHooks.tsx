@@ -394,5 +394,46 @@ export const useNotification = () => {
       }
     }
   }
-  return { loading, getNotifications, deleteNotificationFromDb }
+
+  const markAsReadFromDb = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await postData(`/notification/markAsRead`, {}, config);
+
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const updatePushToken = async (pushToken: string) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        await postData(`/notification/savePushToken`, { token: pushToken }, config);
+        return true;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  return { loading, getNotifications, deleteNotificationFromDb, markAsReadFromDb, updatePushToken }
 }

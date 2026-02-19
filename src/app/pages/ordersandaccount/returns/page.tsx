@@ -31,7 +31,7 @@ export default function Returns() {
       {loading ? <Loading /> : (returns.length > 0 ? <ul className="space-y-4 overflow-auto h-screen">
         <OrderTabs showFilterTabs={false} text="Returns" handleSearchInputChange={() => { }} />
         {returns.map((ret, key) => (
-          <div>
+          <div key={key}>
 
             <div key={key} className="border-8  border-[#F9F9F9] md:border-none" >
               <div className="md:p-6  rounded-xl my-8  bg-white p-4 ">

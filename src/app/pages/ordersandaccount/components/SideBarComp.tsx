@@ -22,8 +22,8 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
     const [openRoute, setOpenRoute] = useState<string | null>(null);
     const pathname = usePathname();
     const router = useRouter();
-
-    const { getUnreadNotifications } = useNotificationStore();
+    const [user, setUser] = useState({ _id: "" })
+    const { getUnreadNotifications, notifications } = useNotificationStore();
     // Automatically open the parent that matches current pathname
     useEffect(() => {
         const foundParent = items.find(
@@ -49,7 +49,15 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
         }
     };
 
-    const user = getUser();
+    useEffect(() => {
+        const user = getUser();
+        if (user) {
+            setUser(user);
+        }
+    }, []);
+
+
+
     return (<div className="w-64 p-4 font-poppins text-[14px]"> <ul className="space-y-3">
         {items.map((item) => (<li key={item.title}>
             {item.children ? (<div>
@@ -59,10 +67,11 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                             ? "bg-[#F9F9F9]"
                             : "bg-white hover:bg-pink-50"
                             }`}
-                    > <span className="flex items-center gap-3">
+                    >
+                        <span className="flex items-center gap-3">
                             {item.icon} {item.title}
-                            {item.title === "Notifications" && !pathname.includes("notifications") && <div className="bg-primaryhover text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                                {getUnreadNotifications(user!._id)}
+                            {item.title === "Notifications" && item.route?.includes("notifications") && getUnreadNotifications(user._id) > 0 && <div className="bg-primaryhover text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                {getUnreadNotifications(user._id)}
                             </div>}
 
                         </span>

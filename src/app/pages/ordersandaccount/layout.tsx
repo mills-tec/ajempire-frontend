@@ -5,8 +5,10 @@ import SideNav from "./components/SideNav";
 import BreadCrumb from "./components/BreadCrumb";
 import { usePathname, useRouter } from "next/navigation";
 import { SideBarItem, sidebarItems } from "./data/sidebarData";
-import Spinner from "@/app/components/Spinner"; // Import your Spinner component
-import { ToastContainer } from "react-toastify";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { useNotification } from "@/api/customHooks";
+import { getUser } from "@/lib/api";
+
 
 interface LayoutProps {
   children: ReactNode;
@@ -28,7 +30,8 @@ export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
-
+  const { setNotifications } = useNotificationStore();
+  const { getNotifications } = useNotification()
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -46,11 +49,19 @@ export default function Layout({ children }: LayoutProps) {
     handleComplete();
     const timeout = setTimeout(() => setIsLoading(false), 50);
 
+
     return () => {
       document.removeEventListener("click", handleClick);
       clearTimeout(timeout);
     };
   }, [pathname]);
+
+  useEffect(() => {
+    (async () => {
+      let req = await getNotifications();
+      setNotifications(req)
+    })();
+  }, [])
 
   return (
     <div className="relative ">

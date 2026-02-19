@@ -271,7 +271,7 @@ export const useCartStore = create<CartStore>()(
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.discountedPrice!) * i.quantity,
+            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
           0
         );
 

@@ -18,7 +18,6 @@ export default function Gallery({ feeds }: { feeds: Feed[] }) {
         id: ""
     });
     const router = useRouter();
-    console.log(showShare.id)
     return (
         <div className='h-screen overflow-y-auto'>
             {/* Masonry Layout using CSS Columns */}

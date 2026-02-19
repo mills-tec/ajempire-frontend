@@ -7,16 +7,20 @@ import React, { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
 import { getBearerToken } from "@/lib/api";
+import CountdownTimer from "@/components/CountDownTimer";
 
 export default function ProductDescription({
   product_data,
+  handleSelectCover,
 }: {
   product_data: ProductResponse;
+  handleSelectCover: (src: string, type: string) => void;
 }) {
   // const [rating, setRating] = React.useState(4);
   const [isAdress, setIsAdress] = useState(false);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
 
-  let { product, shippingFees } = product_data.message;
+  let { product } = product_data.message;
   const {
     getItem,
     addItem,
@@ -25,7 +29,6 @@ export default function ProductDescription({
     increaseQuantity,
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
-    selectAllCartItems,
   } = useCartStore();
 
 
@@ -40,12 +43,12 @@ export default function ProductDescription({
       useCartStore.getState();
 
     // 1️⃣ Check if product already exists in cart
-    const existingItem = getItem(item._id);
+    const existingItem = getItem(item!._id);
 
     // 2️⃣ If not in cart, add it
     if (!existingItem) {
       addItem({
-        ...item,
+        ...item!,
         quantity,
         selectedVariants: selectedVariants ?? [],
         selected: true, // IMPORTANT
@@ -100,13 +103,13 @@ export default function ProductDescription({
 
   const variant_set = new Set<string>();
 
-  for (const variant of product.variants) {
+  for (const variant of product.variants!) {
     variant_set.add(variant.name);
   }
 
   function getAllVariantItems(variant_name: string) {
-    return product.variants.length > 0
-      ? product.variants.filter(
+    return product.variants!.length > 0
+      ? product.variants!.filter(
         (item) => item.name == variant_name && item.stock > 0
       )
       : [];
@@ -117,12 +120,7 @@ export default function ProductDescription({
     setCartSelectedVariants(product._id, selectedVariants);
   }, [selectedVariants]);
 
-  // let size_variant =
-  //   product.variants.length > 0 &&
-  //   product.variants.filter((item) => item.name == "size" && item.stock > 0);
-  // let color_variant =
-  //   product.variants.length > 0 &&
-  //   product.variants.filter((item) => item.name == "color" && item.stock > 0);
+
 
   const filledStar = (
     <svg
@@ -156,7 +154,6 @@ export default function ProductDescription({
     </svg>
   );
 
-  console.log("selectedVariants", selectedVariants);
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
@@ -166,9 +163,8 @@ export default function ProductDescription({
 
       <div className="space-y-3">
         <div className="flex justify-between">
-          {product.itemsSold > 0 && (
-            <p className="text-sm text-black/60">{`${product.itemsSold > 0 ? product.itemsSold + " + sold" : ""
-              }`}</p>
+          {product.itemsSold! > 0 && (
+            <p className="text-sm text-black/60">{product.itemsSold! > 1000 ? (product.itemsSold! / 1000).toFixed(1) + "k" : product.itemsSold!} Sold</p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -182,31 +178,50 @@ export default function ProductDescription({
                 )}
               </div>
             }
-            <p className="text-black/60 text-xs">{product.reviews.length}</p>
+            <p className="text-black/60 text-xs">{product.reviews!.length}</p>
           </div>
         </div>
 
         <div className="flex items-center">
-          <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-            ₦{calcDiscountPrice(product.price, product.discountedPrice)}
-          </h3>
-          <h4 className="text-[10px] lg:text-xs ml-2 line-through">
-            ₦{product.price}
-          </h4>
 
-          <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-            <p>{product.discountedPrice}% OFF Limited time</p>
-          </div>
+          {product.flashSales ? (
+            <>
+
+              <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+                {Number(calcDiscountPrice(product.price, product.flashSales.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              </h3>
+              <h4 className="text-[10px] lg:text-xs ml-2 line-through">
+                {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              </h4>
+            </>
+          ) : (
+            <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+              {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+            </h3>
+          )}
+
+
+          {
+            product.flashSales && (
+              <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+                <p>{product.flashSales.discount}% OFF Limited time</p>
+              </div>
+            )
+          }
         </div>
 
-        <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
-          <p className="font-medium">
-            Only $18,5111 with extra ₦2,019 off | Ends in
-          </p>
-          <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-            03:05:36
-          </p>
-        </div>
+        {
+          product.flashSales && (
+            <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
+              <p className="font-medium">
+                Only {Number(calcDiscountPrice(product.price, 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} with extra {Number((product.price - calcDiscountPrice(product.price, product.flashSales.discount!))).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} off | Ends in
+              </p>
+              <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
+                <CountdownTimer endTime={product.flashSales!.endTime} />
+              </p>
+            </div>
+          )
+        }
       </div>
 
       <div className="flex gap-5">
@@ -221,7 +236,7 @@ export default function ProductDescription({
           <p className="text-sm">{quantity}</p>
           <button
             onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, product.stock))
+              setQuantity((prev) => Math.min(prev + 1, product.stock!))
             }
             className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
           >
@@ -233,9 +248,9 @@ export default function ProductDescription({
       <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
-          {product.images.length > 0 ? (
-            product.images.map((image, key) => (
-              <div key={key} className="size-[4rem] relative object-cover bg-gray-400 rounded-xl">
+          {product.images!.length > 0 ? <>
+            {[...product.images!, product.cover_image!].map((image, key) => (
+              <div key={key} className="size-[4rem] cursor-pointer relative object-cover bg-gray-400 rounded-xl" onClick={() => handleSelectCover(image, "image")}>
                 <Image
                   src={image}
                   alt="variant images"
@@ -243,8 +258,27 @@ export default function ProductDescription({
                   className="absolute object-cover"
                 />
               </div>
-            ))
-          ) : (
+            ))}
+            {product.video && (
+              <div className="size-[4rem] cursor-pointer relative object-cover bg-gray-400 rounded-xl" onClick={() => handleSelectCover(product.video!, "video")}>
+                <video
+                  src={product.video}
+                  className="absolute object-cover h-full w-full"
+                  muted
+                  onLoadedMetadata={(e) => {
+                    e.currentTarget.currentTime = 0;
+                  }}
+                  ref={setVideoRef}
+                  onMouseEnter={() => {
+                    videoRef?.play();
+                  }}
+                  onMouseLeave={() => {
+                    videoRef?.pause();
+                  }}
+                />
+              </div>
+            )}
+          </> : (
             <p className="text-gray-400 text-xs">
               This data is currently unavailable
             </p>
@@ -390,8 +424,8 @@ export default function ProductDescription({
       <div className="p-6 border rounded-lg space-y-2">
         <h4 className=" text-sm lg:text-base">What’s Inside</h4>
         <ul className="text-[11.11px] lg:text-sm list-disc pl-5 text-brand_gray_dark">
-          {product.whatsInside.length > 0 ? (
-            product.whatsInside.map((item, key) => (
+          {product.whatsInside!.length > 0 ? (
+            product.whatsInside!.map((item, key) => (
               <li key={key} className="list-disc">
                 {item}
               </li>

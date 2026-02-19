@@ -7,9 +7,9 @@ interface NotificationStore {
     notifications: Notification[];
     setNotifications: (notifications: Notification[]) => void;
     getUnreadNotifications: (userId: string) => number;
-    updateNotification: (id: string, updates: any) => void;
-    markAsRead: () => void;
+    markAsRead: (userId: string) => void;
     deleteNotification: (id: string) => void;
+    updateNotifications: (notification: Notification) => void;
 }
 
 
@@ -19,24 +19,35 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     setNotifications: (notifications) =>
         set({ notifications }),
 
+    updateNotifications: (notification: Notification) =>
+        set((state) => ({ notifications: [notification, ...state.notifications] })),
 
 
-    updateNotification: (id: string, updates: any) =>
-        set((state) => ({
-            notifications: state.notifications.map((n) =>
-                n._id === id ? { ...n, ...updates } : n
-            ),
-        })),
+    markAsRead: (userId: string) => {
+        set((state) => {
+            let changed = false;
 
-    markAsRead: () =>
-        set((state) => ({
-            notifications: state.notifications.map((n) =>
-            ({
-                ...n,
-                readBy: [getUser()!._id]
-            })
-            ),
-        })),
+            const updated = state.notifications.map((n) => {
+                const alreadyRead = n.readBy.some(
+                    (r) => r.userId.toString() === userId
+                );
+
+                if (alreadyRead) return n;
+
+                changed = true;
+
+                return {
+                    ...n,
+                    readBy: [...n.readBy, { userId }],
+                };
+            });
+
+            if (!changed) return state; // 🚨 Prevent unnecessary update
+
+            return { notifications: updated };
+        });
+    },
+
 
     deleteNotification: (id: string) =>
         set((state) => ({
@@ -44,5 +55,5 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         })),
 
     getUnreadNotifications: (userId: string) =>
-        get().notifications.filter((n) => !n.readBy.includes(userId)).length,
+        get().notifications.filter((n) => !n.readBy.find((r) => r.userId === userId)).length,
 }));

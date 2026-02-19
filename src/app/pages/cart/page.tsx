@@ -47,12 +47,10 @@ export default function CartPage() {
 
   const checkoutHandler = () => {
     const token = getBearerToken();
-    console.log(token)
     const seletedItem = items.filter((item) => item.selected);
 
     if (!token) {
       toast.error("Please log in to checkout", { position: "top-right" });
-      console.log("token", token);
       setIsLoading(false);
       setTimeout(() => {
         setSingin(true);
@@ -78,7 +76,6 @@ export default function CartPage() {
     }, 300);
   };
 
-  console.log("signin", signIn);
   const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
   const handleImageLoad = (id: string) => {
     setLoadedImages(prev => ({ ...prev, [id]: true }));
@@ -261,7 +258,7 @@ export default function CartPage() {
             </div>
 
             <hr className="mt-4" />
-            <div className="text-sm space-y-1 py-1">
+            <div className="text-sm space-y-6 py-3 ">
               <div className="flex justify-between items-center">
                 <p>Item(s) total:</p>
                 <p className="font-medium">₦{orderSummary().total}</p>
@@ -269,14 +266,6 @@ export default function CartPage() {
               <div className="flex justify-between items-center">
                 <p>Item(s) discount:</p>
                 <p className="text-brand_pink">- ₦{orderSummary().discount}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p>Coupon applied</p>
-                <p className="text-brand_pink">-₦{orderSummary().coupon}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p>Delivery fee:</p>
-                <p className="font-medium">₦{orderSummary().deliveryFee}</p>
               </div>
             </div>
             <hr />
