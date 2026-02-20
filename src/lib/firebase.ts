@@ -2,8 +2,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
-import { useAuthStore } from "./stores/auth-store";
+import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -30,6 +29,7 @@ if (typeof window !== "undefined") {
     }
   });
 }
+
 export const generateToken = async () => {
   const permission = await Notification.requestPermission();
 
@@ -39,3 +39,4 @@ export const generateToken = async () => {
     return token;
   }
 }
+

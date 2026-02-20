@@ -35,7 +35,7 @@ export default function Notification({ data }: { data: NotificationType[] }) {
                                 <h1 className="font-bold">{notification.title}</h1>
                                 <p className="text-sm">{notification.message}</p>
                                 <p className="text-xs capitalize">{timeAgo(notification.createdAt)}</p>
-                            </> : <FlashSaleNotificationCom />
+                            </> : <FlashSaleNotificationCom notification={notification} />
                         }
 
                     </div>

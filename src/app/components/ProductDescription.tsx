@@ -1,9 +1,9 @@
 "use client";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { Product, ProductResponse } from "@/lib/types";
+import { ProductResponse } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
 import { getBearerToken } from "@/lib/api";

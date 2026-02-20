@@ -437,3 +437,28 @@ export const useNotification = () => {
   }
   return { loading, getNotifications, deleteNotificationFromDb, markAsReadFromDb, updatePushToken }
 }
+
+export const useExploreInterest = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const getExploreInterest = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(`/products/explore/`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  return { loading, getExploreInterest }
+}

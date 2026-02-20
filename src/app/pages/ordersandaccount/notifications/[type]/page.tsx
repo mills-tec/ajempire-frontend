@@ -9,8 +9,7 @@ import { useNotification } from '@/api/customHooks';
 import { useNotificationStore } from '@/lib/stores/notification-store';
 import { Trash } from 'lucide-react';
 import { getUser } from '@/lib/api';
-import Pusher from 'pusher-js';
-import { Notification as NotificationTYpe } from '@/lib/types';
+import { useAuthStore } from '@/lib/stores/auth-store';
 
 export const TimerInterval = ({ date }: { date: string }) => {
     const [time, setTimer] = useState(timeAgo(date));
@@ -27,6 +26,7 @@ export const TimerInterval = ({ date }: { date: string }) => {
 
 export default function Notification() {
     const params = useParams();
+    const { user } = useAuthStore();
     const { deleteNotificationFromDb, markAsReadFromDb } = useNotification();
     const { notifications, deleteNotification, markAsRead, updateNotifications } = useNotificationStore();
 
@@ -52,16 +52,7 @@ export default function Notification() {
     }, [notifications.length])
 
     useEffect(() => {
-        const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-            cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER!,
-            forceTLS: true,
-        });
 
-        const channel = pusher.subscribe('public-channel');
-
-        channel.bind('new-notification', (data: { message: NotificationTYpe }) => {
-            updateNotifications(data.message)
-        });
     }, [])
 
 

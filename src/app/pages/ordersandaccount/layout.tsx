@@ -3,11 +3,11 @@
 import { ReactNode, useEffect, useState } from "react";
 import SideNav from "./components/SideNav";
 import BreadCrumb from "./components/BreadCrumb";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { SideBarItem, sidebarItems } from "./data/sidebarData";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useNotification } from "@/api/customHooks";
-import { getUser } from "@/lib/api";
+import ExploreInterest from "@/app/components/ExploreInterest";
 
 
 interface LayoutProps {
@@ -27,7 +27,7 @@ function findActiveTitle(items: SideBarItem[], pathname: string): string {
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
@@ -78,7 +78,10 @@ export default function Layout({ children }: LayoutProps) {
               {children}
             </div>
           </div>
+
+
         </main>
+        <ExploreInterest />
       </div>
     </div>
   );

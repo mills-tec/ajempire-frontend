@@ -5,6 +5,7 @@ import { Providers } from "./provider";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LayoutWrapper from "./components/LayoutWrapper";
+import NotificationWrapper from "@/components/NotificationWrapper";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
         <Toaster />
+        <NotificationWrapper />
         <Providers>
           <TooltipProvider>
             <LayoutWrapper>{children}</LayoutWrapper>

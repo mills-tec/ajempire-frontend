@@ -19,7 +19,7 @@ export interface Product {
   _id: string;
   name: string;
   description: string;
-  category?: string;
+  category?: { _id: string, name: string };
   price: number;
   cover_image?: string;
   images?: string[];
@@ -47,6 +47,7 @@ export interface Product {
   __v?: number;
   averageRating?: number;
   video?: string;
+  relatedProducts?: Product[];
 }
 
 export interface Review {

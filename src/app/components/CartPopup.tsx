@@ -104,16 +104,16 @@ export default function CartPopup() {
             <div className="space-y-4 p-4  flex gap-3 items-end ">
               <div className="relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip">
                 <Image
-                  src={selectedItem.cover_image}
+                  src={selectedItem.cover_image!}
                   alt="product image"
                   fill
                   className="absolute object-cover"
                 />
               </div>
               <div className="flex gap-2 lg:gap-5">
-                {selectedItem.images.map((image) => (
+                {selectedItem.images!.map((image, index) => (
                   <div
-                    key={selectedItem._id}
+                    key={index}
                     className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
                   >
                     <Image

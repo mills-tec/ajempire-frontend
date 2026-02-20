@@ -17,12 +17,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSearchStore } from "@/lib/search-store";
-import { generateToken } from "@/lib/firebase";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { useNotification } from "@/api/customHooks";
+import ProductItem from "@/components/ProductItem";
 
 export default function Home() {
-
 
 
   const { data, isLoading } = useQuery({
@@ -36,8 +33,7 @@ export default function Home() {
   const searchActive = Boolean(searchedQuery);
   const [searchLoading, setSearchLoading] = React.useState(false);
 
-  const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
-  const { updatePushToken } = useNotification()
+
   React.useEffect(() => {
     if (resetToken === 0) return; // ignore first render
 
@@ -74,21 +70,13 @@ export default function Home() {
   }, [searchedQuery, data]);
 
 
-  useEffect(() => {
-    // saving push token id on user
-    (async () => {
-      if (user && !isPushTokenSet) {
-        const token = await generateToken();
-        let req = await updatePushToken(token!)
-        if (req) {
-          setIsPushTokenSet(true)
-        }
-      }
-    })()
-  }, [user]);
+
+
+
 
   return (
     <div className="w-full ">
+
       {isLoading && <Spinner />}
       {selectedItem && <CartPopup />}
       <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center">
@@ -144,14 +132,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
               {filteredProducts.map((product, index) => (
-                <Tooltip key={product._id}>
-                  <TooltipTrigger asChild>
-                    <ProductCard product={product} index={index} />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    <p>{product.name}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <ProductItem key={product._id} product={product} index={index} />
               ))}
             </div>
           )}

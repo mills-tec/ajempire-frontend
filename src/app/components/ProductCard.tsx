@@ -34,7 +34,6 @@ export default function ProductCard({
     };
     fetchWishlist();
   }, []);
-  console.log(index, product.name)
   const filledStar = (
     <svg
       width="16"
@@ -68,11 +67,11 @@ export default function ProductCard({
   );
   return (
     <section
-      onClick={() => router.push(`product/${product._id}`)}
+      onClick={() => router.push(`/product/${product._id}`)}
       className={`space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid md:h-fit   ${index % 2 === 0 ? "h-[20rem]" : `h-[14rem] ${index !== 1 ? "-translate-y-10 md:translate-y-0" : ""}`} `}
     >
 
-      <Link href={"product/" + product._id}>
+      <Link href={`/product/${product._id}`}>
         <div className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
           <Image
             src={product.cover_image ?? ""}
@@ -84,8 +83,8 @@ export default function ProductCard({
       </Link>
       <div className="space-y-1">
         <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
-        <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm">
-          Seller Tag
+        <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm capitalize">
+          {product.category?.name}
         </p>
         <p className="text-[0.65rem] text-brand_purple">
           Only {product.stock} left

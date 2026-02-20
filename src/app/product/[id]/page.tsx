@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import { Product } from "@/lib/types";
 import VideoPlayer from "@/components/VideoPlayer";
+import ProductItem from "@/components/ProductItem";
 
 
 
@@ -160,7 +161,7 @@ export default function ProductDetailPage() {
       </p>
     );
 
-  console.log(video)
+  console.log(data.message.product.relatedProducts)
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -181,198 +182,221 @@ export default function ProductDetailPage() {
 
         <div className="flex gap-2 items-center"></div>
       </div>
-      <div className="lg:flex px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 lg:space-x-20">
-        <div className="lg:w-1/2 h-full space-y-8">
-          <div className="space-y-4">
-            <div className="relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip">
-              {
-                currentCoverItem.type === "image" ? (
-                  <Image
-                    src={currentCoverItem.src || ""}
-                    alt="product image"
-                    fill
-                    className="absolute object-cover"
-                  />
-                ) : (
-                  <div className="absolute w-full h-full">
+      <div className="px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 ">
 
-
-                    <VideoPlayer
-                      handleVideoPlay={handleVideoPlay}
-                      item={item}
-                      video={video}
-                      playingMap={playingMap}
-                      videoRefs={videoRefs}
-                      src={currentCoverItem.src}
-                      setPlayingMap={setPlayingMap}
-                      handleSetVideo={(data) => setVideo(prev => ({ ...prev, ...data }))}
-                    />
-
-
-                  </div>
-                )
-              }
-            </div>
-            <div className="flex gap-2 lg:gap-5">
-              {item.images!.length > 0 ? <>
-                {[...item.images!, item.cover_image!].map((image, key) => (
-                  <div
-                    key={key}
-                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
-                    onClick={() => {
-                      setCurrentCoverItem({
-                        src: image,
-                        type: "image"
-                      })
-                    }}
-                  >
+        <div className="lg:flex lg:space-x-20">
+          <div className="lg:w-1/2 h-full space-y-8">
+            <div className="space-y-4">
+              <div className="relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip">
+                {
+                  currentCoverItem.type === "image" ? (
                     <Image
-                      src={image}
+                      src={currentCoverItem.src || ""}
                       alt="product image"
                       fill
                       className="absolute object-cover"
                     />
-                  </div>
-                ))}
+                  ) : (
+                    <div className="absolute w-full h-full">
 
-                {item.video && (
-                  <div
-                    className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
-                    onClick={() => {
-                      setCurrentCoverItem({
-                        src: item.video!,
-                        type: "video"
-                      })
-                    }}
-                  >
-                    <video
-                      ref={setVideoRef}
-                      src={item.video}
-                      className="absolute object-cover h-full w-full"
-                      onLoadedMetadata={(e) => {
-                        e.currentTarget.currentTime = 0; // start at 3 seconds
+
+                      <VideoPlayer
+                        handleVideoPlay={handleVideoPlay}
+                        item={item}
+                        video={video}
+                        playingMap={playingMap}
+                        videoRefs={videoRefs}
+                        src={currentCoverItem.src}
+                        setPlayingMap={setPlayingMap}
+                        handleSetVideo={(data) => setVideo(prev => ({ ...prev, ...data }))}
+                      />
+
+
+                    </div>
+                  )
+                }
+              </div>
+              <div className="flex gap-2 lg:gap-5">
+                {item.images!.length > 0 ? <>
+                  {[...item.images!, item.cover_image!].map((image, key) => (
+                    <div
+                      key={key}
+                      className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                      onClick={() => {
+                        setCurrentCoverItem({
+                          src: image,
+                          type: "image"
+                        })
                       }}
-                      muted
-                      onMouseEnter={() => {
-                        videoRef?.play();
+                    >
+                      <Image
+                        src={image}
+                        alt="product image"
+                        fill
+                        className="absolute object-cover"
+                      />
+                    </div>
+                  ))}
+
+                  {item.video && (
+                    <div
+                      className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                      onClick={() => {
+                        setCurrentCoverItem({
+                          src: item.video!,
+                          type: "video"
+                        })
                       }}
-                      onMouseLeave={() => {
-                        videoRef?.pause();
-                      }}
-                    />
-                  </div>
+                    >
+                      <video
+                        ref={setVideoRef}
+                        src={item.video}
+                        className="absolute object-cover h-full w-full"
+                        onLoadedMetadata={(e) => {
+                          e.currentTarget.currentTime = 0; // start at 3 seconds
+                        }}
+                        muted
+                        onMouseEnter={() => {
+                          videoRef?.play();
+                        }}
+                        onMouseLeave={() => {
+                          videoRef?.pause();
+                        }}
+                      />
+                    </div>
+                  )}
+                </> : null}
+              </div>
+            </div>
+            <div className="lg:hidden">
+              {data?.message && <ProductDescription handleSelectCover={(src: string, type: string) => {
+                setCurrentCoverItem({
+                  src,
+                  type
+                })
+              }} product_data={data} />}
+            </div>
+
+            <div className="lg:hidden h-[200px] overflow-y-auto ">
+              {data?.message && <ProductReview product={data?.message.product} />}
+              {data?.message &&
+                data.message.product.reviews?.map((review) => (
+                  <CommentCard key={review._id} review={review} />
+                ))}
+            </div>
+            <div>
+              <div className="hidden lg:block">
+                {data?.message && (
+                  <ProductReview product={data?.message.product} />
                 )}
-              </> : null}
+              </div>
+              {data?.message &&
+                data.message.product.reviews?.map((review) => (
+                  <CommentCard key={review._id} review={review} />
+                ))}
             </div>
           </div>
-          <div className="lg:hidden">
-            {data?.message && <ProductDescription handleSelectCover={(src: string, type: string) => {
+          <div className="w-1/2 h-full hidden lg:block">
+            {data?.message && <ProductDescription product_data={data} handleSelectCover={(src: string, type: string) => {
               setCurrentCoverItem({
                 src,
                 type
               })
-            }} product_data={data} />}
+            }} />}
           </div>
 
-          <div className="lg:hidden h-[200px] overflow-y-auto ">
-            {data?.message && <ProductReview product={data?.message.product} />}
-            {data?.message &&
-              data.message.product.reviews?.map((review) => (
-                <CommentCard key={review._id} review={review} />
-              ))}
-          </div>
-          <div>
-            <div className="hidden lg:block">
-              {data?.message && (
-                <ProductReview product={data?.message.product} />
-              )}
-            </div>
-            {data?.message &&
-              data.message.product.reviews?.map((review) => (
-                <CommentCard key={review._id} review={review} />
-              ))}
-          </div>
-        </div>
-        <div className="w-1/2 h-full hidden lg:block">
-          {data?.message && <ProductDescription product_data={data} handleSelectCover={(src: string, type: string) => {
-            setCurrentCoverItem({
-              src,
-              type
-            })
-          }} />}
-        </div>
-        {items.length > 0 && (
-          <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
-            <div className="sticky top-0 space-y-2">
-              <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
-                Check Out
-              </button>
 
-              <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
-                <Link href="/pages/cart">
-                  Go to cart
-                </Link>
-              </button>
-            </div>
-            <div className="space-y-3 w-full">
-              <div className="flex items-center gap-1">
-                <Checkbox
-                  checked={
-                    items.length > 0 && items.every((item) => item.selected)
-                  }
-                  onClick={() =>
-                    items.length > 0 && items.every((item) => item.selected)
-                      ? deselectAllCartItems()
-                      : selectAllCartItems()
-                  }
-                  className="z-30 bg-white !rounded-full left-2 top-2"
-                />
-                <p>Select all ({items.length})</p>
+          {items.length > 0 && (
+            <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
+              <div className="sticky top-0 space-y-2">
+                <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+                  Check Out
+                </button>
+
+                <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
+                  <Link href="/pages/cart">
+                    Go to cart
+                  </Link>
+                </button>
               </div>
-              {items.map((item, key) => (
-                <div className="w-[8rem] mx-auto flex flex-col relative items-center" key={key}>
+              <div className="space-y-3 w-full">
+                <div className="flex items-center gap-1">
                   <Checkbox
-                    checked={item?.selected}
-                    onCheckedChange={() => {
-                      toggleItemSelect(item._id);
-                    }}
-                    className="absolute z-30 bg-white border !border-brand_pink !rounded-full left-2 top-2"
+                    checked={
+                      items.length > 0 && items.every((item) => item.selected)
+                    }
+                    onClick={() =>
+                      items.length > 0 && items.every((item) => item.selected)
+                        ? deselectAllCartItems()
+                        : selectAllCartItems()
+                    }
+                    className="z-30 bg-white !rounded-full left-2 top-2"
                   />
-                  <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
-                    <Image
-                      src={item.cover_image ?? ""}
-                      alt="product image"
-                      fill
-                      className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                  <p>Select all ({items.length})</p>
+                </div>
+                {items.map((item, key) => (
+                  <div className="w-[8rem] mx-auto flex flex-col relative items-center" key={key}>
+                    <Checkbox
+                      checked={item?.selected}
+                      onCheckedChange={() => {
+                        toggleItemSelect(item._id);
+                      }}
+                      className="absolute z-30 bg-white border !border-brand_pink !rounded-full left-2 top-2"
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <h1 className="text-sm text-black font-medium w-[8rem] truncate">
-                      {item.name}
-                    </h1>
-                    <div className="flex gap-2 items-center justify-end">
-                      <div
-                        onClick={() => decreaseQuantity(item._id)}
-                        className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
-                      >
-                        -
-                      </div>
-                      <div>{item?.quantity}</div>
-                      <div
-                        onClick={() => increaseQuantity(item._id)}
-                        className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
-                      >
-                        +
+                    <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
+                      <Image
+                        src={item.cover_image ?? ""}
+                        alt="product image"
+                        fill
+                        className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <h1 className="text-sm text-black font-medium w-[8rem] truncate">
+                        {item.name}
+                      </h1>
+                      <div className="flex gap-2 items-center justify-end">
+                        <div
+                          onClick={() => decreaseQuantity(item._id)}
+                          className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
+                        >
+                          -
+                        </div>
+                        <div>{item?.quantity}</div>
+                        <div
+                          onClick={() => increaseQuantity(item._id)}
+                          className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
+                        >
+                          +
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-        {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+          )}
+          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+        </div>
+
+        {
+          item.relatedProducts!.length > 0 && (
+            <div className="font-poppins py-10 space-y-5">
+              <h1 className="text-2xl">Related Products</h1>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
+                {
+                  item.relatedProducts!.map((product, key) => (
+                    <ProductItem index={key} product={product} />
+                  ))
+                }
+              </div>
+
+            </div>
+          )
+        }
       </div>
+
+
       <div className="w-full flex items-center sticky left-0 bottom-20 pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
         <div className="flex gap-2 items-center">
           {!cartItem ? (
