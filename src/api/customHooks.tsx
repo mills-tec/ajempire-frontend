@@ -460,5 +460,20 @@ export const useExploreInterest = () => {
       }
     }
   }
-  return { loading, getExploreInterest }
+
+  const addProductToBrowsingHistory = async (productId: string) => {
+    try {
+      await postData(`/products/browsing-history`, { productId }, config);
+    } catch (err) {
+      let message;
+      if (err instanceof AxiosError) {
+        message = err.response?.data?.error || "Request failed";
+      } else {
+        message = "Something went wrong.";
+      }
+      toast.error(message);
+    }
+  }
+
+  return { loading, getExploreInterest, addProductToBrowsingHistory }
 }

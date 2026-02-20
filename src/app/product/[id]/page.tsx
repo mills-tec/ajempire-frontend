@@ -161,7 +161,6 @@ export default function ProductDetailPage() {
       </p>
     );
 
-  console.log(data.message.product.relatedProducts)
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
