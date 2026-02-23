@@ -19,6 +19,10 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   //   inputRef.current?.blur();
   // };
   const handleSubmit = () => {
+    if (!query) {
+      return;
+    }
+
     submitSearch(); // ✅ still save recent searches in Zustand
     router.push(`/search?q=${encodeURIComponent(query)}`); // 🔹 route-based navigation
     setOpen(false); // ✅ close dropdown
@@ -71,7 +75,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
 
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
+    <div ref={wrapperRef} className="relative w-full overflow-visible">
       <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] focus-within:border-brand_solid_gradient">
         <input
           ref={inputRef}

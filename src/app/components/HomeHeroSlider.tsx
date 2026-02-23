@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import Image from "next/image";
 import Ajbanner from "@/assets/Ajbanner.png";
@@ -54,7 +53,7 @@ export default function HomeHeroSlider({
 
     return (
         <div
-            className="relative w-full lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
+            className="relative z-0 w-full lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -86,7 +85,7 @@ export default function HomeHeroSlider({
                     <div className="absolute inset-0 bg-black/40" />
 
                     {/* Content */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center px-4 lg:px-10">
+                    <div className="absolute z-0 inset-0 flex flex-col justify-center items-center px-4 lg:px-10">
 
                         <div className="grid grid-cols-3 gap-4 lg:gap-6 w-full max-w-4xl">
                             {flashProducts.map((product) => (

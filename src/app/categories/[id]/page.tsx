@@ -7,13 +7,11 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useSearchStore } from "@/lib/search-store";
 import React from "react";
 import { useRouter } from "next/navigation";
-
 
 
 export default function CategoryPage() {
@@ -114,7 +112,7 @@ export default function CategoryPage() {
     if (isError) return <p>Error loading products.</p>;
     return (
         <>
-            <div className="lg:hidden w-full flex flex-col gap-3 ">
+            <div className="lg:hidden w-full flex flex-col gap-3 h-[600px] overflow-y-auto scrollbar-hide">
                 {!isLoading && filteredProducts.length === 0 && (
                     <div className="col-span-full">
                         <Image
@@ -130,7 +128,6 @@ export default function CategoryPage() {
                         </p>
                     </div>
                 )}
-
                 {
                     isLoading ? (
                         <CategoryCardSkeleton />
@@ -148,6 +145,7 @@ export default function CategoryPage() {
                                             ;
                                         }
                                     }
+
                                 >
                                     <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
 

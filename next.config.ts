@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
       "i.pinimg.com", // ✅ ADD THIS
     ],
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+      },
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

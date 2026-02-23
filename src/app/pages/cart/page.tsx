@@ -3,6 +3,7 @@ import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
 import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
+import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
@@ -99,37 +100,39 @@ export default function CartPage() {
 
   if (!isLoading && items.length === 0)
     return (
-      <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
-
-        <div>
-          <svg
-            width="227"
-            height="265"
-            viewBox="0 0 227 265"
-            className="mx-auto"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <ellipse cx="113.5" cy="117" rx="113.5" ry="117" fill="#D9D9D9" />
-            <rect x="55" y="58" width="118" height="118" rx="59" fill="white" />
-            <path
-              d="M126.083 131.501C123.4 131.501 121.249 133.651 121.249 136.334C121.249 137.616 121.759 138.845 122.665 139.752C123.571 140.658 124.801 141.167 126.083 141.167C127.365 141.167 128.594 140.658 129.5 139.752C130.407 138.845 130.916 137.616 130.916 136.334C130.916 135.052 130.407 133.823 129.5 132.916C128.594 132.01 127.365 131.501 126.083 131.501ZM87.416 92.834V97.6673H92.2493L100.949 116.01L97.6627 121.931C97.3002 122.607 97.0827 123.405 97.0827 124.251C97.0827 125.533 97.5919 126.762 98.4983 127.668C99.4048 128.575 100.634 129.084 101.916 129.084H130.916V124.251H102.931C102.771 124.251 102.617 124.187 102.504 124.074C102.391 123.96 102.327 123.807 102.327 123.646C102.327 123.526 102.351 123.429 102.399 123.356L104.574 119.417H122.579C124.391 119.417 125.986 118.402 126.808 116.928L135.459 101.292C135.629 100.906 135.749 100.495 135.749 100.084C135.749 99.443 135.495 98.8284 135.042 98.3751C134.588 97.9219 133.974 97.6673 133.333 97.6673H97.5902L95.3185 92.834M101.916 131.501C99.2335 131.501 97.0827 133.651 97.0827 136.334C97.0827 137.616 97.5919 138.845 98.4983 139.752C99.4048 140.658 100.634 141.167 101.916 141.167C103.198 141.167 104.427 140.658 105.334 139.752C106.24 138.845 106.749 137.616 106.749 136.334C106.749 135.052 106.24 133.823 105.334 132.916C104.427 132.01 103.198 131.501 101.916 131.501Z"
-              fill="#AAAAAA"
-            />
-          </svg>
-          <div className="space-y-2">
-            <p className="italic font-medium text-black/60">your cart is empty</p>
-            <div>
-              <Link href={"/"}>
-                <button className="flex gap-1 items-center w-[15rem] max-w-[80%] mx-auto justify-center py-2 rounded-full bg-brand_pink text-white">
-                  Start Shopping
-                </button>
-              </Link>
+      <RefreshWrapper>
+        <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
+          <div>
+            <svg
+              width="227"
+              height="265"
+              viewBox="0 0 227 265"
+              className="mx-auto"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <ellipse cx="113.5" cy="117" rx="113.5" ry="117" fill="#D9D9D9" />
+              <rect x="55" y="58" width="118" height="118" rx="59" fill="white" />
+              <path
+                d="M126.083 131.501C123.4 131.501 121.249 133.651 121.249 136.334C121.249 137.616 121.759 138.845 122.665 139.752C123.571 140.658 124.801 141.167 126.083 141.167C127.365 141.167 128.594 140.658 129.5 139.752C130.407 138.845 130.916 137.616 130.916 136.334C130.916 135.052 130.407 133.823 129.5 132.916C128.594 132.01 127.365 131.501 126.083 131.501ZM87.416 92.834V97.6673H92.2493L100.949 116.01L97.6627 121.931C97.3002 122.607 97.0827 123.405 97.0827 124.251C97.0827 125.533 97.5919 126.762 98.4983 127.668C99.4048 128.575 100.634 129.084 101.916 129.084H130.916V124.251H102.931C102.771 124.251 102.617 124.187 102.504 124.074C102.391 123.96 102.327 123.807 102.327 123.646C102.327 123.526 102.351 123.429 102.399 123.356L104.574 119.417H122.579C124.391 119.417 125.986 118.402 126.808 116.928L135.459 101.292C135.629 100.906 135.749 100.495 135.749 100.084C135.749 99.443 135.495 98.8284 135.042 98.3751C134.588 97.9219 133.974 97.6673 133.333 97.6673H97.5902L95.3185 92.834M101.916 131.501C99.2335 131.501 97.0827 133.651 97.0827 136.334C97.0827 137.616 97.5919 138.845 98.4983 139.752C99.4048 140.658 100.634 141.167 101.916 141.167C103.198 141.167 104.427 140.658 105.334 139.752C106.24 138.845 106.749 137.616 106.749 136.334C106.749 135.052 106.24 133.823 105.334 132.916C104.427 132.01 103.198 131.501 101.916 131.501Z"
+                fill="#AAAAAA"
+              />
+            </svg>
+            <div className="space-y-2">
+              <p className="italic font-medium text-black/60">your cart is empty</p>
+              <div>
+                <Link href={"/"}>
+                  <button className="flex gap-1 items-center w-[15rem] max-w-[80%] mx-auto justify-center py-2 rounded-full bg-brand_pink text-white">
+                    Start Shopping
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
 
-      </section>
+        </section>
+      </RefreshWrapper>
+
     );
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
