@@ -6,12 +6,13 @@ export default function layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
-    <section className="flex h-[calc(100vh-5rem)] bg-[#FFEAF6] fixed top-[5rem] w-[100vw] z-50">
-      <div className="min-w-[20rem]">
+    <section className="grid grid-cols-1 h-screen md:grid-cols-5 bg-[#FFEAF6] fixed md:top-[5rem] w-[100vw] z-50 font-poppins" >
+      <div className="md:col-span-1">
         <UpdateMenu />
       </div>
-      <div className="flex w-full">{children}</div>
+      <div className="md:col-span-4">{children}</div>
     </section>
   );
 }

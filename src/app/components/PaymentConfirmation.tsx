@@ -85,29 +85,29 @@ export default function PaymentConfirmation() {
           toast.success("Payment verified successfully!");
           setResponseData(response.data.message);
 
-          // 2️⃣ Clear cart on backend
-          const selectedItems = useCartStore.getState().getSelectedItems();
-          if (selectedItems.length > 0) {
-            await axios.delete(
-              "https://ajempire-backend.vercel.app/api/cart/",
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-                data: {
-                  items: selectedItems.map(item => ({
-                    productId: item._id,
-                    qty: item.quantity,
-                  })),
-                },
-              }
-            );
+          // // 2️⃣ Clear cart on backend
+          // const selectedItems = useCartStore.getState().getSelectedItems();
+          // if (selectedItems.length > 0) {
+          //   await axios.delete(
+          //     "https://ajempire-backend.vercel.app/api/cart/",
+          //     {
+          //       headers: {
+          //         Authorization: `Bearer ${token}`,
+          //         "Content-Type": "application/json",
+          //       },
+          //       data: {
+          //         items: selectedItems.map(item => ({
+          //           productId: item._id,
+          //           qty: item.quantity,
+          //         })),
+          //       },
+          //     }
+          //   );
 
-            // 3️⃣ Clear local cart state
-            useCartStore.getState().clearCart();
-            toast.success("Cart cleared!");
-          }
+          //   // 3️⃣ Clear local cart state
+          //   useCartStore.getState().clearCart();
+          //   toast.success("Cart cleared!");
+          // }
 
         } else {
           toast.error("Payment verification failed.");
@@ -123,7 +123,6 @@ export default function PaymentConfirmation() {
     };
     verifyPayment();
   }, [reference]);
-  console.log(responseData);
 
   if (isLoading) {
     return (
@@ -158,7 +157,7 @@ export default function PaymentConfirmation() {
                   d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75"
                   stroke="black"
                   strokeWidth="1.5"
-                  stroke-linecap="round"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>

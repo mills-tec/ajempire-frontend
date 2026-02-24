@@ -4,7 +4,6 @@ import { usePathname, useRouter } from "next/navigation";
 import Profile from "./components/Profile";
 import MobileAccountLinks from "./components/MobileAccountLinks";
 import Spinner from "@/app/components/Spinner";
-import { ToastContainer } from "react-toastify";
 
 export default function OrdersAndAccountPage() {
   const router = useRouter();

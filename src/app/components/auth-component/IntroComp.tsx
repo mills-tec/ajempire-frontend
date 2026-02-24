@@ -76,7 +76,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                         localStorage.setItem("token", token);
                         localStorage.setItem("user", token);
 
-                        setUser({ email: user.email, name: "" });
+                        setUser({ email: user.email, name: user.fullname, id: user._id });
                         // storing accounts so its easier to switch account
                         saveAccounts({ email: user.email, token, user: user })
                         localStorage.setItem(

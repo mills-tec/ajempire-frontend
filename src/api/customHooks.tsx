@@ -134,7 +134,7 @@ export const useReviews = () => {
     if (!loading) {
       setLoading(true);
       try {
-         await updateData(`/review/${product}`, data, config);
+        await updateData(`/review/${product}`, data, config);
         return true;
       } catch (err: unknown) {
         let message;
@@ -221,6 +221,259 @@ export const useIssueReturn = () => {
       }
     }
   };
-  return { postIssueReturn, loading, getReturnRequests };
+
+  const getReturnRequest = async (id: string) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(`/return/${id}`, config);
+        return req.data.message;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  return { postIssueReturn, loading, getReturnRequests, getReturnRequest };
 }
 
+
+export const useUpdates = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const getFeeds = async (type: string, cursor?: string) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=4`, config);
+        return req.data.message;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const addComments = async (data: { feedId: string; type: string; comment: string; parentId?: string }) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await postData(`/updates/comment`, { id: data.feedId, comment: data.comment, parentId: data.parentId, type: data.type }, config);
+        return req.data.message;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const likeUpdate = async (data: { feedId: string; type: string }) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await postData(`/updates/like`, { id: data.feedId, type: data.type }, config);
+
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const likeUpdateComment = async (data: { feedId: string; commentId: string; type: string }) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        let req = await postData(`/updates/likeComment`, { id: data.feedId, commentId: data.commentId, type: data.type }, config);
+        console.log(req.data.message)
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const deleteUpdateComment = async (data: { feedId: string; commentId: string; type: string }) => {
+
+    if (!loading) {
+      setLoading(true);
+      try {
+        let req = await deleteData(`/updates/comment/${data.type}/${data.feedId}/${data.commentId}`, config);
+        console.log(req.data.message)
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  return { getFeeds, loading, addComments, likeUpdate, likeUpdateComment, deleteUpdateComment };
+}
+
+export const useNotification = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const getNotifications = async () => {
+    try {
+      setLoading(true);
+      const req = await getData(`/notification/`, config);
+
+      return req.data.message;
+    } catch (err) {
+      let message;
+      if (err instanceof AxiosError) {
+        message = err.response?.data?.error || "Request failed";
+      } else {
+        message = "Something went wrong.";
+      }
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const deleteNotificationFromDb = async (id: string) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await deleteData(`/notification/${id}`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const markAsReadFromDb = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await postData(`/notification/markAsRead`, {}, config);
+
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const updatePushToken = async (pushToken: string) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        await postData(`/notification/savePushToken`, { token: pushToken }, config);
+        return true;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+  return { loading, getNotifications, deleteNotificationFromDb, markAsReadFromDb, updatePushToken }
+}
+
+export const useExploreInterest = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const getExploreInterest = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(`/products/explore/`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const addProductToBrowsingHistory = async (productId: string) => {
+    try {
+      await postData(`/products/browsing-history`, { productId }, config);
+    } catch (err) {
+      let message;
+      if (err instanceof AxiosError) {
+        message = err.response?.data?.error || "Request failed";
+      } else {
+        message = "Something went wrong.";
+      }
+      toast.error(message);
+    }
+  }
+
+  return { loading, getExploreInterest, addProductToBrowsingHistory }
+}

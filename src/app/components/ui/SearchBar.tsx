@@ -63,7 +63,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
 
   return (
     <div ref={wrapperRef} className="relative w-full">
-      <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] focus-within:border-brand_solid_gradient">
+      <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] border-brand_solid_gradient md:border-brand_solid_gradient md:border-none focus-within:border-brand_solid_gradient">
         <input
           ref={inputRef}
           value={query}
@@ -71,7 +71,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
           onFocus={() => setOpen(true)}               // 🔹 open dropdown
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder={placeholders[index]}
-          className={`w-full outline-none bg-transparent text-[14px] ${placeholderClass}`}
+          className={`w-full outline-none bg-transparent text-sm ${placeholderClass}`}
         />
 
         {/* ✅ CAMERA ICONS (UNCHANGED) */}

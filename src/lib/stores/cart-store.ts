@@ -11,6 +11,7 @@ export type CartItem = Product & {
   selected: boolean;
   synced?: boolean;
 };
+
 interface SelectedLogistic {
   courier_id: string;
   courier_name: string;
@@ -251,7 +252,7 @@ export const useCartStore = create<CartStore>()(
         set({
           items: get().items.map((i) =>
             i._id === id
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) }
+              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock!) }
               : i
           ),
         }),
@@ -270,7 +271,7 @@ export const useCartStore = create<CartStore>()(
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.discountedPrice) * i.quantity,
+            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
           0
         );
 

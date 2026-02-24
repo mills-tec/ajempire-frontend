@@ -33,7 +33,6 @@ export default function ProfileName({ email }: ProfileNameProps) {
             .catch((err) => console.error(err))
             .finally(() => setLoading(false));
     }, []);
-    console.log(profile)
     if (loading) return <div className="flex items-center gap-3 font-poppins animate-pulse">
         <div className="w-[60px] h-[60px] rounded-full bg-gray-200 flex items-center justify-center font-semibold cursor-pointer">
 
@@ -43,7 +42,7 @@ export default function ProfileName({ email }: ProfileNameProps) {
 
     const fullName = profile.fullname || profile?.shippingAddress?.fullName;
     const initials = getInitials(fullName);
-    console.log(profile);
+
     return (
         <div className="flex items-center gap-3 font-poppins">
             <div className="w-[65px] h-[65px] rounded-full bg-brand_solid_gradient flex items-center justify-center font-semibold cursor-pointer">

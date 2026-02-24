@@ -19,7 +19,6 @@ import Reviews from "../../Reviews";
 
 export default function Status() {
     const params = useParams();
-    return;
     const { getOrder } = useOrders();
     const [data, setData] = useState<{
         _id: string;

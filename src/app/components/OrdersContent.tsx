@@ -61,7 +61,7 @@ export default function OrdersContent({
 
   return (
     <div className="border-8  border-[#F9F9F9] md:border-none" >
-      <div className="md:p-6 md:ml-8  rounded-xl my-8  bg-white p-4 ">
+      <div className="md:p-6   rounded-xl my-8  bg-white p-4 ">
         <div className="flex items-center justify-between">
           <h1 className="font-semibold capitalize">{title}</h1>
           <p className="text-black/60 text-sm">

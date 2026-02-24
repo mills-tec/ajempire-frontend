@@ -48,13 +48,7 @@ export default function UpdateVideoContainer() {
   if (!data || !data.message.feeds || posts.length == 0) {
     return "";
   }
-  // console.log(
-  //   "videos: ",
-  //   data,
-  //   posts[0].likes.includes(user._id),
-  //   user._id,
-  //   flattenAllComments(posts[0].comments)
-  // );
+
   return (
     <div className="w-full flex h-full">
       <div className="w-full relative flex items-center justify-center gap-4 px-16 h-full">
@@ -94,44 +88,44 @@ export default function UpdateVideoContainer() {
 
           <div className="h-[95%] w-[25rem] flex items-center justify-center bg-black/20 rounded-xl overflow-clip">
             {isLoading ? (
-              <Spinner fixed={false} />
+              <Spinner />
             ) : // <iframe
-            //   className="size-full"
-            //   width="560"
-            //   height="315"
-            //   src={data?.message.feeds[activeVideoLink].mediaUrl}
-            //   title="YouTube video player"
-            //   frameBorder="0"
-            //   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            //   referrerPolicy="strict-origin-when-cross-origin"
-            //   allowFullScreen
-            // ></iframe>
-            data?.message.feeds[activeVideoLink].mediaType == "image" ? (
-              <Image
-                src={data?.message.feeds[activeVideoLink].mediaUrl}
-                width="560"
-                height="315"
-                className="h-full w-full object-cover"
-                alt=""
-              />
-            ) : (
-              <video
-                src={data?.message.feeds[activeVideoLink].mediaUrl}
-                className="size-full object-cover cursor-pointer"
-                autoPlay
-                loop
-                muted
-                playsInline
-                onClick={(e) => {
-                  const video = e.currentTarget;
-                  if (video.paused) {
-                    video.play();
-                  } else {
-                    video.pause();
-                  }
-                }}
-              />
-            )}
+              //   className="size-full"
+              //   width="560"
+              //   height="315"
+              //   src={data?.message.feeds[activeVideoLink].mediaUrl}
+              //   title="YouTube video player"
+              //   frameBorder="0"
+              //   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              //   referrerPolicy="strict-origin-when-cross-origin"
+              //   allowFullScreen
+              // ></iframe>
+              data?.message.feeds[activeVideoLink].mediaType == "image" ? (
+                <Image
+                  src={data?.message.feeds[activeVideoLink].mediaUrl}
+                  width="560"
+                  height="315"
+                  className="h-full w-full object-cover"
+                  alt=""
+                />
+              ) : (
+                <video
+                  src={data?.message.feeds[activeVideoLink].mediaUrl}
+                  className="size-full object-cover cursor-pointer"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  onClick={(e) => {
+                    const video = e.currentTarget;
+                    if (video.paused) {
+                      video.play();
+                    } else {
+                      video.pause();
+                    }
+                  }}
+                />
+              )}
           </div>
         </div>
         {/* <video
@@ -231,7 +225,7 @@ export default function UpdateVideoContainer() {
                     removeItem(product._id);
                   }}
                 >
-                  <g fill="none" stroke="#FF008C" stroke-width="2">
+                  <g fill="none" stroke="#FF008C" strokeWidth="2">
                     <circle cx="12" cy="12" r="9" />
                     <path d="m8 12l3 3l5-6" />
                   </g>
@@ -306,13 +300,13 @@ export default function UpdateVideoContainer() {
                     d="M21.0938 11.5186C21.354 11.5186 21.6041 11.6216 21.7881 11.8057C21.9721 11.9897 22.0752 12.2398 22.0752 12.5C22.0752 12.7602 21.9721 13.0103 21.7881 13.1943C21.6041 13.3784 21.354 13.4814 21.0938 13.4814H5.46875C5.20851 13.4814 4.95843 13.3784 4.77441 13.1943C4.59039 13.0103 4.4873 12.7602 4.4873 12.5C4.4873 12.2398 4.59039 11.9897 4.77441 11.8057C4.95843 11.6216 5.20851 11.5186 5.46875 11.5186H21.0938Z"
                     fill="black"
                     stroke="black"
-                    stroke-width="0.4"
+                    strokeWidth="0.4"
                   />
                   <path
                     d="M12.085 3.84961C12.3438 3.84961 12.5912 3.95719 12.7725 4.14551C12.9533 4.33352 13.0546 4.58712 13.0547 4.85059C13.0547 5.11424 12.9535 5.36852 12.7725 5.55664L6.08789 12.5L12.7725 19.4434C12.9535 19.6315 13.0547 19.8858 13.0547 20.1494C13.0546 20.4129 12.9533 20.6665 12.7725 20.8545C12.5912 21.0428 12.3438 21.1504 12.085 21.1504C11.8262 21.1503 11.5796 21.0427 11.3984 20.8545L4.03613 13.2061V13.2051C3.94666 13.1122 3.87537 13.0025 3.82715 12.8818C3.77881 12.7608 3.75391 12.6307 3.75391 12.5C3.75391 12.3693 3.77881 12.2392 3.82715 12.1182C3.87546 11.9973 3.94643 11.887 4.03613 11.7939L11.3984 4.14551C11.5796 3.95728 11.8262 3.84971 12.085 3.84961Z"
                     fill="black"
                     stroke="black"
-                    stroke-width="0.3"
+                    strokeWidth="0.3"
                   />
                 </svg>
                 <h2 className="text-sm font-medium pl-2">Comments</h2>

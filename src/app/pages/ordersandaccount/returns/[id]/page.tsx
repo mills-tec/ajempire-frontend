@@ -1,68 +1,61 @@
 "use client";
-import { useIssueReturn, useOrders } from "@/api/customHooks";
+import { useIssueReturn } from "@/api/customHooks";
 import OrderCard from "@/app/components/OrderCard";
-import OrderStatus from "@/app/components/OrderStatus";
+import Check from "@/components/svgs/Check";
+import DashedBorder from "@/components/svgs/DashedBorder";
 
-import { IItem } from "@/lib/types";
+import { IReturnRequest } from "@/lib/types";
 import Image from "next/image";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
-import { ImSpinner8 } from "react-icons/im";
+
+import { useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import Loading from "../../loading";
+import OrderTabs from "../../components/OrderTabs";
 
 
 
 
 export default function Status() {
-    const { getOrder } = useOrders();
-    const [data, setData] = useState<{
-        _id: string;
-        paymentMethod: string;
-        paymentStatus: string;
-        items: IItem[];
-        totalPrice: number;
-        amountPaid: number;
-        discountedPrice: number;
-        deliveryFee: number;
-        shippingAddress: {
-            fullName: string;
-            street: string;
-            city: string;
-            postalCode: string;
-            country: string;
-        };
-        createdAt: Date | null;
-        processedAt: Date | null;
-        shippedAt: Date | null;
-        deliveredAt: Date | null;
-        order_id: string;
-        orderStatus: string;
-    }>({
+    const { getReturnRequest, loading } = useIssueReturn();
+    const [data, setData] = useState<IReturnRequest>({
         _id: "",
-        orderStatus: "",
-        paymentMethod: "",
-        paymentStatus: "",
-        order_id: "",
-        items: [],
-        totalPrice: 0,
-        discountedPrice: 0,
-        amountPaid: 0,
-        deliveryFee: 0,
-        shippingAddress: {
-            fullName: "",
-            street: "",
-            city: "",
-            postalCode: "",
-            country: "",
+        reason: "",
+        itemUsed: false,
+        imageEvidence: "",
+        additionalNotes: "",
+        phoneNumber: "",
+
+        order: {
+            _id: "",
+            order_id: "",
         },
-        createdAt: null,
-        processedAt: null,
-        shippedAt: null,
-        deliveredAt: null,
+
+        user: "",
+
+        product: [
+            {
+                _id: "",
+                product: "",
+                name: "",
+                qty: 0,
+                price: 0,
+                discountedPrice: 0,
+                image: "",
+                variants: {
+                    options: [],
+                },
+            },
+        ],
+
+        status: "processing",
+        total: 0,
+
+        createdAt: "",
+        updatedAt: "",
+        __v: 0,
     });
     const params = useParams();
     const [postLoading] = useState(false);
-    const [chooseProductModal, setChooseProductModal] = useState<boolean>(false);
     const [showReview, setShowReview] = useState(false);
     const [returnModal, setReturnModal] = useState(false);
     const { postIssueReturn } = useIssueReturn();
@@ -122,143 +115,132 @@ export default function Status() {
 
     useEffect(() => {
         (async () => {
-            const { message: order } = await getOrder(params?.id as string);
-            setData(order);
+            const req = await getReturnRequest(params?.id as string);
+            // console.log(req)
+            setData(req);
         })();
     }, []);
 
 
     return (
         <div>
-            <section className="flex flex-col   md:gap-5 rounded-2xl p-5  md:p-8 bg-white">
+            {loading ? <Loading /> : (
+                <>
+                    <OrderTabs showFilterTabs={false} text="Returns Status" handleSearchInputChange={() => { }} />
+                    <section className="grid grid-cols-1 md:grid-cols-3   md:gap-5 rounded-2xl p-5  md:p-8 bg-white gap-10">
 
-                <div className="font-poppins ">
-                    <h1 className="text-lg font-medium  mb-5">Return Status</h1>
+                        <div className=" flex flex-col gap-5 order-2 md:order-1">
+                            <div className="font-poppins ">
+                                <h1 className="text-lg font-medium  mb-5 hidden md:block">Return Status</h1>
 
-                    <div className="text-sm flex flex-col gap-2">
-                        <p>Order #{data.order_id}</p>
-                        <p className="text-[#000000B2]">
-                            Placed On:
-                            <span className="text-primaryhover">
-                                {"12 Jan 2022 "}
-                                {/* {new Date(data.processedAt!).toLocaleDateString("en-us", {
-                                    dateStyle: "long",
-                                })} */}
-                            </span>
-                        </p>
-
-                        <p className="text-[#000000B2]">
-                            Delivery Date:
-                            <span className="text-primaryhover">
-                                {" "}
-                                {/* {new Date(data.processedAt!).toLocaleDateString("en-us", {
-                                    dateStyle: "long",
-                                })} */}
-                            </span>
-                        </p>
-
-                        <p className="text-[#000000B2]">No of Items: {data.items.length}</p>
-
-                        <p className="text-black text-sm mt-10 font-semibold">
-                            Total for {data.items.length}{" "}
-                            {data.items.length > 1 ? "Items" : "Item"}: ₦{data.totalPrice}
-                        </p>
-                    </div>
-                </div>
-
-                <div className=" flex-1">
-                    {data.items.map(
-                        (
-                            item: {
-                                image: string;
-                                name: string;
-                                variant: { name: string; value: string };
-                                price: number;
-                                discountedPrice: number;
-                                qty: number;
-                            },
-                            index,
-                        ) => (
-                            <OrderCard
-                                key={index}
-                                image={item.image}
-                                title={item.name}
-                                variant={
-                                    item?.variant
-                                        ? `${item.variant.name}: ${item.variant.value}`
-                                        : ""
-                                }
-                                price={item.price}
-                                discount={item.discountedPrice}
-                                qty={item.qty}
-                            />
-                        ),
-                    )}
-
-                    <div className="flex-1">
-                        <OrderStatus
-                            deliveredAt={data.deliveredAt}
-                            createdAt={data.createdAt}
-                            processedAt={data.processedAt}
-                            shippedAt={data.shippedAt}
-                        />
-                    </div>
-
-                    <div className="my-10 md:w-[50%]  grid grid-cols-3 gap-2 font-poppins">
-                        <button className="rounded-full text-xs text-white py-1 px-3  md:px-6  border bg-brand_pink  flex items-center justify-center h-10">
-                            {postLoading ? (
-                                <ImSpinner8 className="animate-spin" />
-                            ) : (
-                                "Buy Again"
-                            )}
-                        </button>
-
-                        {data.orderStatus.toLowerCase().includes("delivered") && <>
-                            <button
-                                className="rounded-full text-xs text-black py-1 px-3  md:px-6  border border-black  flex items-center justify-center h-10 "
-                                onClick={() =>
-                                    data.items.length > 1
-                                        ? setChooseProductModal(true)
-                                        : toggleShowReview()
-                                }
-                            >
-                                Leave Review
-                            </button>
-
-                            <button
-                                onClick={() => setReturnModal(true)}
-                                className="rounded-full text-xs text-black py-1 px-3  md:px-6  border border-black  flex items-center justify-center h-10"
-                            >
-                                Issue return
-                            </button>
-                        </>}
-                    </div>
-                    <div className="space-y-4">
-                        {/* <OrderSummaryCard
-                            amountPaid={data.amountPaid}
-                            discount={data.discountedPrice}
-                            shipping={data.deliveryFee}
-                            totalPrice={data.totalPrice}
-                        />
-                        <ShippingAddressCard
-                            city={data.shippingAddress.city}
-                            country={data.shippingAddress.country}
-                            street={data.shippingAddress.street}
-                            name={data.shippingAddress.fullName}
-                            postalCode={data.shippingAddress.postalCode}
-                        /> */}
-                    </div>
-                </div>
+                                <div className="text-sm flex flex-col gap-2">
+                                    <p>Order #{data.order.order_id}</p>
+                                    <p className="text-[#000000B2]">
+                                        Created On :
+                                        <span className="text-primaryhover">
+                                            {new Date(data.createdAt).toLocaleDateString("en-us", {
+                                                dateStyle: "long",
+                                            })}
+                                        </span>
+                                    </p>
 
 
+                                    <p className="text-[#000000B2]">No of Returned Items: {data.product.length}</p>
 
-                {/* <IssueReturn data={{ _id: data._id, items: data.items }} returnModal={returnModal} setReturnModal={(modal: boolean) => setReturnModal(modal)} /> */}
+                                    <p className="text-black text-sm mt-10 font-semibold">
+                                        Total for {data.product.length}{" "}
+                                        {data.product.length > 1 ? "Items" : "Item"}: ₦{Number(data.total).toLocaleString("en-US", {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
 
-                {/* <LeaveReview  selectedProduct={}/> */}
-                {/* <LeaveReview items={data.items} show={showReviewModal} toggleShow={() => setShowReviewModal(!showReviewModal)} chooseProductModal={chooseProductModal} toggleChooseProductModal={() => setChooseProductModal(!chooseProductModal)} /> */}
+                            <div className=" flex-1">
+                                {data.product.map(
+                                    (
+                                        item,
+                                        index,
+                                    ) => (
+                                        <OrderCard
+                                            key={index}
+                                            image={item.image}
+                                            title={item.name}
+                                            variant={
+                                                item?.variants && item.variants.options.length > 0
+                                                    ? `${item.variants.options[0].name}: ${item.variants.options[0].value}`
+                                                    : ""
+                                            }
+                                            price={item.price}
+                                            discount={item.discountedPrice}
+                                            qty={item.qty}
+                                        />
+                                    ),
+                                )}
 
+                            </div>
+                            <div>
+                                <div className="flex items-start font-poppins justify-center w-fit gap-5">
 
-            </section>
+                                    <div className="flex w-fit  items-center justify-center flex-col">
+                                        <Check />
+                                        <DashedBorder />
+                                    </div>
+
+                                    <div>
+                                        <h1 className="text-sm font-medium">Return Processing</h1>
+                                        <p className="text-[#000000B2] text-xs" >Fri, 05 Aug 2025, 3:07am</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start font-poppins justify-center w-fit gap-5">
+
+                                    <div className="flex w-fit  items-center justify-center flex-col">
+                                        <Check />
+                                        <DashedBorder />
+                                    </div>
+
+                                    <div>
+                                        <h1 className="text-sm font-medium">Return Confirmed</h1>
+                                        <p className="text-[#000000B2] text-xs" >Fri, 05 Aug 2025, 3:07am</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start font-poppins justify-center w-fit gap-5 opacity-35">
+
+                                    <div className="flex w-fit  items-center justify-center flex-col">
+                                        <Check />
+                                        <DashedBorder />
+                                    </div>
+
+                                    <div>
+                                        <h1 className="text-sm font-medium">Return In Transit</h1>
+                                        <p className="text-[#000000B2] text-xs" >Pending</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start font-poppins justify-center w-fit gap-5 opacity-35">
+
+                                    <div className="flex w-fit  items-center justify-center flex-col">
+                                        <Check />
+                                        <DashedBorder />
+                                    </div>
+
+                                    <div>
+                                        <h1 className="text-sm font-medium">Return Delivered</h1>
+                                        <p className="text-[#000000B2] text-xs" >Pending</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 h-[200px] relative flex justify-end md:order-2 order-1">
+                            <Image src={data.imageEvidence} alt="" fill className="object-cover bg-primaryhover/10" />
+                        </div>
+                    </section>
+                </>
+            )}
         </div>
 
     );

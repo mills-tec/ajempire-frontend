@@ -4,18 +4,19 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { calcDiscountPrice } from "@/lib/utils";
+import { calcDiscountPrice, getCountdown } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import clsx from "clsx";
 import { getUsersWishlist } from "@/lib/api";
+import CountdownTimer from "@/components/CountDownTimer";
+
 
 export default function ProductCard({
-  //  setShowCartPopup,
   product,
+  index
 }: {
-  // setShowCartPopup: React.Dispatch<React.SetStateAction<boolean>>;
   product: Product;
+  index: number;
 }) {
   const router = useRouter();
 
@@ -24,15 +25,15 @@ export default function ProductCard({
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
 
+
   useEffect(() => {
     const fetchWishlist = async () => {
       const wishlist = await getUsersWishlist();
       // You might want to do something with wishlist here
-      console.log("wishlist: ", wishlist);
+      // console.log("wishlist: ", wishlist);
     };
     fetchWishlist();
   }, []);
-
   const filledStar = (
     <svg
       width="16"
@@ -66,23 +67,25 @@ export default function ProductCard({
   );
   return (
     <section
-      onClick={() => router.push(`product/${product._id}`)}
-      className="space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full"
+      onClick={() => router.push(`/product/${product._id}`)}
+      className={`space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid md:h-fit   ${index % 2 === 0 ? "h-[20rem]" : `h-[14rem] ${index !== 1 ? "-translate-y-10 md:translate-y-0" : ""}`} `}
     >
-      <Link href={"product/" + product._id}>
-        <div className="relative lg:w-full lg:h-[14rem] w-full h-[10rem] rounded-sm overflow-clip ">
+
+      <Link href={`/product/${product._id}`}>
+        <div className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             fill
-            className="transition-transform duration-300 ease-in-out group-hover:scale-110 lg:bg-[#f9f8f8] lg:p-2"
+            className="transition-transform duration-300 ease-in-out group-hover:scale-110 lg:bg-[#f9f8f8] lg:p-2 object-cover"
           />
         </div>
       </Link>
       <div className="space-y-1">
         <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
-        <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm">
-          Seller Tag
+        <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm capitalize">
+          {product.category?.name}
         </p>
         <p className="text-[0.65rem] text-brand_purple">
           Only {product.stock} left
@@ -99,23 +102,34 @@ export default function ProductCard({
               )}
             </div>
           }
-          <p className="text-xs lg:text-base text-black/60">
-            {product.numReviews}
-          </p>
-        </div>
-        <div className="flex w-full text-[7px] lg:text-[10px] rounded-sm border border-brand_pink">
-          <p className="px-2 py-1 bg-brand_pink text-white">
-            Save $15,000 extra
-          </p>
-          <p className="px-2 py-1 text-brand_pink">03:05:36</p>
-        </div>
-        <div className="flex items-center gap-2 pt-1 justify-between">
-          <div className="flex  items-center gap-2">
-            <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
-              N{calcDiscountPrice(product.price, product.discountedPrice ?? 0)}
-            </h3>
-            <p className="text-[7px] lg:text-xs text-black/60">1k+sold</p>
+          {/* {product.reviews?.length! > 0 && <p className="text-xs lg:text-base text-black/60">
+            {product.reviews?.length}
+          </p>} */}
+
+          <div>
+            <p className="text-[7px] lg:text-xs text-black/60 ">{product.itemsSold! > 1000 ? (product.itemsSold! / 1000).toFixed(1) + "k" : product.itemsSold!} Sold</p>
           </div>
+        </div>
+        {product.flashSales && (
+          <div className="flex items-center gap-2 w-fit pr-2 text-[7px] lg:text-[10px] rounded-sm border border-brand_pink ">
+            <p className="px-2 py-1 bg-brand_pink text-white">
+              Save {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} extra
+            </p>
+
+            <span className="text-brand_pink  font-bold">
+              <CountdownTimer endTime={product.flashSales.endTime} />
+            </span>
+
+          </div>
+        )}
+        <div className="flex items-center gap-2 pt-1 justify-between">
+          <div className="flex  items-center gap-2 ">
+            <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
+              {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+            </h3>
+
+          </div>
+
           <div className="flex lg:gap-2 gap-1 items-center">
             <div
               onClick={(e) => {
@@ -134,7 +148,7 @@ export default function ProductCard({
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <g clip-path="url(#clip0_6_3)">
+                  <g clipPath="url(#clip0_6_3)">
                     <path
                       d="M3.14662 10.8687C2.68703 10.3804 2.32291 9.79925 2.07546 9.159C1.82801 8.51875 1.70218 7.83223 1.70531 7.13945C1.70531 5.73829 2.22577 4.39452 3.15219 3.40376C4.07861 2.41299 5.33511 1.85638 6.64527 1.85638C8.48177 1.85638 10.0858 2.92542 10.9343 4.51656H12.2361C12.6675 3.70739 13.2917 3.03492 14.0451 2.56764C14.7985 2.10035 15.6542 1.85493 16.5252 1.85638C17.8353 1.85638 19.0918 2.41299 20.0183 3.40376C20.9447 4.39452 21.4651 5.73829 21.4651 7.13945C21.4651 8.59385 20.884 9.93637 20.0238 10.8687L11.5852 19.881L3.14662 10.8687ZM20.8375 11.7513C21.9417 10.5579 22.6275 8.94191 22.6275 7.13945C22.6275 5.40861 21.9846 3.74866 20.8402 2.52477C19.6958 1.30088 18.1436 0.613304 16.5252 0.613304C14.4911 0.613304 12.6894 1.66992 11.5852 3.31078C11.0216 2.47356 10.2795 1.79213 9.42033 1.32301C8.56122 0.853887 7.60989 0.610591 6.64527 0.613304C5.02684 0.613304 3.47469 1.30088 2.33029 2.52477C1.18589 3.74866 0.542969 5.40861 0.542969 7.13945C0.542969 8.94191 1.22875 10.5579 2.33298 11.7513L11.5852 21.6461L20.8375 11.7513Z"
                       fill="#FF008C"
