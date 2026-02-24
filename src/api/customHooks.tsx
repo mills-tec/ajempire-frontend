@@ -248,11 +248,11 @@ export const useIssueReturn = () => {
 export const useUpdates = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
-  const getFeeds = async (type: string) => {
+  const getFeeds = async (type: string, cursor?: string) => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await getData(`/updates/${type}`, config);
+        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=4`, config);
         return req.data.message;
       } catch (err: unknown) {
         let message;

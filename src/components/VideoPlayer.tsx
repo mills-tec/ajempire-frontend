@@ -1,12 +1,12 @@
 import { Product } from '@/lib/types';
-import { Pause, Play, PlayCircle, Volume2, VolumeX } from 'lucide-react';
+import { Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import React from 'react'
 
 export default function VideoPlayer({ handleVideoPlay, item, video, playingMap, videoRefs, src, setPlayingMap, handleSetVideo }: { handleVideoPlay: (id: string) => void, video: { showPlay: boolean, muted: boolean }, item: Product, playingMap: Record<string, boolean>, videoRefs: React.RefObject<Record<string, HTMLVideoElement | null>>, src: string, setPlayingMap: React.Dispatch<React.SetStateAction<Record<string, boolean>>>, handleSetVideo: (data: { showPlay: boolean, muted: boolean }) => void }) {
     return (
         <div className='h-full w-full'>
 
-            <video
+            {src && <video
                 src={src}
                 autoPlay
                 loop
@@ -22,7 +22,7 @@ export default function VideoPlayer({ handleVideoPlay, item, video, playingMap, 
                     setPlayingMap((prev) => ({ ...prev, [item._id]: false }));
                 }}
 
-            />
+            />}
             <div onClick={() => handleVideoPlay(item._id)} className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${!video.showPlay ? "hidden opacity-0" : "opacity-100"}`}>
                 <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
                     {!playingMap[item._id] ? <Play size={40} color="white" /> : <Pause size={40} color="white" />}

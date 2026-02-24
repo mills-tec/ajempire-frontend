@@ -1,7 +1,9 @@
 import { getData } from "@/api/api";
 import FeedItem from "@/components/FeedItem";
 import Gallery from "@/components/Gallery";
+import { getFeeds, getProducts } from "@/lib/api";
 import { Feed } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
 import { Metadata } from "next";
 
 
@@ -74,11 +76,11 @@ export async function generateMetaData({ params }: { params: Promise<{ type: str
 export default async function Page({ params }: { params: Promise<{ type: string, id: string }> }) {
     const { type } = await params;
     const req = await getData(`/updates/${type}`, {});
-    const feeds: Feed[] = req.data.message;
+    const feeds: { data: Feed[], nextCursor: string, hasMore: boolean } = req.data.message;
 
     return (
         <div>
-            {type !== "gallery" ? <FeedItem feeds={feeds} /> : <Gallery feeds={feeds} />}
+            {type !== "gallery" ? <FeedItem feeds={feeds} /> : <Gallery feeds={feeds.data} />}
 
 
         </div>

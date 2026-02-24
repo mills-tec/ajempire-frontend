@@ -13,6 +13,8 @@ import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import ShareModal from "./ShareModal";
 import { useUpdates } from "@/api/customHooks";
 import { getCountdown } from "@/lib/utils";
+import useInfiniteScroll from "react-infinite-scroll-hook";
+import EndlessScrollLoading from "./EndlessScrollLoading";
 
 
 
@@ -46,16 +48,20 @@ function Countdown({ targetDate }: { targetDate: string }) {
     );
 }
 
-export default function FeedItem({ feeds }: { feeds: Feed[] }) {
+export default function FeedItem({ feeds }: { feeds: { data: Feed[], nextCursor: string, hasMore: boolean } }) {
+
     const params = useParams();
+
     const { id: idParam, type } = params;
     const [id, setId] = useState(idParam);
     const [href, setHref] = useState("");
     const { addComments, likeUpdate, likeUpdateComment, deleteUpdateComment } = useUpdates();
-    const [data, setData] = useState<{ feeds: Feed[]; nextCursor: string }>({ feeds: [...feeds], nextCursor: "" });
+    const [data, setData] = useState<{ feeds: Feed[]; nextCursor: string, hasMore: boolean }>({ feeds: [...feeds.data], nextCursor: feeds.nextCursor, hasMore: feeds.hasMore });
     const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
     const [currentIndex, setCurrentIndex] = useState(0);
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // const [hasMore, sethasMore] = useState(true);
+
     const [user, setUser] = useState<{
         _id: string;
         email: string;
@@ -63,7 +69,7 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
     } | null>({ _id: "", email: "", fullname: "" });
 
     const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-
+    const { getFeeds, loading } = useUpdates();
 
     const { addItem, isInWishlist, removeItem } = useWishlistStore();
     const [inWishlist, setInWishlist] = useState(false);
@@ -84,13 +90,6 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
         showPlay: false
     });
 
-    const isLooping = feeds.length > 0;
-
-    const loopedFeeds = useMemo(() => {
-        if (!isLooping) return feeds;
-        // Create 3 copies for seamless scroll
-        return [...feeds, ...feeds, ...feeds];
-    }, [feeds, isLooping]);
 
 
 
@@ -179,7 +178,7 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
 
         }
 
-        const feedType = feeds.find(item => item._id === id)?.type;
+        const feedType = feeds.data.find(item => item._id === id)?.type;
 
         if (parentId) {
             setData(prev => ({
@@ -330,20 +329,32 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
         // setting href
         setHref(window.location.href);
 
-        const focusedIndex = feeds.findIndex(feed => feed._id === id);
+        const focusedIndex = feeds.data.findIndex(feed => feed._id === id);
         const sections = document.querySelectorAll(".section");
 
         const observer = new IntersectionObserver(
             (entries) => {
-                entries.forEach((entry) => {
+                entries.forEach((entry, index) => {
                     if (entry.isIntersecting) {
                         const index = Number(entry.target.id.replace("feed-", ""));
-                        const id = feeds[index]._id;
+                        const id = feeds.data[index]._id;
 
                         // Update URL without refreshing
                         setShowDesc(false);
                         setId(id);
                         window.history.replaceState(null, "", `/pages/update/${type}/${id}`);
+
+                        if (index === feeds.data.length - 1) {
+
+                            // hybrid endless scrolling
+                            // if the user is at the last item, load more
+                            if (!data.hasMore) {
+
+                                setData(prev => ({ ...prev, feeds: [...prev.feeds, ...prev.feeds] }));
+                            }
+
+                        }
+
                     }
                 });
             },
@@ -362,12 +373,12 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
         setCurrentIndex(focusedIndex);
         scrollToWithOffset(el, 60);
 
-        if (feeds[focusedIndex].comments) {
-            setComment(prev => ({ ...prev, comments: feeds[focusedIndex].comments! }));
+        if (feeds.data[focusedIndex].comments) {
+            setComment(prev => ({ ...prev, comments: feeds.data[focusedIndex].comments! }));
         }
         // checking wish liit if ifeed has product
-        if (feeds[focusedIndex].product) {
-            setInWishlist(isInWishlist(feeds[focusedIndex].product._id));
+        if (feeds.data[focusedIndex].product) {
+            setInWishlist(isInWishlist(feeds.data[focusedIndex].product._id));
         }
 
 
@@ -378,9 +389,33 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
             if (hidePlayTimeout.current) {
                 clearTimeout(hidePlayTimeout.current);
             }
+
+            sections.forEach((section) => {
+                observer.unobserve(section);
+            });
         };
 
     }, [])
+
+
+    const [infiniteRef] = useInfiniteScroll({
+        loading,
+        hasNextPage: data.hasMore,
+        onLoadMore: async () => {
+            const cursor = (data?.nextCursor as any) || "";
+            if (!cursor) return;
+
+            try {
+                const newData = await getFeeds(type as string, cursor);
+
+                setData(prev => ({ ...prev, feeds: [...prev.feeds, ...newData.data], nextCursor: newData.nextCursor, hasMore: newData.hasMore }));
+            } catch (err) {
+                console.error("Error loading more products:", err);
+            }
+        },
+        disabled: Boolean(false),
+
+    });
 
 
     return (
@@ -533,6 +568,7 @@ export default function FeedItem({ feeds }: { feeds: Feed[] }) {
                 })}
                 <div className="h-[30vh] md:h-[10vh]" />
             </div>
+            <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={data.hasMore} />
 
 
 

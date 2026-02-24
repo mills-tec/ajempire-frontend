@@ -7,22 +7,22 @@ import ProductDescription from "@/app/components/ProductDescription";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getBearerToken, getProduct } from "@/lib/api";
-import Spinner from "@/app/components/Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
 import { toast } from "sonner";
 import CheckoutRequirement from "@/app/components/CheckoutRequirement";
-import { Product } from "@/lib/types";
 import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { user } = useAuthStore()
 
   // ✅ All hooks must be at the top and unconditional
   const {

@@ -76,6 +76,7 @@ export default function ProductCard({
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             fill
             className="transition-transform duration-300 ease-in-out group-hover:scale-110 lg:bg-[#f9f8f8] lg:p-2 object-cover"
           />

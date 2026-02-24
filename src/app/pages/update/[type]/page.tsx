@@ -14,13 +14,16 @@ export default function page() {
     useEffect(() => {
 
         (async () => {
-            const res = await getFeeds(type as string);
-            if (!res || res.length === 0) return;
-            setData(res);
-            router.push(`${type}/${res[0]._id}`);
+            const res = await getFeeds(type as string, "");
+            if (!res.data || res.data.length === 0) return;
+
+            setData(res.data);
+            router.push(`${type}/${res.data[0]._id}`);
         })();
 
     }, [])
+
+
     if (loading) return <Spinner />
     return data.length === 0 ? <div className='h-[85vh] flex items-center justify-center'>No data found</div> : <Spinner />
 
