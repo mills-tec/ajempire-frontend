@@ -203,7 +203,7 @@ export default function OrderSummaryPage() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
+            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
           </svg>
         </div>
 
@@ -231,7 +231,7 @@ export default function OrderSummaryPage() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
+            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
           </svg>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ">
@@ -248,7 +248,7 @@ export default function OrderSummaryPage() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" stroke-linecap="square" />
+            <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
           </svg>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
@@ -263,7 +263,7 @@ export default function OrderSummaryPage() {
               d="M11 7V13.6667L14 17"
               stroke="white"
               strokeWidth="1.5"
-              stroke-linecap="round"
+              strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>

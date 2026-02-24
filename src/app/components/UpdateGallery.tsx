@@ -13,7 +13,7 @@ interface Prop {
 
 export default function UpdateGallery({ items }: Prop) {
   return (
-    <div className="columns-1 md:columns-2 gap-4">
+    <div className="columns-1 md:columns-2 gap-4 font-poppins">
       {items.map((item) => (
         <div
           key={item.id}

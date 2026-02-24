@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 export default function NotificationTable() {
     const pathname = usePathname()
     const tabs = [
-        { name: "All", path: "/pages/ordersandaccount/notifications" },
+        { name: "All", path: "/pages/ordersandaccount/notifications/all" },
         { name: "Flash Sale", path: "/pages/ordersandaccount/notifications/flashsale" },
         { name: "Order", path: "/pages/ordersandaccount/notifications/order" },
         { name: "System", path: "/pages/ordersandaccount/notifications/system" },
@@ -21,7 +21,7 @@ export default function NotificationTable() {
                     <p>Notification</p>
                 </div>
             </div>
-            <ul className="w-full flex items-center justify-between lg:justify-around lg:gap-10 font-poppins lg:text-[14px] text-[12px]">
+            <ul className="w-full flex items-center justify-between lg:gap-10 font-poppins lg:text-[14px] text-[12px]">
                 {tabs.map((tab) => (
                     <li key={tab.path}>
                         <Link

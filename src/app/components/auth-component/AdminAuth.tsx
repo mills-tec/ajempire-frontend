@@ -27,7 +27,7 @@ export default function AdminAuth({ onProceed }: AdminAuthProps) {
                     Senior Admin
                 </button>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3.33331 8.00016H12.6666M12.6666 8.00016L7.99998 3.3335M12.6666 8.00016L7.99998 12.6668" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M3.33331 8.00016H12.6666M12.6666 8.00016L7.99998 3.3335M12.6666 8.00016L7.99998 12.6668" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </div>
         </div>

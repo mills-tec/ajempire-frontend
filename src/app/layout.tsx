@@ -8,6 +8,7 @@ import LayoutWrapper from "./components/LayoutWrapper";
 import { CartIconProvider } from "./contextanimation/CartIconContext";
 
 
+import NotificationWrapper from "@/components/NotificationWrapper";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
         <Toaster />
+        <NotificationWrapper />
         <Providers>
           <TooltipProvider>
             {/* 🔥 ADD THIS */}

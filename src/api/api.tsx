@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
-const globalUrl = "https://ajempire-backend.vercel.app/api";
+export const globalUrl = "https://ajempire-backend.vercel.app/api";
 export const getData = async (url: string, config?: AxiosRequestConfig) =>
   axios.get(`${globalUrl}${url}`, config);
 export const postData = async (url: string, data: unknown, config?: AxiosRequestConfig) =>

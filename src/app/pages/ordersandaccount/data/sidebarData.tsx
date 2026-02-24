@@ -77,11 +77,11 @@ export const sidebarItems: SideBarItem[] = [
   { title: "My Usage", route: "/pages/ordersandaccount/myuseage", icon: <MyUsageIcon className="text-primaryhover" /> },
   { title: "Wish List", route: "/pages/ordersandaccount/wishlist", icon: <WishListIcon className="text-primaryhover" /> },
   {
-    title: "Notifications", route: "/pages/ordersandaccount/notifications", icon: <NotificationsIcon className="text-primaryhover" />,
+    title: "Notifications", route: "/pages/ordersandaccount/notifications/all", icon: <NotificationsIcon className="text-primaryhover" />,
     children: [
       {
         title: "All",
-        route: "/pages/ordersandaccount/notifications"
+        route: "/pages/ordersandaccount/notifications/all"
       },
       {
         title: "Flash Sales",

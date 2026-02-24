@@ -11,6 +11,7 @@ interface Props {
   item: CartItem;
   cartRef: React.RefObject<HTMLAnchorElement | null>;
 }
+import CountdownTimer from "@/components/CountDownTimer";
 
 export default function CartPopupProductDescription({
   item,
@@ -250,24 +251,36 @@ export default function CartPopupProductDescription({
             </div>
           </div>
           <div className="flex items-center">
-            <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              ₦{calcDiscountPrice(item.price, item.discountedPrice!)}
-            </h3>
-            <h4 className="text-[10px] lg:text-xs ml-2">₦33,500</h4>
+            {item.flashSales ? (
+              <>
+                <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+                  {Number(calcDiscountPrice(item.price, item.flashSales.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                </h3>
+
+                <h4 className="text-[10px] lg:text-xs ml-2">{Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}</h4>
+              </>
+
+
+            ) : (
+              <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+                {Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              </h3>
+            )}
+
 
             <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-              <p>93% OFF Limited time</p>
+              <p>{item.flashSales?.discount}% OFF Limited time</p>
             </div>
           </div>
 
-          <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
+          {item.flashSales && <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
             <p className="font-medium">
-              Only $18,5111 with extra ₦2,019 off | Ends in
+              Only {Number(calcDiscountPrice(item.price, 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} with extra {Number((item.price - calcDiscountPrice(item.price, item.flashSales!.discount)).toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} off | Ends in
             </p>
             <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-              03:05:36
+              <CountdownTimer endTime={item.flashSales!.endTime} />
             </p>
-          </div>
+          </div>}
         </div>
       </div>
 

@@ -26,16 +26,16 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       posts: state.posts.map((post) =>
         post._id === postId
           ? {
-              ...post,
-              comments: post.comments.map((comment) =>
-                comment._id === commentId
-                  ? {
-                      ...comment,
-                      viewReply: !comment.viewReply ? true : false,
-                    }
-                  : comment
-              ),
-            }
+            ...post,
+            comments: post.comments.map((comment) =>
+              comment._id === commentId
+                ? {
+                  ...comment,
+                  viewReply: !comment.viewReply ? true : false,
+                }
+                : comment
+            ),
+          }
           : post
       ),
     })),
@@ -52,11 +52,11 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
     const optimisticPosts = posts.map((p) =>
       p._id === postId
         ? {
-            ...p,
-            likes: userHasLiked
-              ? p.likes.filter((id) => id !== userId)
-              : [...p.likes, userId],
-          }
+          ...p,
+          likes: userHasLiked
+            ? p.likes.filter((id) => id !== userId)
+            : [...p.likes, userId],
+        }
         : p
     );
 
@@ -83,11 +83,11 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       const revertedPosts = posts.map((p) =>
         p._id === postId
           ? {
-              ...p,
-              likes: userHasLiked
-                ? [...p.likes, userId] // revert removal
-                : p.likes.filter((id) => id !== userId), // revert add
-            }
+            ...p,
+            likes: userHasLiked
+              ? [...p.likes, userId] // revert removal
+              : p.likes.filter((id) => id !== userId), // revert add
+          }
           : p
       );
 
@@ -113,18 +113,18 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
     const optimisticPosts = posts.map((p) =>
       p._id === postId
         ? {
-            ...p,
-            comments: p.comments.map((c) =>
-              c._id === commentId
-                ? {
-                    ...c,
-                    likes: userHasLiked
-                      ? c.likes.filter((id) => id !== userId)
-                      : [...c.likes, userId],
-                  }
-                : c
-            ),
-          }
+          ...p,
+          comments: p.comments.map((c) =>
+            c._id === commentId
+              ? {
+                ...c,
+                likes: userHasLiked
+                  ? c.likes.filter((id) => id !== userId)
+                  : [...c.likes, userId],
+              }
+              : c
+          ),
+        }
         : p
     );
 
@@ -153,18 +153,18 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       const revertedPosts = posts.map((p) =>
         p._id === postId
           ? {
-              ...p,
-              comments: p.comments.map((c) =>
-                c._id === commentId
-                  ? {
-                      ...c,
-                      likes: userHasLiked
-                        ? [...c.likes, userId] // revert unlike
-                        : c.likes.filter((id) => id !== userId), // revert like
-                    }
-                  : c
-              ),
-            }
+            ...p,
+            comments: p.comments.map((c) =>
+              c._id === commentId
+                ? {
+                  ...c,
+                  likes: userHasLiked
+                    ? [...c.likes, userId] // revert unlike
+                    : c.likes.filter((id) => id !== userId), // revert like
+                }
+                : c
+            ),
+          }
           : p
       );
 

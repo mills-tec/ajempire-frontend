@@ -299,7 +299,7 @@ removeCoupon: () => set({ appliedCoupon: null }),
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.discountedPrice || 0 ) * i.quantity,
+            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
           0
         );
 

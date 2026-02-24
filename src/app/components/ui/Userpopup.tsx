@@ -1,7 +1,11 @@
+"use client";
 import Link from "next/link";
 import ProfileName from "./ProfileName";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 export default function Userpopup() {
+    const { user } = useAuthStore();
     return (
         <div className="">
             <div className=" mt-6 h-full flex items-start justify-end z-50">
@@ -69,12 +73,13 @@ export default function Userpopup() {
                             </Link>
                         </li>
                         <li className="hover:bg-[#FFE6F4] p-2 rounded-md transition-all duration-300">
-                            <Link href={"/pages/ordersandaccount/notifications"} className="flex items-center gap-4">
+                            <Link href={"/pages/ordersandaccount/notifications/all"} className="flex items-center gap-4">
                                 <svg width="13" height="16" viewBox="0 0 13 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M7.66797 14.0576C7.60585 14.119 7.53887 14.1753 7.46777 14.2266C7.18377 14.4311 6.84564 14.5402 6.5 14.54L6.37012 14.5352C6.07013 14.5115 5.7806 14.4055 5.53223 14.2266C5.46113 14.1753 5.39415 14.119 5.33203 14.0576H7.66797ZM6.5 1.45703C7.71433 1.45703 8.88054 1.94895 9.74219 2.82715C10.6041 3.7057 11.0908 4.89901 11.0908 6.14551V8.76074L11.0986 8.9043C11.1095 8.99853 11.1312 9.09127 11.1631 9.18066L11.2188 9.3125L12.4668 11.8564C12.4907 11.9051 12.5024 11.9603 12.5 12.0156C12.4976 12.0711 12.4811 12.1248 12.4531 12.1709C12.4253 12.2168 12.3868 12.2532 12.3428 12.2783C12.2987 12.3034 12.2495 12.3164 12.2002 12.3164H0.799805C0.750531 12.3164 0.701337 12.3034 0.657227 12.2783C0.613167 12.2532 0.574699 12.2168 0.546875 12.1709C0.518938 12.1248 0.502447 12.0711 0.5 12.0156C0.497609 11.9603 0.509312 11.9051 0.533203 11.8564L1.78223 9.3125V9.31152C1.86616 9.13984 1.90935 8.95071 1.90918 8.75977V6.14551C1.90921 4.89901 2.39586 3.7057 3.25781 2.82715C4.11946 1.94895 5.28567 1.45703 6.5 1.45703Z" stroke="#FF008C" />
                                 </svg>
 
                                 <p>Notification</p>
+                                {/* {getUnreadNotifications(user._id)} */}
                             </Link>
                         </li>
 

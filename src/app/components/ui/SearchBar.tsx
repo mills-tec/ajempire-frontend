@@ -84,7 +84,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
           onFocus={() => setOpen(true)}               // 🔹 open dropdown
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder={placeholders[index]}
-          className={`w-full outline-none bg-transparent text-[14px] ${placeholderClass}`}
+          className={`w-full outline-none bg-transparent text-sm ${placeholderClass}`}
         />
 
         {/* ✅ CAMERA ICONS (UNCHANGED) */}

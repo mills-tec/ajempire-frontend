@@ -1,7 +1,9 @@
+import { useAuthStore } from "./stores/auth-store";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
   Comment,
+  Feed,
   Product,
   ProductResponse,
   ProductsResponse,
@@ -130,8 +132,8 @@ export async function getSessionBackend() {
 }
 
 /// Product API
-export async function getProducts(): Promise<ProductsResponse | null> {
-  const res = await fetch(API_URL + "/product");
+export async function getProducts(cursor: string): Promise<ProductsResponse | null> {
+  const res = await fetch(API_URL + "/product?limit=4&cursor=" + cursor);
   if (!res.ok) return null;
   return res.json();
 }
@@ -139,7 +141,8 @@ export async function getProducts(): Promise<ProductsResponse | null> {
 
 
 export async function getProduct(id: string): Promise<ProductResponse | null> {
-  const res = await fetch(API_URL + "/product/" + id);
+  const user = getUser();
+  const res = await fetch(API_URL + "/product/" + id + "/" + user?._id);
   if (!res.ok) return null;
   return res.json();
 }
@@ -149,10 +152,16 @@ export function getBearerToken() {
   return userStr ? JSON.parse(userStr)?.token : null;
 }
 
-export function getUser(): { _id: string; email: string } | null {
+export function getUser(): { _id: string; email: string, fullname: string } | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("ajempire_signin_user");
   return userStr ? JSON.parse(userStr)?.user : null;
+}
+
+export async function getFeeds(cursor: string, type: string): Promise<Feed[] | null> {
+  const res = await fetch(API_URL + "/updates/" + type + "?limit=4&cursor=" + cursor);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 const collectDescendants = (root: Comment): Comment[] => {

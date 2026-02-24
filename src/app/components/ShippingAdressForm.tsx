@@ -219,7 +219,7 @@ export default function ShippingAdressForm({
               <path
                 d="M0.5 0.5H21.5"
                 stroke="#CFCFCF"
-                stroke-linecap="square"
+                strokeLinecap="square"
               />
             </svg>
           </div>
@@ -240,7 +240,7 @@ export default function ShippingAdressForm({
                 d="M11 7V13.6667L14 17"
                 stroke="white"
                 strokeWidth="1.5"
-                stroke-linecap="round"
+                strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
@@ -257,7 +257,7 @@ export default function ShippingAdressForm({
               <path
                 d="M0.5 0.5H21.5"
                 stroke="#CFCFCF"
-                stroke-linecap="square"
+                strokeLinecap="square"
               />
             </svg>
           </div>
@@ -277,7 +277,7 @@ export default function ShippingAdressForm({
                 d="M11 7V13.6667L14 17"
                 stroke="white"
                 strokeWidth="1.5"
-                stroke-linecap="round"
+                strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
@@ -294,7 +294,7 @@ export default function ShippingAdressForm({
               <path
                 d="M0.5 0.5H21.5"
                 stroke="#CFCFCF"
-                stroke-linecap="square"
+                strokeLinecap="square"
               />
             </svg>
           </div>
@@ -311,7 +311,7 @@ export default function ShippingAdressForm({
                 d="M11 7V13.6667L14 17"
                 stroke="white"
                 strokeWidth="1.5"
-                stroke-linecap="round"
+                strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
@@ -483,7 +483,7 @@ export default function ShippingAdressForm({
               d="M0.75 13.8575L7.30375 7.30375L13.8575 13.8575M13.8575 0.75L7.3025 7.30375L0.75 0.75"
               stroke="black"
               strokeWidth="1.5"
-              stroke-linecap="round"
+              strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>

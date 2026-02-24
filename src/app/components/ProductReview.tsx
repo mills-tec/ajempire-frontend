@@ -5,7 +5,7 @@ import { getRatingStats } from "@/lib/utils";
 import React from "react";
 
 export default function ProductReview({ product }: { product: Product }) {
-  const ratingStats = getRatingStats(product.reviews);
+  const ratingStats = getRatingStats(product.reviews!);
 
   const filledStar = (
     <svg
@@ -55,7 +55,7 @@ export default function ProductReview({ product }: { product: Product }) {
               )}
             </div>
           }
-          <p className="text-black/60 text-xs">({product.reviews.length})</p>
+          <p className="text-black/60 text-xs">({product.reviews!.length})</p>
         </div>
       </div>
       <div className="flex gap-8 lg:w-[80%]">
@@ -85,7 +85,7 @@ export default function ProductReview({ product }: { product: Product }) {
               <Progress
                 value={
                   ratingStats.normalized[
-                    val as keyof typeof ratingStats.normalized
+                  val as keyof typeof ratingStats.normalized
                   ]
                 }
                 className="!h-1"
@@ -96,7 +96,7 @@ export default function ProductReview({ product }: { product: Product }) {
       </div>
 
       <div className="py-10">
-        {product.reviews.length > 0 ? (
+        {product.reviews!.length > 0 ? (
           <div></div>
         ) : (
           <h1 className="text-lg">No review for this product</h1>
