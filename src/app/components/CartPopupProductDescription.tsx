@@ -5,13 +5,18 @@ import { calcDiscountPrice } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CheckoutRequirement from "./CheckoutRequirement";
+import { animateToCart } from "@/lib/animateToCart";
+
+interface Props {
+  item: CartItem;
+  cartRef: React.RefObject<HTMLAnchorElement | null>;
+}
 import CountdownTimer from "@/components/CountDownTimer";
 
 export default function CartPopupProductDescription({
   item,
-}: {
-  item: CartItem;
-}) {
+  cartRef,
+}: Props) {
   // const [rating, setRating] = React.useState(4);
   const [isAdress, setIsAdress] = useState(false);
   const { items: selectedItem, selectAllCartItems } = useCartStore();
@@ -39,8 +44,6 @@ export default function CartPopupProductDescription({
 
   };
 
-
-
   const {
     addItem,
     getItem,
@@ -51,19 +54,32 @@ export default function CartPopupProductDescription({
   } = useCartStore();
   const cartItem = getItem(item._id);
 
-  const [quantity, setQuantity] = useState(
-    cartItem ? (cartItem.quantity == 0 ? 1 : cartItem.quantity) : 1
-  );
+  const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
 
   const [selectedVariants, setSelectedVariants] = useState(
     () => cartItem?.selectedVariants ?? null
   );
 
+  // useEffect(() => {
+  //   if (quantity == 0) {
+  //     removeItem(item._id);
+  //   }
+  //   setCartItemQty(item._id, quantity);
+  // }, [quantity]);
   useEffect(() => {
-    if (quantity == 0) {
-      removeItem(item._id);
+    if (cartItem) {
+      setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
+    } else {
+      setQuantity(1); // reset if item removed
     }
-    setCartItemQty(item._id, quantity);
+  }, [cartItem]);
+
+  useEffect(() => {
+    if (quantity <= 0) {
+      removeItem(item._id);
+    } else {
+      setCartItemQty(item._id, quantity);
+    }
   }, [quantity]);
 
   const variant_set = new Set<string>();
@@ -129,6 +145,88 @@ export default function CartPopupProductDescription({
       />
     </svg>
   );
+  // const animateToCart = (
+  //   e: React.MouseEvent<HTMLButtonElement>
+  // ) => {
+  //   const button = e.currentTarget;
+  //   const cartIcon = document.getElementById("cart-icon");
+
+  //   if (!cartIcon) {
+  //     addItem({
+  //       ...item,
+  //       quantity,
+  //       selectedVariants: selectedVariants ?? [],
+  //     });
+  //     return;
+  //   }
+
+  //   const buttonRect = button.getBoundingClientRect();
+  //   const cartRect = cartIcon.getBoundingClientRect();
+
+  //   // Calculate centers
+  //   const startX = buttonRect.left + buttonRect.width / 2;
+  //   const startY = buttonRect.top + buttonRect.height / 2;
+
+  //   const endX = cartRect.left + cartRect.width / 2;
+  //   const endY = cartRect.top + cartRect.height / 2;
+
+  //   const deltaX = endX - startX;
+  //   const deltaY = endY - startY;
+
+  //   // Create circle
+  //   const circle = document.createElement("div");
+  //   circle.style.position = "fixed";
+  //   circle.style.left = `${startX}px`;
+  //   circle.style.top = `${startY}px`;
+  //   circle.style.width = "14px";
+  //   circle.style.height = "14px";
+  //   circle.style.borderRadius = "50%";
+  //   circle.style.background = "#FF008C";
+  //   circle.style.zIndex = "9999";
+  //   circle.style.pointerEvents = "none";
+  //   circle.style.transform = "translate(0px, 0px) scale(1)";
+  //   circle.style.transition =
+  //     "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)";
+
+  //   document.body.appendChild(circle);
+
+  //   // Add arc jump
+  //   const jumpHeight = deltaY < 0 ? -80 : -40;
+
+  //   requestAnimationFrame(() => {
+  //     circle.style.transform = `
+  //     translate(${deltaX}px, ${deltaY + jumpHeight}px)
+  //     scale(0.8)
+  //   `;
+  //   });
+
+  //   // Drop into cart
+  //   setTimeout(() => {
+  //     circle.style.transform = `
+  //     translate(${deltaX}px, ${deltaY}px)
+  //     scale(0.5)
+  //   `;
+  //   }, 300);
+
+  //   // Finish
+  //   setTimeout(() => {
+  //     circle.remove();
+
+  //     cartIcon.classList.add("cart-bounce");
+
+  //     setTimeout(() => {
+  //       cartIcon.classList.remove("cart-bounce");
+  //     }, 350);
+
+  //     addItem({
+  //       ...item,
+  //       quantity,
+  //       selectedVariants: selectedVariants ?? [],
+  //     });
+  //   }, 650);
+  // };
+
+
   return (
     <div className="space-y-4 lg:space-y-8">
       <div className="space-y-1 px-4">
@@ -149,7 +247,7 @@ export default function CartPopupProductDescription({
                   )}
                 </div>
               }
-              <p className="text-black/60 text-xs">{item.reviews!.length}</p>
+              <p className="text-black/60 text-xs">{item.reviews?.length ?? 0}</p>
             </div>
           </div>
           <div className="flex items-center">
@@ -306,13 +404,27 @@ export default function CartPopupProductDescription({
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
-              onClick={() =>
-                addItem({
-                  ...item,
-                  quantity,
-                  selectedVariants: selectedVariants ?? [],
-                })
-              }
+              // onClick={() =>
+              //   addItem({
+              //     ...item,
+              //     quantity,
+              //     selectedVariants: selectedVariants ?? [],
+              //   })
+              // }
+              onClick={(e) => {
+                animateToCart({
+                  buttonElement: e.currentTarget,
+                  cartElement: cartRef.current!,
+                  addItemCallback: () =>
+                    addItem({
+                      ...item,
+                      quantity: quantity || 1,
+                      selectedVariants: selectedVariants ?? [],
+                    }),
+                });
+              }}
+
+
               className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
             >
               Add to Cart

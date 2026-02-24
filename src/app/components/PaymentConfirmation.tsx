@@ -18,24 +18,138 @@ export default function PaymentConfirmation() {
   const [responseData, setResponseData] = useState<string>("");
   const [showModal, setShowModal] = useState(true);
 
+  // useEffect(() => {
+  //   const verifyPayment = async () => {
+  //     setIsLoading(true);
+  //     const token = getBearerToken();
+  //     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
+  //     if (!token) {
+  //       toast("User not authenticated");
+  //       router.push("/login");
+  //       return;
+  //     }
+
+  //     console.log("Verifying payment with reference:", reference);
+  //     try {
+  //       const response = await axios.post(
+  //         `https://ajempire-backend.vercel.app/api/checkout/verify/${reference}`,
+  //         {
+  //           paymentMethod: paymentMethod,
+  //         },
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //             "Content-Type": "application/json",
+  //           },
+  //         }
+  //       );
+  //       console.log("Payment verification response:", response.data);
+  //       if (response?.data?.message) {
+  //         console.log("Payment verified successfully!");
+  //         setResponseData(response.data.message);
+
+  //         // 2️⃣ Clear cart on backend
+  //         const selectedItems = useCartStore.getState().getSelectedItems();
+  //         if (selectedItems.length > 0) {
+  //           await axios.delete(
+  //             "https://ajempire-backend.vercel.app/api/cart/",
+  //             {
+  //               headers: {
+  //                 Authorization: `Bearer ${token}`,
+  //                 "Content-Type": "application/json",
+  //               },
+  //               data: {
+  //                 items: selectedItems.map(item => ({
+  //                   productId: item._id,
+  //                   qty: item.quantity,
+  //                 })),
+  //               },
+  //             }
+  //           );
+
+  //           const store = useCartStore.getState();
+
+  //           store.clearCart();
+  //           store.resetCheckoutFlow();
+  //           // 🔥 force persist update
+  //           useCartStore.persist?.clearStorage?.();
+  //         }
+
+  //       } else {
+  //         toast.error("Payment verification failed.");
+  //         router.push("/checkout");
+  //       }
+  //       if (response?.data?.message) {
+  //         toast.success("Payment verified successfully!");
+  //         setResponseData(response.data.message);
+
+  //         // 2️⃣ Clear cart on backend
+  //         const selectedItems = useCartStore.getState().getSelectedItems();
+  //         if (selectedItems.length > 0) {
+  //           await axios.delete(
+  //             "https://ajempire-backend.vercel.app/api/cart/",
+  //             {
+  //               headers: {
+  //                 Authorization: `Bearer ${token}`,
+  //                 "Content-Type": "application/json",
+  //               },
+  //               data: {
+  //                 items: selectedItems.map(item => ({
+  //                   productId: item._id,
+  //                   qty: item.quantity,
+  //                 })),
+  //               },
+  //             }
+  //           );
+
+  //           // 3️⃣ Clear local cart state
+  //           useCartStore.getState().clearCart();
+  //           toast.success("Cart cleared!");
+  //         }
+
+  //       } else {
+  //         toast.error("Payment verification failed.");
+  //         router.push("/checkout");
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Error verifying payment:", error);
+  //       toast.error("An error occurred during payment verification.");
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+  //   verifyPayment();
+  // }, [reference]);
+  console.log(responseData);
+
   useEffect(() => {
     const verifyPayment = async () => {
       setIsLoading(true);
+      // 🔥 If already verified, don't verify again
+      if (sessionStorage.getItem("paymentVerified") === "true") {
+        const savedMessage = sessionStorage.getItem("paymentMessage");
+        if (savedMessage) {
+          setResponseData(savedMessage);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+
       const token = getBearerToken();
       const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
+
       if (!token) {
-        toast("User not authenticated");
+        toast.error("User not authenticated");
         router.push("/login");
         return;
       }
 
-      console.log("Verifying payment with reference:", reference);
       try {
         const response = await axios.post(
           `https://ajempire-backend.vercel.app/api/checkout/verify/${reference}`,
-          {
-            paymentMethod: paymentMethod,
-          },
+          { paymentMethod },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -43,86 +157,66 @@ export default function PaymentConfirmation() {
             },
           }
         );
-        console.log("Payment verification response:", response.data);
-        if (response?.data?.message) {
-          console.log("Payment verified successfully!");
-          setResponseData(response.data.message);
 
-          // 2️⃣ Clear cart on backend
-          const selectedItems = useCartStore.getState().getSelectedItems();
-          if (selectedItems.length > 0) {
-            await axios.delete(
-              "https://ajempire-backend.vercel.app/api/cart/",
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-                data: {
-                  items: selectedItems.map(item => ({
-                    productId: item._id,
-                    qty: item.quantity,
-                  })),
-                },
-              }
-            );
-
-            const store = useCartStore.getState();
-
-            store.clearCart();
-            store.resetCheckoutFlow();
-
-            // 🔥 force persist update
-            useCartStore.persist?.clearStorage?.();
-
-          }
-
-        } else {
+        if (!response?.data?.message) {
           toast.error("Payment verification failed.");
           router.push("/checkout");
+          return;
         }
-        if (response?.data?.message) {
-          toast.success("Payment verified successfully!");
-          setResponseData(response.data.message);
+        // ✅ Payment successful
+        const message = response.data.message;
 
-          // // 2️⃣ Clear cart on backend
-          // const selectedItems = useCartStore.getState().getSelectedItems();
-          // if (selectedItems.length > 0) {
-          //   await axios.delete(
-          //     "https://ajempire-backend.vercel.app/api/cart/",
-          //     {
-          //       headers: {
-          //         Authorization: `Bearer ${token}`,
-          //         "Content-Type": "application/json",
-          //       },
-          //       data: {
-          //         items: selectedItems.map(item => ({
-          //           productId: item._id,
-          //           qty: item.quantity,
-          //         })),
-          //       },
-          //     }
-          //   );
+        setResponseData(message);
+        toast.success("Payment verified successfully!");
 
-          //   // 3️⃣ Clear local cart state
-          //   useCartStore.getState().clearCart();
-          //   toast.success("Cart cleared!");
-          // }
+        // 🔥 Persist success so refresh doesn't clear it
+        sessionStorage.setItem("paymentVerified", "true");
+        sessionStorage.setItem("paymentMessage", message);
 
-        } else {
-          toast.error("Payment verification failed.");
-          router.push("/checkout");
+
+        const store = useCartStore.getState();
+        const selectedItems = store.getSelectedItems();
+
+        if (selectedItems.length > 0) {
+          // 1️⃣ Remove from backend
+          await axios.delete(
+            "https://ajempire-backend.vercel.app/api/cart/",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              data: {
+                items: selectedItems.map(item => ({
+                  productId: item._id,
+                  qty: item.quantity,
+                })),
+              },
+            }
+          );
+
+          // 2️⃣ Remove ONLY purchased items locally
+          const purchasedIds = selectedItems.map(item => item._id);
+          store.removePurchasedItems(purchasedIds);
+
+          // 3️⃣ Reset checkout state (NOT cart items)
+          store.resetCheckoutFlow();
         }
 
       } catch (error) {
         console.error("Error verifying payment:", error);
         toast.error("An error occurred during payment verification.");
+        router.push("/checkout");
       } finally {
         setIsLoading(false);
       }
     };
-    verifyPayment();
+
+    if (reference) {
+      verifyPayment();
+    }
   }, [reference]);
+
 
   if (isLoading) {
     return (
@@ -139,9 +233,12 @@ export default function PaymentConfirmation() {
             <div
               className="w-full flex justify-end items-center mb-6 cursor-pointer"
               onClick={() => {
-                setShowModal(false)
+                sessionStorage.removeItem("paymentVerified");
+                sessionStorage.removeItem("paymentMessage");
+                setShowModal(false);
                 router.push("/");
               }}
+
             >
               <p className="lg:hidden w-full text-[16px]">
                 Payment Confirmation

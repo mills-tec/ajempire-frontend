@@ -17,7 +17,7 @@ export default function CouponsTab() {
                     </svg>
                 </Link>
                 <div className=" w-full text-center font-semibold text-black/70">
-                    <p>Your Oders</p>
+                    <p>Coupons & Offers</p>
                 </div>
 
             </div>

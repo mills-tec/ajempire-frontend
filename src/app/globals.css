@@ -21,6 +21,12 @@
   }
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+  touch-action: pan-x pan-y;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -41,6 +47,25 @@
 
 .animate-fast-pulse {
   animation: fast-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes cartBounce {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+  }
+  60% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-bounce {
+  animation: cartBounce 350ms ease;
 }
 
 * {
