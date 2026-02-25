@@ -128,3 +128,12 @@ export function getCountdown(targetDate: string | Date) {
 
   return { days, hours, minutes, seconds };
 }
+
+export function shuffleArray(array: any[]) {
+  const arr = [...array]; // copy so original isn't mutated
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); // pick a random index
+    [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
+  }
+  return arr;
+}

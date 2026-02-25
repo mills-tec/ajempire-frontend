@@ -3,9 +3,9 @@ import CommentItem from "@/components/CommentItem";
 import { CommentIcon, Favorite, GoBack, HeartFill, ShareIcon } from "@/components/svgs/Icons";
 import { getUser } from "@/lib/api";
 import { CommentData, Feed, Product } from "@/lib/types";
-import { Heart, Pause, Play, SendHorizonal, Volume, Volume2, VolumeOff, VolumeX } from "lucide-react";
+import { Heart, Pause, Play, SendHorizonal, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useParams } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
@@ -56,7 +56,7 @@ export default function FeedItem({ feeds }: { feeds: { data: Feed[], nextCursor:
     const [id, setId] = useState(idParam);
     const [href, setHref] = useState("");
     const { addComments, likeUpdate, likeUpdateComment, deleteUpdateComment } = useUpdates();
-    const [data, setData] = useState<{ feeds: Feed[]; nextCursor: string, hasMore: boolean }>({ feeds: [...feeds.data], nextCursor: feeds.nextCursor, hasMore: feeds.hasMore });
+    const [data, setData] = useState<{ feeds: Feed[]; nextCursor: string, hasMore: boolean }>({ feeds: feeds.data, nextCursor: feeds.nextCursor, hasMore: feeds.hasMore });
     const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
     const [currentIndex, setCurrentIndex] = useState(0);
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -113,12 +113,7 @@ export default function FeedItem({ feeds }: { feeds: { data: Feed[], nextCursor:
 
         const feed = data.feeds[nextIndex];
 
-        // keep URL + state in sync
-        // window.history.replaceState(
-        //     null,
-        //     "",
-        //     `/pages/update/${type}/${feed._id}`
-        // );
+
 
 
 
@@ -324,97 +319,87 @@ export default function FeedItem({ feeds }: { feeds: { data: Feed[], nextCursor:
 
 
     useEffect(() => {
-
         setUser(getUser());
-        // setting href
         setHref(window.location.href);
+    }, []);
 
-        const focusedIndex = feeds.data.findIndex(feed => feed._id === id);
+    useEffect(() => {
         const sections = document.querySelectorAll(".section");
 
         const observer = new IntersectionObserver(
             (entries) => {
-                entries.forEach((entry, index) => {
+                entries.forEach((entry) => {
                     if (entry.isIntersecting) {
                         const index = Number(entry.target.id.replace("feed-", ""));
-                        const id = feeds.data[index]._id;
-
-                        // Update URL without refreshing
-                        setShowDesc(false);
-                        setId(id);
-                        window.history.replaceState(null, "", `/pages/update/${type}/${id}`);
-
-                        if (index === feeds.data.length - 1) {
-
-                            // hybrid endless scrolling
-                            // if the user is at the last item, load more
-                            if (!data.hasMore) {
-
-                                setData(prev => ({ ...prev, feeds: [...prev.feeds, ...prev.feeds] }));
-                            }
-
+                        if (data.feeds[index]) {
+                            const currentId = data.feeds[index]._id;
+                            setShowDesc(false);
+                            setId(currentId);
+                            window.history.replaceState(null, "", `/pages/update/${type}/${currentId}`);
                         }
-
                     }
                 });
             },
-            {
-                threshold: 0.6,
-            }
+            { threshold: 0.6 }
         );
 
         sections.forEach((section) => {
             observer.observe(section);
         });
 
-        if (!focusedIndex) return;
-        const el = itemRefs.current[focusedIndex];
-        if (!el) return;
-        setCurrentIndex(focusedIndex);
-        scrollToWithOffset(el, 60);
-
-        if (feeds.data[focusedIndex].comments) {
-            setComment(prev => ({ ...prev, comments: feeds.data[focusedIndex].comments! }));
-        }
-        // checking wish liit if ifeed has product
-        if (feeds.data[focusedIndex].product) {
-            setInWishlist(isInWishlist(feeds.data[focusedIndex].product._id));
-        }
-
-
-
-
-
         return () => {
-            if (hidePlayTimeout.current) {
-                clearTimeout(hidePlayTimeout.current);
-            }
-
             sections.forEach((section) => {
                 observer.unobserve(section);
             });
         };
+    }, [data.feeds.length, type]);
 
-    }, [])
+    useEffect(() => {
+        const focusedIndex = data.feeds.findIndex(feed => feed._id === id);
+        if (focusedIndex === -1) return;
+
+        const el = itemRefs.current[focusedIndex];
+        if (!el) return;
+
+        setCurrentIndex(focusedIndex);
+        scrollToWithOffset(el, 60);
+
+        if (data.feeds[focusedIndex].comments) {
+            setComment(prev => ({ ...prev, comments: data.feeds[focusedIndex].comments! }));
+        }
+
+        if (data.feeds[focusedIndex].product) {
+            setInWishlist(isInWishlist(data.feeds[focusedIndex].product._id));
+        }
+    }, []);
 
 
     const [infiniteRef] = useInfiniteScroll({
         loading,
-        hasNextPage: data.hasMore,
+        hasNextPage: true, // Always true for endless scroll
         onLoadMore: async () => {
-            const cursor = (data?.nextCursor as any) || "";
-            if (!cursor) return;
-
-            try {
-                const newData = await getFeeds(type as string, cursor);
-
-                setData(prev => ({ ...prev, feeds: [...prev.feeds, ...newData.data], nextCursor: newData.nextCursor, hasMore: newData.hasMore }));
-            } catch (err) {
-                console.error("Error loading more products:", err);
+            if (data.hasMore) {
+                const cursor = (data?.nextCursor as any) || "";
+                try {
+                    const newData = await getFeeds(type as string, cursor);
+                    setData(prev => ({
+                        ...prev,
+                        feeds: [...prev.feeds, ...newData.data],
+                        nextCursor: newData.nextCursor,
+                        hasMore: newData.hasMore
+                    }));
+                } catch (err) {
+                    console.error("Error loading more products:", err);
+                }
+            } else {
+                // If no more from server, loop back by appending the initial feeds
+                setData(prev => ({
+                    ...prev,
+                    feeds: [...prev.feeds, ...feeds.data]
+                }));
             }
         },
         disabled: Boolean(false),
-
     });
 
 
@@ -566,9 +551,10 @@ export default function FeedItem({ feeds }: { feeds: { data: Feed[], nextCursor:
                         </div>
                     </div>
                 })}
+                <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={data.hasMore} gridNumber="grid-cols-1" />
                 <div className="h-[30vh] md:h-[10vh]" />
             </div>
-            <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={data.hasMore} />
+
 
 
 

@@ -90,24 +90,24 @@ export default function Home() {
 
   });
 
-  useEffect(() => {
-    if (!lastItemRef.current) return;
+  // useEffect(() => {
+  //   if (!lastItemRef.current) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          appendProducts(shuffleArray(data?.message?.products || []));
-        }
-      },
-      { threshold: 0.1 } // 1 = fully visible, 0.5 = half visible
-    );
+  //   const observer = new IntersectionObserver(
+  //     (entries) => {
+  //       if (entries[0].isIntersecting) {
+  //         appendProducts(shuffleArray(data?.message?.products || []));
+  //       }
+  //     },
+  //     { threshold: 0.1 } // 1 = fully visible, 0.5 = half visible
+  //   );
 
-    observer.observe(lastItemRef.current);
+  //   observer.observe(lastItemRef.current);
 
-    return () => {
-      if (lastItemRef.current) observer.unobserve(lastItemRef.current);
-    };
-  }, []);
+  //   return () => {
+  //     if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+  //   };
+  // }, []);
 
   const appendProducts = (newProducts: any[]) => {
     queryClient.setQueryData(["products"], (oldData: any) => {
@@ -126,14 +126,7 @@ export default function Home() {
     });
   };
 
-  function shuffleArray(array: any[]) {
-    const arr = [...array]; // copy so original isn't mutated
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1)); // pick a random index
-      [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
-    }
-    return arr;
-  }
+
 
   return (
     <div className="w-full ">
@@ -200,52 +193,15 @@ export default function Home() {
 
                 ))}
 
-
               </div>
-
               <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
+
+
 
 
             </>
           )}
         </div>
-
-        {/* <div className="grid grid-cols-2 lg:flex justify-start flex-wrap gap-4  lg:gap-6 mx-auto mt-8">
-          {data?.message &&
-            filteredProducts?.map((product) => (
-              <Tooltip key={product._id}>
-                <TooltipTrigger>
-                  <div>
-                    <ProductCard product={product} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center">
-                  <p>{product.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-        </div> */}
-        {/* {data && (
-          <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-20 mb-24 py-2 rounded-full bg-brand_pink text-white">
-            <p>See More </p>
-            <svg
-              width="23"
-              height="16"
-              viewBox="0 0 23 16"
-              className="size-3"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M18.75 5.125L11.875 12L5 5.125"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        )} */}
 
       </div>
     </div>

@@ -252,7 +252,7 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=4`, config);
+        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=1`, config);
         return req.data.message;
       } catch (err: unknown) {
         let message;

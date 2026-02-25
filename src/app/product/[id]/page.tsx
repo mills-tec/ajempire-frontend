@@ -16,6 +16,7 @@ import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import RelatedProducts from "@/components/RelatedProducts";
 
 
 
@@ -382,13 +383,7 @@ export default function ProductDetailPage() {
           item.relatedProducts!.length > 0 && (
             <div className="font-poppins py-10 space-y-5">
               <h1 className="text-2xl">Related Products</h1>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
-                {
-                  item.relatedProducts!.map((product, key) => (
-                    <ProductItem index={key} product={product} />
-                  ))
-                }
-              </div>
+              <RelatedProducts items={item.relatedProducts} />
 
             </div>
           )
