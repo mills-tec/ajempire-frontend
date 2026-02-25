@@ -24,6 +24,8 @@ export default function ProductCard({
   const setSelectedItem = useCartStore((state) => state.setSelectedItem);
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
+  const showSellerTag = Math.random() > 0.4;
+
 
 
   useEffect(() => {
@@ -34,6 +36,15 @@ export default function ProductCard({
     };
     fetchWishlist();
   }, []);
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+  };
+
+
   const filledStar = (
     <svg
       width="16"
@@ -87,9 +98,12 @@ export default function ProductCard({
         <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm capitalize">
           {product.category?.name}
         </p>
+
         <p className="text-[0.65rem] text-brand_purple">
           Only {product.stock} left
         </p>
+
+
         <div className="flex items-center gap-2">
           {
             <div className="flex text-brand_gray_dark">
@@ -217,6 +231,6 @@ export default function ProductCard({
           </div>
         </div>
       </div>
-    </section>
+    </section >
   );
 }

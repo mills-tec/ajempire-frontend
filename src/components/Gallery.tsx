@@ -18,6 +18,10 @@ export default function Gallery({ feeds }: { feeds: Feed[] }) {
         id: ""
     });
     const router = useRouter();
+    const host =
+        typeof window !== "undefined"
+            ? window.location.host
+            : "";
     return (
         <div className='h-screen overflow-y-auto'>
             {/* Masonry Layout using CSS Columns */}
@@ -118,7 +122,11 @@ export default function Gallery({ feeds }: { feeds: Feed[] }) {
                 ))}
             </div>
 
-            <ShareModal share={showShare.show} href={`${window.location.host}/product/${showShare.id}`} hideShare={() => setShowShare({ show: false, id: "" })} />
-        </div >
+            <ShareModal
+                share={showShare.show}
+                href={`${host}/product/${showShare.id}`}
+                hideShare={() => setShowShare({ show: false, id: "" })}
+            />
+        </div>
     )
 }

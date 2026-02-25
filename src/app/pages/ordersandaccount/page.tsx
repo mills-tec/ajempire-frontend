@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Profile from "./components/Profile";
 import MobileAccountLinks from "./components/MobileAccountLinks";
 import Spinner from "@/app/components/Spinner";
+import { ToastContainer } from "react-toastify";
+import BrowserHistory from "@/app/components/BrowserHistory";
 
 export default function OrdersAndAccountPage() {
   const router = useRouter();
@@ -52,6 +54,9 @@ export default function OrdersAndAccountPage() {
       </div>
       <div>
         <MobileAccountLinks />
+      </div>
+      <div>
+        <BrowserHistory />
       </div>
     </div>
   );

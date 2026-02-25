@@ -50,7 +50,7 @@ export default function MobileAccountLinks() {
         },
         {
             title: "Support",
-            url: "/pages/ordersandaccount/help",
+            url: "/pages/support",
             icon: <HelpIcon />
         },
         {
