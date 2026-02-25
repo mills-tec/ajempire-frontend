@@ -1,5 +1,10 @@
+"use client";
+
+import { mapCouponToDeal } from "@/lib/couponMapper";
 import CouponsTab from "../../components/CouponsTab";
 import FlashDealCard from "../../components/FlashDealCard";
+import { getCoupons } from "@/lib/api";
+import { useEffect, useState } from "react";
 type Deal = {
     id: string | number;
     title: string;
@@ -12,34 +17,31 @@ type Deal = {
 };
 
 export default function ExpiredCoupons() {
-    const expiredDeals: Deal[] = [
-        {
-            id: 5,
-            title: "40% off Fashion Items",
-            description: "Expired on 01-09-2025",
-            discountPercent: 40,
-            validUntil: "01-09-2025",
-            code: "STYLE40",
-            ctaText: "Expired",
-            status: "expired",
-        },
-        {
-            id: 6,
-            title: "10% off Groceries",
-            description: "Expired on 15-08-2025",
-            discountPercent: 10,
-            validUntil: "15-08-2025",
-            code: "FOOD10",
-            ctaText: "Expired",
-            status: "expired",
-        },
-    ];
+    const [deals, setDeals] = useState<Deal[]>([])
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            const res = await getCoupons();
+            if (!res) return;
+
+            const allDeals = res.message.map(mapCouponToDeal);
+
+            // UNUSED = not expired
+            const unusedDeals = allDeals.filter(
+                (deal) => deal.status === "expired"
+            );
+
+            setDeals(unusedDeals);
+        };
+
+        fetchCoupons();
+    }, []);
+    console.log(deals, "deals");
     return (
-        <div className="w-fulllg:block  font-poppins">
+        <div className="w-full px-6  lg:block  font-poppins">
             <CouponsTab />
             <div className="mt-11 text-[15px] flex flex-col gap-4">
-                <p>Special offers for you</p>
-                <FlashDealCard deals={expiredDeals} />
+                <p>Your Expired Coupons will appear here</p>
+                <FlashDealCard deals={deals} />
             </div>
         </div>
     )

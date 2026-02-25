@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface Deal {
     id: string | number;
@@ -17,6 +18,9 @@ type Props = {
 };
 
 export default function FlashDealCard({ deals = [] }: Props) {
+    const [showModal, setShowModal] = useState(false);
+    const [activeCode, setActiveCode] = useState("");
+
     const themes = [
         {
             bg: "bg-[#FFE6F4]", // pink
@@ -30,10 +34,15 @@ export default function FlashDealCard({ deals = [] }: Props) {
         },
     ];
 
+    // const handleGetCode = (dealCode: string) => {
+    //     navigator.clipboard.writeText(dealCode);
+    //     alert(`Coupon code ${dealCode} copied!`);
+    // };
     const handleGetCode = (dealCode: string) => {
-        navigator.clipboard.writeText(dealCode);
-        alert(`Coupon code ${dealCode} copied!`);
+        setActiveCode(dealCode);
+        setShowModal(true);
     };
+
 
     return (
         <div className="space-y-4">
@@ -148,6 +157,55 @@ export default function FlashDealCard({ deals = [] }: Props) {
                     </div>
                 );
             })}
+
+            {showModal && (
+                <div className="fixed left-0 top-0 w-screen h-screen z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white w-[90%] max-w-[350px] rounded-lg p-5 relative font-poppins">
+
+                        {/* Close (X) */}
+                        <button
+                            onClick={() => setShowModal(false)}
+                            className="absolute top-3 left-3 text-gray-500 hover:text-black text-lg"
+                        >
+                            ✕
+                        </button>
+
+                        {/* Title */}
+                        <p className="text-center text-[16px] font-semibold mb-4">
+                            Your Coupon Code
+                        </p>
+
+                        {/* Coupon Code */}
+                        <div className="border-2 border-dashed border-gray-300 rounded-md py-4 text-center mb-6">
+                            <p className="text-[22px] font-semibold tracking-widest">
+                                {activeCode}
+                            </p>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex items-center justify-between gap-3">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="w-full h-[35px] rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(activeCode);
+                                    setShowModal(false);
+                                    toast.success(`Coupon code ${activeCode} copied!`, { position: "top-right" });
+                                }}
+                                className="w-full h-[35px] rounded-full bg-primaryhover text-white hover:opacity-90 transition"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

@@ -9,15 +9,13 @@ const SearchDropdown = ({ onClose }: { onClose?: () => void }) => {
 
     if (recent.length === 0) {
         return (
-            <div className="absolute top-[48px] w-full bg-white p-4 rounded-xl shadow">
+            <div className="absolute z-50 top-[48px] w-full bg-white p-4 rounded-xl shadow">
                 <p className="text-sm text-gray-400">No recent searches</p>
             </div>
         );
     }
-
-
     return (
-        <div className="absolute top-[48px] left-0 w-full bg-white rounded-2xl shadow-xl border z-50 p-4">
+        <div className="absolute top-[48px] left-0 w-full bg-white rounded-2xl shadow-xl border z-[9999] p-4">
 
             {/* Header */}
             <div className="flex items-center justify-between mb-3">

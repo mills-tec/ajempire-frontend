@@ -39,6 +39,17 @@ export default function ShippingAdressForm({
   const [singin, setSingin] = useState(false);
 
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
+  const convertToLocalPhone = (phone: string) => {
+    if (!phone) return "";
+
+    // If number starts with +234, replace with 0
+    if (phone.startsWith("+234")) {
+      return "0" + phone.slice(4);
+    }
+
+    return phone;
+  };
+
 
   useEffect(() => {
     axios
@@ -55,7 +66,7 @@ export default function ShippingAdressForm({
     setTimeout(() => setShowInitialSpinner(false), 700); // hide after 500ms
     if (existingAddress) {
       setFullName(existingAddress.fullName || "");
-      setPhone(existingAddress.phone || "");
+      setPhone(convertToLocalPhone(existingAddress.phone) || "");
       setStreet(existingAddress.street || "");
       setCity(existingAddress.city || "");
       setPostalCode(existingAddress.postalCode || "");
@@ -75,7 +86,7 @@ export default function ShippingAdressForm({
           if (data && Object.keys(data).length > 0) {
             // Prefill if address exists
             setFullName(data.fullName || "");
-            setPhone(data.phone || "");
+            setPhone(convertToLocalPhone(data.phone) || "");
             setStreet(data.street || "");
             setCity(data.city || "");
             setPostalCode(data.postalCode || "");

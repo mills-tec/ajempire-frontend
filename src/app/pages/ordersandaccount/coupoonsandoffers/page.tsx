@@ -1,5 +1,9 @@
+"use client";
+import { useEffect, useState } from "react";
 import CouponsTab from "../components/CouponsTab";
 import FlashDealCard from "../components/FlashDealCard";
+import { getCoupons } from "@/lib/api";
+import { mapCouponToDeal } from "@/lib/couponMapper";
 type Deal = {
     id: string | number;
     title: string;
@@ -12,7 +16,28 @@ type Deal = {
 };
 
 
+
 export default function CouponsAndOffers() {
+    const [deals, setDeals] = useState<Deal[]>([])
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            const res = await getCoupons();
+            if (!res) return;
+
+            const allDeals = res.message.map(mapCouponToDeal);
+
+            // UNUSED = not expired
+            const unusedDeals = allDeals.filter(
+                (deal) => deal.status === "unused"
+            );
+
+            setDeals(unusedDeals);
+        };
+
+        fetchCoupons();
+    }, []);
+    console.log(deals, "deals");
+
     const unusedDeals: Deal[] = [
         {
             id: 1,
@@ -55,7 +80,7 @@ export default function CouponsAndOffers() {
 
             <div className="mt-11 text-[15px] flex flex-col gap-4">
                 <p className="font-semibold text-[17px]">Special offers for you</p>
-                <FlashDealCard deals={unusedDeals} />
+                <FlashDealCard deals={deals} />
             </div>
         </div>
     );

@@ -1,21 +1,34 @@
 "use client";
+
 import { useRef, useState, useEffect } from "react";
 import { useSearchStore } from "@/lib/search-store";
 import SearchDropdown from "./SearchDropdown";
 import { SearchIcon } from "@/components/svgs/SearchIcon";
 import { CameraIcon } from "@/components/svgs/CameraIcon";
 import { CameraSnap } from "@/components/svgs/CameraSnap";
-
+import { useRouter } from "next/navigation";
 const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const { query, setQuery, submitSearch } = useSearchStore();
+  const router = useRouter();
+  // const handleSubmit = () => {
+  //   submitSearch();          // ✅ saves to recent + locks search
+  //   setOpen(false);          // ✅ close dropdown
+  //   inputRef.current?.blur();
+  // };
   const handleSubmit = () => {
-    submitSearch();          // ✅ saves to recent + locks search
-    setOpen(false);          // ✅ close dropdown
+    if (!query) {
+      return;
+    }
+
+    submitSearch(); // ✅ still save recent searches in Zustand
+    router.push(`/search?q=${encodeURIComponent(query)}`); // 🔹 route-based navigation
+    setOpen(false); // ✅ close dropdown
     inputRef.current?.blur();
-  };
+  }
+
   const [placeholderClass, setPlaceholderClass] = useState("placeholder:animate-placeholderFromBottom");
 
   // ✅ click outside to close dropdown
@@ -62,8 +75,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
 
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
-      <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] border-brand_solid_gradient md:border-brand_solid_gradient md:border-none focus-within:border-brand_solid_gradient">
+    <div ref={wrapperRef} className="relative w-full overflow-visible">
+      <div className="w-full flex gap-2 items-center border rounded-full h-[40px] px-[14px] focus-within:border-brand_solid_gradient">
         <input
           ref={inputRef}
           value={query}

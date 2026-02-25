@@ -1,10 +1,11 @@
 "use client";
-import { getBearerToken } from "@/lib/api";
+import { getBearerToken, getCoupons } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
 import ListOfLogistics from "./ui/ListOfLogistics";
+import { toast } from "sonner";
 
 interface CheckoutSummeryCardProps {
   initiateCheckout: () => void;
@@ -20,9 +21,13 @@ export default function CheckoutSummeryCard({
 }: CheckoutSummeryCardProps) {
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
-  // const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
-  const { orderSummary, } = useCartStore();
   // const { selectedLogistic } = useCartStore();
+  // const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
+  const { orderSummary, applyCoupon, removeCoupon, appliedCoupon } =
+    useCartStore();
+  const [couponCode, setCouponCode] = useState("");
+  const [loadingCoupon, setLoadingCoupon] = useState(false);
+
 
   useEffect(() => {
     setMounted(true);
@@ -51,6 +56,80 @@ export default function CheckoutSummeryCard({
     // fetchTotal();
   }, []);
 
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+
+    if (code === "") {
+      toast.error("Please enter a coupon code", { position: "top-right" });
+      setLoadingCoupon(false);
+      return;
+    }
+    setLoadingCoupon(true);
+
+    try {
+      const res = await getCoupons();
+      if (!res?.message) throw new Error("No coupons");
+
+      const coupon = res.message.find(
+        (c: any) => c.code.toUpperCase() === code
+      );
+
+      if (!coupon) {
+        toast.error("Invalid coupon code", { position: "top-right" });
+        removeCoupon();
+        return;
+      }
+
+      // expiry check
+      if (coupon.isExpired === true) {
+        toast.error("Coupon has expired", { position: "top-right" });
+        return;
+      }
+
+      // used check
+      if (coupon.users?.length > 0) {
+        toast.error("Coupon already used", { position: "top-right" });
+
+        return;
+      }
+
+      console.log("Entered coupon code:", code);
+      console.log("Coupon found:", coupon);
+
+      applyCoupon({
+        code: coupon.code,
+        type: coupon.discountType,
+        value: coupon.discountValue,
+      });
+      console.log("Coupon applied to store:", {
+        code: coupon.code,
+        type: coupon.discountType,
+        value: coupon.discountValue,
+        users: coupon.users,
+      });
+      toast.success("Coupon applied successfully", { position: "top-right" });
+
+      setCouponCode("");
+    }
+
+    catch (err) {
+      console.error(err);
+      toast.error("Failed to apply coupon", { position: "top-right" });
+    }
+    finally {
+      setLoadingCoupon(false);
+    }
+  };
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+  };
+
+
+
   if (!mounted) {
     return (
       <div className="w-full h-screen bg-gray-100  animate-pulse  rounded-md"></div>
@@ -69,35 +148,55 @@ export default function CheckoutSummeryCard({
         <p className="text-[17px] font-semibold opacity-75 mb-4">
           Order Summary
         </p>
+        {/* Coupon Code Input and Apply Button */}
         <div className="flex items-center gap-4 mb-4">
           <div className="w-[250px] h-[35px] border-2 border-gray-300 px-3 rounded-md focus-within:border-brand_solid_gradient transition-all duration-200">
             <input
               type="text"
               placeholder="Enter Coupon Code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
               className="w-full h-full bg-transparent text-[12px] border-none outline-none"
             />
+
           </div>
-          <button className="bg-[#D3D3D3] w-[100px] h-[35px] rounded-full hover:bg-brand_solid_gradient hover:text-white transition-all duration-200">
+          {/* <button className="bg-[#D3D3D3] w-[100px] h-[35px] rounded-full hover:bg-brand_solid_gradient hover:text-white transition-all duration-200">
             <p className="text-[14px]">Apply</p>
+          </button> */}
+          <button
+            onClick={handleApplyCoupon}
+            disabled={loadingCoupon}
+            className="bg-[#D3D3D3] w-[100px] h-[35px] rounded-full hover:bg-brand_solid_gradient hover:text-white transition-all duration-200 disabled:opacity-50"
+          >
+            <p className="text-[14px]">
+              {loadingCoupon ? "Applying..." : "Apply"}
+            </p>
           </button>
         </div>
         <div className="flex flex-col gap-2 text-[14px]">
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Subtotal</p>
-            <p className={`${styleadress}`}>₦{orderSummary().total}</p>
+            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().total)}</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Shipping Charge</p>
-            <p className={`${styleadress}`}> ₦{orderSummary().deliveryFee}</p>
+            <p className={`${styleadress}`}> ₦{formatPrice(orderSummary().deliveryFee)}</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Discount</p>
-            <p className={`${styleadress}`}>₦{orderSummary().discount}</p>
+            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().discount)}</p>
           </div>
+          {orderSummary().coupon > 0 && (
+            <div className="flex items-center justify-between text-[#999999]">
+              <p>Coupon</p>
+              <p>-₦{formatPrice(orderSummary().coupon)}</p>
+            </div>
+          )}
+
           <hr />
           <div className="flex items-center justify-between">
             <p className={`${styleadress}`}>Total</p>
-            <p className={`${styleadress}`}>₦{orderSummary().finalTotal}</p>
+            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().finalTotal)}</p>
           </div>
         </div>
       </div>

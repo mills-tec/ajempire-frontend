@@ -5,6 +5,9 @@ import { Providers } from "./provider";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LayoutWrapper from "./components/LayoutWrapper";
+import { CartIconProvider } from "./contextanimation/CartIconContext";
+
+
 import NotificationWrapper from "@/components/NotificationWrapper";
 
 const poppins = Poppins({
@@ -23,6 +26,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
@@ -30,7 +34,10 @@ export default function RootLayout({
         <NotificationWrapper />
         <Providers>
           <TooltipProvider>
-            <LayoutWrapper>{children}</LayoutWrapper>
+            {/* 🔥 ADD THIS */}
+            <CartIconProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </CartIconProvider>
           </TooltipProvider>
         </Providers>
       </body>

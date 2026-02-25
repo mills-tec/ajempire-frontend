@@ -5,6 +5,7 @@ import axios from 'axios'
 import { getBearerToken } from '@/lib/api'
 import ProfileName from './ui/ProfileName'
 import RecentPurchases from './ui/RecentPurchases'
+import UsageSkeleton from './UsageSkeleton'
 interface UsageStats {
   ordersThisMonth: number;
   totalSpentThisMonth: number;
@@ -14,6 +15,7 @@ interface UsageStats {
 }
 export const UseAgeComponent = () => {
   const [usageData, setUsageData] = useState<UsageStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const useAgeData = async () => {
@@ -32,9 +34,15 @@ export const UseAgeComponent = () => {
       } catch (err) {
         console.error("Error fetching usage data:", err);
       }
+      finally {
+        setLoading(false);
+      }
     }
     useAgeData();
   }, [])
+
+  if (loading) return <UsageSkeleton />;
+
   return (
     <div className='w-full lg:relative lg:flex-row lg:gap-0 flex flex-col gap-10'>
       <div className='w-full font-poppins flex flex-col gap-16 lg:flex-row justify-around '>
