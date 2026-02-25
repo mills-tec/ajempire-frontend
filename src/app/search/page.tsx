@@ -35,18 +35,18 @@ function SearchContent() {
 
     const localMinPrice = minParam ? Number(minParam) : null;
     const localMaxPrice = maxParam ? Number(maxParam) : null;
-
-    const isPriceFilterActive =
-        localMinPrice !== null && localMaxPrice !== null;
+    const [searchLoading, setSearchLoading] = useState(false);
 
 
-
-    const { data, isLoading, isError, refetch } = useQuery({
+    const { data, isLoading, refetch, isError } = useQuery({
         queryKey: ["products"],
-        queryFn: getProducts,
+        queryFn: () => getProducts(""),
     });
 
-    const [searchLoading, setSearchLoading] = useState(false);
+    useEffect(() => {
+        console.log("Raw API data:", data);
+    }, [data]);
+
 
     // Simulate skeleton loading when query changes
     useEffect(() => {
@@ -57,19 +57,15 @@ function SearchContent() {
     }, [query]);
 
     useEffect(() => {
-        console.log("Raw API data:", data);
         console.log("Products array:", data?.message?.products ?? []);
         data?.message?.products?.forEach((p, i) => {
             console.log("return only cat", p.category);
         });
     }, [data]);
 
-    useEffect(() => {
-        console.log("Raw API data:", data);
-    }, [data]);
-
     const normalize = (str: string) =>
         str.toLowerCase().replace(/\s+/g, "");
+
     const productsMatchingQuery = useMemo(() => {
         const products = data?.message?.products ?? [];
         if (!query) return products;
@@ -78,7 +74,7 @@ function SearchContent() {
 
         return products.filter((product) => {
             const normalizedName = normalize(product.name);
-            const normalizedCategory = normalize(product.category.name);
+            const normalizedCategory = normalize(product.category!.name);
 
             const matchesName =
                 normalizedName.includes(normalizedQuery);
@@ -90,52 +86,7 @@ function SearchContent() {
         });
     }, [data, query]);
 
-    // const filteredProducts = useMemo(() => {
-    //     const products = data?.message?.products ?? [];
-    //     if (!query) return products;
 
-    //     return products.filter((product) => {
-    //         const matchesName = product.name.toLowerCase().includes(query.toLowerCase());
-    //         const matchesCategories = product.category?.toLocaleLowerCase().includes(query.toLowerCase())
-    //         const matchesMin = minPrice === null || product.price >= minPrice;
-    //         const matchesMax = maxPrice === null || product.price <= maxPrice;
-    //         return (matchesName || matchesCategories) && matchesMin && matchesMax;
-    //     });
-    // }, [data, query, minPrice, maxPrice]);
-    // const filteredProducts = useMemo(() => {
-    //     return productsMatchingQuery.filter((product) => {
-    //         const meetsMin = localMinPrice === null || product.price >= localMinPrice;
-    //         const meetsMax = localMaxPrice === null || product.price <= localMaxPrice;
-    //         return meetsMin && meetsMax;
-    //     });
-    // }, [productsMatchingQuery, localMinPrice, localMaxPrice]);
-    // const filteredProducts = useMemo(() => {
-    //     if (!isPriceFilterActive) {
-    //         return productsMatchingQuery;
-    //     }
-
-    //     return productsMatchingQuery.filter((product) => {
-    //         return (
-    //             product.price >= (localMinPrice ?? 0) &&
-    //             product.price <= (localMaxPrice ?? Infinity)
-    //         );
-    //     });
-    // }, [productsMatchingQuery, isPriceFilterActive, localMinPrice, localMaxPrice]);
-
-
-
-    // const categoriesInResults = useMemo(() => {
-    //     const products = data?.message?.products ?? [];
-
-    //     const cats = products.reduce((acc, product) => {
-    //         if (product.category) {
-    //             acc.add(product.category);
-    //         }
-    //         return acc;
-    //     }, new Set());
-
-    //     return Array.from(cats);
-    // }, [data]);
     const filteredProducts = useMemo(() => {
         console.log("productsMatchingQuery", productsMatchingQuery)
         if (localMinPrice === null && localMaxPrice === null) {
@@ -332,11 +283,11 @@ function SearchContent() {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
-                    {filteredProducts.map((product) => (
+                    {filteredProducts.map((product, index) => (
                         <Tooltip key={product._id}>
                             <TooltipTrigger asChild>
                                 <div>
-                                    <ProductCard product={product} />
+                                    <ProductCard product={product} index={index} />
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" align="center">

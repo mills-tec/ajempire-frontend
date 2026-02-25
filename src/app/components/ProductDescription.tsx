@@ -8,7 +8,6 @@ import CheckoutRequirement from "./CheckoutRequirement";
 import { toast } from "sonner";
 import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { getBearerToken } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
 
 export default function ProductDescription({
@@ -190,7 +189,7 @@ export default function ProductDescription({
                 )}
               </div>
             }
-            <p className="text-black/60 text-xs">{product?.reviews.length}</p>
+            <p className="text-black/60 text-xs">{product?.reviews!.length}</p>
           </div>
         </div>
 

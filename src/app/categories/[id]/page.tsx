@@ -114,7 +114,7 @@ export default function CategoryPage() {
         <>
             <div className="lg:hidden w-full flex flex-col gap-3 h-[600px] overflow-y-auto scrollbar-hide">
                 {!isLoading && filteredProducts.length === 0 && (
-                    <div className="col-span-full">
+                    <div className="col-span-full" >
                         <Image
                             src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
                             alt="No results"
@@ -134,7 +134,7 @@ export default function CategoryPage() {
                     )
                         :
                         (
-                            filteredProducts?.map((product) => (
+                            filteredProducts?.map((product, index) => (
 
                                 <div
                                     onClick={
@@ -145,6 +145,7 @@ export default function CategoryPage() {
                                             ;
                                         }
                                     }
+                                    key={index}
 
                                 >
                                     <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
@@ -243,13 +244,13 @@ export default function CategoryPage() {
                                 </p>
                             </div>
                         )}
-                        {filteredProducts?.map((product) => (
+                        {filteredProducts?.map((product, index) => (
                             <div key={product._id} className="relative">
                                 {/* Only wrap the main card content for tooltip */}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <div>
-                                            <ProductCard product={product} />
+                                            <ProductCard index={index} product={product} />
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" align="center">

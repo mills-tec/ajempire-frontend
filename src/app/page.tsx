@@ -6,7 +6,7 @@ import ProductCard from "./components/ProductCard";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
 import CartPopup from "./components/CartPopup";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProducts, getProductsByCategory } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import {
@@ -23,6 +23,7 @@ import HomeHeroSlider from "./components/HomeHeroSlider";
 import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProvider";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import Spinner from "./components/Spinner";
 // export default function Home() {
 
 //   const { data, isLoading, refetch } = useQuery({
@@ -249,7 +250,7 @@ function HomeContent({
   const selectedItem = useCartStore((state) => state.selectedItem);
   const { searchedQuery, resetToken, minPrice, maxPrice } =
     useSearchStore();
-
+  const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
   const [searchLoading, setSearchLoading] = React.useState(false);
@@ -285,25 +286,6 @@ function HomeContent({
     });
   }, [searchedQuery, data, minPrice, maxPrice]);
 
-  return (
-    <>
-      <PullToRefreshHeader />
-      <PullToRefreshContainer>
-
-        <div className="w-full">
-          {selectedItem && <CartPopup />}
-
-          <div
-            className="lg:hidden w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center"
-
-            style={{
-              transform: `translateY(-${pull * 0.7}px)`,
-              opacity: 1 - Math.min(pull / 150, 1),
-              transition: pull === 0 ? "all 0.25s ease" : "none",
-            }}
-          >
-            <SearchBar />
-          </div>
   const [infiniteRef] = useInfiniteScroll({
     loading: uiLoading,
     hasNextPage,
@@ -372,48 +354,24 @@ function HomeContent({
   }
 
   return (
-    <div className="w-full ">
+    <>
+      <PullToRefreshHeader />
+      <PullToRefreshContainer>
 
-      {isLoading && <Spinner />}
-      {selectedItem && <CartPopup />}
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center">
-        <SearchBar />
-      </div>
-      {/* <div className="mt-[5.8rem] lg:mt-0">
-        <Categories />
-      </div> */}
-      <div className="mt-[5.8rem] lg:mt-0 px-[20px] lg:px-10">
-        {/* Banner */}
-        {!searchActive && <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
-          {uiLoading ? (
-            <div className="w-full h-[379px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
-          ) : (
-            <Image
-              src={Ajbanner}
-              alt="banner image"
-              priority
-              className="w-full lg:h-[379px] h-alto object-cover"
+        <div className="w-full">
+          {selectedItem && <CartPopup />}
 
-            />
-          )}
-        </div>
-        }
+          <div
+            className="lg:hidden w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center"
 
-        {/* Categories */}
-        <div className={`mt-${searchActive ? "[1rem]" : "8"}`}>
-          {uiLoading || searchLoading ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 pt-3 lg:pt-0">
-              {[...Array(11)].map((_, i) => (
-                <div
-                  key={i}
-                  className="lg:w-20 lg:h-20 rounded-full bg-gray-200 animate-pulse shrink-0 w-14 h-14"
-                />
-              ))}
-            </div>
-          ) : (
-            <Categories />
-          )}
-        </div>
+            style={{
+              transform: `translateY(-${pull * 0.7}px)`,
+              opacity: 1 - Math.min(pull / 150, 1),
+              transition: pull === 0 ? "all 0.25s ease" : "none",
+            }}
+          >
+            <SearchBar />
+          </div>
 
           <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
             {/* Banner */}
@@ -475,11 +433,11 @@ function HomeContent({
                 </div>
               ) : (
                 <div className=" grid  grid-cols-2  gap-2  sm:grid-cols-3  md:grid-cols-4  lg:grid-cols-5 lg:gap-6">
-                  {filteredProducts.map((product: any) => (
-                    <Tooltip key={product._id}>
+                  {filteredProducts.map((product: any, index: number) => (
+                    <Tooltip key={index}>
                       <TooltipTrigger asChild>
                         <div>
-                          <ProductCard product={product} />
+                          <ProductCard product={product} index={index} />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" align="center">
@@ -489,92 +447,19 @@ function HomeContent({
                   ))}
                 </div>
               )}
+
+              <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
+
             </div>
 
-            {data && (
-              <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-20 mb-24 py-2 rounded-full bg-brand_pink text-white">
-                <p>See More </p>
-                <svg
-                  width="23"
-                  height="16"
-                  viewBox="0 0 23 16"
-                  className="size-3"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M18.75 5.125L11.875 12L5 5.125"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            )}
+
 
           </div>
         </div>
       </PullToRefreshContainer>
     </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
-                {filteredProducts.map((product, index) => (
-                  <div ref={!hasNextPage && index === filteredProducts.length - 1 ? lastItemRef : null} key={index}>
-                    <ProductItem key={product._id} product={product} index={index} />
-                  </div>
 
-                ))}
+  )
 
 
-              </div>
-
-              <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
-
-
-            </>
-          )}
-        </div>
-
-        {/* <div className="grid grid-cols-2 lg:flex justify-start flex-wrap gap-4  lg:gap-6 mx-auto mt-8">
-          {data?.message &&
-            filteredProducts?.map((product) => (
-              <Tooltip key={product._id}>
-                <TooltipTrigger>
-                  <div>
-                    <ProductCard product={product} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center">
-                  <p>{product.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-        </div> */}
-        {/* {data && (
-          <button className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-20 mb-24 py-2 rounded-full bg-brand_pink text-white">
-            <p>See More </p>
-            <svg
-              width="23"
-              height="16"
-              viewBox="0 0 23 16"
-              className="size-3"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M18.75 5.125L11.875 12L5 5.125"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        )} */}
-
-      </div>
-    </div>
-  );
 }
