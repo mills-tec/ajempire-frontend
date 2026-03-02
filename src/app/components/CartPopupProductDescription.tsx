@@ -268,9 +268,11 @@ export default function CartPopupProductDescription({
             )}
 
 
-            <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-              <p>{item.flashSales?.discount}% OFF Limited time</p>
-            </div>
+            {
+              item.flashSales && <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+                <p>{item.flashSales?.discount}% OFF Limited time</p>
+              </div>
+            }
           </div>
 
           {item.flashSales && <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">

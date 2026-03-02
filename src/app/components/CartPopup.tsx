@@ -12,10 +12,11 @@ export default function CartPopup() {
 
   // local state for animation
   const [isVisible, setIsVisible] = useState(false);
-
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   // whenever selectedItem changes, trigger animation
   useEffect(() => {
     if (selectedItem) {
+      setSelectedImage(selectedItem.cover_image || null);
       setIsVisible(true); // fade in
       document.body.style.overflow = "hidden";
     } else {
@@ -27,18 +28,11 @@ export default function CartPopup() {
 
 
 
-  // 2️⃣ debug effect — MUST be before return
-  useEffect(() => {
-    if (selectedItem) {
-      console.log("🧠 CartPopup sees selectedItem:", selectedItem);
-    }
-  }, [selectedItem]);
 
   // 3️⃣ conditional render AFTER hooks
   if (!selectedItem) return null
 
-  console.log("🧠 selectedItem:", selectedItem);
-  console.log("🧠 items:", items);
+
 
 
 
@@ -128,26 +122,29 @@ export default function CartPopup() {
             <div className="space-y-4 p-4  flex gap-3 items-end ">
               <div className="relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip">
                 <Image
-                  src={selectedItem.cover_image || selectedItem.images?.[0] || "/placeholder.png"}
+                  src={selectedImage || "/placeholder.png"}
                   alt="product image"
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="absolute object-cover"
                 />
 
               </div>
-              {Array.isArray(selectedItem.images) && (
+              {Array.isArray([selectedItem.images]) && (
                 <div className="flex gap-2 lg:gap-5">
-                  {selectedItem.images?.filter(Boolean).map((image, index) => (
+                  {[...selectedItem.images!, selectedItem.cover_image]?.filter(Boolean).map((image, index) => (
                     <div
                       key={index}
-                      className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
+                      className="w-[51px] h-[38px] lg:w-[71px] object-cover cursor-pointer lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
+                      onClick={() => setSelectedImage(image!)}
                     >
-                      <Image
+                      {image && <Image
                         src={image}
                         alt="product image"
                         fill
+                        sizes="(max-width: 51px) 71px, 51px"
                         className="absolute object-cover"
-                      />
+                      />}
                     </div>
                   ))}
                 </div>

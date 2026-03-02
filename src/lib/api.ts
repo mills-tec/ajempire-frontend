@@ -147,6 +147,8 @@ export async function getProduct(id: string): Promise<ProductResponse | null> {
   return res.json();
 }
 
+
+
 export function getBearerToken() {
   const userStr = typeof window != "undefined" ? localStorage.getItem("ajempire_signin_user") : null;
   return userStr ? JSON.parse(userStr)?.token : null;

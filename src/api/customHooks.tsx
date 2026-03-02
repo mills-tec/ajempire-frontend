@@ -477,3 +477,71 @@ export const useExploreInterest = () => {
 
   return { loading, getExploreInterest, addProductToBrowsingHistory }
 }
+
+export const useBrowsingHistory = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [uiLoading, setUILoading] = useState<boolean>(true);
+
+  const getBrowsingHistory = async (cursor: string, limit: number) => {
+    if (!loading) {
+      setUILoading(true);
+      try {
+        const req = await getData(`/browsing-history?limit=${limit}&cursor=${cursor}`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setUILoading(false);
+      }
+    }
+  }
+
+  const deleteBrowsingHistory = async (ids: string[]) => {
+
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await deleteData(`/browsing-history?ids=${ids}`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const clearBrowsingHistory = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await deleteData(`/browsing-history`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  return { loading, getBrowsingHistory, uiLoading, deleteBrowsingHistory, clearBrowsingHistory }
+}

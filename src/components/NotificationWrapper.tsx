@@ -11,9 +11,6 @@ export default function NotificationWrapper() {
     const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
     const { updatePushToken } = useNotification();
     const { updateNotifications } = useNotificationStore();
-
-    console.log("PUSHER KEY:", process.env.NEXT_PUBLIC_PUSHER_APP_KEY);
-    console.log("PUSHER CLUSTER:", process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER);
     const pusherRef = useRef<Pusher | null>(null);
 
     // Save push token once

@@ -19,13 +19,6 @@ export default function Tabs({
 }) {
     const pathname = usePathname();
 
-    // const tabs = [
-    //     { name: "All Orders", path: "/pages/ordersandaccount/orders/all", includes: "all" },
-    //     { name: "Processing", path: "/pages/ordersandaccount/orders/processing", includes: "processing" },
-    //     { name: "Shipped", path: "/pages/ordersandaccount/orders/shipped", includes: "shipped" },
-    //     { name: "Delivered", path: "/pages/ordersandaccount/orders/delivered", includes: "delivered" },
-    //     { name: "Reviews", path: "/pages/ordersandaccount/orders/reviews", includes: "reviews" },
-    // ];
     const router = useRouter();
     return (
         <div className="mb-5">
