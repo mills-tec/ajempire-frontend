@@ -3,12 +3,12 @@ import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { getBearerToken } from "@/lib/api";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 
 
 let config = {};
-
-const token =
-  typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ajempire_signin_user")!).token : null;
+const token = getBearerToken();
 if (token) {
   config = {
     headers: {
@@ -16,14 +16,11 @@ if (token) {
     },
   };
 }
+
 export const useOrders = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
+
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
@@ -252,7 +249,7 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=1`, config);
+        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=${ITEMS_TO_APPEND}`, config);
         return req.data.message;
       } catch (err: unknown) {
         let message;

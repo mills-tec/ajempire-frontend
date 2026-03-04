@@ -33,7 +33,7 @@ export default function NotificationWrapper() {
                 {
                     cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER!,
                     forceTLS: true,
-                    authEndpoint: "/api/pusher/auth", // required for private channels
+                    // authEndpoint: "/api/pusher/auth",
                 }
             );
         }

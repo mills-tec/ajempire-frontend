@@ -132,8 +132,8 @@ export async function getSessionBackend() {
 }
 
 /// Product API
-export async function getProducts(cursor: string): Promise<ProductsResponse | null> {
-  const res = await fetch(API_URL + "/product?limit=4&cursor=" + cursor);
+export async function getProducts(query: string): Promise<ProductsResponse | null> {
+  const res = await fetch(API_URL + "/product?" + query);
   if (!res.ok) return null;
   return res.json();
 }
@@ -142,12 +142,42 @@ export async function getProducts(cursor: string): Promise<ProductsResponse | nu
 
 export async function getProduct(id: string): Promise<ProductResponse | null> {
   const user = getUser();
-  const res = await fetch(API_URL + "/product/" + id + "/" + user?._id);
+  const res = await fetch(API_URL + "/product/" + id + "?user=" + user?._id);
   if (!res.ok) return null;
   return res.json();
 }
 
+export async function getUpdates(type: string, cursor: string, limit: number): Promise<{ data: Feed[]; nextCursor: string; hasMore: boolean } | null> {
+  const res = await fetch(API_URL + "/updates/" + type + "?limit=" + limit + "&cursor=" + cursor);
+  if (!res.ok) return null;
 
+  return ((await res.json()) as any).message;
+}
+
+export async function getRelatedProducts(category: string, query: string): Promise<{
+  products: Product[];
+  nextCursor: string;
+  hasMore: boolean;
+} | null> {
+  const res = await fetch(API_URL + "/product/related/" + category + "?" + query);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getExploreInterest(limit: number, cursor: string): Promise<{
+  products: Product[];
+  nextCursor: string;
+  hasMore: boolean;
+} | null> {
+  const token = getBearerToken()
+  const res = await fetch(API_URL + "/products/explore/" + "?limit=" + limit + "&cursor=" + cursor, {
+    headers: {
+      "Authorization": "Bearer " + token
+    }
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
 
 export function getBearerToken() {
   const userStr = typeof window != "undefined" ? localStorage.getItem("ajempire_signin_user") : null;

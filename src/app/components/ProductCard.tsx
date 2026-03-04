@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
@@ -25,8 +25,7 @@ export default function ProductCard({
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
   const showSellerTag = Math.random() > 0.4;
-
-
+  const [imgLoading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -84,12 +83,16 @@ export default function ProductCard({
 
       <Link href={`/product/${product._id}`}>
         <div className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
+
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             fill
-            className="transition-transform duration-300 ease-in-out group-hover:scale-110 lg:bg-[#f9f8f8] lg:p-2 object-cover"
+            className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
+            onLoad={() => {
+              setLoading(false)
+            }}
           />
         </div>
       </Link>

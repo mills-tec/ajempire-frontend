@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
@@ -18,6 +18,8 @@ import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProv
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ProductItem from "@/components/ProductItem";
+import Skeleton from "@/components/Skeleton";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 
 export default function Home() {
@@ -55,7 +57,9 @@ function HomeContent({
   const [searchLoading, setSearchLoading] = React.useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
-
+  const [cursor, setCursor] = useState("");
+  const [lastItemInview, setLastItemInView] = useState(false);
+  const [triggerManualLoad, setManualLoad] = useState(true);
   React.useEffect(() => {
     if (resetToken === 0) return;
     setUiLoading(true);
@@ -86,19 +90,22 @@ function HomeContent({
   }, [searchedQuery, data, minPrice, maxPrice]);
 
   const [infiniteRef] = useInfiniteScroll({
-    loading: uiLoading,
+    loading: false,
     hasNextPage,
     onLoadMore: async () => {
-      const cursor = (data?.message as any)?.nextCursor || "";
-      if (!cursor) return;
+
+
 
       try {
-        const newData = await getProducts(cursor); // fetch next page
+        const newData = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`); // fetch next page
         // Update the cached query to append new products
         appendProducts(newData?.message?.products || []);
+        setCursor((newData?.message as any)?.nextCursor! || "");
 
         // Update hasNextPage based on backend response
         setHasNextPage((newData!.message as any)?.hasMore ?? false);
+
+
       } catch (err) {
         console.error("Error loading more products:", err);
       }
@@ -125,6 +132,56 @@ function HomeContent({
       };
     });
   };
+
+
+  useEffect(() => {
+    if (hasNextPage === false || !triggerManualLoad) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setLastItemInView(true);
+            observer.unobserve(entry.target); // optional: stop observing once visible
+          }
+        },
+        {
+          root: null, // viewport
+          rootMargin: "0px",
+          threshold: 0.5, // 50% of the item is visible
+        }
+      );
+
+      if (lastItemRef.current) {
+        observer.observe(lastItemRef.current);
+      }
+      setManualLoad(true);
+      return () => {
+        if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+      };
+    }
+  }, [hasNextPage, triggerManualLoad])
+
+
+  // appends new data
+  useEffect(() => {
+    if (!lastItemInview) return;
+
+
+
+    const loadMoreProducts = () => {
+      const total = filteredProducts.length;
+      if (total === 0) return;
+
+      const nextItems = shuffleArray(filteredProducts);
+
+      appendProducts(nextItems);
+      setLastItemInView(false);
+      setManualLoad(false);
+    };
+
+    const timer = setTimeout(loadMoreProducts, 500); // optional delay for UX
+
+    return () => clearTimeout(timer); // cleanup if component unmounts
+  }, [lastItemInview]);
 
 
 
@@ -216,9 +273,18 @@ function HomeContent({
 
                     ))}
 
-                  </div>
-                  {/* <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} /> */}
+                    {!hasNextPage && [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                      <div key={i}>
 
+                        <Skeleton />
+
+                      </div>
+                    ))}
+
+
+
+                  </div>
+                  <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
 
 
 

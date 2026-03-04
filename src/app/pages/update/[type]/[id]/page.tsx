@@ -1,8 +1,9 @@
 import { getData } from "@/api/api";
 import FeedItem from "@/components/FeedItem";
 import Gallery from "@/components/Gallery";
-import { getFeeds, getProducts } from "@/lib/api";
+import { getFeeds, getProducts, getUpdates } from "@/lib/api";
 import { Feed } from "@/lib/types";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Metadata } from "next";
 
@@ -14,9 +15,11 @@ export function buildFeedMetadata(feed: {
     title: string
     description: string
     mediaUrl?: string
+    mediaType?: string
+    thumbnailUrl?: string
 }): Metadata {
     const url = `${window.location}`
-    const image = feed.mediaUrl || "https://yourdomain.com/og-default.jpg"
+    const image = feed.mediaType === "video" ? feed.thumbnailUrl : feed.mediaUrl || "https://yourdomain.com/og-default.jpg"
     const description = feed.description?.slice(0, 155)
 
     return {
@@ -42,7 +45,7 @@ export function buildFeedMetadata(feed: {
 
             images: [
                 {
-                    url: image,
+                    url: image!,
                     width: 1200,
                     height: 630,
                     alt: feed.title,
@@ -54,7 +57,7 @@ export function buildFeedMetadata(feed: {
             card: "summary_large_image",
             title: feed.title,
             description,
-            images: [image],
+            images: [image!],
             // site: "@yourhandle", // optional
             // creator: "@yourhandle", // optional
         },
@@ -75,12 +78,13 @@ export async function generateMetaData({ params }: { params: Promise<{ type: str
 
 export default async function Page({ params }: { params: Promise<{ type: string, id: string }> }) {
     const { type } = await params;
-    const req = await getData(`/updates/${type}`, {});
-    const feeds: { data: Feed[], nextCursor: string, hasMore: boolean } = req.data.message;
+    const req = await getUpdates(type, "", ITEMS_TO_APPEND);
+
+    if (!req) return;
 
     return (
         <div>
-            {type !== "gallery" ? <FeedItem feeds={feeds} /> : <Gallery feeds={feeds.data} />}
+            {type !== "gallery" ? <FeedItem feeds={req!} /> : <Gallery />}
 
 
         </div>

@@ -383,7 +383,7 @@ export default function ProductDetailPage() {
           item.relatedProducts!.length > 0 && (
             <div className="font-poppins py-10 space-y-5">
               <h1 className="text-2xl">Related Products</h1>
-              <RelatedProducts items={item.relatedProducts} />
+              <RelatedProducts category={item.category?._id!} />
 
             </div>
           )
