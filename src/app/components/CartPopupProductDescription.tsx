@@ -6,22 +6,20 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { animateToCart } from "@/lib/animateToCart";
-
+import CountdownTimer from "@/components/CountDownTimer";
+import { useModalStore } from "@/lib/stores/modal-store";
 interface Props {
   item: CartItem;
   cartRef: React.RefObject<HTMLAnchorElement | null>;
 
 }
-import CountdownTimer from "@/components/CountDownTimer";
-import { useModalStore } from "@/lib/stores/modal-store";
-import { useAuthStore } from "@/lib/stores/auth-store";
 
 export default function CartPopupProductDescription({
   item,
   cartRef,
 }: Props) {
   // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false);
+
   const { items: selectedItem, selectAllCartItems } = useCartStore();
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
   const openModal = useModalStore((s) => s.openModal);
@@ -49,7 +47,6 @@ export default function CartPopupProductDescription({
 
 
     selectAllCartItems();
-    setIsAdress(true);
     setTimeout(() => {
       console.log("Selected items:", selectedItem);
     }, 50);
