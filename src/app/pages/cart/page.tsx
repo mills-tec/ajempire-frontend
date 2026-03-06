@@ -132,6 +132,7 @@ export default function CartPage() {
 
     );
   return (
+
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
       {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
       <div className="w-full lg:px-0 space-y-6 lg:overflow-y-scroll scrollbar-hide lg:h-[calc(100vh-8rem)]">
@@ -361,5 +362,6 @@ export default function CartPage() {
         </div>
       )}
     </div>
+
   );
 }

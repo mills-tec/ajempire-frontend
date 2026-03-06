@@ -51,16 +51,16 @@ const NavResponsive = ({
           </Link>
         </li>
         <li>
-          {isActive("/pages/update") ? (
+          {isActive("/pages/update/all") ? (
             <Link
-              href="/pages/update"
+              href="/pages/update/all"
               className={`flex flex-col items-center ${isActive(
-                "/pages/update"
+                "/pages/update/all"
               )}`}
             >
               <div
                 className={` w-[40px] h-[40px] flex items-center justify-center rounded-sm  bg-brand_gradient_dark "
-                                        }`}
+               }`}
               >
                 <CustomImgLogo size={30} />
               </div>

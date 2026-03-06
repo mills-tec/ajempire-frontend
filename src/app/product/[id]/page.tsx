@@ -395,8 +395,8 @@ export default function ProductDetailPage() {
         }
       </div>
 
-
-      <div className="w-full flex items-center sticky left-0 bottom-20 pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
+      {/* add to cart div  */}
+      <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
@@ -457,7 +457,7 @@ export default function ProductDetailPage() {
             </svg>
           </button>
         </div>
-        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+        <button className="h-[2rem] lg:h-[3rem]  text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
           Check Out
         </button>
 

@@ -18,8 +18,6 @@ export default function NotificationWrapper() {
 
     // Save push token once
     useEffect(() => {
-
-
         (async () => {
             const token = await generateToken();
 
@@ -63,6 +61,10 @@ export default function NotificationWrapper() {
 
 
     useEffect(() => {
+        if (!messaging) {
+            console.log("Firebase Messaging not supported in this environment");
+            return;
+        }
 
         const unsubscribe = onMessage(messaging, (payload) => {
             if (Notification.permission === "granted") {

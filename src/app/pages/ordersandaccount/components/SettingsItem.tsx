@@ -1,14 +1,20 @@
+"use client";
 import Link from "next/link";
 
 type SettingsItemProps = {
     label: string;
     value?: string;
     href?: string;
+    onClick?: () => void;
 };
 
-const SettingsItem = ({ label, value, href }: SettingsItemProps) => {
+const SettingsItem = ({ label, value, href, onClick }: SettingsItemProps) => {
+
     const Content = (
-        <div className="flex items-center justify-between py-5 border-b border-gray-200 cursor-pointer">
+        <div
+            className="flex items-center justify-between py-5 border-b border-gray-200 cursor-pointer transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
+            onClick={onClick} // ✅ attach handler
+        >
             <p className="text-sm text-gray-700">{label}</p>
 
             <div className="flex items-center gap-3">
@@ -32,11 +38,12 @@ const SettingsItem = ({ label, value, href }: SettingsItemProps) => {
         </div>
     );
 
-    // If link exists → wrap with Link
+    // ✅ navigation item
     if (href) {
         return <Link href={href}>{Content}</Link>;
     }
 
+    // ✅ clickable action item
     return Content;
 };
 

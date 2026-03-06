@@ -32,7 +32,6 @@ export enum CheckoutStep {
   ORDER_SUMMARY,
 }
 
-
 type SyncAction =
   | { type: "add"; item: CartItem }
   | { type: "remove"; id: string }
@@ -44,7 +43,7 @@ type CartStore = {
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
   addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void; 
+  removeItem: (id: string) => void;
   removePurchasedItems: (ids: string[]) => void;
   resetSelectedItem: () => void;
   clearCart: () => void;
@@ -67,10 +66,9 @@ type CartStore = {
   clearRequestToken: () => void;
 
   /* COUPON */
-appliedCoupon: AppliedCoupon | null;
-applyCoupon: (coupon: AppliedCoupon) => void;
-removeCoupon: () => void;
-
+  appliedCoupon: AppliedCoupon | null;
+  applyCoupon: (coupon: AppliedCoupon) => void;
+  removeCoupon: () => void;
 
   /* CHECKOUT FLOW */
   checkoutStep: CheckoutStep;
@@ -85,14 +83,10 @@ removeCoupon: () => void;
     finalTotal: number;
   };
 
-  
   retrySync: () => Promise<void>;
 };
 
 export const useCartStore = create<CartStore>()(
-
-
-
   persist(
     (set, get) => ({
       items: [],
@@ -106,12 +100,11 @@ export const useCartStore = create<CartStore>()(
       requestToken: null,
 
       /* COUPON */
-appliedCoupon: null,
+      appliedCoupon: null,
 
-applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
+      applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
-removeCoupon: () => set({ appliedCoupon: null }),
-
+      removeCoupon: () => set({ appliedCoupon: null }),
 
       /* CHECKOUT FLOW */
       checkoutStep: CheckoutStep.ADDRESS_FORM,
@@ -142,7 +135,7 @@ removeCoupon: () => set({ appliedCoupon: null }),
           newItems = get().items.map((i) =>
             i._id === item._id
               ? { ...i, quantity: i.quantity + item.quantity, synced: false }
-              : i
+              : i,
           );
         } else {
           newItems = [...get().items, { ...item, synced: false }];
@@ -152,38 +145,89 @@ removeCoupon: () => set({ appliedCoupon: null }),
         set({ items: newItems });
 
         // Try to sync
-        addToCart(newItems)
-          .then(() => {
+        // addToCart(newItems)
+        // addToCart([item])
+        //   .then(() => {
+        //     // mark all as synced
+        //     set({
+        //       items: newItems.map((i) => ({ ...i, synced: true })),
+        //       syncQueue: [],
+        //     });
+        //   })
+        //   .catch(() => {
+        //     // add to retry queue
+        //     set({ syncQueue: [...get().syncQueue, { type: "add", item }] });
+        //     toast.error("Couldn't sync cart. Will retry.");
+        //   });
 
-            // mark all as synced
+        // Update local first
+
+        // Try to sync ONLY changed item
+        addToCart([item])
+          .then(() => {
             set({
-              items: newItems.map((i) => ({ ...i, synced: true })),
-              syncQueue: [],
+              items: get().items.map((i) =>
+                i._id === item._id ? { ...i, synced: true } : i,
+              ),
             });
           })
           .catch(() => {
-            // add to retry queue
-            set({ syncQueue: [...get().syncQueue, { type: "add", item }] });
+            set({
+              syncQueue: [...get().syncQueue, { type: "add", item }],
+            });
             toast.error("Couldn't sync cart. Will retry.");
           });
       },
+      // setSelectedVariants: (id: string, variants: Variant[]) => {
+      //   const updatedItems = get().items.map((i) =>
+      //     i._id === id ? { ...i, selectedVariants: variants, synced: false } : i
+      //   );
+      //   const updatedItem = updatedItems.find((i) => i._id === id);
+
+      //   set({
+      //     items: updatedItems,
+      //   });
+
+      //   // Try to sync
+      //   if (updatedItem) {
+      //     addToCart(updatedItems)
+      //       .then(() => {
+      //         set({
+      //           items: updatedItems.map((i) => ({ ...i, synced: true })),
+      //           syncQueue: [],
+      //         });
+      //       })
+      //       .catch(() => {
+      //         set({
+      //           syncQueue: [
+      //             ...get().syncQueue,
+      //             { type: "update", item: updatedItem },
+      //           ],
+      //         });
+      //         toast.error("Couldn't sync cart. Will retry.");
+      //       });
+      //   }
+      // },
       setSelectedVariants: (id: string, variants: Variant[]) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, selectedVariants: variants, synced: false } : i
+          i._id === id
+            ? { ...i, selectedVariants: variants, synced: false }
+            : i,
         );
+
         const updatedItem = updatedItems.find((i) => i._id === id);
 
-        set({
-          items: updatedItems,
-        });
+        // Update local state first
+        set({ items: updatedItems });
 
-        // Try to sync
+        // Sync ONLY changed item
         if (updatedItem) {
-          addToCart(updatedItems)
+          addToCart([updatedItem])
             .then(() => {
               set({
-                items: updatedItems.map((i) => ({ ...i, synced: true })),
-                syncQueue: [],
+                items: get().items.map((i) =>
+                  i._id === id ? { ...i, synced: true } : i,
+                ),
               });
             })
             .catch(() => {
@@ -193,6 +237,7 @@ removeCoupon: () => set({ appliedCoupon: null }),
                   { type: "update", item: updatedItem },
                 ],
               });
+
               toast.error("Couldn't sync cart. Will retry.");
             });
         }
@@ -209,34 +254,66 @@ removeCoupon: () => set({ appliedCoupon: null }),
       toggleItemSelect: (id: string) =>
         set({
           items: get().items.map((i) =>
-            i._id === id ? { ...i, selected: !i.selected } : i
+            i._id === id ? { ...i, selected: !i.selected } : i,
           ),
         }),
+      // setQuantity: (id: string, quantity: number) => {
+      //   const updatedItems = get().items.map((i) =>
+      //     i._id === id ? { ...i, quantity, synced: false } : i,
+      //   );
+      //   const updatedItem = updatedItems.find((i) => i._id === id);
+      //   set({ items: updatedItems });
+
+      //   // Try to sync
+      //   if (updatedItem) {
+      //     addToCart(updatedItems)
+      //       .then(() => {
+      //         // mark all as synced
+      //         set({
+      //           items: updatedItems.map((i) => ({ ...i, synced: true })),
+      //           syncQueue: [],
+      //         });
+      //       })
+      //       .catch(() => {
+      //         // add to retry queue
+      //         set({
+      //           syncQueue: [
+      //             ...get().syncQueue,
+      //             { type: "update", item: updatedItem },
+      //           ],
+      //         });
+      //         toast.error("Couldn't sync cart. Will retry.");
+      //       });
+      //   }
+      // },
       setQuantity: (id: string, quantity: number) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, quantity, synced: false } : i
+          i._id === id ? { ...i, quantity, synced: false } : i,
         );
+
         const updatedItem = updatedItems.find((i) => i._id === id);
+
+        // Update local state first (instant UI)
         set({ items: updatedItems });
 
-        // Try to sync
+        // Sync ONLY changed item
         if (updatedItem) {
-          addToCart(updatedItems)
+          addToCart([updatedItem])
             .then(() => {
-              // mark all as synced
               set({
-                items: updatedItems.map((i) => ({ ...i, synced: true })),
-                syncQueue: [],
+                items: get().items.map((i) =>
+                  i._id === id ? { ...i, synced: true } : i,
+                ),
               });
             })
             .catch(() => {
-              // add to retry queue
               set({
                 syncQueue: [
                   ...get().syncQueue,
                   { type: "update", item: updatedItem },
                 ],
               });
+
               toast.error("Couldn't sync cart. Will retry.");
             });
         }
@@ -266,32 +343,50 @@ removeCoupon: () => set({ appliedCoupon: null }),
         }
       },
       removePurchasedItems: (ids: string[]) => {
-  set({
-    items: get().items.filter((item) => !ids.includes(item._id)),
-  });
-},
+        set({
+          items: get().items.filter((item) => !ids.includes(item._id)),
+        });
+      },
 
       clearCart: () =>
         set({
           items: [],
           selectedLogistic: null,
         }),
-      increaseQuantity: (id) =>
-        set({
-          items: get().items.map((i) =>
-            i._id === id
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
-              : i
-          ),
-        }),
-      decreaseQuantity: (id) =>
-        set({
-          items: get()
-            .items.map((i) =>
-              i._id === id ? { ...i, quantity: Math.max(i.quantity - 1, 1) } : i
-            )
-            .filter((i) => i.quantity > 0),
-        }),
+      // increaseQuantity: (id) =>
+      //   set({
+      //     items: get().items.map((i) =>
+      //       i._id === id
+      //         ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
+      //         : i,
+      //     ),
+      //   }),
+      // decreaseQuantity: (id) =>
+      //   set({
+      //     items: get()
+      //       .items.map((i) =>
+      //         i._id === id
+      //           ? { ...i, quantity: Math.max(i.quantity - 1, 1) }
+      //           : i,
+      //       )
+      //       .filter((i) => i.quantity > 0),
+      //   }),
+      increaseQuantity: (id) => {
+        const item = get().getItem(id);
+        if (!item) return;
+
+        get().setQuantity(
+          id,
+          Math.min(item.quantity + 1, item.stock || item.quantity + 1),
+        );
+      },
+
+      decreaseQuantity: (id) => {
+        const item = get().getItem(id);
+        if (!item) return;
+
+        get().setQuantity(id, Math.max(item.quantity - 1, 1));
+      },
       orderSummary: () => {
         const items = get().items.filter((i) => i.selected);
 
@@ -299,29 +394,28 @@ removeCoupon: () => set({ appliedCoupon: null }),
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
-          0
+            sum +
+            calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
+          0,
         );
 
         // const coupon = 0;
-      const appliedCoupon = get().appliedCoupon;
-let coupon = 0;
+        const appliedCoupon = get().appliedCoupon;
+        let coupon = 0;
 
-if (appliedCoupon) {
-  const discountedSubtotal = total - discount;
+        if (appliedCoupon) {
+          const discountedSubtotal = total - discount;
 
-  if (appliedCoupon.type === "percent") {
-    coupon = Math.round(
-      (appliedCoupon.value / 100) * discountedSubtotal
-    );
-  }
+          if (appliedCoupon.type === "percent") {
+            coupon = Math.round(
+              (appliedCoupon.value / 100) * discountedSubtotal,
+            );
+          }
 
-  if (appliedCoupon.type === "fixed") {
-    coupon = Math.min(appliedCoupon.value, discountedSubtotal);
-  }
-}
-
-
+          if (appliedCoupon.type === "fixed") {
+            coupon = Math.min(appliedCoupon.value, discountedSubtotal);
+          }
+        }
 
         // 👇 pull logistics from the global store
         const deliveryFee = get().selectedLogistic?.total ?? 0;
@@ -375,12 +469,12 @@ if (appliedCoupon) {
         requestToken: state.requestToken,
         checkoutStep: state.checkoutStep,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // derived getter instead of in-store `get total()`
 export const useCartTotal = () =>
   useCartStore((state) =>
-    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
   );

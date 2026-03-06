@@ -73,8 +73,13 @@ export async function generateMetaData({ params }: { params: Promise<{ type: str
 }
 
 
-export default async function Page({ params }: { params: Promise<{ type: string, id: string }> }) {
-    const { type } = await params;
+export default async function Page({
+    params
+}: {
+    params: { type: string; id: string }
+}) {
+    const { type } = params;
+
     const req = await getData(`/updates/${type}`, {});
     const feeds: { data: Feed[], nextCursor: string, hasMore: boolean } = req.data.message;
 

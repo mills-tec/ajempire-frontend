@@ -42,14 +42,10 @@ export function getRatingStats(arr: Review[]) {
 
 
 export const saveAccounts = (account: { token: string, user: any, email: string }) => {
-  if (localStorage.getItem("savedAccounts")) {
-    const savedAccounts: { token: string, user: any, email: string }[] = JSON.parse(localStorage.getItem("savedAccounts")!);
-    if (!savedAccounts.some(savedAccount => savedAccount.email == account.email)) {
-      localStorage.setItem("savedAccounts", JSON.stringify([...savedAccounts, account]));
-    }
-  } else {
-    localStorage.setItem("savedAccounts", JSON.stringify([account]));
-
+  const raw = localStorage.getItem("savedAccounts");
+  const savedAccounts: { token: string, user: any, email: string }[] = raw ? JSON.parse(raw) : [];
+  if (!savedAccounts.some((savedAccount) => savedAccount.email == account.email)) {
+    localStorage.setItem("savedAccounts", JSON.stringify([...savedAccounts, account]));
   }
 };
 

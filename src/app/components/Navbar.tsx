@@ -11,6 +11,10 @@ const Navbar = () => {
 
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
+
+  // Hide navbar on product pages so cart bar can fill bottom
+  const isProductPage = pathname.startsWith("/product/");
+
   const isActive = (path: string) => {
     if (path === "/") {
       return pathname === "/" ? "text-[#FF008C] opacity-100" : "opacity-70";
@@ -33,6 +37,7 @@ const Navbar = () => {
           setShowIntro={setShowIntro}
         />
       </div>
+
       <div className="flex lg:hidden ">
         <NavResponsive
           isLoggedIn={isLoggedIn}

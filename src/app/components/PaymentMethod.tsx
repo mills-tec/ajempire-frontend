@@ -9,10 +9,10 @@ interface PaymentMethodProps {
     onNext: () => void;
     setIsadress?: (value: boolean) => void;
     goToPreviousStep?: () => void;
-
+    onClose?: () => void;
 }
 
-export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }: PaymentMethodProps) {
+export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep, onClose }: PaymentMethodProps) {
     // const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"paystack" | "flutter" | "">("");
     const [loading, setLoading] = useState(false)
     const { selectedPaymentMethod, setSelectedPaymentMethod } = useCheckoutStore();
@@ -161,7 +161,7 @@ export default function PaymentMethod({ onNext, setIsadress, goToPreviousStep }:
                 </div>
                 <div
                     className="absolute top-6 right-6 cursor-pointer"
-                    onClick={() => setIsadress && setIsadress(false)}
+                    onClick={onClose}
                 >
                     <svg
                         width="15"

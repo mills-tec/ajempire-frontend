@@ -350,15 +350,30 @@ export async function likeFeedCommentPost(postId: string) {
 // get categories
 
 // {{base_url}}/
+// export async function getCategories(): Promise<{ message: Category[] }> {
+//   const token = getBearerToken();
+//   if (!token) throw new Error("User not authenticated");
+
+//   const res = await fetch(`${API_URL}/category`, {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/json",
+//       // Authorization: `Bearer ${token}`,
+//     },
+//   });
+
+//   if (!res.ok) throw new Error("Failed to get categories");
+//   return res.json();
+// }
+
 export async function getCategories(): Promise<{ message: Category[] }> {
   const token = getBearerToken();
-  if (!token) throw new Error("User not authenticated");
 
   const res = await fetch(`${API_URL}/category`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      // Authorization: `Bearer ${token}`,
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
   });
 
@@ -430,6 +445,26 @@ export async function getProductsByCategory(
   const data = await res.json();
   console.log("Products by category response data:", data);
   return data.message.products;
+}
+
+// SEARCH API
+export async function searchProducts(
+  searchQuery: string
+): Promise<Product[]> {
+  console.log("📡 calling searchProducts with query:", searchQuery);
+  const res = await fetch(`${API_URL}/product/search?name=${encodeURIComponent(searchQuery)}`);
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  console.log("Search response data:", data);
+  console.log("Message structure:", data.message);
+
+  // The API returns { message: { items: [...], pagination: {...} } }
+  if (Array.isArray(data.message?.items)) {
+    return data.message.items;
+  }
+
+  return [];
 }
 
 // COUPON API

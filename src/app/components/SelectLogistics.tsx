@@ -7,12 +7,14 @@ interface SelectLogisticsProps {
     onContinue: () => void;
     onBack: () => void;
     setIsadress?: React.Dispatch<React.SetStateAction<boolean>>;
+    onClose?: () => void;
 }
 
 export default function SelectLogistics({
     setIsadress,
     onContinue,
     onBack,
+    onClose,
 }: SelectLogisticsProps) {
     const { selectedLogistic } = useCartStore();
     // console.log("Selected Logistic from SelectLogistics:", selectedLogistic);
@@ -93,7 +95,7 @@ export default function SelectLogistics({
                 {/* Close */}
                 <div
                     className="absolute top-6 right-6 cursor-pointer"
-                    onClick={() => setIsadress?.(false)}
+                    onClick={onClose}
                 >
                     <svg
                         width="15"

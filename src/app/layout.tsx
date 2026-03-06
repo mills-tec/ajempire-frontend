@@ -9,6 +9,7 @@ import { CartIconProvider } from "./contextanimation/CartIconContext";
 
 
 import NotificationWrapper from "@/components/NotificationWrapper";
+import ModalProvider from "./components/providers/ModalProvider";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -28,19 +29,49 @@ export default function RootLayout({
 }) {
 
   return (
+
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
+
+        {/* System UI */}
         <Toaster />
         <NotificationWrapper />
+
         <Providers>
           <TooltipProvider>
-            {/* 🔥 ADD THIS */}
             <CartIconProvider>
-              <LayoutWrapper>{children}</LayoutWrapper>
+
+              {/* App Layout */}
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+
+              {/* ⭐ GLOBAL UI LAYER (IMPORTANT POSITION) */}
+              <ModalProvider />
+
             </CartIconProvider>
           </TooltipProvider>
         </Providers>
+
       </body>
     </html>
   );
+
 }
+
+// return (
+//   <html lang="en">
+//     <body className={`${poppins.variable} antialiased`}>
+//       <Toaster />
+//       <NotificationWrapper />
+//       <Providers>
+//         <TooltipProvider>
+//           {/* 🔥 ADD THIS */}
+//           <CartIconProvider>
+//             <LayoutWrapper>{children}</LayoutWrapper>
+//           </CartIconProvider>
+//         </TooltipProvider>
+//       </Providers>
+//     </body>
+//   </html>
+// );

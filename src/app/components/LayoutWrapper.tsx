@@ -5,6 +5,8 @@ import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 import CartPopup from "./CartPopup";
 
+
+
 export default function LayoutWrapper({
     children,
 }: {
@@ -21,7 +23,7 @@ export default function LayoutWrapper({
 
     console.log("pathname:", pathname, "hideLayout:", hideLayout);
 
-
+    const isProductPage = pathname.startsWith("/product/");
     return (
         <div className="flex flex-col min-h-screen overflow-hidden">
             {/* Navbar */}
@@ -33,14 +35,16 @@ export default function LayoutWrapper({
 
             {/* Main Content */}
             <main
-                className={`pb-[90px] ${hideLayout ? "pt-0" : "lg:pt-[100px]"
-                    }`}
+                className={`
+    ${isProductPage ? "pb-0" : "pb-[90px]"}
+    ${hideLayout ? "pt-0" : "lg:pt-[100px]"}
+  `}
             >
                 {children}
             </main>
 
             {/* Footer */}
-            {!hideLayout && (
+            {!hideLayout && !isProductPage && (
                 <footer>
                     {/* Mobile nav */}
                     <div className="lg:hidden w-full fixed bottom-0 left-0 bg-white z-50 shadow-sm h-[80px] px-[20px] flex items-center justify-center border-t border-gray-300">

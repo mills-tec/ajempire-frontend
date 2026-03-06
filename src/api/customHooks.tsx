@@ -7,8 +7,10 @@ import { AxiosError } from "axios";
 
 let config = {};
 
-const token =
-  typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ajempire_signin_user")!).token : null;
+// Safely read token from localStorage. Avoid reading `.token` on null which
+// throws: "Cannot read properties of null (reading 'token')".
+const rawUserStr = typeof window !== "undefined" ? localStorage.getItem("ajempire_signin_user") : null;
+const token = rawUserStr ? JSON.parse(rawUserStr).token : null;
 if (token) {
   config = {
     headers: {
