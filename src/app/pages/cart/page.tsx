@@ -1,0 +1,365 @@
+"use client";
+import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
+import CartCard from "@/app/components/CartCard";
+import CartCardSkeleton from "@/app/components/CartCardSkeleton";
+import CheckoutRequirement from "@/app/components/CheckoutRequirement";
+import RefreshWrapper from "@/app/components/RefreshWrapper";
+import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { calcDiscountPrice } from "@/lib/utils";
+import clsx from "clsx";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+export default function CartPage() {
+  const {
+    items,
+    deselectAllCartItems,
+    selectAllCartItems,
+    orderSummary,
+    selectedItem,
+    syncQueue,
+  } = useCartStore();
+
+  const [expand, setExpand] = useState(false);
+  const [isAdress, setIsAdress] = useState(false);
+  const [signIn, setSingin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const selectedItems = items.filter(item => item.selected);
+  const selectedCount = selectedItems.length;
+
+  const checkoutHandler = () => {
+    const token = getBearerToken();
+    const seletedItem = items.filter((item) => item.selected);
+
+    if (!token) {
+      toast.error("Please log in to checkout", { position: "top-right" });
+      setIsLoading(false);
+      setTimeout(() => {
+        setSingin(true);
+      }, 500);
+    }
+    if (items.length === 0) {
+      toast.error("Your cart is empty", { position: "top-right" });
+      return;
+    }
+    if (seletedItem.length === 0) {
+      toast.error("Please select at least one item to checkout", {
+        position: "top-right",
+      });
+      return;
+    }
+    if (token && seletedItem.length > 0 && items.length > 0) {
+      setIsAdress(true);
+      setSingin(false);
+      setIsLoading(true);
+    }
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+  };
+
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+  const handleImageLoad = (id: string) => {
+    setLoadedImages(prev => ({ ...prev, [id]: true }));
+  };
+
+
+  // Show skeleton while loading
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // you can adjust based on actual fetch time
+    return () => clearTimeout(timer);
+  }, [items]);
+
+  if (isLoading) {
+    return (
+      <section className="h-full w-full text-center pt-[3%] lg:pt-[2%]">
+        <CartCardSkeleton />
+      </section>
+    );
+  }
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+  };
+
+
+  if (!isLoading && items.length === 0)
+    return (
+      <RefreshWrapper>
+        <section className="h-full w-full text-center pt-[30%] lg:pt-[5%]">
+          <div>
+            <svg
+              width="227"
+              height="265"
+              viewBox="0 0 227 265"
+              className="mx-auto"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <ellipse cx="113.5" cy="117" rx="113.5" ry="117" fill="#D9D9D9" />
+              <rect x="55" y="58" width="118" height="118" rx="59" fill="white" />
+              <path
+                d="M126.083 131.501C123.4 131.501 121.249 133.651 121.249 136.334C121.249 137.616 121.759 138.845 122.665 139.752C123.571 140.658 124.801 141.167 126.083 141.167C127.365 141.167 128.594 140.658 129.5 139.752C130.407 138.845 130.916 137.616 130.916 136.334C130.916 135.052 130.407 133.823 129.5 132.916C128.594 132.01 127.365 131.501 126.083 131.501ZM87.416 92.834V97.6673H92.2493L100.949 116.01L97.6627 121.931C97.3002 122.607 97.0827 123.405 97.0827 124.251C97.0827 125.533 97.5919 126.762 98.4983 127.668C99.4048 128.575 100.634 129.084 101.916 129.084H130.916V124.251H102.931C102.771 124.251 102.617 124.187 102.504 124.074C102.391 123.96 102.327 123.807 102.327 123.646C102.327 123.526 102.351 123.429 102.399 123.356L104.574 119.417H122.579C124.391 119.417 125.986 118.402 126.808 116.928L135.459 101.292C135.629 100.906 135.749 100.495 135.749 100.084C135.749 99.443 135.495 98.8284 135.042 98.3751C134.588 97.9219 133.974 97.6673 133.333 97.6673H97.5902L95.3185 92.834M101.916 131.501C99.2335 131.501 97.0827 133.651 97.0827 136.334C97.0827 137.616 97.5919 138.845 98.4983 139.752C99.4048 140.658 100.634 141.167 101.916 141.167C103.198 141.167 104.427 140.658 105.334 139.752C106.24 138.845 106.749 137.616 106.749 136.334C106.749 135.052 106.24 133.823 105.334 132.916C104.427 132.01 103.198 131.501 101.916 131.501Z"
+                fill="#AAAAAA"
+              />
+            </svg>
+            <div className="space-y-2">
+              <p className="italic font-medium text-black/60">your cart is empty</p>
+              <div>
+                <Link href={"/"}>
+                  <button className="flex gap-1 items-center w-[15rem] max-w-[80%] mx-auto justify-center py-2 rounded-full bg-brand_pink text-white">
+                    Start Shopping
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </RefreshWrapper>
+
+    );
+  return (
+    <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
+      {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
+      <div className="w-full lg:px-0 space-y-6 lg:overflow-y-scroll scrollbar-hide lg:h-[calc(100vh-8rem)]">
+        <div className="flex items-center w-full justify-between py-4 lg:py-0 border-b border-b-black/30 lg:border-none ">
+          <div className="gap-1 flex items-center px-4 lg:px-0">
+            <Checkbox
+              checked={items.length > 0 && items.every((item) => item.selected)}
+              onClick={() =>
+                items.length > 0 && items.every((item) => item.selected)
+                  ? deselectAllCartItems()
+                  : selectAllCartItems()
+              }
+              className="!rounded-full !size-4"
+            />
+
+            <p className="text-sm">All</p>
+          </div>
+          <p className="font-medium lg:hidden  ">
+            Cart
+            ({selectedCount} {selectedCount === 1 ? "item" : "items"})
+          </p>
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            fill="none"
+            className="h-5 mr-3"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M5 18C5.39782 18 5.77936 18.158 6.06066 18.4393C6.34196 18.7206 6.5 19.1022 6.5 19.5C6.5 19.8978 6.34196 20.2794 6.06066 20.5607C5.77936 20.842 5.39782 21 5 21C4.60218 21 4.22064 20.842 3.93934 20.5607C3.65804 20.2794 3.5 19.8978 3.5 19.5C3.5 19.1022 3.65804 18.7206 3.93934 18.4393C4.22064 18.158 4.60218 18 5 18ZM22.999 18.5C23.552 18.5 24 18.944 24 19.5C24 20.0525 23.555 20.5 22.999 20.5H9.001C8.86952 20.5004 8.73926 20.4748 8.6177 20.4247C8.49614 20.3746 8.38567 20.301 8.29266 20.208C8.19964 20.1151 8.1259 20.0047 8.07568 19.8832C8.02545 19.7617 7.99974 19.6315 8 19.5C8 18.9475 8.445 18.5 9.001 18.5H22.999ZM5 13C5.39782 13 5.77936 13.158 6.06066 13.4393C6.34196 13.7206 6.5 14.1022 6.5 14.5C6.5 14.8978 6.34196 15.2794 6.06066 15.5607C5.77936 15.842 5.39782 16 5 16C4.60218 16 4.22064 15.842 3.93934 15.5607C3.65804 15.2794 3.5 14.8978 3.5 14.5C3.5 14.1022 3.65804 13.7206 3.93934 13.4393C4.22064 13.158 4.60218 13 5 13ZM22.999 13.5C23.552 13.5 24 13.944 24 14.5C24 15.0525 23.555 15.5 22.999 15.5H9.001C8.86952 15.5004 8.73926 15.4748 8.6177 15.4247C8.49614 15.3746 8.38567 15.301 8.29266 15.208C8.19964 15.1151 8.1259 15.0047 8.07568 14.8832C8.02545 14.7617 7.99974 14.6315 8 14.5C8 13.9475 8.445 13.5 9.001 13.5H22.999ZM5 8C5.39782 8 5.77936 8.15804 6.06066 8.43934C6.34196 8.72064 6.5 9.10218 6.5 9.5C6.5 9.89782 6.34196 10.2794 6.06066 10.5607C5.77936 10.842 5.39782 11 5 11C4.60218 11 4.22064 10.842 3.93934 10.5607C3.65804 10.2794 3.5 9.89782 3.5 9.5C3.5 9.10218 3.65804 8.72064 3.93934 8.43934C4.22064 8.15804 4.60218 8 5 8ZM22.999 8.5C23.552 8.5 24 8.944 24 9.5C24 10.0525 23.555 10.5 22.999 10.5H9.001C8.86952 10.5004 8.73926 10.4748 8.6177 10.4247C8.49614 10.3746 8.38567 10.301 8.29266 10.208C8.19964 10.1151 8.1259 10.0047 8.07568 9.88323C8.02545 9.76172 7.99974 9.63148 8 9.5C8 8.9475 8.445 8.5 9.001 8.5H22.999Z"
+              fill="black"
+            />
+          </svg>
+        </div>
+        {items.map((item, i) => (
+          <CartCard item={item} key={i} />
+        ))}
+      </div>
+      {!selectedItem && (
+        <div className="lg:h-{calc(100vh-8rem)}">
+          <div
+            className={clsx(
+              "fixed lg:sticky bottom-[5rem] lg:bottom-0 w-screen p-4 lg:top-[8rem] bg-white rounded-t-2xl border-t border-black/25 lg:border-none lg:p-0 lg:bg-transparent lg:rounded-none lg:w-min",
+              expand ? "block" : "hidden lg:block"
+            )}
+          >
+            <svg
+              width="24"
+              height="12"
+              viewBox="0 0 24 12"
+              fill="none"
+              className={clsx(
+                "flex justify-self-end mb-1 lg:hidden",
+                expand ? "rotate-180" : "-rotate-180"
+              )}
+              onClick={() => setExpand(!expand)}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g clipPath="url(#clip0_1335_19956)">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
+                  fill="black"
+                />
+              </g>
+              <defs>
+                <clipPath id="clip0_1335_19956">
+                  <rect
+                    width="12"
+                    height="24"
+                    fill="white"
+                    transform="matrix(0 -1 1 0 0 12)"
+                  />
+                </clipPath>
+              </defs>
+            </svg>
+
+            <p className=" text-sm text-center pb-4">
+              <span className="font-medium text-base">Order Summary</span>
+              ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
+            </p>
+
+            {/* <div className="flex gap-2">
+              {items
+                .filter((item) => item.selected == true)
+                .map((item, i) => (
+                  <div key={i}>
+                    <div className="size-[4rem] rounded-md overflow-clip object-cover relative bg-gray-400">
+                      <Image
+                        src={item.cover_image!}
+                        alt="product image"
+                        fill
+                        className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                    <p className="text-xs text-black/75 mt-1">
+                      ₦{calcDiscountPrice(item.price, item.discountedPrice!)}{" "}
+                      <span className="text-brand_pink">x{item.quantity}</span>
+                    </p>
+                  </div>
+                ))}
+            </div> */}
+            <div className="flex gap-2 min-h-[5rem] transition-all duration-300">
+              {selectedItems.map((item) => {
+                const isLoaded = loadedImages[item._id];
+
+                return (
+                  <div key={item._id} className="transition-all duration-300">
+                    <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
+
+
+                      {isLoaded && (
+                        <SelectedItemSkeleton />
+                      )}
+
+                      <Image
+                        src={item.cover_image!}
+                        alt="product image"
+                        fill
+                        className={clsx(
+                          "object-cover transition-opacity duration-500",
+                          isLoaded ? "opacity-100" : "opacity-0"
+                        )}
+                        onLoad={() => handleImageLoad(item._id)}
+                      />
+                    </div>
+
+                    <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
+                      ₦{formatPrice(calcDiscountPrice(item.price, item.discountedPrice!))}
+                      <span className="text-brand_pink"> x{item.quantity}</span>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <hr className="mt-4" />
+            <div className="text-sm space-y-6 py-3 ">
+              <div className="flex justify-between items-center">
+                <p>Item(s) total:</p>
+                <p className="font-medium">₦{formatPrice(orderSummary().total)}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p>Item(s) discount:</p>
+                <p className="text-brand_pink">- ₦{formatPrice(orderSummary().discount)}</p>
+              </div>
+            </div>
+            <hr />
+            <div className="mt-2">
+              <div className="text-xs flex justify-between text-black/60">
+                <div></div>
+                <p>Total payable</p>
+              </div>
+              <div className="flex justify-between text-sm items-center">
+                <p>Total:</p>
+                <p className="font-semibold">₦{formatPrice(orderSummary().finalTotal)}</p>
+              </div>
+            </div>
+            <button
+              className="flex gap-1 items-center w-[20rem] justify-center mx-auto mt-4 lg:mb-24 py-2 rounded-full bg-brand_pink text-white"
+              onClick={checkoutHandler}
+            >
+              Checkout
+            </button>
+          </div>
+
+          <div
+            className={clsx(
+              "fixed bottom-[5rem] w-screen p-4 z-50 h-min border-t border-black/25 lg:border-none bg-white rounded-t-2xl",
+              !expand ? "block lg:hidden" : "hidden lg:hidden"
+            )}
+          >
+            <svg
+              width="24"
+              height="12"
+              viewBox="0 0 24 12"
+              fill="none"
+              className="flex justify-self-end mb-1"
+              onClick={() => setExpand(!expand)}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g clipPath="url(#clip0_1335_19956)">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12.7106 1.84306L18.3676 7.50006L16.9536 8.91406L12.0036 3.96406L7.05365 8.91406L5.63965 7.50006L11.2966 1.84306C11.4842 1.65559 11.7385 1.55028 12.0036 1.55028C12.2688 1.55028 12.5231 1.65559 12.7106 1.84306Z"
+                  fill="black"
+                />
+              </g>
+              <defs>
+                <clipPath id="clip0_1335_19956">
+                  <rect
+                    width="12"
+                    height="24"
+                    fill="white"
+                    transform="matrix(0 -1 1 0 0 12)"
+                  />
+                </clipPath>
+              </defs>
+            </svg>
+
+            <div>
+              <p className=" text-sm font-medium pb-4">
+                ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
+              </p>
+              <div className="flex justify-between items-end">
+                <div>
+                  <h3 className="font-medium">₦{formatPrice(orderSummary().total)}</h3>
+                  <p className="text-xs text-brand_pink">
+                    ₦{formatPrice(orderSummary().discount)} discount applied
+                  </p>
+                </div>
+                <button
+                  className="flex gap-1 items-center w-[10rem] justify-center py-2 rounded-full bg-brand_pink text-white"
+                  onClick={checkoutHandler}
+                >
+                  Checkout
+                </button>
+              </div>
+            </div>
+          </div>
+          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+        </div>
+      )}
+    </div>
+  );
+}
