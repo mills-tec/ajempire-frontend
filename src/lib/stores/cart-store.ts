@@ -85,7 +85,6 @@ type CartStore = {
     finalTotal: number;
   };
 
-
   retrySync: () => Promise<void>;
 };
 

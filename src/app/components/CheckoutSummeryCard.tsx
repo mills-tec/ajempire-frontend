@@ -19,7 +19,6 @@ interface SelectedLogistic {
 }
 export default function CheckoutSummeryCard({
   initiateCheckout,
-
 }: CheckoutSummeryCardProps) {
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);

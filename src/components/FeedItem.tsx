@@ -451,7 +451,6 @@ export default function FeedItem({ feeds }: FeedsProps) {
                                         onClick={showPlayTemporarily}
                                         onMouseMove={showPlayTemporarily}
                                         playsInline
-
                                     />
 
                                     <div

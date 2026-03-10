@@ -1,5 +1,4 @@
 import { getData, postData } from "@/api/api";
-import { useAuthStore } from "./stores/auth-store";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
