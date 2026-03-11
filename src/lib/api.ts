@@ -8,6 +8,8 @@ import {
   ProductResponse,
   ProductsResponse,
 } from "./types";
+import { getToken } from "firebase/messaging";
+import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 
 export type Coupon = {
   _id: string;
@@ -465,9 +467,38 @@ export async function getProductsByCategory(
 }
 
 // COUPON API
-export async function getCoupons(): Promise<{ message: Coupon[] } | null> {
+// export async function getCoupons(): Promise<{ message: ICoupon[] } | null> {
+//   try {
+//     const token = getBearerToken()
+//     const res = await fetch(`${API_URL}/coupons`, {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
+
+//     if (!res.ok) {
+//       console.error("Failed to fetch coupons");
+//       return null;
+//     }
+
+//     const data = await res.json();
+//     console.log("Coupons response:", data);
+
+//     return data;
+//   } catch (error) {
+//     console.error("Coupon fetch error:", error);
+//     return null;
+//   }
+// }
+
+export async function getCoupons(type: string): Promise<{ message: ICoupon[] } | null> {
   try {
-    const res = await fetch(`${API_URL}/coupons`);
+    const token = getBearerToken()
+    const res = await fetch(`${API_URL}/coupons/${type}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!res.ok) {
       console.error("Failed to fetch coupons");

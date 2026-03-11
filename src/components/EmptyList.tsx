@@ -3,7 +3,7 @@ import React from 'react'
 
 export default function EmptyList({ message, writeup, Icon, href, btnText }: { message: string, writeup: string, Icon?: React.ReactNode, href?: string, btnText?: string }) {
     return (
-        <div className="h-[70vh] flex flex-col items-center justify-center gap-y-1" >
+        <div className="h-[40vh] flex flex-col items-center justify-center gap-y-1" >
             {Icon && Icon}
             <h1 className='text-center font-poppins text-lg font-semibold'>
                 {message}

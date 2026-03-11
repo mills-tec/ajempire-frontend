@@ -12,9 +12,10 @@ const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function UserUsageChart({ trendData }: UserUsageChartProps) {
 
-    const series = trendData?.map(item => Number(item.percentage.toFixed(0))) || [];
+    const series = trendData?.map(item => Number(item.total.toFixed(0))) || [];
     const labels = trendData?.map(item => item.category) || [];
-    console.log("Series Data:", series);
+
+
     // const chartData = {
     //     series: [25, 25, 25, 25],
 
@@ -135,8 +136,8 @@ export default function UserUsageChart({ trendData }: UserUsageChartProps) {
                                 }}
                             >
                                 <img
-                                    src={categoryImages[item.category] || categoryImages.default}
-                                    className="w-8 h-8"
+                                    src={item.image || categoryImages.default}
+                                    className="w-8 h-8 object-cover rounded-full"
                                 />
                                 <p className="text-[14px] font-medium">
                                     {item.percentage.toFixed(0)}%

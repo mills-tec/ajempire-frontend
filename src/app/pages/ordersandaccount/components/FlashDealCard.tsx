@@ -1,20 +1,11 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ICoupon } from "../coupoonsandoffers/page";
 
-interface Deal {
-    id: string | number;
-    title: string;
-    description?: string;
-    validUntil?: string;
-    status: "unused" | "used" | "expired";
-    code: string;
-    ctaText?: string;
-    discountPercent: number;
-}
 
 type Props = {
-    deals?: Deal[];
+    deals?: ICoupon[];
 };
 
 export default function FlashDealCard({ deals = [] }: Props) {
@@ -34,10 +25,6 @@ export default function FlashDealCard({ deals = [] }: Props) {
         },
     ];
 
-    // const handleGetCode = (dealCode: string) => {
-    //     navigator.clipboard.writeText(dealCode);
-    //     alert(`Coupon code ${dealCode} copied!`);
-    // };
     const handleGetCode = (dealCode: string) => {
         setActiveCode(dealCode);
         setShowModal(true);
@@ -52,7 +39,7 @@ export default function FlashDealCard({ deals = [] }: Props) {
 
                 return (
                     <div
-                        key={coupon.id}
+                        key={index}
                         className={`font-poppins text-[14px] w-full flex items-center justify-between lg:p-5 p-3 rounded-md ${isInactive ? "bg-[#E9E9E9]" : theme.bg
                             }`}
                     >
@@ -112,7 +99,7 @@ export default function FlashDealCard({ deals = [] }: Props) {
                                     }`}
                             >
                                 <p>{coupon.description}</p>
-                                <p>{coupon.validUntil}</p>
+                                <p>Valid Until: {new Date(coupon.expiry).toLocaleDateString("en-us", { dateStyle: "full" })}</p>
                             </div>
 
                             {/* Buttons */}
@@ -148,7 +135,11 @@ export default function FlashDealCard({ deals = [] }: Props) {
                                 className={`${isInactive ? "text-[#737373]" : theme.text
                                     } lg:text-[50px] text-[35px] font-semibold flex items-center justify-end gap-2`}
                             >
-                                {coupon.discountPercent}%{" "}
+                                {coupon.discountType === "fixed" ?
+                                    Number(coupon.discountValue).toLocaleString("en-NG", { style: "currency", currency: "NGN" })
+                                    :
+                                    coupon.discountValue + "%"
+                                }
                                 <span className="lg:text-[30px] text-[15px] font-normal">
                                     off
                                 </span>

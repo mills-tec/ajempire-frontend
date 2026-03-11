@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
 import { useRouter } from "next/navigation";
 import CountdownTimer from "@/components/CountDownTimer";
+import { formatPrice } from "../pages/cart/page";
 
 function CartCard({ item }: { item: CartItem }) {
   const {
@@ -93,7 +94,7 @@ function CartCard({ item }: { item: CartItem }) {
                     </>
                   ) : (
                     <p className="text-brand_pink">
-                      ₦{item.price}
+                      {formatPrice(item.price)}
                     </p>
                   )
                 }
