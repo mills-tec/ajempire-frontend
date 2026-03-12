@@ -41,6 +41,8 @@ export const UseAgeComponent = () => {
   }, [])
 
   if (loading) return <UsageSkeleton />;
+
+  console.log(usageData)
   return (
     <div className='w-full lg:relative lg:flex-row lg:gap-0 flex flex-col gap-10'>
       <div className='w-full font-poppins flex flex-col gap-16 lg:flex-row justify-around '>
