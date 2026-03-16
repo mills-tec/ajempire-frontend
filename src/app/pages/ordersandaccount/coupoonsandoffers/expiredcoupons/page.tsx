@@ -3,45 +3,50 @@
 import { mapCouponToDeal } from "@/lib/couponMapper";
 import CouponsTab from "../../components/CouponsTab";
 import FlashDealCard from "../../components/FlashDealCard";
-import { getCoupons } from "@/lib/api";
+import { Coupon, getCoupons } from "@/lib/api";
 import { useEffect, useState } from "react";
-type Deal = {
-    id: string | number;
-    title: string;
-    description?: string;
-    discountPercent: number;
-    validUntil?: string;
-    code: string;
-    ctaText?: string;
-    status: "unused" | "used" | "expired";
-};
+import { ICoupon } from "../page";
+import FlashDealSkeleton from "@/components/FlashDealSkeleton";
+import EmptyList from "@/components/EmptyList";
+import { Store } from "lucide-react";
+
 
 export default function ExpiredCoupons() {
-    const [deals, setDeals] = useState<Deal[]>([])
+    const [deals, setDeals] = useState<ICoupon[]>([])
+    const [loading, setLoading] = useState<boolean>(true);
     useEffect(() => {
         const fetchCoupons = async () => {
-            const res = await getCoupons();
-            if (!res) return;
+            try {
+                const res = await getCoupons("expired");
+                if (!res) return;
 
-            const allDeals = res.message.map(mapCouponToDeal);
 
-            // UNUSED = not expired
-            const unusedDeals = allDeals.filter(
-                (deal) => deal.status === "expired"
-            );
+                setDeals(res.message.map(item => ({ ...item, status: "expired" })))
 
-            setDeals(unusedDeals);
+            } catch (err) {
+
+            } finally {
+                setLoading(false)
+            }
         };
 
         fetchCoupons();
     }, []);
-    console.log(deals, "deals");
+
     return (
         <div className="w-full px-6  lg:block  font-poppins">
             <CouponsTab />
             <div className="mt-11 text-[15px] flex flex-col gap-4">
-                <p>Your Expired Coupons will appear here</p>
-                <FlashDealCard deals={deals} />
+
+                {loading ?
+                    <>
+
+                        <FlashDealSkeleton />   </> : <>
+
+                        {deals.length > 0 ? <>   <p>Your Expired Coupons will appear here</p>
+                            <FlashDealCard deals={deals} /> </> : <EmptyList message="No expired coupons" writeup="There are currently no coupons that have passed their expiration date." Icon={<Store size={40} className="text-brand_solid_gradient" />} />}
+
+                    </>}
             </div>
         </div>
     )

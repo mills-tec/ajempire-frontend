@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import CartPopupProductDescription from "./CartPopupProductDescription";
 import { useCartStore } from "@/lib/stores/cart-store";
 import Link from "next/link";
+import OptimizedImage from "./OptimizedImage";
 
 export default function CartPopup() {
   const { selectedItem, items } = useCartStore();
@@ -11,34 +12,27 @@ export default function CartPopup() {
   const cartRef = useRef<HTMLAnchorElement>(null);
 
   // local state for animation
-  const [isVisible, setIsVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // whenever selectedItem changes, trigger animation
   useEffect(() => {
     if (selectedItem) {
-      setIsVisible(true); // fade in
+      setSelectedImage(selectedItem.cover_image || null);
+
       document.body.style.overflow = "hidden";
     } else {
       // fade out first
-      setIsVisible(false);
       document.body.style.overflow = "auto";
     }
   }, [selectedItem]);
 
 
 
-  // 2️⃣ debug effect — MUST be before return
-  useEffect(() => {
-    if (selectedItem) {
-      console.log("🧠 CartPopup sees selectedItem:", selectedItem);
-    }
-  }, [selectedItem]);
 
   // 3️⃣ conditional render AFTER hooks
   if (!selectedItem) return null
 
-  console.log("🧠 selectedItem:", selectedItem);
-  console.log("🧠 items:", items);
+
 
 
 
@@ -54,9 +48,6 @@ export default function CartPopup() {
     >
       <div
         className="w-full shadow-2xl relative lg:w-[40rem] lg:pb-0 z-50 rounded-t-2xl bg-white h-min max-h-[70vh] lg:max-h-[80vh] lg:rounded-2xl lg:top-[10%] overflow-clip overscroll-contain overflow-y-auto"
-        // onWheel={(e) => e.stopPropagation()}
-        // onTouchMove={(e) => e.stopPropagation()}
-        // onClick={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
@@ -127,27 +118,18 @@ export default function CartPopup() {
           <div key={selectedItem._id}>
             <div className="space-y-4 p-4  flex gap-3 items-end ">
               <div className="relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip">
-                <Image
-                  src={selectedItem.cover_image || selectedItem.images?.[0] || "/placeholder.png"}
-                  alt="product image"
-                  fill
-                  className="absolute object-cover"
-                />
+                <OptimizedImage src={selectedImage!} alt="product image" />
 
               </div>
-              {Array.isArray(selectedItem.images) && (
+              {Array.isArray([selectedItem.images]) && (
                 <div className="flex gap-2 lg:gap-5">
-                  {selectedItem.images?.filter(Boolean).map((image, index) => (
+                  {[...selectedItem.images!, selectedItem.cover_image]?.filter(Boolean).map((image, index) => (
                     <div
                       key={index}
-                      className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
+                      className={`w-[51px] h-[38px] lg:w-[71px] object-cover cursor-pointer lg:h-[58px] overflow-clip relative   rounded-xl `}
+                      onClick={() => { setSelectedImage(image!) }}
                     >
-                      <Image
-                        src={image}
-                        alt="product image"
-                        fill
-                        className="absolute object-cover"
-                      />
+                      {image && <OptimizedImage src={image} alt="product image" />}
                     </div>
                   ))}
                 </div>

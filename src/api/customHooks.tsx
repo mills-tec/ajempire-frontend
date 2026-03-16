@@ -3,12 +3,11 @@ import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-
+import { getBearerToken } from "@/lib/api";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 
 let config = {};
-
-const token =
-  typeof window !== "undefined" ? JSON.parse(localStorage.getItem("ajempire_signin_user")!).token : null;
+const token = getBearerToken();
 if (token) {
   config = {
     headers: {
@@ -16,14 +15,11 @@ if (token) {
     },
   };
 }
+
 export const useOrders = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
+
   const getAllOrders = async () => {
     setIsLoading(true);
     try {
@@ -252,7 +248,7 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=4`, config);
+        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=${ITEMS_TO_APPEND}`, config);
         return req.data.message;
       } catch (err: unknown) {
         let message;
@@ -476,4 +472,72 @@ export const useExploreInterest = () => {
   }
 
   return { loading, getExploreInterest, addProductToBrowsingHistory }
+}
+
+export const useBrowsingHistory = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [uiLoading, setUILoading] = useState<boolean>(true);
+
+  const getBrowsingHistory = async (cursor: string, limit: number) => {
+    if (!loading) {
+      setUILoading(true);
+      try {
+        const req = await getData(`/browsing-history?limit=${limit}&cursor=${cursor}`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setUILoading(false);
+      }
+    }
+  }
+
+  const deleteBrowsingHistory = async (ids: string[]) => {
+
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await deleteData(`/browsing-history?ids=${ids}`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  const clearBrowsingHistory = async () => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await deleteData(`/browsing-history`, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  return { loading, getBrowsingHistory, uiLoading, deleteBrowsingHistory, clearBrowsingHistory }
 }

@@ -62,7 +62,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
       if (res?.message) {
         res.message.token ? setIsLoggedIn(true) : setIsLoggedIn(false);
-        setUser({ email: res.message.user.email, name: "" });
+        setUser({ email: res.message.user.email, name: res.message.user.fullname, id: res.message.user._id });
         localStorage.setItem(
           "ajempire_signin_user",
           JSON.stringify(res.message)
@@ -148,12 +148,12 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
           <div className="bg-white">
             <button
               className={`w-full !rounded-full text-base py-2 text-white hover:!text-white ${isLoading ||
-                  errors.email ||
-                  errors.password ||
-                  form.email.trim().length == 0 ||
-                  form.password.trim().length == 0
-                  ? "!bg-brand_gradient_light"
-                  : "!bg-brand_pink"
+                errors.email ||
+                errors.password ||
+                form.email.trim().length == 0 ||
+                form.password.trim().length == 0
+                ? "!bg-brand_gradient_light"
+                : "!bg-brand_pink"
                 }`}
               type="submit"
               disabled={

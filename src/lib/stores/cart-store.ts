@@ -44,7 +44,7 @@ type CartStore = {
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
   addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void; 
+  removeItem: (id: string) => void;
   removePurchasedItems: (ids: string[]) => void;
   resetSelectedItem: () => void;
   clearCart: () => void;
@@ -67,9 +67,9 @@ type CartStore = {
   clearRequestToken: () => void;
 
   /* COUPON */
-appliedCoupon: AppliedCoupon | null;
-applyCoupon: (coupon: AppliedCoupon) => void;
-removeCoupon: () => void;
+  appliedCoupon: AppliedCoupon | null;
+  applyCoupon: (coupon: AppliedCoupon) => void;
+  removeCoupon: () => void;
 
 
   /* CHECKOUT FLOW */
@@ -85,7 +85,6 @@ removeCoupon: () => void;
     finalTotal: number;
   };
 
-  
   retrySync: () => Promise<void>;
 };
 
@@ -106,11 +105,11 @@ export const useCartStore = create<CartStore>()(
       requestToken: null,
 
       /* COUPON */
-appliedCoupon: null,
+      appliedCoupon: null,
 
-applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
+      applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
-removeCoupon: () => set({ appliedCoupon: null }),
+      removeCoupon: () => set({ appliedCoupon: null }),
 
 
       /* CHECKOUT FLOW */
@@ -266,10 +265,10 @@ removeCoupon: () => set({ appliedCoupon: null }),
         }
       },
       removePurchasedItems: (ids: string[]) => {
-  set({
-    items: get().items.filter((item) => !ids.includes(item._id)),
-  });
-},
+        set({
+          items: get().items.filter((item) => !ids.includes(item._id)),
+        });
+      },
 
       clearCart: () =>
         set({
@@ -304,22 +303,22 @@ removeCoupon: () => set({ appliedCoupon: null }),
         );
 
         // const coupon = 0;
-      const appliedCoupon = get().appliedCoupon;
-let coupon = 0;
+        const appliedCoupon = get().appliedCoupon;
+        let coupon = 0;
 
-if (appliedCoupon) {
-  const discountedSubtotal = total - discount;
+        if (appliedCoupon) {
+          const discountedSubtotal = total - discount;
 
-  if (appliedCoupon.type === "percent") {
-    coupon = Math.round(
-      (appliedCoupon.value / 100) * discountedSubtotal
-    );
-  }
+          if (appliedCoupon.type === "percent") {
+            coupon = Math.round(
+              (appliedCoupon.value / 100) * discountedSubtotal
+            );
+          }
 
-  if (appliedCoupon.type === "fixed") {
-    coupon = Math.min(appliedCoupon.value, discountedSubtotal);
-  }
-}
+          if (appliedCoupon.type === "fixed") {
+            coupon = Math.min(appliedCoupon.value, discountedSubtotal);
+          }
+        }
 
 
 

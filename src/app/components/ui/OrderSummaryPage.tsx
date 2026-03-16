@@ -21,60 +21,60 @@ export default function OrderSummaryPage() {
   }, []);
 
   useEffect(() => { });
-  const syncCartToBackend = async () => {
-    const token = getBearerToken();
-    if (!token) return;
+  // const syncCartToBackend = async () => {
+  //   const token = getBearerToken();
+  //   if (!token) return;
 
-    const selectedItems = getSelectedItems();
+  //   const selectedItems = getSelectedItems();
 
-    if (!selectedItems || selectedItems.length === 0) {
-      toast.error("No selected items to sync for testing.");
-      return;
-    }
+  //   if (!selectedItems || selectedItems.length === 0) {
+  //     toast.error("No selected items to sync for testing.");
+  //     return;
+  //   }
 
 
-    try {
-      await axios.delete(
-        "https://ajempire-backend.vercel.app/api/cart/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          data: {
-            // Map to backend format
-            items: selectedItems.map(item => ({
-              productId: item._id,
-              qty: item.quantity,
-            })),
-          },
-        }
-      );
+  //   try {
+  //     // await axios.delete(
+  //     //   "https://ajempire-backend.vercel.app/api/cart/",
+  //     //   {
+  //     //     headers: {
+  //     //       Authorization: `Bearer ${token}`,
+  //     //       "Content-Type": "application/json",
+  //     //     },
+  //     //     data: {
+  //     //       // Map to backend format
+  //     //       items: selectedItems.map(item => ({
+  //     //         productId: item._id,
+  //     //         qty: item.quantity,
+  //     //       })),
+  //     //     },
+  //     //   }
+  //     // );
 
-      // Optionally, you can also POST items to cart if DELETE clears it first
-      await axios.post(
-        "https://ajempire-backend.vercel.app/api/cart/",
-        {
-          items: selectedItems.map(item => ({
-            productId: item._id,
-            qty: item.quantity,
-          })),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  //     // Optionally, you can also POST items to cart if DELETE clears it first
+  //     // await axios.post(
+  //     //   "https://ajempire-backend.vercel.app/api/cart/",
+  //     //   {
+  //     //     items: selectedItems.map(item => ({
+  //     //       productId: item._id,
+  //     //       qty: item.quantity,
+  //     //     })),
+  //     //   },
+  //     //   {
+  //     //     headers: {
+  //     //       Authorization: `Bearer ${token}`,
+  //     //       "Content-Type": "application/json",
+  //     //     },
+  //     //   }
+  //     // );
 
-      toast.success("Cart synced to backend for testing!");
-    } catch (error) {
-      console.error("Error syncing cart:", error);
-      toast.error("Failed to sync cart for testing.");
-    }
-  };
-  const initiateCheckout = async () => {
+  //     toast.success("Cart synced to backend for testing!");
+  //   } catch (error) {
+  //     console.error("Error syncing cart:", error);
+  //     toast.error("Failed to sync cart for testing.");
+  //   }
+  // };
+  const initiateCheckout = async (couponCode: string) => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
@@ -110,7 +110,7 @@ export default function OrderSummaryPage() {
     }
 
     // For testing: sync cart to backend
-    await syncCartToBackend();
+    // await syncCartToBackend();
 
     try {
       const response = await axios.post(
@@ -122,6 +122,7 @@ export default function OrderSummaryPage() {
             courier_id: selectedLogistic.courier_id,
             service_code: selectedLogistic.courier_id,
           },
+          couponCode
         },
         {
           headers: {
@@ -276,7 +277,7 @@ export default function OrderSummaryPage() {
       </p>
       <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <GetshippingAddress />
-        <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
+        <CheckoutSummeryCard initiateCheckout={(couponCode: string) => initiateCheckout(couponCode)} />
       </div>
     </div>
   );

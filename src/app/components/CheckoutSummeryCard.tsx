@@ -1,14 +1,15 @@
 "use client";
-import { getBearerToken, getCoupons } from "@/lib/api";
+import { applyCouponCode, getBearerToken, getCoupons } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
 import ListOfLogistics from "./ui/ListOfLogistics";
 import { toast } from "sonner";
+import { postData } from "@/api/api";
 
 interface CheckoutSummeryCardProps {
-  initiateCheckout: () => void;
+  initiateCheckout: (couponCode: string) => void;
 }
 interface SelectedLogistic {
   courier_id: string;
@@ -57,7 +58,7 @@ export default function CheckoutSummeryCard({
   }, []);
 
   const handleApplyCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
+    const code = couponCode;
 
     if (code === "") {
       toast.error("Please enter a coupon code", { position: "top-right" });
@@ -67,54 +68,32 @@ export default function CheckoutSummeryCard({
     setLoadingCoupon(true);
 
     try {
-      const res = await getCoupons();
-      if (!res?.message) throw new Error("No coupons");
+      const token = getBearerToken();
+      const res = await postData(`/coupon/apply`, { code }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      const coupon = res.message.find(
-        (c: any) => c.code.toUpperCase() === code
-      );
-
-      if (!coupon) {
-        toast.error("Invalid coupon code", { position: "top-right" });
-        removeCoupon();
-        return;
-      }
-
-      // expiry check
-      if (coupon.isExpired === true) {
-        toast.error("Coupon has expired", { position: "top-right" });
-        return;
-      }
-
-      // used check
-      if (coupon.users?.length > 0) {
-        toast.error("Coupon already used", { position: "top-right" });
-
-        return;
-      }
-
-      console.log("Entered coupon code:", code);
-      console.log("Coupon found:", coupon);
+      const coupon = res.data.coupon;
 
       applyCoupon({
         code: coupon.code,
         type: coupon.discountType,
         value: coupon.discountValue,
       });
-      console.log("Coupon applied to store:", {
-        code: coupon.code,
-        type: coupon.discountType,
-        value: coupon.discountValue,
-        users: coupon.users,
-      });
+
+
       toast.success("Coupon applied successfully", { position: "top-right" });
 
-      setCouponCode("");
+      // setCouponCode("");
+
+
     }
 
-    catch (err) {
-      console.error(err);
-      toast.error("Failed to apply coupon", { position: "top-right" });
+    catch (err: any) {
+      console.error(err.response.data);
+      toast.error(err.response.data.error, { position: "top-right" });
     }
     finally {
       setLoadingCoupon(false);
@@ -203,7 +182,9 @@ export default function CheckoutSummeryCard({
 
       <button
         className="w-full text-center mt-4 bg-primaryhover text-white h-[35px] rounded-full"
-        onClick={initiateCheckout}
+        onClick={() => {
+          initiateCheckout(couponCode)
+        }}
       >
         Checkout
       </button>

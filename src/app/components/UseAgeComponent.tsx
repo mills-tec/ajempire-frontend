@@ -29,7 +29,6 @@ export const UseAgeComponent = () => {
         if (res.data.message.stats) {
 
           setUsageData(res.data.message.stats);
-          console.log("Fetched usage data:", res.data.message.stats);
         }
       } catch (err) {
         console.error("Error fetching usage data:", err);
@@ -43,6 +42,7 @@ export const UseAgeComponent = () => {
 
   if (loading) return <UsageSkeleton />;
 
+  console.log(usageData)
   return (
     <div className='w-full lg:relative lg:flex-row lg:gap-0 flex flex-col gap-10'>
       <div className='w-full font-poppins flex flex-col gap-16 lg:flex-row justify-around '>
@@ -61,14 +61,14 @@ export const UseAgeComponent = () => {
                   </div>
                   <p className='text-primaryhover text-[30px]'>{usageData.ordersThisMonth}</p>
                 </div>
-                <div className='font-poppins bg-brand_light_pink w-[120px] h-[110px] flex flex-col items-center pt-3 gap-2 rounded-sm'>
+                <div className='font-poppins bg-brand_light_pink w-fit px-5 h-[110px] flex flex-col items-center pt-3 gap-2 rounded-sm'>
                   <div className='text-center opacity-60'>
                     <p className='text-[14px]'>Total Spent </p>
                     <p className='text-[14px]'>this month</p>
                   </div>
-                  <p className='text-primaryhover text-[30px]'>{usageData.totalSpentThisMonth}</p>
+                  <p className='text-primaryhover text-[30px]'>{Number(usageData.totalSpentThisMonth).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}</p>
                 </div>
-                <div className='font-poppins bg-brand_light_pink w-[120px] h-[110px] flex flex-col items-center pt-3 gap-2 rounded-sm'>
+                <div className='font-poppins bg-brand_light_pink w-[120px] h-[110px] flex flex-col items-center  pt-3 gap-2 rounded-sm'>
                   <p className='text-center opacity-60 text-[14px]'>Coupons</p>
                   <p className='text-primaryhover text-[30px]'>{usageData.totalCoupons}</p>
                 </div>

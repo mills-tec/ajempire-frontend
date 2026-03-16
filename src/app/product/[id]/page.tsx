@@ -16,6 +16,7 @@ import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import RelatedProducts from "@/components/RelatedProducts";
 
 
 
@@ -105,7 +106,7 @@ export default function ProductDetailPage() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
-
+  const [videoLoaded, setMediaLoaded] = useState<string[]>([]);
   const handleVideoPlay = (id: string) => {
     setPlayingMap((prev) => ({
       ...prev,
@@ -161,6 +162,16 @@ export default function ProductDetailPage() {
       </p>
     );
 
+  const preLoadFunc = (): boolean => {
+    const media = [
+      ...(item.images ?? []),      // If images is undefined, use empty array
+      ...(item.cover_image ? [item.cover_image] : []),  // Only add if it exists
+      ...(item.video ? [item.video] : []),              // Only add if it exists
+    ];
+
+    return media.length === videoLoaded.length;
+
+  }
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -186,17 +197,17 @@ export default function ProductDetailPage() {
         <div className="lg:flex lg:space-x-20">
           <div className="lg:w-1/2 h-full space-y-8">
             <div className="space-y-4">
-              <div className="relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip">
+              <div className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}>
                 {
                   currentCoverItem.type === "image" ? (
                     <Image
                       src={currentCoverItem.src || ""}
                       alt="product image"
                       fill
-                      className="absolute object-cover"
+                      className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                     />
                   ) : (
-                    <div className="absolute w-full h-full">
+                    <div className={`absolute w-full h-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}>
 
 
                       <VideoPlayer
@@ -220,7 +231,7 @@ export default function ProductDetailPage() {
                   {[...item.images!, item.cover_image!].map((image, key) => (
                     <div
                       key={key}
-                      className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                      className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
                       onClick={() => {
                         setCurrentCoverItem({
                           src: image,
@@ -232,14 +243,18 @@ export default function ProductDetailPage() {
                         src={image}
                         alt="product image"
                         fill
-                        className="absolute object-cover"
+                        className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                        onLoad={() => {
+                          setMediaLoaded((prev) => prev.find(it => it == image) ? [...prev] : [...prev, image]);
+
+                        }}
                       />
                     </div>
                   ))}
 
                   {item.video && (
                     <div
-                      className="size-[3rem] lg:size-[6rem] overflow-clip relative bg-gray-400 rounded-xl cursor-pointer"
+                      className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
                       onClick={() => {
                         setCurrentCoverItem({
                           src: item.video!,
@@ -248,9 +263,11 @@ export default function ProductDetailPage() {
                       }}
                     >
                       <video
+
+                        preload="metadata"
                         ref={setVideoRef}
                         src={item.video}
-                        className="absolute object-cover h-full w-full"
+                        className={`absolute object-cover h-full w-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                         onLoadedMetadata={(e) => {
                           e.currentTarget.currentTime = 0; // start at 3 seconds
                         }}
@@ -261,6 +278,11 @@ export default function ProductDetailPage() {
                         onMouseLeave={() => {
                           videoRef?.pause();
                         }}
+                        onLoadedData={() => {
+
+                          setMediaLoaded((prev) => [...prev, item.video!]);
+                        }}
+                        playsInline
                       />
                     </div>
                   )}
@@ -382,13 +404,7 @@ export default function ProductDetailPage() {
           item.relatedProducts!.length > 0 && (
             <div className="font-poppins py-10 space-y-5">
               <h1 className="text-2xl">Related Products</h1>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
-                {
-                  item.relatedProducts!.map((product, key) => (
-                    <ProductItem index={key} product={product} />
-                  ))
-                }
-              </div>
+              <RelatedProducts category={item.category?._id!} />
 
             </div>
           )

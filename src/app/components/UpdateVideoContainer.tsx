@@ -116,6 +116,7 @@ export default function UpdateVideoContainer() {
                   loop
                   muted
                   playsInline
+                  preload="none"
                   onClick={(e) => {
                     const video = e.currentTarget;
                     if (video.paused) {
