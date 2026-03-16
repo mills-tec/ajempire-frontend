@@ -9,6 +9,7 @@ import AuthWrapper from "../auth-component/AuthWrapper";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useSearchStore } from "@/lib/search-store";
 import { useRef } from "react";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 type NavResponsiveProps = {
   isLoggedIn: boolean;
@@ -25,13 +26,15 @@ const NavResponsive = ({
   const { items } = useCartStore();
   const { clearSearch } = useSearchStore();
   const cartRef = useRef<HTMLAnchorElement>(null);
+  const openModal = useModalStore((s) => s.openModal);
+  const clickzome = "transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
   return (
     <div className="w-full h-[70px]  text-[11px] font-poppins flex items-center">
       <ul className="w-full  flex items-center  justify-between ">
         <li>
           <Link
             href="/"
-            className={` ${isActive("/")} flex flex-col items-center`}
+            className={` ${clickzome} ${isActive("/")} flex flex-col items-center `}
             onClick={clearSearch}
           >
             <HomeIcon size={30} className="opacity-80" />
@@ -42,7 +45,7 @@ const NavResponsive = ({
         <li>
           <Link
             href={"/categories"}
-            className={` ${isActive(
+            className={` ${clickzome} ${isActive(
               "/categories"
             )} flex flex-col items-center`}
           >
@@ -54,7 +57,7 @@ const NavResponsive = ({
           {isActive("/pages/update/all") ? (
             <Link
               href="/pages/update/all"
-              className={`flex flex-col items-center ${isActive(
+              className={`${clickzome} flex flex-col items-center ${isActive(
                 "/pages/update/all"
               )}`}
             >
@@ -67,7 +70,7 @@ const NavResponsive = ({
             </Link>
           ) : (
             <div
-              className={` w-[40px] h-[40px] flex items-center justify-center rounded-sm  bg-brand_gradient_light opacity-0
+              className={` ${clickzome} w-[40px] h-[40px] flex items-center justify-center rounded-sm  bg-brand_gradient_light opacity-0
                                     }`}
             >
               <CustomImgLogo size={30} />
@@ -78,7 +81,7 @@ const NavResponsive = ({
         <li>
           <Link
             href={"/pages/cart"}
-            className={` ${isActive(
+            className={`${clickzome} ${isActive(
               "/pages/cart"
             )} flex relative flex-col items-center`}
           >
@@ -95,7 +98,7 @@ const NavResponsive = ({
           {isLoggedIn ? (
             <Link
               href={"/pages/ordersandaccount"}
-              className={` ${isActive(
+              className={`${clickzome} ${isActive(
                 "/pages/ordersandaccount"
               )} flex flex-col items-center`}
             >
@@ -105,13 +108,13 @@ const NavResponsive = ({
           ) : (
             <button
               className="flex flex-col items-center opacity-80"
-              onClick={() => setShowIntro(true)}
+              onClick={() => openModal("authwrapper")}
             >
               <UserIcon className="w-6" />
               <p className="mt-[-2px]">profile</p>
             </button>
           )}
-          {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />}
+          {/* {showIntro && <AuthWrapper onClose={() => setShowIntro(false)} />} */}
         </li>
       </ul>
     </div>

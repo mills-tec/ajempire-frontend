@@ -27,25 +27,6 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     const closeModal = useModalStore((s) => s.closeModal);
 
 
-
-    // const goToNextStep = () => {
-    //     setCheckoutStep(
-    //         checkoutStep === CheckoutStep.ADDRESS_FORM
-    //             ? CheckoutStep.PAYMENT_METHOD
-    //             : checkoutStep === CheckoutStep.PAYMENT_METHOD
-    //                 ? CheckoutStep.LOGISTICS
-    //                 : CheckoutStep.ORDER_SUMMARY
-    //     );
-    // };
-
-    // const goToPreviousStep = () => {
-    //     setCheckoutStep(
-    //         checkoutStep === CheckoutStep.LOGISTICS
-    //             ? CheckoutStep.PAYMENT_METHOD
-    //             : CheckoutStep.ADDRESS_FORM
-    //     );
-    // };
-
     const steps = [
         CheckoutStep.ADDRESS_FORM,
         CheckoutStep.PAYMENT_METHOD,
@@ -53,10 +34,6 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
         CheckoutStep.ORDER_SUMMARY,
     ];
 
-    // const goToNextStep = () => {
-    //     const i = steps.indexOf(checkoutStep);
-    //     setCheckoutStep(steps[i + 1]);
-    // };
     const goToNextStep = () => {
         const i = steps.indexOf(checkoutStep);
         if (i < steps.length - 1) {
@@ -64,10 +41,6 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
         }
     };
 
-    // const goToPreviousStep = () => {
-    //     const i = steps.indexOf(checkoutStep);
-    //     setCheckoutStep(steps[i - 1]);
-    // };
     const goToPreviousStep = () => {
         const i = steps.indexOf(checkoutStep);
         if (i > 0) {

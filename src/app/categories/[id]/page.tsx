@@ -146,6 +146,7 @@ export default function CategoryPage() {
                                         }
                                     }
                                     key={index}
+                                    className="w-full"
 
                                 >
                                     <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
@@ -165,7 +166,7 @@ export default function CategoryPage() {
 
                                             {/* Text */}
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-sm font-medium leading-tight truncate w-full">{product.name.length > 13 ? product.name.substring(0, 13) + '...' : product.name}</p>
+                                                <p className="text-sm font-medium leading-tight truncate w-full">{product.name.length > 10 ? product.name.substring(0, 10) + '...' : product.name}</p>
 
                                                 <p className="text-[0.65rem] text-brand_purple">
                                                     Only {product.stock} left

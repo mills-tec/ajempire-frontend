@@ -92,9 +92,14 @@ export default function CartPopupProductDescription({
     }
   }, [quantity]);
 
+  // const variant_set = new Set<string>();
+
+  // for (const variant of item?.variants!) {
+  //   variant_set.add(variant.name);
+  // }
   const variant_set = new Set<string>();
 
-  for (const variant of item?.variants!) {
+  for (const variant of item?.variants ?? []) {
     variant_set.add(variant.name);
   }
 
@@ -117,12 +122,14 @@ export default function CartPopupProductDescription({
   //   item?.selectedVariants,
   //   items
   // );
-  let size_variant =
-    item.variants!.length > 0 &&
-    item.variants!.filter((item) => item.name == "size" && item.stock > 0);
-  let color_variant =
-    item.variants!.length > 0 &&
-    item.variants!.filter((item) => item.name == "color" && item.stock > 0);
+  // let size_variant =
+  //   item.variants!.length > 0 &&
+  //   item.variants!.filter((item) => item.name == "size" && item.stock > 0);
+  // let color_variant =
+  //   item.variants!.length > 0 &&
+  //   item.variants!.filter((item) => item.name == "color" && item.stock > 0);
+
+
 
   const filledStar = (
     <svg

@@ -1,17 +1,20 @@
 "use client";
 
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function logout(router: any) {
-  const queryClient = useQueryClient();
-  // clear storage
-  localStorage.clear();
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("auth-storage");
+    localStorage.removeItem("ajempire_signin_user");
+  }
 
-  // update auth store
-  useAuthStore.getState().setIsLoggedIn(false);
-// ✅ real instance
-    queryClient.clear();
-  // navigate AFTER state settles
+  const { setIsLoggedIn } = useAuthStore.getState(); // ✅ correct way outside component
+
+  setIsLoggedIn(false);
+
   router.push("/");
+
+  toast.success("Signout successful", { position: "top-right" });
 }

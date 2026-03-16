@@ -8,6 +8,7 @@ import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useModalStore } from "@/lib/stores/modal-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
 
@@ -27,12 +28,11 @@ export default function CartPage() {
   } = useCartStore();
 
   const [expand, setExpand] = useState(false);
-  const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const selectedItems = items.filter(item => item.selected);
   const selectedCount = selectedItems.length;
-
+  const openModal = useModalStore((s) => s.openModal);
   const checkoutHandler = () => {
     const token = getBearerToken();
     const seletedItem = items.filter((item) => item.selected);
@@ -41,8 +41,9 @@ export default function CartPage() {
       toast.error("Please log in to checkout", { position: "top-right" });
       setIsLoading(false);
       setTimeout(() => {
-        setSingin(true);
+        openModal("authwrapper");
       }, 500);
+      return;
     }
     if (items.length === 0) {
       toast.error("Your cart is empty", { position: "top-right" });
@@ -55,8 +56,7 @@ export default function CartPage() {
       return;
     }
     if (token && seletedItem.length > 0 && items.length > 0) {
-      setIsAdress(true);
-      setSingin(false);
+      openModal("checkout");
       setIsLoading(true);
     }
     setTimeout(() => {
@@ -358,7 +358,7 @@ export default function CartPage() {
               </div>
             </div>
           </div>
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
+
         </div>
       )}
     </div>

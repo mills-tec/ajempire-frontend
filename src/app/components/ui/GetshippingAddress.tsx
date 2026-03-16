@@ -3,6 +3,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import ShippingAdressForm from "../ShippingAdressForm";
 import { getBearerToken } from "@/lib/api";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 interface Address {
   fullName: string;
@@ -19,6 +20,7 @@ const GetshippingAddress = () => {
   const [address, setAddress] = useState<Address | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const closeModal = useModalStore((s) => s.closeModal);
   const fetchAddress = async () => {
     const token = getBearerToken();
     try {
@@ -71,9 +73,9 @@ const GetshippingAddress = () => {
               <div>
                 {/* Render your ShippingAdressForm component here */}
                 <ShippingAdressForm
-                  setIsadress={setIsEditing} // lets form close itself
                   existingAddress={address || undefined} // prefill with current info
                   onAddressUpdated={fetchAddress}
+                  onClose={() => setIsEditing(false)}
                 />
               </div>
             )}

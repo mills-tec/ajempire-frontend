@@ -12,15 +12,18 @@ import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
+
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
+  console.log("selected logistic in order summary:", selectedLogistic?.delivery_eta);
+
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => { });
+
   const syncCartToBackend = async () => {
     const token = getBearerToken();
     if (!token) return;
@@ -275,7 +278,28 @@ export default function OrderSummaryPage() {
         Please Confirm and submit your order
       </p>
       <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
-        <GetshippingAddress />
+        <div className="w-full">
+          <GetshippingAddress />
+          <div className="mt-4 lg:block hidden">
+            <p className="text-lg font-semibold">Delivery details</p>
+            <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
+              <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
+              <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
+                <span className="text-brand_solid_gradient">
+                  {selectedLogistic?.delivery_eta_time &&
+                    new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      }
+                    )}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
         <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
       </div>
     </div>

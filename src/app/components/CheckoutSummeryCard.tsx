@@ -15,7 +15,8 @@ interface SelectedLogistic {
   courier_name: string;
   total: number;
   delivery_eta: string;
-}
+  delivery_eta_time: string;
+};
 export default function CheckoutSummeryCard({
   initiateCheckout,
 }: CheckoutSummeryCardProps) {
@@ -27,33 +28,12 @@ export default function CheckoutSummeryCard({
     useCartStore();
   const [couponCode, setCouponCode] = useState("");
   const [loadingCoupon, setLoadingCoupon] = useState(false);
+  const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
 
 
   useEffect(() => {
     setMounted(true);
-    // const fetchTotal = async () => {
-    //   const token = getBearerToken();
-    //   if (!token) return;
-    //   try {
-    //     const res = await axios.get(
-    //       "https://ajempire-backend.vercel.app/api/cart/",
-    //       {
-    //         headers: { Authorization: `Bearer ${token}` },
-    //       }
-    //     );
-    //     if (res?.data?.message) {
-    //       setTotals({
-    //         subtotal: res.data.message.total,
-    //         discount: res.data.message.discountedPrice,
-    //         total: res.data.message.totalPrice,
-    //       });
-    //     }
-    //   } catch (err) {
-    //     console.error("Error fetching totals:", err);
-    //   }
-    // };
 
-    // fetchTotal();
   }, []);
 
   const handleApplyCoupon = async () => {
@@ -140,6 +120,26 @@ export default function CheckoutSummeryCard({
       <p className="font-medium text-[17px]">Your Order</p>
       <div className="w-full">
         <ListOfLogistics />
+      </div>
+
+      <div className="mt-4 lg:hidden w-full">
+        <p className="text-lg font-semibold">Delivery details</p>
+        <div className="mt-2 p-4 border w-full text-[14px] text-gray-600 border-gray-200 rounded-md">
+          <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
+          <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
+            <span className="text-brand_solid_gradient">
+              {selectedLogistic?.delivery_eta_time &&
+                new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  }
+                )}
+            </span>
+          </p>
+        </div>
       </div>
       <div className="w-full">
         <SelectedpaymentMethod />

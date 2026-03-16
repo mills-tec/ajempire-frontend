@@ -144,23 +144,10 @@ export const useCartStore = create<CartStore>()(
         // Update local first
         set({ items: newItems });
 
-        // Try to sync
-        // addToCart(newItems)
-        // addToCart([item])
-        //   .then(() => {
-        //     // mark all as synced
-        //     set({
-        //       items: newItems.map((i) => ({ ...i, synced: true })),
-        //       syncQueue: [],
-        //     });
-        //   })
-        //   .catch(() => {
-        //     // add to retry queue
-        //     set({ syncQueue: [...get().syncQueue, { type: "add", item }] });
-        //     toast.error("Couldn't sync cart. Will retry.");
-        //   });
+        const token = getBearerToken();
 
-        // Update local first
+        // 🚨 If guest user, skip backend sync
+        if (!token) return;
 
         // Try to sync ONLY changed item
         addToCart([item])
@@ -178,36 +165,7 @@ export const useCartStore = create<CartStore>()(
             toast.error("Couldn't sync cart. Will retry.");
           });
       },
-      // setSelectedVariants: (id: string, variants: Variant[]) => {
-      //   const updatedItems = get().items.map((i) =>
-      //     i._id === id ? { ...i, selectedVariants: variants, synced: false } : i
-      //   );
-      //   const updatedItem = updatedItems.find((i) => i._id === id);
 
-      //   set({
-      //     items: updatedItems,
-      //   });
-
-      //   // Try to sync
-      //   if (updatedItem) {
-      //     addToCart(updatedItems)
-      //       .then(() => {
-      //         set({
-      //           items: updatedItems.map((i) => ({ ...i, synced: true })),
-      //           syncQueue: [],
-      //         });
-      //       })
-      //       .catch(() => {
-      //         set({
-      //           syncQueue: [
-      //             ...get().syncQueue,
-      //             { type: "update", item: updatedItem },
-      //           ],
-      //         });
-      //         toast.error("Couldn't sync cart. Will retry.");
-      //       });
-      //   }
-      // },
       setSelectedVariants: (id: string, variants: Variant[]) => {
         const updatedItems = get().items.map((i) =>
           i._id === id
@@ -219,7 +177,9 @@ export const useCartStore = create<CartStore>()(
 
         // Update local state first
         set({ items: updatedItems });
+        const token = getBearerToken();
 
+        if (!token) return; // 🚨 skip backend sync for guest users
         // Sync ONLY changed item
         if (updatedItem) {
           addToCart([updatedItem])
@@ -296,6 +256,10 @@ export const useCartStore = create<CartStore>()(
         // Update local state first (instant UI)
         set({ items: updatedItems });
 
+        const token = getBearerToken();
+
+        if (!token) return; // 🚨 skip backend sync for guest users
+
         // Sync ONLY changed item
         if (updatedItem) {
           addToCart([updatedItem])
@@ -321,7 +285,8 @@ export const useCartStore = create<CartStore>()(
       removeItem: async (id) => {
         try {
           set({ items: get().items.filter((i) => i._id !== id) });
-
+          const token = getBearerToken();
+          if (!token) return;
           removeCartItem(id)
             .then(() => {
               // mark all as synced
@@ -353,24 +318,7 @@ export const useCartStore = create<CartStore>()(
           items: [],
           selectedLogistic: null,
         }),
-      // increaseQuantity: (id) =>
-      //   set({
-      //     items: get().items.map((i) =>
-      //       i._id === id
-      //         ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
-      //         : i,
-      //     ),
-      //   }),
-      // decreaseQuantity: (id) =>
-      //   set({
-      //     items: get()
-      //       .items.map((i) =>
-      //         i._id === id
-      //           ? { ...i, quantity: Math.max(i.quantity - 1, 1) }
-      //           : i,
-      //       )
-      //       .filter((i) => i.quantity > 0),
-      //   }),
+
       increaseQuantity: (id) => {
         const item = get().getItem(id);
         if (!item) return;
@@ -457,6 +405,26 @@ export const useCartStore = create<CartStore>()(
           toast.success("Cart fully synced!");
         } else {
           toast.warning(`${newQueue.length} cart actions pending`);
+        }
+      },
+
+      syncGuestCartOnLogin: async () => {
+        const token = getBearerToken();
+        if (!token) return;
+
+        const items = get().items.filter((i) => !i.synced);
+
+        if (items.length === 0) return;
+
+        try {
+          await addToCart(items);
+
+          set({
+            items: get().items.map((i) => ({ ...i, synced: true })),
+            syncQueue: [],
+          });
+        } catch (error) {
+          console.error("Cart merge failed", error);
         }
       },
     }),

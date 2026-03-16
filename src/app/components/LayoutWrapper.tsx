@@ -58,8 +58,7 @@ export default function LayoutWrapper({
                 </footer>
             )}
 
-            {typeof window !== "undefined" && <CartPopup />}
-
+            <CartPopup />
         </div>
     );
 }

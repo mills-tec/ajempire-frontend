@@ -38,7 +38,6 @@ export default function ShippingAdressForm({
   const [selectedState, setSelectedState] = useState("Delta");
   const [selectedCountry, setSelectedCountry] = useState("Nigeria");
   const [loading, setLoading] = useState(false);
-  const [singin, setSingin] = useState(false);
 
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
   const convertToLocalPhone = (phone: string) => {
