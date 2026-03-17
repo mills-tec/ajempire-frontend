@@ -1,4 +1,4 @@
-import { useAuthStore } from "./stores/auth-store";
+import { getData, postData } from "@/api/api";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
@@ -8,6 +8,8 @@ import {
   ProductResponse,
   ProductsResponse,
 } from "./types";
+import { getToken } from "firebase/messaging";
+import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 
 export type Coupon = {
   _id: string;
@@ -139,8 +141,8 @@ export async function getSessionBackend() {
 }
 
 /// Product API
-export async function getProducts(cursor: string): Promise<ProductsResponse | null> {
-  const res = await fetch(API_URL + "/product?limit=4&cursor=" + cursor);
+export async function getProducts(query: string): Promise<ProductsResponse | null> {
+  const res = await fetch(API_URL + "/product?" + query);
   if (!res.ok) return null;
   return res.json();
 }
@@ -149,7 +151,39 @@ export async function getProducts(cursor: string): Promise<ProductsResponse | nu
 
 export async function getProduct(id: string): Promise<ProductResponse | null> {
   const user = getUser();
-  const res = await fetch(API_URL + "/product/" + id + "/" + user?._id);
+  const res = await fetch(API_URL + "/product/" + id + "?user=" + user?._id);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getUpdates(type: string, cursor: string, limit: number): Promise<{ data: Feed[]; nextCursor: string; hasMore: boolean } | null> {
+  const res = await fetch(API_URL + "/updates/" + type + "?limit=" + limit + "&cursor=" + cursor);
+  if (!res.ok) return null;
+
+  return ((await res.json()) as any).message;
+}
+
+export async function getRelatedProducts(category: string, query: string): Promise<{
+  products: Product[];
+  nextCursor: string;
+  hasMore: boolean;
+} | null> {
+  const res = await fetch(API_URL + "/product/related/" + category + "?" + query);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function getExploreInterest(limit: number, cursor: string): Promise<{
+  products: Product[];
+  nextCursor: string;
+  hasMore: boolean;
+} | null> {
+  const token = getBearerToken()
+  const res = await fetch(API_URL + "/products/explore/" + "?limit=" + limit + "&cursor=" + cursor, {
+    headers: {
+      "Authorization": "Bearer " + token
+    }
+  });
   if (!res.ok) return null;
   return res.json();
 }
@@ -403,15 +437,39 @@ export async function searchProducts(
 }
 
 // COUPON API
-export async function getCoupons(): Promise<{ message: Coupon[] } | null> {
+// export async function getCoupons(): Promise<{ message: ICoupon[] } | null> {
+//   try {
+//     const token = getBearerToken()
+//     const res = await fetch(`${API_URL}/coupons`, {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
+
+//     if (!res.ok) {
+//       console.error("Failed to fetch coupons");
+//       return null;
+//     }
+
+//     const data = await res.json();
+//     console.log("Coupons response:", data);
+
+//     return data;
+//   } catch (error) {
+//     console.error("Coupon fetch error:", error);
+//     return null;
+//   }
+// }
+
+export async function getCoupons(type: string): Promise<{ message: ICoupon[] } | null> {
   try {
-    const token = getBearerToken();
-    if (!token) throw new Error("User not authenticated");
-    const res = await fetch(`${API_URL}/coupons`, {
-       headers: {
-        "Authorization": `Bearer ${token}`,
+    const token = getBearerToken()
+    const res = await fetch(`${API_URL}/coupons/${type}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
     });
+
     if (!res.ok) {
       console.error("Failed to fetch coupons");
       return null;
@@ -427,28 +485,38 @@ export async function getCoupons(): Promise<{ message: Coupon[] } | null> {
   }
 }
 
-export async function getUsageStats(): Promise<UsageStats | null> {
+
+
+export async function applyCouponCode(code: string): Promise<{
+  message: {
+    _id: string;
+    code: string;
+    discountType: "fixed" | "percentage"; // adjust if only fixed is allowed
+    discountValue: number;
+    title: string;
+    expiry: string; // ISO date string
+    isExpired: boolean;
+    usedBy: string[]; // assuming array of user IDs
+    __v: number;
+  }
+} | null> {
+
   try {
     const token = getBearerToken();
-    if (!token) throw new Error("User not authenticated");
-
-    const res = await fetch(`${API_URL}/stats`, {
+    const res = await postData(`/coupon/apply`, { code }, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-    if (!res.ok) {
-      console.error("Failed to fetch usage stats", res.status);
-      return null;
-    }
 
-    const data = await res.json();
-    console.log("Usage stats response:", data);
 
-    return data.message?.stats || null;
-  } catch (err) {
-    console.error("Error fetching usage stats:", err);
+    const data = await res;
+
+    return data.data;
+  } catch (error) {
+    console.error("Coupon fetch error:", error);
     return null;
   }
+
 }

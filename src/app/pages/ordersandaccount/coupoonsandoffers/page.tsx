@@ -4,62 +4,45 @@ import CouponsTab from "../components/CouponsTab";
 import FlashDealCard from "../components/FlashDealCard";
 import { getCoupons } from "@/lib/api";
 import { mapCouponToDeal } from "@/lib/couponMapper";
-type Deal = {
+import FlashDealSkeleton from "@/components/FlashDealSkeleton";
+import EmptyList from "@/components/EmptyList";
+import { Store } from "lucide-react";
+export interface ICoupon {
     id: string | number;
     title: string;
     description?: string;
-    discountPercent: number;
     validUntil?: string;
     code: string;
     ctaText?: string;
     status: "unused" | "used" | "expired";
+    discountType: "fixed" | "percentage";
+    discountValue: number;
+    expiry: string; // ISO date string
+    isExpired: boolean;
+    __v: number;
 };
 
 
 
 export default function CouponsAndOffers() {
-    const [deals, setDeals] = useState<Deal[]>([])
+    const [deals, setDeals] = useState<ICoupon[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
     useEffect(() => {
         const fetchCoupons = async () => {
-            const res = await getCoupons();
-            if (!res) return;
+            try {
+                const res = await getCoupons("");
 
-            const allDeals = res.message.map(mapCouponToDeal);
+                if (!res) return;
+                setDeals(res.message.map(item => ({ ...item, status: "unused" })));
+            } catch (err) {
 
-            // UNUSED = not expired
-            const unusedDeals = allDeals.filter(
-                (deal) => deal.status === "unused"
-            );
-
-            setDeals(unusedDeals);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchCoupons();
     }, []);
-    console.log(deals, "deals");
-
-    const unusedDeals: Deal[] = [
-        {
-            id: 1,
-            title: "30% off Nail Kits",
-            description: "Applicable on nail kits only",
-            discountPercent: 30,
-            validUntil: "01-06-2025",
-            code: "NAIL30",
-            ctaText: "Get",
-            status: "unused",
-        },
-        {
-            id: 2,
-            title: "20% off Orders above ₦10,000",
-            description: "Valid for 24 hours only",
-            discountPercent: 20,
-            validUntil: "01-06-2025",
-            code: "BIG20",
-            ctaText: "Get Code",
-            status: "unused",
-        },
-    ];
 
     return (
         <div className="w-full px-6  lg:block  font-poppins">
@@ -79,8 +62,15 @@ export default function CouponsAndOffers() {
             </div> */}
 
             <div className="mt-11 text-[15px] flex flex-col gap-4">
-                <p className="font-semibold text-[17px]">Special offers for you</p>
-                <FlashDealCard deals={deals} />
+                {
+                    loading ? <FlashDealSkeleton /> : <>
+                        {deals.length > 0 ? <>
+                            <p className="font-semibold text-[17px]">Special offers for you</p>
+
+                            <FlashDealCard deals={deals} />
+                        </> : <EmptyList message="No expired coupons" writeup="There are currently no coupons that have passed their expiration date." Icon={<Store size={40} className="text-brand_solid_gradient" />} />}
+                    </>
+                }
             </div>
         </div>
     );

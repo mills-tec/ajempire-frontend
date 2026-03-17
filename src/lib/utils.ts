@@ -124,3 +124,14 @@ export function getCountdown(targetDate: string | Date) {
 
   return { days, hours, minutes, seconds };
 }
+export const ITEMS_TO_APPEND = 10;
+export function shuffleArray(array: any[]) {
+  const arr = [...array]; // copy so original isn't mutated
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); // pick a random index
+    [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
+  }
+  const startIndex = Math.floor(Math.random() * arr.length);
+  const endIndex = Math.min(startIndex + ITEMS_TO_APPEND * 2, arr.length);
+  return arr.slice(startIndex, endIndex);
+}

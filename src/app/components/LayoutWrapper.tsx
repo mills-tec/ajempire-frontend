@@ -13,7 +13,6 @@ export default function LayoutWrapper({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    console.log("LayoutWrapper children:", children);
 
 
     // Routes where navbar & footer should be hidden
@@ -21,7 +20,6 @@ export default function LayoutWrapper({
         pathname.startsWith("/admin") ||
         pathname === "/admin-login";
 
-    console.log("pathname:", pathname, "hideLayout:", hideLayout);
 
     const isProductPage = pathname.startsWith("/product/");
     return (

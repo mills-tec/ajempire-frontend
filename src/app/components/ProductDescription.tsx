@@ -38,7 +38,7 @@ export default function ProductDescription({
     const fetchWishlist = async () => {
       const wishlist = await getUsersWishlist();
       // You might want to do something with wishlist here
-      console.log("wishlist: ", wishlist);
+      // console.log("wishlist: ", wishlist);
     };
     fetchWishlist();
   }, []);
@@ -256,7 +256,7 @@ export default function ProductDescription({
         </div>
       </div>
 
-      <div className="space-y-2 hidden lg:block">
+      {/* <div className="space-y-2 hidden lg:block">
         <h4 className="text-xs text-brand_gray_dark">Images: </h4>
         <div className="flex gap-2">
           {product.images!.length > 0 ? <>
@@ -273,6 +273,7 @@ export default function ProductDescription({
             {product.video && (
               <div className="size-[4rem] cursor-pointer relative object-cover bg-gray-400 rounded-xl" onClick={() => handleSelectCover(product.video!, "video")}>
                 <video
+                  preload="none"
                   src={product.video}
                   className="absolute object-cover h-full w-full"
                   muted
@@ -286,6 +287,7 @@ export default function ProductDescription({
                   onMouseLeave={() => {
                     videoRef?.pause();
                   }}
+                  playsInline
                 />
               </div>
             )}
@@ -295,7 +297,7 @@ export default function ProductDescription({
             </p>
           )}
         </div>
-      </div>
+      </div> */}
 
       <div className="lg:flex gap-6">
         {/* <div className="space-y-2">

@@ -16,7 +16,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
+export const formatPrice = (amount: number) => {
+  return Number(amount).toLocaleString("en-ng", { style: "currency", currency: "NGN" });
+};
 export default function CartPage() {
   const {
     items,
@@ -87,12 +89,7 @@ export default function CartPage() {
     );
   }
 
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-  };
+
 
 
   if (!isLoading && items.length === 0)
@@ -233,7 +230,7 @@ export default function CartPage() {
                       />
                     </div>
                     <p className="text-xs text-black/75 mt-1">
-                      ₦{calcDiscountPrice(item.price, item.discountedPrice!)}{" "}
+                      {calcDiscountPrice(item.price, item.discountedPrice!)}{" "}
                       <span className="text-brand_pink">x{item.quantity}</span>
                     </p>
                   </div>
@@ -265,7 +262,7 @@ export default function CartPage() {
                     </div>
 
                     <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
-                      ₦{formatPrice(calcDiscountPrice(item.price, item.discountedPrice!))}
+                      {formatPrice(calcDiscountPrice(item.price, item.flashSales?.discount ?? 0!))}
                       <span className="text-brand_pink"> x{item.quantity}</span>
                     </p>
                   </div>
@@ -277,11 +274,11 @@ export default function CartPage() {
             <div className="text-sm space-y-6 py-3 ">
               <div className="flex justify-between items-center">
                 <p>Item(s) total:</p>
-                <p className="font-medium">₦{formatPrice(orderSummary().total)}</p>
+                <p className="font-medium">{formatPrice(orderSummary().total)}</p>
               </div>
               <div className="flex justify-between items-center">
                 <p>Item(s) discount:</p>
-                <p className="text-brand_pink">- ₦{formatPrice(orderSummary().discount)}</p>
+                <p className="text-brand_pink">- {formatPrice(orderSummary().discount)}</p>
               </div>
             </div>
             <hr />
@@ -292,7 +289,7 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-sm items-center">
                 <p>Total:</p>
-                <p className="font-semibold">₦{formatPrice(orderSummary().finalTotal)}</p>
+                <p className="font-semibold">{formatPrice(orderSummary().finalTotal)}</p>
               </div>
             </div>
             <button
@@ -344,9 +341,9 @@ export default function CartPage() {
               </p>
               <div className="flex justify-between items-end">
                 <div>
-                  <h3 className="font-medium">₦{formatPrice(orderSummary().total)}</h3>
+                  <h3 className="font-medium">{formatPrice(orderSummary().total)}</h3>
                   <p className="text-xs text-brand_pink">
-                    ₦{formatPrice(orderSummary().discount)} discount applied
+                    {formatPrice(orderSummary().discount)} discount applied
                   </p>
                 </div>
                 <button

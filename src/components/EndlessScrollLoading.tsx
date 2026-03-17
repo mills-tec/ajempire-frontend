@@ -1,10 +1,15 @@
 import React from 'react'
+import Skeleton from './Skeleton'
 
 
-export default function EndlessScrollLoading({ infiniteRef, hasNextPage }: { infiniteRef: any, hasNextPage: boolean }) {
+export default function EndlessScrollLoading({ infiniteRef, hasNextPage, gridNumber = "grid-cols-2" }: { infiniteRef: any, hasNextPage: boolean, gridNumber?: string }) {
     return (
         <div ref={infiniteRef}>
-            {hasNextPage && <h1 >Loading...</h1>}
+            {hasNextPage && <div className={`grid ${gridNumber}  md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6`}>
+                {[...Array(10)].map((_, i) => (
+                    <Skeleton key={i} />
+                ))}
+            </div>}
         </div>
     )
 }

@@ -1,33 +1,36 @@
 "use client";
-import EndlessScrollLoading from "@/components/EndlessScrollLoading";
-import ProductItem from "@/components/ProductItem";
-import Skeleton from "@/components/Skeleton";
-import { getExploreInterest } from "@/lib/api";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import ProductItem from "./ProductItem";
+import Skeleton from "./Skeleton";
+import EndlessScrollLoading from "./EndlessScrollLoading";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
+import { getRelatedProducts } from "@/lib/api";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 // const ITEMS_TO_APPEND = 10;
 
-export default function ExploreInterest() {
-
+export default function RelatedProducts({ category }: { category: string }) {
     const queryClient = useQueryClient();
 
     const [cursor, setCursor] = useState("");
     const [hasNextPage, setHasNextPage] = useState(true);
 
     const lastItemRef = useRef<HTMLDivElement>(null);
-    const originalProductsRef = useRef<any[]>([]);
+
     const [isDuplicating, setIsDuplicating] = useState(false);
+
+    // 👇 SAME PATTERN AS GALLERY
+    const originalProductsRef = useRef<any[]>([]);
 
     /*
      * INITIAL FETCH
      */
     const { data, isLoading } = useQuery(
-        ["exploreInterest"],
-        () => getExploreInterest(ITEMS_TO_APPEND, ""),
+        ["relatedProducts", category],
+        () => getRelatedProducts(category, `limit=${ITEMS_TO_APPEND}`),
         {
+            enabled: !!category,
             onSuccess: (res) => {
                 setCursor(res?.nextCursor || "");
                 setHasNextPage(res?.hasMore ?? false);
@@ -49,10 +52,10 @@ export default function ExploreInterest() {
     }, [data]);
 
     /*
-     * Append helper
+     * APPEND HELPER
      */
     const appendProducts = (newProducts: any[]) => {
-        queryClient.setQueryData(["exploreInterest"], (oldData: any) => {
+        queryClient.setQueryData(["relatedProducts", category], (oldData: any) => {
             if (!oldData) return oldData;
 
             return {
@@ -66,7 +69,7 @@ export default function ExploreInterest() {
     };
 
     /*
-     * API infinite scroll
+     * API INFINITE SCROLL
      */
     const [infiniteRef] = useInfiniteScroll({
         loading: false,
@@ -74,29 +77,26 @@ export default function ExploreInterest() {
         disabled: Boolean(isLoading),
         onLoadMore: async () => {
             try {
-
-                const newData = await getExploreInterest(
-                    ITEMS_TO_APPEND,
-                    cursor
+                const newData = await getRelatedProducts(
+                    category,
+                    `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`
                 );
 
                 appendProducts(newData?.products || []);
 
                 setCursor(newData?.nextCursor || "");
                 setHasNextPage(newData?.hasMore ?? false);
-
             } catch (err) {
-                console.error("Error loading explore interest:", err);
+                console.error("Error loading related products:", err);
             }
         },
     });
 
     /*
-     * Observe last item (only after API finished)
+     * OBSERVE LAST ITEM
      */
     useEffect(() => {
-
-        if (hasNextPage) return;
+        if (hasNextPage) return; // only duplicate when API finished
         if (!lastItemRef.current) return;
 
         const observer = new IntersectionObserver(
@@ -114,63 +114,47 @@ export default function ExploreInterest() {
         observer.observe(lastItemRef.current);
 
         return () => observer.disconnect();
-
     }, [hasNextPage, isDuplicating]);
 
     /*
-     * Duplication logic (same as Gallery)
+     * DUPLICATION LOGIC (same as gallery)
      */
     useEffect(() => {
-
         if (!isDuplicating) return;
         if (!originalProductsRef.current.length) return;
 
         const timer = setTimeout(() => {
-
-            appendProducts(
-                shuffleArray(originalProductsRef.current)
-            );
-
+            appendProducts(shuffleArray(originalProductsRef.current));
             setIsDuplicating(false);
-
         }, 500);
 
         return () => clearTimeout(timer);
-
     }, [isDuplicating]);
 
-
-
     return (
-        <section className="px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
 
-            <div className="font-poppins py-10 space-y-5">
-                <h1 className="text-2xl font-poppins">Explore Interest</h1>
-            </div>
+            {products.map((product: any, index: number) => (
+                <div
+                    key={index}
+                    ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null}
+                >
+                    <ProductItem product={product} index={index} />
+                </div>
+            ))}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-
-                {products.map((product: any, index: number) => (
-                    <div
-                        key={index}
-                        ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null}
-                    >
-                        <ProductItem product={product} index={index} />
-                    </div>
+            {/* Skeleton while duplicating */}
+            {isDuplicating &&
+                [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                    <Skeleton key={`dup-skeleton-${i}`} />
                 ))}
 
-                {/* Skeleton while duplicating */}
-                {isDuplicating &&
-                    [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-                        <Skeleton key={`dup-skeleton-${i}`} />
-                    ))}
+            {/* API loading */}
+            <EndlessScrollLoading
+                infiniteRef={infiniteRef}
+                hasNextPage={hasNextPage}
+            />
 
-                <EndlessScrollLoading
-                    infiniteRef={infiniteRef}
-                    hasNextPage={hasNextPage}
-                />
-
-            </div>
-        </section>
+        </div>
     );
 }

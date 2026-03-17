@@ -2,18 +2,12 @@
 export const dynamic = "force-dynamic";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import ProductCard from "./components/ProductCard";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
 import CartPopup from "./components/CartPopup";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getProducts, getProductsByCategory } from "@/lib/api";
+import { getProducts } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useSearchStore } from "@/lib/search-store";
 import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
 
@@ -23,6 +17,10 @@ import HomeHeroSlider from "./components/HomeHeroSlider";
 import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProvider";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import ProductItem from "@/components/ProductItem";
+import Skeleton from "@/components/Skeleton";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+
 
 export default function Home() {
   const { data, isLoading, refetch } = useQuery({
@@ -87,7 +85,9 @@ function HomeContent({
   const [searchLoading, setSearchLoading] = React.useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
-
+  const [cursor, setCursor] = useState("");
+  const [lastItemInview, setLastItemInView] = useState(false);
+  const [triggerManualLoad, setManualLoad] = useState(true);
   React.useEffect(() => {
     if (resetToken === 0) return;
     setUiLoading(true);
@@ -95,12 +95,12 @@ function HomeContent({
     return () => clearTimeout(timer);
   }, [resetToken]);
 
-  React.useEffect(() => {
-    if (!searchActive) return;
-    setSearchLoading(true);
-    const timer = setTimeout(() => setSearchLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [searchedQuery]);
+  // React.useEffect(() => {
+  //   if (!searchActive) return;
+  //   setSearchLoading(true);
+  //   const timer = setTimeout(() => setSearchLoading(false), 500);
+  //   return () => clearTimeout(timer);
+  // }, [searchedQuery]);
 
   const products = data?.message?.products ?? [];
 
@@ -120,19 +120,22 @@ function HomeContent({
   // }, [searchedQuery, data, minPrice, maxPrice]);
 
   const [infiniteRef] = useInfiniteScroll({
-    loading: uiLoading,
+    loading: false,
     hasNextPage,
     onLoadMore: async () => {
-      const cursor = (data?.message as any)?.nextCursor || "";
-      if (!cursor) return;
+
+
 
       try {
-        const newData = await getProducts(cursor); // fetch next page
+        const newData = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`); // fetch next page
         // Update the cached query to append new products
         appendProducts(newData?.message?.products || []);
+        setCursor((newData?.message as any)?.nextCursor! || "");
 
         // Update hasNextPage based on backend response
         setHasNextPage((newData!.message as any)?.hasMore ?? false);
+
+
       } catch (err) {
         console.error("Error loading more products:", err);
       }
@@ -141,24 +144,7 @@ function HomeContent({
 
   });
 
-  useEffect(() => {
-    if (!lastItemRef.current) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          appendProducts(shuffleArray(data?.message?.products || []));
-        }
-      },
-      { threshold: 0.1 } // 1 = fully visible, 0.5 = half visible
-    );
-
-    observer.observe(lastItemRef.current);
-
-    return () => {
-      if (lastItemRef.current) observer.unobserve(lastItemRef.current);
-    };
-  }, []);
 
   const appendProducts = (newProducts: any[]) => {
     queryClient.setQueryData(["products"], (oldData: any) => {
@@ -177,21 +163,64 @@ function HomeContent({
     });
   };
 
-  function shuffleArray(array: any[]) {
-    const arr = [...array]; // copy so original isn't mutated
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1)); // pick a random index
-      [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
+
+  useEffect(() => {
+    if (hasNextPage === false || !triggerManualLoad) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setLastItemInView(true);
+            observer.unobserve(entry.target); // optional: stop observing once visible
+          }
+        },
+        {
+          root: null, // viewport
+          rootMargin: "0px",
+          threshold: 0.5, // 50% of the item is visible
+        }
+      );
+
+      if (lastItemRef.current) {
+        observer.observe(lastItemRef.current);
+      }
+      setManualLoad(true);
+      return () => {
+        if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+      };
     }
-    return arr;
-  }
+  }, [hasNextPage, triggerManualLoad])
+
+
+  // appends new data
+  useEffect(() => {
+    if (!lastItemInview) return;
+
+
+
+    const loadMoreProducts = () => {
+      const total = products.length;
+      if (total === 0) return;
+
+      const nextItems = shuffleArray(products);
+
+      appendProducts(nextItems);
+      setLastItemInView(false);
+      setManualLoad(false);
+    };
+
+    const timer = setTimeout(loadMoreProducts, 500); // optional delay for UX
+
+    return () => clearTimeout(timer); // cleanup if component unmounts
+  }, [lastItemInview]);
+
+
 
   return (
     <>
       <PullToRefreshHeader />
       <PullToRefreshContainer>
 
-        <div className="w-full">
+        <div className="w-full bg-[#FFF9FC]">
           {selectedItem && <CartPopup />}
 
           <div
@@ -255,7 +284,7 @@ function HomeContent({
 
             {/* Products */}
             <div className="mt-8">
-              {uiLoading || searchLoading || isLoading ? (
+              {uiLoading || searchLoading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
                   {[...Array(10)].map((_, i) => (
                     <div
@@ -265,31 +294,35 @@ function HomeContent({
                   ))}
                 </div>
               ) : (
-                <div className=" grid  grid-cols-2  gap-2  sm:grid-cols-3  md:grid-cols-4  lg:grid-cols-5 lg:gap-6">
-                  {products.map((product: any, index: number) => (
-                    <Tooltip key={index}>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <ProductCard product={product} index={index} />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" align="center">
-                        <p>{product.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
+                    {products.map((product: any, index: number) => (
+                      <div ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null} key={index}>
+                        <ProductItem key={product._id} product={product} index={index} />
+                      </div>
+
+                    ))}
+
+                    {!hasNextPage && [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                      <div key={i}>
+
+                        <Skeleton />
+
+                      </div>
+                    ))}
+
+
+
+                  </div>
+                  <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
+                </>
               )}
-
-              <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
-
             </div>
+
           </div>
         </div>
       </PullToRefreshContainer>
     </>
 
-  )
-
-
+  );
 }

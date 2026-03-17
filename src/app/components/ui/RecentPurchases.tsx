@@ -1,18 +1,15 @@
 import { getBearerToken } from "@/lib/api";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { Product } from "@/lib/types";
 import axios from "axios";
 import { toast } from "sonner";
 
 interface RecentPurchase {
-    recentPurchases?: any[];
+    recentPurchases?: RecentPurchaseItem[];
 }
 interface RecentPurchaseItem {
-    _id: string;
-    name: string;
-    discountedPrice: number;
-    qty: number;
-    image?: string;
-    variants?: string[];
+    product: Product,
+    qty: number
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
     const url = "https://ajempire-backend.vercel.app/api/reorder/";
@@ -21,57 +18,41 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
 
 
     const handleReorder = async (purchase: RecentPurchaseItem) => {
-        if (!purchase._id) {
+        if (!purchase.product._id) {
             console.error("Purchase _id is missing!", purchase);
             return;
         }
-
+        const product = purchase.product;
         const token = getBearerToken();
         if (!token) return toast.error("Please log in to reorder");
 
-        const cartItem = getItem(purchase._id);
-        console.log(purchase)
-
+        const cartItem = getItem(purchase.product._id);
         if (cartItem) {
             // Item already in cart → increment qty
             setQuantity(
-                purchase._id,
+                product._id,
                 cartItem.quantity + purchase.qty
             );
+            toast.success("Item quantity incremented");
         } else {
+            console.log(product)
             // Item not in cart → add fresh
-            addItem(purchase as any);
-            // addItem({
-            //     _id: purchase._id,
-            //     name: purchase.name,
-            //     price: purchase.discountedPrice,
-            //     quantity: purchase.qty,
-            //     cover_image: purchase.image!,
-            //     selectedVariants: [],
-            //     selected: true, // ✅ REQUIRED
-            // });
+            // addItem({ quantity: purchase.qty, ...product! });
+            addItem({
+                _id: product._id,
+                name: product.name,
+                price: product.price,
+                flashSales: product.flashSales,
+                cover_image: product.cover_image,
+                description: product.description,
+                quantity: purchase.qty,
+                selectedVariants: [],
+                selected: true, // IMPORTANT
+            });
+            toast.success("Item added to cart successfully");
         }
 
-        try {
-            const res = await axios.post(
-                `https://ajempire-backend.vercel.app/api/reorder/${purchase._id}`,
-                {
-                    quantity: purchase.qty,
-                    variants: purchase.variants ?? [],
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-
-            console.log("Reorder successful:", res.data.message);
-            toast.success(res.data.message || "Item reordered successfully");
-        } catch (err) {
-            console.error("Error reordering item:", err);
-            toast.error("Could not reorder item");
-        }
     };
-
 
     return (
         <div className="w-full">
@@ -87,27 +68,27 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
                             <div className="w-[30%]">
 
                                 <img
-                                    src={purchase?.image}
+                                    src={purchase?.product.cover_image}
                                     alt=""
                                     className="w-[100px] h-[100px] object-cover"
                                 />
                             </div>
                             <div className="w-[70%] flex flex-col ">
-                                <p>{purchase.name}</p>
-                                {purchase.variants &&
-                                    purchase.variants.map((variant: string) => (
+                                <p>{purchase.product.name}</p>
+                                {purchase.product.variants &&
+                                    purchase.product.variants.map((variant) => (
                                         <div className="flex items-center gap-2 opacity-70 text-[13px]">
-                                            <p>Property:</p>
-                                            <p>{variant}</p>
+                                            <p>{variant.name}:</p>
+                                            <p>{variant.value}</p>
                                         </div>
                                     ))}
 
                                 <div className="flex items-center gap-2 opacity-70 text-[13px]">
-                                    <p>Quntity:</p>
+                                    <p>Quantity:</p>
                                     <p>{purchase.qty}</p>
                                 </div>
                                 <p className="text-primaryhover">
-                                    ₦ {purchase.discountedPrice}
+                                    {Number(purchase.product.flashSales ? purchase.product.price - (purchase.product.flashSales.discount) : purchase.product.price).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}
                                 </p>
                                 <div className="text-end">
                                     <button

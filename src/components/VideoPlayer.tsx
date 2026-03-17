@@ -7,6 +7,7 @@ export default function VideoPlayer({ handleVideoPlay, item, video, playingMap, 
         <div className='h-full w-full'>
 
             {src && <video
+                preload="none"
                 src={src}
                 autoPlay
                 loop
