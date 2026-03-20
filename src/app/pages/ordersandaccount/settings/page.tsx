@@ -1,7 +1,29 @@
+"use client";
 import Link from "next/link";
 import SettingsItem from "../components/SettingsItem";
+import { toast } from "sonner";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 export default function Settings() {
+    const openModal = useModalStore(s => s.openModal);
+    const handleShareApp = async () => {
+        const url = window.location.origin;
+
+        if (navigator.share) {
+            await navigator.share({
+                title: "Check out this app!",
+                text: "Discover premium cosmetics and beauty essentials at AJ Empire ✨ Shop original products, great prices, and fast delivery. Try it now 👇",
+                url,
+            });
+        } else {
+            await navigator.clipboard.writeText(url);
+            toast.success("copied app link", { position: "top-right" })
+        }
+    };
+    const handleLogout = () => {
+        openModal("signout-confirm");
+    }
+
     return (
         <div className="font-poppins lg:px-5 w-full mt-3 lg:mt-0  lg:block overflow-hidden ">
             <div className="lg:hidden pb-6 px-5 flex items-center  mb-[10px] shadow-md">
@@ -18,13 +40,13 @@ export default function Settings() {
                 <SettingsItem label="Country & region" value="NG" />
                 <SettingsItem label="Language" value="English" />
                 <SettingsItem label="Currency" value="NG" />
-                <SettingsItem label="Notifications" href="/pages/ordersandaccount/notifications" />
+                <SettingsItem label="Notifications" href="/pages/ordersandaccount/notifications/all" />
                 <SettingsItem label="About" href="/pages/ordersandaccount/settings/firstabout" />
                 <SettingsItem label="Contact Us" href="/pages/ordersandaccount/support/contact" />
                 <SettingsItem label="Legal terms and policies" />
-                <SettingsItem label="Share this app" />
+                <SettingsItem label="Share this app" onClick={handleShareApp} />
                 <SettingsItem label="Switch accounts" href="/pages/ordersandaccount/switchaccount" />
-                <SettingsItem label="Log-Out" href="/signout" />
+                <SettingsItem label="Log-Out" onClick={handleLogout} />
             </div>
         </div>
     )

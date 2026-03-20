@@ -26,6 +26,36 @@ export default function Home() {
     queryKey: ["products"],
     queryFn: () => getProducts(""),
   });
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async (): Promise<void> => {
+    // pull current products from cache
+    const currentData = queryClient.getQueryData<any>(["products"]);
+    const products: any[] = currentData?.message?.products ?? [];
+
+    if (products.length > 0) {
+      // rotate the list by a random offset so the mid index moves
+      const offset = Math.floor(Math.random() * products.length);
+      const rotated = products
+        .slice(offset)
+        .concat(products.slice(0, offset));
+
+      // optionally shuffle a little inside the rotated list to add variation
+      const rearranged = rotated.sort(() => Math.random() - 0.5);
+
+      // apply the new order back into the cache
+      queryClient.setQueryData(["products"], {
+        ...currentData,
+        message: {
+          ...currentData.message,
+          products: rearranged,
+        },
+      });
+    }
+
+    // ensure we show loading animation for at least 1s
+    await new Promise((r) => setTimeout(r, 1000));
+  };
 
   return (
     <PullToRefreshProvider
@@ -59,26 +89,29 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
     return () => clearTimeout(timer);
   }, [resetToken]);
 
-  React.useEffect(() => {
-    if (!searchActive) return;
-    setSearchLoading(true);
-    const timer = setTimeout(() => setSearchLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [searchedQuery]);
+  // React.useEffect(() => {
+  //   if (!searchActive) return;
+  //   setSearchLoading(true);
+  //   const timer = setTimeout(() => setSearchLoading(false), 500);
+  //   return () => clearTimeout(timer);
+  // }, [searchedQuery]);
 
-  const filteredProducts = React.useMemo(() => {
-    const products = data?.message?.products ?? [];
-    if (!searchedQuery) return products;
+  const products = data?.message?.products ?? [];
 
-    return products.filter((product: any) => {
-      const matchesName = product.name
-        .toLowerCase()
-        .includes(searchedQuery.toLowerCase());
-      const matchesMin = minPrice === null || product.price >= minPrice;
-      const matchesMax = maxPrice === null || product.price <= maxPrice;
-      return matchesName && matchesMin && matchesMax;
-    });
-  }, [searchedQuery, data, minPrice, maxPrice]);
+  // const filteredProducts = React.useMemo(() => {
+  //   const products = data?.message?.products ?? [];
+  //   if (!searchedQuery) return products;
+
+  //   return products.filter((product: any) => {
+  //     const matchesName =
+  //       product.name.toLowerCase().includes(searchedQuery.toLowerCase());
+  //     const matchesMin =
+  //       minPrice === null || product.price >= minPrice;
+  //     const matchesMax =
+  //       maxPrice === null || product.price <= maxPrice;
+  //     return matchesName && matchesMin && matchesMax;
+  //   });
+  // }, [searchedQuery, data, minPrice, maxPrice]);
 
   const [infiniteRef] = useInfiniteScroll({
     loading: false,
@@ -146,10 +179,10 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
     if (!lastItemInview) return;
 
     const loadMoreProducts = () => {
-      const total = filteredProducts.length;
+      const total = products.length;
       if (total === 0) return;
 
-      const nextItems = shuffleArray(filteredProducts);
+      const nextItems = shuffleArray(products);
 
       appendProducts(nextItems);
       setLastItemInView(false);
@@ -165,11 +198,13 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
     <>
       <PullToRefreshHeader />
       <PullToRefreshContainer>
-        <div className="w-full">
+
+        <div className="w-full bg-[#FFF9FC]">
           {selectedItem && <CartPopup />}
 
           <div
-            className="lg:hidden w-full bg-white z-50 shadow-sm px-[20px] h-[90px] flex items-center"
+            className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
+
             style={{
               transform: `translateY(-${pull * 0.7}px)`,
               opacity: 1 - Math.min(pull / 150, 1),
@@ -209,7 +244,7 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
                 <Categories cat={"categories"} />
               )}
             </div>
-            {!isLoading && filteredProducts.length === 0 && (
+            {!isLoading && products.length === 0 && (
               <div className="col-span-full">
                 <Image
                   src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
@@ -239,20 +274,18 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
               ) : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
-                    {filteredProducts.map((product: any, index: number) => (
-                      <div
-                        ref={
-                          !hasNextPage && index === filteredProducts.length - 1
-                            ? lastItemRef
-                            : null
-                        }
-                        key={index}
-                      >
-                        <ProductItem
-                          key={product._id}
-                          product={product}
-                          index={index}
-                        />
+                    {products.map((product: any, index: number) => (
+                      <div ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null} key={index}>
+                        <ProductItem key={product._id} product={product} index={index} />
+                      </div>
+
+                    ))}
+
+                    {!hasNextPage && [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                      <div key={i}>
+
+                        <Skeleton />
+
                       </div>
                     ))}
 
@@ -263,10 +296,7 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
                         </div>
                       ))}
                   </div>
-                  <EndlessScrollLoading
-                    infiniteRef={infiniteRef}
-                    hasNextPage={hasNextPage}
-                  />
+                  <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
                 </>
               )}
             </div>

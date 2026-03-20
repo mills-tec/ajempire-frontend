@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { getUser } from "@/lib/api";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 type SideBarItem = {
     title: string;
@@ -12,6 +13,7 @@ type SideBarItem = {
     icon?: React.ReactNode;
     children?: SideBarItem[];
     onClick?: () => void;
+    action?: "logout";
 };
 
 type SideBarCompProps = {
@@ -24,6 +26,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
     const router = useRouter();
     const [user, setUser] = useState({ _id: "" })
     const { getUnreadNotifications, notifications } = useNotificationStore();
+    const openModal = useModalStore(s => s.openModal);
     // Automatically open the parent that matches current pathname
     useEffect(() => {
         const foundParent = items.find(
@@ -46,6 +49,13 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
             // open and navigate
             setOpenRoute(item.route ?? null);
             if (item.route) router.push(item.route);
+        }
+    };
+    const handleAction = (action?: string) => {
+        switch (action) {
+            case "logout":
+                openModal("signout-confirm");
+                break;
         }
     };
 
@@ -109,7 +119,15 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                     <ul className="ml-4 mt-1 space-y-1">
                         {item.children.map((child) => (
                             <li key={child.title}>
-                                {child.onClick ? (
+                                {child.action ? (
+                                    // ✅ handle actions like "Logout"
+                                    <button
+                                        onClick={() => handleAction(child.action)}
+                                        className="block w-full text-left text-[13px] p-2 px-6 rounded-md hover:bg-pink-50 text-[#525252] transition-all duration-300"
+                                    >
+                                        {child.title}
+                                    </button>
+                                ) : child.onClick ? (
                                     // ✅ handle buttons like "Share this app"
                                     <button
                                         onClick={child.onClick}
@@ -127,6 +145,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                                             }`}
                                     >
                                         {child.title}
+
                                     </Link>
                                 )}
                             </li>
