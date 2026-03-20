@@ -27,14 +27,14 @@ function CartCard({ item }: { item: CartItem }) {
   return (
     <section>
       {selectedItem && <CartPopup />}
-      <div className="flex items-start relative w-full px-4 lg:px-0 cursor-pointer" onClick={
-        (e) => {
+      <div
+        className="flex items-start relative w-full px-4 lg:px-0 cursor-pointer"
+        onClick={(e) => {
           // Navigate to product detail page
           e.stopPropagation();
           router.push(`/product/${item._id}`);
-
-        }
-      }>
+        }}
+      >
         <div
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -71,40 +71,62 @@ function CartCard({ item }: { item: CartItem }) {
               <div className="px-[0.2rem] bg-brand_purple w-max text-white py-[0.12rem] rounded-sm text-[0.6rem]">
                 Seller Tag
               </div>
-              {item.flashSales && <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
-                <p className="text-brand_pink font-semibold">
-                  Save {Number(item.price - calcDiscountPrice(item.price, item.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} extra
-                </p>
-                <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
-                  <CountdownTimer endTime={item.flashSales?.endTime!} />
-                </p>
-              </div>}
+              {item.flashSales && (
+                <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
+                  <p className="text-brand_pink font-semibold">
+                    Save{" "}
+                    {Number(
+                      item.price -
+                        calcDiscountPrice(
+                          item.price,
+                          item.flashSales?.discountValue ?? 0,
+                          item.flashSales?.discountType ?? "percent",
+                        ),
+                    ).toLocaleString("en-NG", {
+                      style: "currency",
+                      currency: "NGN",
+                    })}{" "}
+                    extra
+                  </p>
+                  <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
+                    <CountdownTimer endTime={item.flashSales?.endDate!} />
+                  </p>
+                </div>
+              )}
             </div>
             <div className="space-x-2 flex items-baseline justify-between w-full mt-6">
               <div className="flex items-center gap-1">
-                {
-                  item.flashSales ? (
-                    <>
-                      <p className="text-black/60 text-xs line-through">
-                        {Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
-                      </p>
-                      <p className="text-brand_pink">
-                        {Number(calcDiscountPrice(item.price, item.flashSales?.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-brand_pink">
-                      {formatPrice(item.price)}
+                {item.flashSales ? (
+                  <>
+                    <p className="text-black/60 text-xs line-through">
+                      {Number(item.price).toLocaleString("en-NG", {
+                        style: "currency",
+                        currency: "NGN",
+                      })}
                     </p>
-                  )
-                }
+                    <p className="text-brand_pink">
+                      {Number(
+                        calcDiscountPrice(
+                          item.price,
+                          item.flashSales?.discountValue!,
+                          item.flashSales?.discountType!,
+                        ),
+                      ).toLocaleString("en-NG", {
+                        style: "currency",
+                        currency: "NGN",
+                      })}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-brand_pink">{formatPrice(item.price)}</p>
+                )}
               </div>
 
               <div className="flex gap-2 items-center text-sm">
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    decreaseQuantity(item._id)
+                    decreaseQuantity(item._id);
                   }}
                   className="border size-[1.2rem] lg:size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                 >
@@ -114,7 +136,7 @@ function CartCard({ item }: { item: CartItem }) {
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    increaseQuantity(item._id)
+                    increaseQuantity(item._id);
                   }}
                   className="border size-[1.2rem] lg:size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                 >
@@ -134,7 +156,7 @@ function CartCard({ item }: { item: CartItem }) {
           fill="none"
           onClick={(e) => {
             e.stopPropagation();
-            removeItem(item._id)
+            removeItem(item._id);
           }}
           xmlns="http://www.w3.org/2000/svg"
         >

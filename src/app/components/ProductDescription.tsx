@@ -1,7 +1,7 @@
 "use client";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { ProductResponse } from "@/lib/types";
-import { calcDiscountPrice } from "@/lib/utils";
+import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
@@ -291,17 +291,23 @@ export default function ProductDescription({
           <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
             <p className="font-medium">
               Only{" "}
-              {Number(calcDiscountPrice(product.price, 0)).toLocaleString(
-                "en-NG",
-                { style: "currency", currency: "NGN" },
-              )}{" "}
+              {Number(
+                calcDiscountPrice(
+                  product.price,
+                  product.flashSales.discountValue!,
+                  product.flashSales.discountType!,
+                ),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}{" "}
               with extra{" "}
               {Number(
-                product.price -
-                  calcDiscountPrice(
-                    product.price,
-                    product.flashSales.discount!,
-                  ),
+                calcDiscount(
+                  product.price,
+                  product.flashSales.discountValue!,
+                  product.flashSales.discountType!,
+                ),
               ).toLocaleString("en-NG", {
                 style: "currency",
                 currency: "NGN",
@@ -309,7 +315,7 @@ export default function ProductDescription({
               off | Ends in
             </p>
             <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-              <CountdownTimer endTime={product.flashSales!.endTime} />
+              <CountdownTimer endTime={product.flashSales!.endDate} />
             </p>
           </div>
         )}

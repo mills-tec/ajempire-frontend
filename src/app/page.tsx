@@ -21,7 +21,6 @@ import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
-
 export default function Home() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -59,26 +58,21 @@ export default function Home() {
   };
 
   return (
-    <PullToRefreshProvider onRefresh={handleRefresh}>
+    <PullToRefreshProvider
+      onRefresh={async (): Promise<void> => {
+        await refetch();
+      }}
+    >
       <HomeContent data={data} isLoading={isLoading} />
     </PullToRefreshProvider>
   );
 }
 
-
-
-function HomeContent({
-  data,
-  isLoading,
-}: {
-  data: any;
-  isLoading: boolean;
-}) {
+function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
   const { pull } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
-  const { searchedQuery, resetToken, minPrice, maxPrice } =
-    useSearchStore();
+  const { searchedQuery, resetToken, minPrice, maxPrice } = useSearchStore();
   const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
@@ -123,28 +117,22 @@ function HomeContent({
     loading: false,
     hasNextPage,
     onLoadMore: async () => {
-
-
-
       try {
-        const newData = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`); // fetch next page
+        const newData = await getProducts(
+          `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`,
+        ); // fetch next page
         // Update the cached query to append new products
         appendProducts(newData?.message?.products || []);
         setCursor((newData?.message as any)?.nextCursor! || "");
 
         // Update hasNextPage based on backend response
         setHasNextPage((newData!.message as any)?.hasMore ?? false);
-
-
       } catch (err) {
         console.error("Error loading more products:", err);
       }
     },
     disabled: Boolean(false),
-
   });
-
-
 
   const appendProducts = (newProducts: any[]) => {
     queryClient.setQueryData(["products"], (oldData: any) => {
@@ -154,15 +142,11 @@ function HomeContent({
         ...oldData,
         message: {
           ...oldData.message,
-          products: [
-            ...(oldData.message?.products ?? []),
-            ...newProducts,
-          ],
+          products: [...(oldData.message?.products ?? []), ...newProducts],
         },
       };
     });
   };
-
 
   useEffect(() => {
     if (hasNextPage === false || !triggerManualLoad) {
@@ -177,7 +161,7 @@ function HomeContent({
           root: null, // viewport
           rootMargin: "0px",
           threshold: 0.5, // 50% of the item is visible
-        }
+        },
       );
 
       if (lastItemRef.current) {
@@ -188,14 +172,11 @@ function HomeContent({
         if (lastItemRef.current) observer.unobserve(lastItemRef.current);
       };
     }
-  }, [hasNextPage, triggerManualLoad])
-
+  }, [hasNextPage, triggerManualLoad]);
 
   // appends new data
   useEffect(() => {
     if (!lastItemInview) return;
-
-
 
     const loadMoreProducts = () => {
       const total = products.length;
@@ -212,8 +193,6 @@ function HomeContent({
 
     return () => clearTimeout(timer); // cleanup if component unmounts
   }, [lastItemInview]);
-
-
 
   return (
     <>
@@ -237,19 +216,18 @@ function HomeContent({
 
           <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
             {/* Banner */}
-            {
-              !searchActive && <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
+            {!searchActive && (
+              <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
                 {uiLoading || isLoading ? (
                   <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
                 ) : (
-
                   <HomeHeroSlider
                     products={data?.message?.products ?? []}
                     loading={uiLoading || isLoading}
                   />
                 )}
               </div>
-            }
+            )}
 
             {/* Categories */}
             <div className={`mt-${searchActive ? "[1rem]" : "8"}`}>
@@ -311,18 +289,20 @@ function HomeContent({
                       </div>
                     ))}
 
-
-
+                    {!hasNextPage &&
+                      [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                        <div key={i}>
+                          <Skeleton />
+                        </div>
+                      ))}
                   </div>
                   <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
                 </>
               )}
             </div>
-
           </div>
         </div>
       </PullToRefreshContainer>
     </>
-
   );
 }
