@@ -10,10 +10,9 @@ import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { getUsersWishlist } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
 
-
 export default function ProductCard({
   product,
-  index
+  index,
 }: {
   product: Product;
   index: number;
@@ -25,7 +24,7 @@ export default function ProductCard({
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
   const showSellerTag = Math.random() > 0.4;
-  const [imgLoading, setLoading] = useState(true)
+  const [imgLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -42,7 +41,6 @@ export default function ProductCard({
       maximumFractionDigits: 0,
     }).format(Math.round(amount));
   };
-
 
   const filledStar = (
     <svg
@@ -80,10 +78,10 @@ export default function ProductCard({
       onClick={() => router.push(`/product/${product._id}`)}
       className={`space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid md:h-fit   ${index % 2 === 0 ? "h-[20rem]" : `h-[14rem] ${index !== 1 ? "-translate-y-10 md:translate-y-0" : ""}`} `}
     >
-
       <Link href={`/product/${product._id}`}>
-        <div className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
-
+        <div
+          className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}
+        >
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
@@ -91,7 +89,7 @@ export default function ProductCard({
             fill
             className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
             onLoad={() => {
-              setLoading(false)
+              setLoading(false);
             }}
           />
         </div>
@@ -106,7 +104,6 @@ export default function ProductCard({
           Only {product.stock} left
         </p>
 
-
         <div className="flex items-center gap-2">
           {
             <div className="flex text-brand_gray_dark">
@@ -115,7 +112,7 @@ export default function ProductCard({
                   <span key={i}>{filledStar}</span>
                 ) : (
                   <span key={i}>{unfilledStar}</span>
-                )
+                ),
               )}
             </div>
           }
@@ -124,27 +121,47 @@ export default function ProductCard({
           </p>} */}
 
           <div>
-            <p className="text-[7px] lg:text-xs text-black/60 ">{product.itemsSold! > 1000 ? (product.itemsSold! / 1000).toFixed(1) + "k" : product.itemsSold!} Sold</p>
+            <p className="text-[7px] lg:text-xs text-black/60 ">
+              {product.itemsSold! > 1000
+                ? (product.itemsSold! / 1000).toFixed(1) + "k"
+                : product.itemsSold!}{" "}
+              Sold
+            </p>
           </div>
         </div>
         {product.flashSales && (
           <div className="flex items-center gap-2 w-fit pr-2 text-[7px] lg:text-[10px] rounded-sm border border-brand_pink ">
             <p className="px-2 py-1 bg-brand_pink text-white">
-              Save {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} extra
+              Save{" "}
+              {Number(
+                calcDiscountPrice(
+                  product.price,
+                  product.flashSales?.discountValue,
+                  product.flashSales?.discountType,
+                ),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}{" "}
+              extra
             </p>
 
             <span className="text-brand_pink  font-bold">
-              <CountdownTimer endTime={product.flashSales.endTime} />
+              <CountdownTimer endTime={product.flashSales.endDate} />
             </span>
-
           </div>
         )}
         <div className="flex items-center gap-2 pt-1 justify-between">
           <div className="flex  items-center gap-2 ">
             <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
-              {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              {Number(
+                calcDiscountPrice(
+                  product.price,
+                  product.flashSales?.discountValue ?? 0,
+                  product.flashSales?.discountType ?? "percent",
+                ),
+              ).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
             </h3>
-
           </div>
 
           <div className="flex lg:gap-2 gap-1 items-center">
@@ -234,6 +251,6 @@ export default function ProductCard({
           </div>
         </div>
       </div>
-    </section >
+    </section>
   );
 }

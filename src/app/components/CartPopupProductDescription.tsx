@@ -13,10 +13,7 @@ interface Props {
 }
 import CountdownTimer from "@/components/CountDownTimer";
 
-export default function CartPopupProductDescription({
-  item,
-  cartRef,
-}: Props) {
+export default function CartPopupProductDescription({ item, cartRef }: Props) {
   // const [rating, setRating] = React.useState(4);
   const [isAdress, setIsAdress] = useState(false);
   const { items: selectedItem, selectAllCartItems } = useCartStore();
@@ -41,7 +38,6 @@ export default function CartPopupProductDescription({
     setTimeout(() => {
       console.log("Selected items:", selectedItem);
     }, 50);
-
   };
 
   const {
@@ -57,7 +53,7 @@ export default function CartPopupProductDescription({
   const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
 
   const [selectedVariants, setSelectedVariants] = useState(
-    () => cartItem?.selectedVariants ?? null
+    () => cartItem?.selectedVariants ?? null,
   );
 
   // useEffect(() => {
@@ -91,8 +87,8 @@ export default function CartPopupProductDescription({
   function getAllVariantItems(variant_name: string) {
     return item.variants!.length > 0
       ? item.variants!.filter(
-        (variant) => variant.name == variant_name && variant.stock > 0
-      )
+          (variant) => variant.name == variant_name && variant.stock > 0,
+        )
       : [];
   }
 
@@ -226,7 +222,6 @@ export default function CartPopupProductDescription({
   //   }, 650);
   // };
 
-
   return (
     <div className="space-y-4 lg:space-y-8">
       <div className="space-y-1 px-4">
@@ -243,46 +238,94 @@ export default function CartPopupProductDescription({
                       <span key={i}>{filledStar}</span>
                     ) : (
                       <span key={i}>{unfilledStar}</span>
-                    )
+                    ),
                   )}
                 </div>
               }
-              <p className="text-black/60 text-xs">{item.reviews?.length ?? 0}</p>
+              <p className="text-black/60 text-xs">
+                {item.reviews?.length ?? 0}
+              </p>
             </div>
           </div>
           <div className="flex items-center">
             {item.flashSales ? (
               <>
                 <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                  {Number(calcDiscountPrice(item.price, item.flashSales.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                  {Number(
+                    calcDiscountPrice(
+                      item.price,
+                      item.flashSales.discountValue!,
+                      item.flashSales.discountType!,
+                    ),
+                  ).toLocaleString("en-NG", {
+                    style: "currency",
+                    currency: "NGN",
+                  })}
                 </h3>
 
-                <h4 className="text-[10px] lg:text-xs ml-2">{Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}</h4>
+                <h4 className="text-[10px] lg:text-xs ml-2">
+                  {Number(item.price).toLocaleString("en-NG", {
+                    style: "currency",
+                    currency: "NGN",
+                  })}
+                </h4>
               </>
-
-
             ) : (
               <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                {Number(item.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                {Number(item.price).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}
               </h3>
             )}
 
-
-            {
-              item.flashSales && <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-                <p>{item.flashSales?.discount}% OFF Limited time</p>
+            {item.flashSales && (
+              <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+                <p>
+                  {item.flashSales.discountType === "percent"
+                    ? `${item.flashSales.discountValue}%`
+                    : `₦${item.flashSales.discountValue}`}{" "}
+                  OFF Limited time
+                </p>
               </div>
-            }
+            )}
           </div>
 
-          {item.flashSales && <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
-            <p className="font-medium">
-              Only {Number(calcDiscountPrice(item.price, 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} with extra {Number((item.price - calcDiscountPrice(item.price, item.flashSales!.discount)).toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} off | Ends in
-            </p>
-            <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-              <CountdownTimer endTime={item.flashSales!.endTime} />
-            </p>
-          </div>}
+          {item.flashSales && (
+            <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
+              <p className="font-medium">
+                Only{" "}
+                {Number(
+                  calcDiscountPrice(
+                    item.price,
+                    item.flashSales.discountValue!,
+                    item.flashSales.discountType!,
+                  ),
+                ).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}{" "}
+                with extra{" "}
+                {Number(
+                  (
+                    item.price -
+                    calcDiscountPrice(
+                      item.price,
+                      item.flashSales!.discountValue!,
+                      item.flashSales!.discountType!,
+                    )
+                  ).toFixed(2),
+                ).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}{" "}
+                off | Ends in
+              </p>
+              <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
+                <CountdownTimer endTime={item.flashSales.endDate} />
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -332,7 +375,7 @@ export default function CartPopupProductDescription({
                               const exists = selectedArr.some(
                                 (v) =>
                                   v.name === variantItem.name &&
-                                  v.value === variantItem.value
+                                  v.value === variantItem.value,
                               );
                               if (exists) {
                                 return selectedArr.filter(
@@ -340,7 +383,7 @@ export default function CartPopupProductDescription({
                                     !(
                                       v.name === variantItem.name &&
                                       v.value === variantItem.value
-                                    )
+                                    ),
                                 );
                               } else {
                                 return [...selectedArr, variantItem];
@@ -364,7 +407,7 @@ export default function CartPopupProductDescription({
                               const exists = selectedArr.some(
                                 (v) =>
                                   v.name === variantItem.name &&
-                                  v.value === variantItem.value
+                                  v.value === variantItem.value,
                               );
                               if (exists) {
                                 return selectedArr.filter(
@@ -372,7 +415,7 @@ export default function CartPopupProductDescription({
                                     !(
                                       v.name === variantItem.name &&
                                       v.value === variantItem.value
-                                    )
+                                    ),
                                 );
                               } else {
                                 return [...selectedArr, variantItem];
@@ -387,10 +430,10 @@ export default function CartPopupProductDescription({
                           }}
                         >
                           {selectedVariants?.some(
-                            (v) => v._id === variantItem._id
+                            (v) => v._id === variantItem._id,
                           ) && (
-                              <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                            )}
+                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                          )}
                         </div>
                       );
                     }
@@ -425,8 +468,6 @@ export default function CartPopupProductDescription({
                     }),
                 });
               }}
-
-
               className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
             >
               Add to Cart
@@ -477,12 +518,13 @@ export default function CartPopupProductDescription({
           </button>
         </div>
         <div className="w-full">
-          <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+          <button
+            className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full"
+            onClick={checkoutHandler}
+          >
             Check Out
           </button>
-
         </div>
-
       </div>
       {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
     </div>

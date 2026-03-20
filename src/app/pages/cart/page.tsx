@@ -16,7 +16,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 export const formatPrice = (amount: number) => {
-  return Number(amount).toLocaleString("en-ng", { style: "currency", currency: "NGN" });
+  return Number(amount).toLocaleString("en-ng", {
+    style: "currency",
+    currency: "NGN",
+  });
 };
 export default function CartPage() {
   const {
@@ -32,7 +35,7 @@ export default function CartPage() {
   const [isAdress, setIsAdress] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const selectedItems = items.filter(item => item.selected);
+  const selectedItems = items.filter((item) => item.selected);
   const selectedCount = selectedItems.length;
 
   const checkoutHandler = () => {
@@ -68,9 +71,8 @@ export default function CartPage() {
 
   const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
   const handleImageLoad = (id: string) => {
-    setLoadedImages(prev => ({ ...prev, [id]: true }));
+    setLoadedImages((prev) => ({ ...prev, [id]: true }));
   };
-
 
   // Show skeleton while loading
 
@@ -89,9 +91,6 @@ export default function CartPage() {
     );
   }
 
-
-
-
   if (!isLoading && items.length === 0)
     return (
       <RefreshWrapper>
@@ -106,14 +105,23 @@ export default function CartPage() {
               xmlns="http://www.w3.org/2000/svg"
             >
               <ellipse cx="113.5" cy="117" rx="113.5" ry="117" fill="#D9D9D9" />
-              <rect x="55" y="58" width="118" height="118" rx="59" fill="white" />
+              <rect
+                x="55"
+                y="58"
+                width="118"
+                height="118"
+                rx="59"
+                fill="white"
+              />
               <path
                 d="M126.083 131.501C123.4 131.501 121.249 133.651 121.249 136.334C121.249 137.616 121.759 138.845 122.665 139.752C123.571 140.658 124.801 141.167 126.083 141.167C127.365 141.167 128.594 140.658 129.5 139.752C130.407 138.845 130.916 137.616 130.916 136.334C130.916 135.052 130.407 133.823 129.5 132.916C128.594 132.01 127.365 131.501 126.083 131.501ZM87.416 92.834V97.6673H92.2493L100.949 116.01L97.6627 121.931C97.3002 122.607 97.0827 123.405 97.0827 124.251C97.0827 125.533 97.5919 126.762 98.4983 127.668C99.4048 128.575 100.634 129.084 101.916 129.084H130.916V124.251H102.931C102.771 124.251 102.617 124.187 102.504 124.074C102.391 123.96 102.327 123.807 102.327 123.646C102.327 123.526 102.351 123.429 102.399 123.356L104.574 119.417H122.579C124.391 119.417 125.986 118.402 126.808 116.928L135.459 101.292C135.629 100.906 135.749 100.495 135.749 100.084C135.749 99.443 135.495 98.8284 135.042 98.3751C134.588 97.9219 133.974 97.6673 133.333 97.6673H97.5902L95.3185 92.834M101.916 131.501C99.2335 131.501 97.0827 133.651 97.0827 136.334C97.0827 137.616 97.5919 138.845 98.4983 139.752C99.4048 140.658 100.634 141.167 101.916 141.167C103.198 141.167 104.427 140.658 105.334 139.752C106.24 138.845 106.749 137.616 106.749 136.334C106.749 135.052 106.24 133.823 105.334 132.916C104.427 132.01 103.198 131.501 101.916 131.501Z"
                 fill="#AAAAAA"
               />
             </svg>
             <div className="space-y-2">
-              <p className="italic font-medium text-black/60">your cart is empty</p>
+              <p className="italic font-medium text-black/60">
+                your cart is empty
+              </p>
               <div>
                 <Link href={"/"}>
                   <button className="flex gap-1 items-center w-[15rem] max-w-[80%] mx-auto justify-center py-2 rounded-full bg-brand_pink text-white">
@@ -123,10 +131,8 @@ export default function CartPage() {
               </div>
             </div>
           </div>
-
         </section>
       </RefreshWrapper>
-
     );
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
@@ -147,8 +153,7 @@ export default function CartPage() {
             <p className="text-sm">All</p>
           </div>
           <p className="font-medium lg:hidden  ">
-            Cart
-            ({selectedCount} {selectedCount === 1 ? "item" : "items"})
+            Cart ({selectedCount} {selectedCount === 1 ? "item" : "items"})
           </p>
           <svg
             width="28"
@@ -175,7 +180,7 @@ export default function CartPage() {
           <div
             className={clsx(
               "fixed lg:sticky bottom-[5rem] lg:bottom-0 w-screen p-4 lg:top-[8rem] bg-white rounded-t-2xl border-t border-black/25 lg:border-none lg:p-0 lg:bg-transparent lg:rounded-none lg:w-min",
-              expand ? "block" : "hidden lg:block"
+              expand ? "block" : "hidden lg:block",
             )}
           >
             <svg
@@ -185,7 +190,7 @@ export default function CartPage() {
               fill="none"
               className={clsx(
                 "flex justify-self-end mb-1 lg:hidden",
-                expand ? "rotate-180" : "-rotate-180"
+                expand ? "rotate-180" : "-rotate-180",
               )}
               onClick={() => setExpand(!expand)}
               xmlns="http://www.w3.org/2000/svg"
@@ -211,8 +216,8 @@ export default function CartPage() {
             </svg>
 
             <p className=" text-sm text-center pb-4">
-              <span className="font-medium text-base">Order Summary</span>
-              ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
+              <span className="font-medium text-base">Order Summary</span>(
+              {selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
             </p>
 
             {/* <div className="flex gap-2">
@@ -242,11 +247,7 @@ export default function CartPage() {
                 return (
                   <div key={item._id} className="transition-all duration-300">
                     <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
-
-
-                      {isLoaded && (
-                        <SelectedItemSkeleton />
-                      )}
+                      {isLoaded && <SelectedItemSkeleton />}
 
                       <Image
                         src={item.cover_image!}
@@ -254,14 +255,20 @@ export default function CartPage() {
                         fill
                         className={clsx(
                           "object-cover transition-opacity duration-500",
-                          isLoaded ? "opacity-100" : "opacity-0"
+                          isLoaded ? "opacity-100" : "opacity-0",
                         )}
                         onLoad={() => handleImageLoad(item._id)}
                       />
                     </div>
 
                     <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
-                      {formatPrice(calcDiscountPrice(item.price, item.flashSales?.discount ?? 0!))}
+                      {formatPrice(
+                        calcDiscountPrice(
+                          item.price,
+                          item.flashSales?.discountValue ?? 0!,
+                          item.flashSales?.discountType!,
+                        ),
+                      )}
                       <span className="text-brand_pink"> x{item.quantity}</span>
                     </p>
                   </div>
@@ -273,11 +280,15 @@ export default function CartPage() {
             <div className="text-sm space-y-6 py-3 ">
               <div className="flex justify-between items-center">
                 <p>Item(s) total:</p>
-                <p className="font-medium">{formatPrice(orderSummary().total)}</p>
+                <p className="font-medium">
+                  {formatPrice(orderSummary().total)}
+                </p>
               </div>
               <div className="flex justify-between items-center">
                 <p>Item(s) discount:</p>
-                <p className="text-brand_pink">- {formatPrice(orderSummary().discount)}</p>
+                <p className="text-brand_pink">
+                  - {formatPrice(orderSummary().discount)}
+                </p>
               </div>
             </div>
             <hr />
@@ -288,7 +299,9 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between text-sm items-center">
                 <p>Total:</p>
-                <p className="font-semibold">{formatPrice(orderSummary().finalTotal)}</p>
+                <p className="font-semibold">
+                  {formatPrice(orderSummary().finalTotal)}
+                </p>
               </div>
             </div>
             <button
@@ -302,7 +315,7 @@ export default function CartPage() {
           <div
             className={clsx(
               "fixed bottom-[5rem] w-screen p-4 z-50 h-min border-t border-black/25 lg:border-none bg-white rounded-t-2xl",
-              !expand ? "block lg:hidden" : "hidden lg:hidden"
+              !expand ? "block lg:hidden" : "hidden lg:hidden",
             )}
           >
             <svg
@@ -336,11 +349,14 @@ export default function CartPage() {
 
             <div>
               <p className=" text-sm font-medium pb-4">
-                ({selectedCount} {selectedCount === 1 ? "item" : "items"}) selected
+                ({selectedCount} {selectedCount === 1 ? "item" : "items"})
+                selected
               </p>
               <div className="flex justify-between items-end">
                 <div>
-                  <h3 className="font-medium">{formatPrice(orderSummary().total)}</h3>
+                  <h3 className="font-medium">
+                    {formatPrice(orderSummary().total)}
+                  </h3>
                   <p className="text-xs text-brand_pink">
                     {formatPrice(orderSummary().discount)} discount applied
                   </p>

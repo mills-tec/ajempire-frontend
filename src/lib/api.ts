@@ -8,7 +8,6 @@ import {
   ProductResponse,
   ProductsResponse,
 } from "./types";
-import { getToken } from "firebase/messaging";
 import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 
 export type Coupon = {
@@ -21,7 +20,6 @@ export type Coupon = {
   isExpired: boolean;
   users: string[];
 };
-
 
 // lib/api.ts
 const API_URL = "https://ajempire-backend.vercel.app/api";
@@ -134,13 +132,15 @@ export async function getSessionBackend() {
 }
 
 /// Product API
-export async function getProducts(query: string): Promise<ProductsResponse | null> {
+export async function getProducts(
+  query: string,
+): Promise<ProductsResponse | null> {
   const res = await fetch(API_URL + "/product?" + query);
   if (!res.ok) return null;
-  return res.json();
+  const resp = await res.json();
+  console.log(resp.message);
+  return resp;
 }
-
-
 
 export async function getProduct(id: string): Promise<ProductResponse | null> {
   const user = getUser();
@@ -149,51 +149,80 @@ export async function getProduct(id: string): Promise<ProductResponse | null> {
   return res.json();
 }
 
-export async function getUpdates(type: string, cursor: string, limit: number): Promise<{ data: Feed[]; nextCursor: string; hasMore: boolean } | null> {
-  const res = await fetch(API_URL + "/updates/" + type + "?limit=" + limit + "&cursor=" + cursor);
+export async function getUpdates(
+  type: string,
+  cursor: string,
+  limit: number,
+): Promise<{ data: Feed[]; nextCursor: string; hasMore: boolean } | null> {
+  const res = await fetch(
+    API_URL + "/updates/" + type + "?limit=" + limit + "&cursor=" + cursor,
+  );
   if (!res.ok) return null;
 
   return ((await res.json()) as any).message;
 }
 
-export async function getRelatedProducts(category: string, query: string): Promise<{
+export async function getRelatedProducts(
+  category: string,
+  query: string,
+): Promise<{
   products: Product[];
   nextCursor: string;
   hasMore: boolean;
 } | null> {
-  const res = await fetch(API_URL + "/product/related/" + category + "?" + query);
+  const res = await fetch(
+    API_URL + "/product/related/" + category + "?" + query,
+  );
   if (!res.ok) return null;
   return res.json();
 }
 
-export async function getExploreInterest(limit: number, cursor: string): Promise<{
+export async function getExploreInterest(
+  limit: number,
+  cursor: string,
+): Promise<{
   products: Product[];
   nextCursor: string;
   hasMore: boolean;
 } | null> {
-  const token = getBearerToken()
-  const res = await fetch(API_URL + "/products/explore/" + "?limit=" + limit + "&cursor=" + cursor, {
-    headers: {
-      "Authorization": "Bearer " + token
-    }
-  });
+  const token = getBearerToken();
+  const res = await fetch(
+    API_URL + "/products/explore/" + "?limit=" + limit + "&cursor=" + cursor,
+    {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    },
+  );
   if (!res.ok) return null;
   return res.json();
 }
 
 export function getBearerToken() {
-  const userStr = typeof window != "undefined" ? localStorage.getItem("ajempire_signin_user") : null;
+  const userStr =
+    typeof window != "undefined"
+      ? localStorage.getItem("ajempire_signin_user")
+      : null;
   return userStr ? JSON.parse(userStr)?.token : null;
 }
 
-export function getUser(): { _id: string; email: string, fullname: string } | null {
+export function getUser(): {
+  _id: string;
+  email: string;
+  fullname: string;
+} | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("ajempire_signin_user");
   return userStr ? JSON.parse(userStr)?.user : null;
 }
 
-export async function getFeeds(cursor: string, type: string): Promise<Feed[] | null> {
-  const res = await fetch(API_URL + "/updates/" + type + "?limit=4&cursor=" + cursor);
+export async function getFeeds(
+  cursor: string,
+  type: string,
+): Promise<Feed[] | null> {
+  const res = await fetch(
+    API_URL + "/updates/" + type + "?limit=4&cursor=" + cursor,
+  );
   if (!res.ok) return null;
   return res.json();
 }
@@ -283,7 +312,6 @@ export async function addToWishlistAPI(productId: string) {
   if (!wishlist) throw new Error("Failed to add to wishlist");
 
   const wishlistIDs = wishlist.message.map((item) => item.product._id);
-
 
   const res = await fetch(`${API_URL}/wishlist`, {
     method: "POST",
@@ -400,7 +428,6 @@ export async function getCategories(): Promise<{ message: Category[] }> {
   return res.json();
 }
 
-
 // export async function getProductsByCategory(
 //   category: string
 // ): Promise<ProductsResponse | null> {
@@ -456,7 +483,7 @@ export async function getCategories(): Promise<{ message: Category[] }> {
 // }
 
 export async function getProductsByCategory(
-  category: string
+  category: string,
 ): Promise<Product[]> {
   const res = await fetch(`${API_URL}/category/${category}/product`);
   if (!res.ok) return [];
@@ -491,9 +518,11 @@ export async function getProductsByCategory(
 //   }
 // }
 
-export async function getCoupons(type: string): Promise<{ message: ICoupon[] } | null> {
+export async function getCoupons(
+  type: string,
+): Promise<{ message: ICoupon[] } | null> {
   try {
-    const token = getBearerToken()
+    const token = getBearerToken();
     const res = await fetch(`${API_URL}/coupons/${type}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -515,8 +544,6 @@ export async function getCoupons(type: string): Promise<{ message: ICoupon[] } |
   }
 }
 
-
-
 export async function applyCouponCode(code: string): Promise<{
   message: {
     _id: string;
@@ -528,18 +555,19 @@ export async function applyCouponCode(code: string): Promise<{
     isExpired: boolean;
     usedBy: string[]; // assuming array of user IDs
     __v: number;
-  }
+  };
 } | null> {
-
   try {
     const token = getBearerToken();
-    const res = await postData(`/coupon/apply`, { code }, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const res = await postData(
+      `/coupon/apply`,
+      { code },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
-
-
+    );
 
     const data = await res;
 
@@ -548,5 +576,4 @@ export async function applyCouponCode(code: string): Promise<{
     console.error("Coupon fetch error:", error);
     return null;
   }
-
 }

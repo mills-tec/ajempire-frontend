@@ -5,20 +5,30 @@ export function cn(...inputs: any[]) {
 }
 
 // this is the new price after discount is applied
-export function calcDiscountPrice(originalPrice: number, discount: number) {
+export function calcDiscountPrice(
+  originalPrice: number,
+  discount: number,
+  discountType: "percent" | "fixed",
+) {
   // discount is expected as a percentage e.g. 20 for 20%
   if (typeof originalPrice !== "number" || typeof discount !== "number")
     return 0;
-  const discountedAmount = (discount / 100) * originalPrice;
+  const discountedAmount =
+    discountType === "percent" ? (discount / 100) * originalPrice : discount;
   return Math.round(originalPrice - discountedAmount);
 }
 
 // this is the removed price after discount is applied
-export function calcDiscount(originalPrice: number, discount: number) {
+export function calcDiscount(
+  originalPrice: number,
+  discount: number,
+  discountType: "percent" | "fixed",
+) {
   // discount is expected as a percentage e.g. 20 for 20%
   if (typeof originalPrice !== "number" || typeof discount !== "number")
     return 0;
-  const discountedAmount = (discount / 100) * originalPrice;
+  const discountedAmount =
+    discountType === "percent" ? (discount / 100) * originalPrice : discount;
   return Math.round(discountedAmount);
 }
 
@@ -39,17 +49,24 @@ export function getRatingStats(arr: Review[]) {
   return { counts, normalized };
 }
 
-
-
-export const saveAccounts = (account: { token: string, user: any, email: string }) => {
+export const saveAccounts = (account: {
+  token: string;
+  user: any;
+  email: string;
+}) => {
   if (localStorage.getItem("savedAccounts")) {
-    const savedAccounts: { token: string, user: any, email: string }[] = JSON.parse(localStorage.getItem("savedAccounts")!);
-    if (!savedAccounts.some(savedAccount => savedAccount.email == account.email)) {
-      localStorage.setItem("savedAccounts", JSON.stringify([...savedAccounts, account]));
+    const savedAccounts: { token: string; user: any; email: string }[] =
+      JSON.parse(localStorage.getItem("savedAccounts")!);
+    if (
+      !savedAccounts.some((savedAccount) => savedAccount.email == account.email)
+    ) {
+      localStorage.setItem(
+        "savedAccounts",
+        JSON.stringify([...savedAccounts, account]),
+      );
     }
   } else {
     localStorage.setItem("savedAccounts", JSON.stringify([account]));
-
   }
 };
 
@@ -60,7 +77,6 @@ export function getInitials(name?: string) {
   const second = parts[1]?.[0] || "";
   return (first + second).toUpperCase();
 }
-
 
 const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
@@ -78,41 +94,54 @@ export function timeAgo(date: string | Date | undefined) {
   if (!date) return null;
 
   const diffInSeconds = Math.floor(
-    (new Date(date).getTime() - Date.now()) / 1000
+    (new Date(date).getTime() - Date.now()) / 1000,
   );
 
   let duration = diffInSeconds;
 
   for (const [amount, unit] of units) {
     if (Math.abs(duration) < amount) {
-      const val = rtf.format(Math.round(duration), unit)
+      const val = rtf.format(Math.round(duration), unit);
       return val;
-
     }
     duration /= amount;
   }
-
-
 }
 
 export const openSocialApp = (type: string, href: string) => {
   switch (type) {
     case "telegram":
-      window.open(`https://t.me/share/url?url=${href}`, "_blank", "noopener,noreferrer");
+      window.open(
+        `https://t.me/share/url?url=${href}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
       break;
     case "whatsapp":
-      window.open(`https://wa.me/?text=${href}`, "_blank", "noopener,noreferrer");
+      window.open(
+        `https://wa.me/?text=${href}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
       break;
     case "facebook":
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${href}`, "_blank", "noopener,noreferrer");
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${href}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
       break;
     case "twitter":
-      window.open(`https://twitter.com/intent/tweet?url=${href}`, "_blank", "noopener,noreferrer");
+      window.open(
+        `https://twitter.com/intent/tweet?url=${href}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
       break;
     default:
       break;
   }
-}
+};
 
 export function getCountdown(targetDate: string | Date) {
   const now = new Date().getTime();

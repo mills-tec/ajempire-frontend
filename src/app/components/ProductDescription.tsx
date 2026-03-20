@@ -1,7 +1,7 @@
 "use client";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { ProductResponse } from "@/lib/types";
-import { calcDiscountPrice } from "@/lib/utils";
+import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import CheckoutRequirement from "./CheckoutRequirement";
@@ -32,7 +32,12 @@ export default function ProductDescription({
     setQuantity: setCartItemQty,
   } = useCartStore();
 
-  const { items: wishlistItems, addItem: addWishlistItem, removeItem: removeWishlistItem, isInWishlist } = useWishlistStore();
+  const {
+    items: wishlistItems,
+    addItem: addWishlistItem,
+    removeItem: removeWishlistItem,
+    isInWishlist,
+  } = useWishlistStore();
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -81,11 +86,11 @@ export default function ProductDescription({
   const item = getItem(product._id);
 
   const [quantity, setQuantity] = useState(() =>
-    item ? (item.quantity === 0 ? 1 : item.quantity) : 1
+    item ? (item.quantity === 0 ? 1 : item.quantity) : 1,
   );
 
   const [selectedVariants, setSelectedVariants] = useState(
-    () => item?.selectedVariants ?? null
+    () => item?.selectedVariants ?? null,
   );
 
   useEffect(() => {
@@ -121,8 +126,8 @@ export default function ProductDescription({
   function getAllVariantItems(variant_name: string) {
     return product.variants!.length > 0
       ? product.variants!.filter(
-        (item) => item.name == variant_name && item.stock > 0
-      )
+          (item) => item.name == variant_name && item.stock > 0,
+        )
       : [];
   }
 
@@ -130,8 +135,6 @@ export default function ProductDescription({
     if (!selectedVariants || selectedVariants.length === 0) return;
     setCartSelectedVariants(product._id, selectedVariants);
   }, [selectedVariants]);
-
-
 
   const filledStar = (
     <svg
@@ -175,7 +178,12 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold! > 0 && (
-            <p className="text-sm text-black/60">{product.itemsSold! > 1000 ? (product.itemsSold! / 1000).toFixed(1) + "k" : product.itemsSold!} Sold</p>
+            <p className="text-sm text-black/60">
+              {product.itemsSold! > 1000
+                ? (product.itemsSold! / 1000).toFixed(1) + "k"
+                : product.itemsSold!}{" "}
+              Sold
+            </p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -185,7 +193,7 @@ export default function ProductDescription({
                     <span key={i}>{filledStar}</span>
                   ) : (
                     <span key={i}>{unfilledStar}</span>
-                  )
+                  ),
                 )}
               </div>
             }
@@ -194,45 +202,81 @@ export default function ProductDescription({
         </div>
 
         <div className="flex items-center">
-
           {product.flashSales ? (
             <>
-
               <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                {Number(calcDiscountPrice(product.price, product.flashSales.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                {Number(
+                  calcDiscountPrice(
+                    product.price,
+                    product.flashSales.discountValue!,
+                    product.flashSales.discountType!,
+                  ),
+                ).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}
               </h3>
               <h4 className="text-[10px] lg:text-xs ml-2 line-through">
-                {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                {Number(product.price).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}
               </h4>
             </>
           ) : (
             <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              {Number(product.price).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}
             </h3>
           )}
 
-
-          {
-            product.flashSales && (
-              <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-                <p>{product.flashSales.discount}% OFF Limited time</p>
-              </div>
-            )
-          }
-        </div>
-
-        {
-          product.flashSales && (
-            <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
-              <p className="font-medium">
-                Only {Number(calcDiscountPrice(product.price, 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} with extra {Number((product.price - calcDiscountPrice(product.price, product.flashSales.discount!))).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} off | Ends in
-              </p>
-              <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-                <CountdownTimer endTime={product.flashSales!.endTime} />
+          {product.flashSales && (
+            <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+              <p>
+                {" "}
+                {product.flashSales.discountType === "percent"
+                  ? `${product.flashSales.discountValue}% `
+                  : `₦${product.flashSales.discountValue}`}
+                OFF Limited time
               </p>
             </div>
-          )
-        }
+          )}
+        </div>
+
+        {product.flashSales && (
+          <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
+            <p className="font-medium">
+              Only{" "}
+              {Number(
+                calcDiscountPrice(
+                  product.price,
+                  product.flashSales.discountValue!,
+                  product.flashSales.discountType!,
+                ),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}{" "}
+              with extra{" "}
+              {Number(
+                calcDiscount(
+                  product.price,
+                  product.flashSales.discountValue!,
+                  product.flashSales.discountType!,
+                ),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}{" "}
+              off | Ends in
+            </p>
+            <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
+              <CountdownTimer endTime={product.flashSales!.endDate} />
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-5">
@@ -365,7 +409,7 @@ export default function ProductDescription({
                             const exists = selectedArr.some(
                               (v) =>
                                 v.name === variantItem.name &&
-                                v.value === variantItem.value
+                                v.value === variantItem.value,
                             );
                             if (exists) {
                               return selectedArr.filter(
@@ -373,7 +417,7 @@ export default function ProductDescription({
                                   !(
                                     v.name === variantItem.name &&
                                     v.value === variantItem.value
-                                  )
+                                  ),
                               );
                             } else {
                               return [...selectedArr, variantItem];
@@ -397,7 +441,7 @@ export default function ProductDescription({
                             const exists = selectedArr.some(
                               (v) =>
                                 v.name === variantItem.name &&
-                                v.value === variantItem.value
+                                v.value === variantItem.value,
                             );
                             if (exists) {
                               return selectedArr.filter(
@@ -405,7 +449,7 @@ export default function ProductDescription({
                                   !(
                                     v.name === variantItem.name &&
                                     v.value === variantItem.value
-                                  )
+                                  ),
                               );
                             } else {
                               return [...selectedArr, variantItem];
@@ -420,10 +464,10 @@ export default function ProductDescription({
                         }}
                       >
                         {selectedVariants?.some(
-                          (v) => v._id === variantItem._id
+                          (v) => v._id === variantItem._id,
                         ) && (
-                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                          )}
+                          <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
+                        )}
                       </div>
                     );
                   }

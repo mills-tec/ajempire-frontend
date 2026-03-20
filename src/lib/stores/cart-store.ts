@@ -32,7 +32,6 @@ export enum CheckoutStep {
   ORDER_SUMMARY,
 }
 
-
 type SyncAction =
   | { type: "add"; item: CartItem }
   | { type: "remove"; id: string }
@@ -71,7 +70,6 @@ type CartStore = {
   applyCoupon: (coupon: AppliedCoupon) => void;
   removeCoupon: () => void;
 
-
   /* CHECKOUT FLOW */
   checkoutStep: CheckoutStep;
   setCheckoutStep: (step: CheckoutStep) => void;
@@ -89,9 +87,6 @@ type CartStore = {
 };
 
 export const useCartStore = create<CartStore>()(
-
-
-
   persist(
     (set, get) => ({
       items: [],
@@ -110,7 +105,6 @@ export const useCartStore = create<CartStore>()(
       applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
       removeCoupon: () => set({ appliedCoupon: null }),
-
 
       /* CHECKOUT FLOW */
       checkoutStep: CheckoutStep.ADDRESS_FORM,
@@ -141,7 +135,7 @@ export const useCartStore = create<CartStore>()(
           newItems = get().items.map((i) =>
             i._id === item._id
               ? { ...i, quantity: i.quantity + item.quantity, synced: false }
-              : i
+              : i,
           );
         } else {
           newItems = [...get().items, { ...item, synced: false }];
@@ -153,7 +147,6 @@ export const useCartStore = create<CartStore>()(
         // Try to sync
         addToCart(newItems)
           .then(() => {
-
             // mark all as synced
             set({
               items: newItems.map((i) => ({ ...i, synced: true })),
@@ -168,7 +161,9 @@ export const useCartStore = create<CartStore>()(
       },
       setSelectedVariants: (id: string, variants: Variant[]) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, selectedVariants: variants, synced: false } : i
+          i._id === id
+            ? { ...i, selectedVariants: variants, synced: false }
+            : i,
         );
         const updatedItem = updatedItems.find((i) => i._id === id);
 
@@ -208,12 +203,12 @@ export const useCartStore = create<CartStore>()(
       toggleItemSelect: (id: string) =>
         set({
           items: get().items.map((i) =>
-            i._id === id ? { ...i, selected: !i.selected } : i
+            i._id === id ? { ...i, selected: !i.selected } : i,
           ),
         }),
       setQuantity: (id: string, quantity: number) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, quantity, synced: false } : i
+          i._id === id ? { ...i, quantity, synced: false } : i,
         );
         const updatedItem = updatedItems.find((i) => i._id === id);
         set({ items: updatedItems });
@@ -280,14 +275,16 @@ export const useCartStore = create<CartStore>()(
           items: get().items.map((i) =>
             i._id === id
               ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
-              : i
+              : i,
           ),
         }),
       decreaseQuantity: (id) =>
         set({
           items: get()
             .items.map((i) =>
-              i._id === id ? { ...i, quantity: Math.max(i.quantity - 1, 1) } : i
+              i._id === id
+                ? { ...i, quantity: Math.max(i.quantity - 1, 1) }
+                : i,
             )
             .filter((i) => i.quantity > 0),
         }),
@@ -298,8 +295,14 @@ export const useCartStore = create<CartStore>()(
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
-          0
+            sum +
+            calcDiscount(
+              i.price,
+              i.flashSales?.discountValue ?? 0,
+              i.flashSales?.discountType ?? "percent",
+            ) *
+              i.quantity,
+          0,
         );
 
         // const coupon = 0;
@@ -311,7 +314,7 @@ export const useCartStore = create<CartStore>()(
 
           if (appliedCoupon.type === "percent") {
             coupon = Math.round(
-              (appliedCoupon.value / 100) * discountedSubtotal
+              (appliedCoupon.value / 100) * discountedSubtotal,
             );
           }
 
@@ -319,8 +322,6 @@ export const useCartStore = create<CartStore>()(
             coupon = Math.min(appliedCoupon.value, discountedSubtotal);
           }
         }
-
-
 
         // 👇 pull logistics from the global store
         const deliveryFee = get().selectedLogistic?.total ?? 0;
@@ -374,12 +375,12 @@ export const useCartStore = create<CartStore>()(
         requestToken: state.requestToken,
         checkoutStep: state.checkoutStep,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // derived getter instead of in-store `get total()`
 export const useCartTotal = () =>
   useCartStore((state) =>
-    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
   );

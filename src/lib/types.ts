@@ -19,7 +19,7 @@ export interface Product {
   _id: string;
   name: string;
   description: string;
-  category?: { _id: string, name: string };
+  category?: { _id: string; name: string };
   price: number;
   cover_image?: string;
   images?: string[];
@@ -38,9 +38,10 @@ export interface Product {
   reviews?: Review[];
   variants?: Variant[];
   flashSales?: {
-    startTime: string;
-    endTime: string;
-    discount: number;
+    startDate: string;
+    endDate: string;
+    discountValue: number;
+    discountType: "percent" | "fixed";
   };
   createdAt?: string;
   updatedAt?: string;
@@ -83,7 +84,7 @@ export interface IItem {
   qty: number;
   image: string;
   discountedPrice: number;
-  review?: Review
+  review?: Review;
 }
 
 export interface IOrder {
@@ -163,7 +164,6 @@ export interface IReturnRequest {
   __v: number;
 }
 
-
 export interface CommentData {
   _id: string;
   user: {
@@ -181,7 +181,6 @@ export interface CommentData {
 }
 
 export interface Feed {
-
   _id: string;
   title: string;
   description: string;
@@ -196,8 +195,6 @@ export interface Feed {
   startDate?: string;
   endDate?: string;
   flashPrice?: number;
-
-
 }
 
 export interface Notification {
