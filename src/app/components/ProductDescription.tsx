@@ -365,7 +365,7 @@ export default function ProductDescription({
                         className={`relative size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
                                   ${
                                     isSelected
-                                      ? "after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
+                                      ? "after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
                                       : ""
                                   } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                         style={{
