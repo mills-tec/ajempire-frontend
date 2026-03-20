@@ -21,7 +21,6 @@ import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
-
 export default function Home() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -37,9 +36,7 @@ export default function Home() {
     if (products.length > 0) {
       // rotate the list by a random offset so the mid index moves
       const offset = Math.floor(Math.random() * products.length);
-      const rotated = products
-        .slice(offset)
-        .concat(products.slice(0, offset));
+      const rotated = products.slice(offset).concat(products.slice(0, offset));
 
       // optionally shuffle a little inside the rotated list to add variation
       const rearranged = rotated.sort(() => Math.random() - 0.5);
@@ -65,20 +62,11 @@ export default function Home() {
   );
 }
 
-
-
-function HomeContent({
-  data,
-  isLoading,
-}: {
-  data: any;
-  isLoading: boolean;
-}) {
+function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
   const { pull } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
-  const { searchedQuery, resetToken, minPrice, maxPrice } =
-    useSearchStore();
+  const { searchedQuery, resetToken, minPrice, maxPrice } = useSearchStore();
   const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
@@ -123,28 +111,22 @@ function HomeContent({
     loading: false,
     hasNextPage,
     onLoadMore: async () => {
-
-
-
       try {
-        const newData = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`); // fetch next page
+        const newData = await getProducts(
+          `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`,
+        ); // fetch next page
         // Update the cached query to append new products
         appendProducts(newData?.message?.products || []);
         setCursor((newData?.message as any)?.nextCursor! || "");
 
         // Update hasNextPage based on backend response
         setHasNextPage((newData!.message as any)?.hasMore ?? false);
-
-
       } catch (err) {
         console.error("Error loading more products:", err);
       }
     },
     disabled: Boolean(false),
-
   });
-
-
 
   const appendProducts = (newProducts: any[]) => {
     queryClient.setQueryData(["products"], (oldData: any) => {
@@ -154,15 +136,11 @@ function HomeContent({
         ...oldData,
         message: {
           ...oldData.message,
-          products: [
-            ...(oldData.message?.products ?? []),
-            ...newProducts,
-          ],
+          products: [...(oldData.message?.products ?? []), ...newProducts],
         },
       };
     });
   };
-
 
   useEffect(() => {
     if (hasNextPage === false || !triggerManualLoad) {
@@ -177,7 +155,7 @@ function HomeContent({
           root: null, // viewport
           rootMargin: "0px",
           threshold: 0.5, // 50% of the item is visible
-        }
+        },
       );
 
       if (lastItemRef.current) {
@@ -188,14 +166,11 @@ function HomeContent({
         if (lastItemRef.current) observer.unobserve(lastItemRef.current);
       };
     }
-  }, [hasNextPage, triggerManualLoad])
-
+  }, [hasNextPage, triggerManualLoad]);
 
   // appends new data
   useEffect(() => {
     if (!lastItemInview) return;
-
-
 
     const loadMoreProducts = () => {
       const total = products.length;
@@ -213,19 +188,15 @@ function HomeContent({
     return () => clearTimeout(timer); // cleanup if component unmounts
   }, [lastItemInview]);
 
-
-
   return (
     <>
       <PullToRefreshHeader />
       <PullToRefreshContainer>
-
-        <div className="w-full bg-[#FFF9FC]">
+        <div className="w-full ">
           {selectedItem && <CartPopup />}
 
           <div
             className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
-
             style={{
               transform: `translateY(-${pull * 0.7}px)`,
               opacity: 1 - Math.min(pull / 150, 1),
@@ -237,19 +208,18 @@ function HomeContent({
 
           <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
             {/* Banner */}
-            {
-              !searchActive && <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
+            {!searchActive && (
+              <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
                 {uiLoading || isLoading ? (
                   <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
                 ) : (
-
                   <HomeHeroSlider
                     products={data?.message?.products ?? []}
                     loading={uiLoading || isLoading}
                   />
                 )}
               </div>
-            }
+            )}
 
             {/* Categories */}
             <div className={`mt-${searchActive ? "[1rem]" : "8"}`}>
@@ -297,32 +267,39 @@ function HomeContent({
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
                     {products.map((product: any, index: number) => (
-                      <div ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null} key={index}>
-                        <ProductItem key={product._id} product={product} index={index} />
+                      <div
+                        ref={
+                          !hasNextPage && index === products.length - 1
+                            ? lastItemRef
+                            : null
+                        }
+                        key={index}
+                      >
+                        <ProductItem
+                          key={product._id}
+                          product={product}
+                          index={index}
+                        />
                       </div>
-
                     ))}
 
-                    {!hasNextPage && [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-                      <div key={i}>
-
-                        <Skeleton />
-
-                      </div>
-                    ))}
-
-
-
+                    {!hasNextPage &&
+                      [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                        <div key={i}>
+                          <Skeleton />
+                        </div>
+                      ))}
                   </div>
-                  <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
+                  <EndlessScrollLoading
+                    infiniteRef={infiniteRef}
+                    hasNextPage={hasNextPage}
+                  />
                 </>
               )}
             </div>
-
           </div>
         </div>
       </PullToRefreshContainer>
     </>
-
   );
 }
