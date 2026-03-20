@@ -17,6 +17,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import RelatedProducts from "@/components/RelatedProducts";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 
 
@@ -39,8 +40,6 @@ export default function ProductDetailPage() {
     selectedItem,
     setQuantity: setCartItemQty,
   } = useCartStore();
-
-  const [isAdress, setIsAdress] = useState(false);
 
   const { data, isLoading } = useQuery(
     ["product", id],
@@ -66,11 +65,12 @@ export default function ProductDetailPage() {
     }
   }, [data]);
 
-
+  const openModal = useModalStore((s) => s.openModal);
   const checkoutHandler = () => {
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout");
+      openModal("authwrapper");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function ProductDetailPage() {
     }
 
     store.selectAllCartItems();
-    setIsAdress(true);
+    openModal("checkout");
   };
 
   const [video, setVideo] = useState({
@@ -220,8 +220,6 @@ export default function ProductDetailPage() {
                         setPlayingMap={setPlayingMap}
                         handleSetVideo={(data) => setVideo(prev => ({ ...prev, ...data }))}
                       />
-
-
                     </div>
                   )
                 }
@@ -397,7 +395,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
         </div>
 
         {

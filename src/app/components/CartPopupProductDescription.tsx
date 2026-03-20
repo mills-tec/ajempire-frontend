@@ -503,7 +503,6 @@ export default function CartPopupProductDescription({
         </div>
 
       </div>
-      {/* {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />} */}
     </div>
   );
 }
