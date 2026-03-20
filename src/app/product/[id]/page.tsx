@@ -17,13 +17,12 @@ import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import RelatedProducts from "@/components/RelatedProducts";
-
-
+import { useModalStore } from "@/lib/stores/modal-store";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { user } = useAuthStore()
+  const { user } = useAuthStore();
 
   // ✅ All hooks must be at the top and unconditional
   const {
@@ -40,12 +39,10 @@ export default function ProductDetailPage() {
     setQuantity: setCartItemQty,
   } = useCartStore();
 
-  const [isAdress, setIsAdress] = useState(false);
-
   const { data, isLoading } = useQuery(
     ["product", id],
     () => (id ? getProduct(id) : null),
-    { enabled: !!id }
+    { enabled: !!id },
   );
 
   // 🌀 Base variables
@@ -53,12 +50,12 @@ export default function ProductDetailPage() {
   const cartItem = item ? getItem(item._id) : null;
 
   const [quantity, setQuantity] = useState(
-    cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1
+    cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1,
   );
 
   const [currentCoverItem, setCurrentCoverItem] = useState({
     src: "",
-    type: ""
+    type: "",
   });
 
   useEffect(() => {
@@ -66,11 +63,12 @@ export default function ProductDetailPage() {
     }
   }, [data]);
 
-
+  const openModal = useModalStore((s) => s.openModal);
   const checkoutHandler = () => {
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout");
+      openModal("authwrapper");
       return;
     }
 
@@ -80,7 +78,6 @@ export default function ProductDetailPage() {
       toast.error("Product not loaded yet");
       return;
     }
-
 
     const store = useCartStore.getState();
     const existingItem = store.getItem(currentItem._id);
@@ -95,13 +92,13 @@ export default function ProductDetailPage() {
     }
 
     store.selectAllCartItems();
-    setIsAdress(true);
+    openModal("checkout");
   };
 
   const [video, setVideo] = useState({
     showPlay: true,
     muted: true,
-  })
+  });
 
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
@@ -122,13 +119,11 @@ export default function ProductDetailPage() {
     if (video?.paused) {
       video.play();
     } else {
-      video?.pause()
+      video?.pause();
     }
   };
 
-
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-
 
   // 🧩 Update quantity safely
   useEffect(() => {
@@ -142,9 +137,8 @@ export default function ProductDetailPage() {
 
     setCurrentCoverItem({
       src: item.video ? item.video : item?.cover_image!,
-      type: item.video ? "video" : "image"
-    })
-
+      type: item.video ? "video" : "image",
+    });
   }, [quantity, item]);
 
   if (isLoading) return <ProductDetailSkeleton />;
@@ -153,7 +147,6 @@ export default function ProductDetailPage() {
     // product not loaded yet
     return <ProductDetailSkeleton />;
   }
-
 
   if (!data || !item)
     return (
@@ -164,14 +157,13 @@ export default function ProductDetailPage() {
 
   const preLoadFunc = (): boolean => {
     const media = [
-      ...(item.images ?? []),      // If images is undefined, use empty array
-      ...(item.cover_image ? [item.cover_image] : []),  // Only add if it exists
-      ...(item.video ? [item.video] : []),              // Only add if it exists
+      ...(item.images ?? []), // If images is undefined, use empty array
+      ...(item.cover_image ? [item.cover_image] : []), // Only add if it exists
+      ...(item.video ? [item.video] : []), // Only add if it exists
     ];
 
     return media.length === videoLoaded.length;
-
-  }
+  };
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -193,113 +185,122 @@ export default function ProductDetailPage() {
         <div className="flex gap-2 items-center"></div>
       </div>
       <div className="px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 ">
-
         <div className="lg:flex lg:space-x-20">
           <div className="lg:w-1/2 h-full space-y-8">
             <div className="space-y-4">
-              <div className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}>
-                {
-                  currentCoverItem.type === "image" ? (
-                    <Image
-                      src={currentCoverItem.src || ""}
-                      alt="product image"
-                      fill
-                      className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+              <div
+                className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+              >
+                {currentCoverItem.type === "image" ? (
+                  <Image
+                    src={currentCoverItem.src || ""}
+                    alt="product image"
+                    fill
+                    className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                  />
+                ) : (
+                  <div
+                    className={`absolute w-full h-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                  >
+                    <VideoPlayer
+                      handleVideoPlay={handleVideoPlay}
+                      item={item}
+                      video={video}
+                      playingMap={playingMap}
+                      videoRefs={videoRefs}
+                      src={currentCoverItem.src}
+                      setPlayingMap={setPlayingMap}
+                      handleSetVideo={(data) =>
+                        setVideo((prev) => ({ ...prev, ...data }))
+                      }
                     />
-                  ) : (
-                    <div className={`absolute w-full h-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}>
-
-
-                      <VideoPlayer
-                        handleVideoPlay={handleVideoPlay}
-                        item={item}
-                        video={video}
-                        playingMap={playingMap}
-                        videoRefs={videoRefs}
-                        src={currentCoverItem.src}
-                        setPlayingMap={setPlayingMap}
-                        handleSetVideo={(data) => setVideo(prev => ({ ...prev, ...data }))}
-                      />
-
-
-                    </div>
-                  )
-                }
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 lg:gap-5">
-                {item.images!.length > 0 ? <>
-                  {[...item.images!, item.cover_image!].map((image, key) => (
-                    <div
-                      key={key}
-                      className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
-                      onClick={() => {
-                        setCurrentCoverItem({
-                          src: image,
-                          type: "image"
-                        })
-                      }}
-                    >
-                      <Image
-                        src={image}
-                        alt="product image"
-                        fill
-                        className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
-                        onLoad={() => {
-                          setMediaLoaded((prev) => prev.find(it => it == image) ? [...prev] : [...prev, image]);
+                {item.images!.length > 0 ? (
+                  <>
+                    {[...item.images!, item.cover_image!].map((image, key) => (
+                      <div
+                        key={key}
+                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+                        onClick={() => {
+                          setCurrentCoverItem({
+                            src: image,
+                            type: "image",
+                          });
+                        }}
+                      >
+                        <Image
+                          src={image}
+                          alt="product image"
+                          fill
+                          className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                          onLoad={() => {
+                            setMediaLoaded((prev) =>
+                              prev.find((it) => it == image)
+                                ? [...prev]
+                                : [...prev, image],
+                            );
+                          }}
+                        />
+                      </div>
+                    ))}
 
+                    {item.video && (
+                      <div
+                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+                        onClick={() => {
+                          setCurrentCoverItem({
+                            src: item.video!,
+                            type: "video",
+                          });
                         }}
-                      />
-                    </div>
-                  ))}
-
-                  {item.video && (
-                    <div
-                      className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
-                      onClick={() => {
-                        setCurrentCoverItem({
-                          src: item.video!,
-                          type: "video"
-                        })
-                      }}
-                    >
-                      <video
-
-                        preload="metadata"
-                        ref={setVideoRef}
-                        src={item.video}
-                        className={`absolute object-cover h-full w-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
-                        onLoadedMetadata={(e) => {
-                          e.currentTarget.currentTime = 0; // start at 3 seconds
-                        }}
-                        muted
-                        onMouseEnter={() => {
-                          videoRef?.play();
-                        }}
-                        onMouseLeave={() => {
-                          videoRef?.pause();
-                        }}
-                        onLoadedData={() => {
-
-                          setMediaLoaded((prev) => [...prev, item.video!]);
-                        }}
-                        playsInline
-                      />
-                    </div>
-                  )}
-                </> : null}
+                      >
+                        <video
+                          preload="metadata"
+                          ref={setVideoRef}
+                          src={item.video}
+                          className={`absolute object-cover h-full w-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                          onLoadedMetadata={(e) => {
+                            e.currentTarget.currentTime = 0; // start at 3 seconds
+                          }}
+                          muted
+                          onMouseEnter={() => {
+                            videoRef?.play();
+                          }}
+                          onMouseLeave={() => {
+                            videoRef?.pause();
+                          }}
+                          onLoadedData={() => {
+                            setMediaLoaded((prev) => [...prev, item.video!]);
+                          }}
+                          playsInline
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : null}
               </div>
             </div>
             <div className="lg:hidden">
-              {data?.message && <ProductDescription handleSelectCover={(src: string, type: string) => {
-                setCurrentCoverItem({
-                  src,
-                  type
-                })
-              }} product_data={data} />}
+              {data?.message && (
+                <ProductDescription
+                  handleSelectCover={(src: string, type: string) => {
+                    setCurrentCoverItem({
+                      src,
+                      type,
+                    });
+                  }}
+                  product_data={data}
+                />
+              )}
             </div>
 
             <div className="lg:hidden h-[200px] overflow-y-auto ">
-              {data?.message && <ProductReview product={data?.message.product} />}
+              {data?.message && (
+                <ProductReview product={data?.message.product} />
+              )}
               {data?.message &&
                 data.message.product.reviews?.map((review) => (
                   <CommentCard key={review._id} review={review} />
@@ -318,26 +319,31 @@ export default function ProductDetailPage() {
             </div>
           </div>
           <div className="w-1/2 h-full hidden lg:block">
-            {data?.message && <ProductDescription product_data={data} handleSelectCover={(src: string, type: string) => {
-              setCurrentCoverItem({
-                src,
-                type
-              })
-            }} />}
+            {data?.message && (
+              <ProductDescription
+                product_data={data}
+                handleSelectCover={(src: string, type: string) => {
+                  setCurrentCoverItem({
+                    src,
+                    type,
+                  });
+                }}
+              />
+            )}
           </div>
-
 
           {items.length > 0 && (
             <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
               <div className="sticky top-0 space-y-2">
-                <button className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+                <button
+                  className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full"
+                  onClick={checkoutHandler}
+                >
                   Check Out
                 </button>
 
                 <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
-                  <Link href="/pages/cart">
-                    Go to cart
-                  </Link>
+                  <Link href="/pages/cart">Go to cart</Link>
                 </button>
               </div>
               <div className="space-y-3 w-full">
@@ -356,7 +362,10 @@ export default function ProductDetailPage() {
                   <p>Select all ({items.length})</p>
                 </div>
                 {items.map((item, key) => (
-                  <div className="w-[8rem] mx-auto flex flex-col relative items-center" key={key}>
+                  <div
+                    className="w-[8rem] mx-auto flex flex-col relative items-center"
+                    key={key}
+                  >
                     <Checkbox
                       checked={item?.selected}
                       onCheckedChange={() => {
@@ -397,22 +406,18 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
         </div>
 
-        {
-          item.relatedProducts!.length > 0 && (
-            <div className="font-poppins py-10 space-y-5">
-              <h1 className="text-2xl">Related Products</h1>
-              <RelatedProducts category={item.category?._id!} />
-
-            </div>
-          )
-        }
+        {item.relatedProducts && item.relatedProducts.length > 0 && (
+          <div className="font-poppins py-10 space-y-5">
+            <h1 className="text-2xl">Related Products</h1>
+            <RelatedProducts category={item.category?._id!} />
+          </div>
+        )}
       </div>
 
-
-      <div className="w-full flex items-center sticky left-0 bottom-20 pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
+      {/* add to cart div  */}
+      <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
@@ -473,10 +478,12 @@ export default function ProductDetailPage() {
             </svg>
           </button>
         </div>
-        <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={checkoutHandler}>
+        <button
+          className="h-[2rem] lg:h-[3rem]  text-xs bg-brand_pink text-white rounded-full w-full"
+          onClick={checkoutHandler}
+        >
           Check Out
         </button>
-
       </div>
     </section>
   );

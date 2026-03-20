@@ -1,11 +1,11 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import UserUsageChart from './UserUsageChart'
-import axios from 'axios'
-import { getBearerToken } from '@/lib/api'
 import ProfileName from './ui/ProfileName'
 import RecentPurchases from './ui/RecentPurchases'
 import UsageSkeleton from './UsageSkeleton'
+import { getBearerToken } from '@/lib/api'
+import axios from 'axios'
 interface UsageStats {
   ordersThisMonth: number;
   totalSpentThisMonth: number;
@@ -14,8 +14,8 @@ interface UsageStats {
   recentPurchases: any[];
 }
 export const UseAgeComponent = () => {
-  const [usageData, setUsageData] = useState<UsageStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [usageData, setUsageData] = useState<UsageStats | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const useAgeData = async () => {
@@ -40,14 +40,14 @@ export const UseAgeComponent = () => {
     useAgeData();
   }, [])
 
-  if (loading) return <UsageSkeleton />;
+  if (loading) return <UsageSkeleton />
 
   console.log(usageData)
   return (
     <div className='w-full lg:relative lg:flex-row lg:gap-0 flex flex-col gap-10'>
       <div className='w-full font-poppins flex flex-col gap-16 lg:flex-row justify-around '>
         <div className='flex flex-col items-start gap-5'>
-          <h1 className='text-[24px] font-medium'>My Uage</h1>
+          <h1 className='text-[24px] font-medium'>My Usage</h1>
           <div className='flex items-center gap-1 w-full '>
             <ProfileName />
           </div>
@@ -81,9 +81,10 @@ export const UseAgeComponent = () => {
           <UserUsageChart trendData={usageData?.spendingTrendData} />
         </div>
       </div>
+
       <div className='lg:absolute w-full lg:top-72'>
         <RecentPurchases recentPurchases={usageData?.recentPurchases} />
       </div>
-    </div>
+    </div >
   )
 }

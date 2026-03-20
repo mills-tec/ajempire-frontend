@@ -112,7 +112,7 @@ export default function CategoryPage() {
     if (isError) return <p>Error loading products.</p>;
     return (
         <>
-            <div className="lg:hidden w-full flex flex-col gap-3 h-[600px] overflow-y-auto scrollbar-hide">
+            <div className="lg:hidden w-full flex flex-col gap-3 ">
                 {!isLoading && filteredProducts.length === 0 && (
                     <div className="col-span-full" >
                         <Image
@@ -146,6 +146,7 @@ export default function CategoryPage() {
                                         }
                                     }
                                     key={index}
+                                    className="w-full"
 
                                 >
                                     <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex  gap-3">
@@ -165,7 +166,7 @@ export default function CategoryPage() {
 
                                             {/* Text */}
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-sm font-medium leading-tight">{product.name}</p>
+                                                <p className="text-sm font-medium leading-tight truncate w-full">{product.name.length > 10 ? product.name.substring(0, 10) + '...' : product.name}</p>
 
                                                 <p className="text-[0.65rem] text-brand_purple">
                                                     Only {product.stock} left
@@ -187,8 +188,8 @@ export default function CategoryPage() {
                                                 </div>
 
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="text-sm font-semibold text-brand_pink">
-                                                        N{formatPrice(calcDiscountPrice(product.price, product.discountedPrice ?? 0))}
+                                                    <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
+                                                        {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
                                                     </h3>
                                                     <p className="text-[9px] text-black/60">1k+ sold</p>
                                                 </div>

@@ -80,7 +80,7 @@ export default function MobileAccountLinks() {
                         <Link
                             href={url}
                             key={index}
-                            className="flex flex-col items-center justify-center gap-1"
+                            className="flex flex-col items-center justify-center gap-1 transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
                         >
                             <div className="w-9 h-9 flex items-center justify-center bg-[#FFD9EE] rounded-lg mb-1">
                                 {icon}
@@ -100,7 +100,7 @@ export default function MobileAccountLinks() {
                         <Link
                             href={url}
                             key={index}
-                            className="flex flex-col items-center justify-center gap-1"
+                            className="flex flex-col items-center justify-center gap-1 transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
                         >
                             <div className="w-9 h-9 flex items-center justify-center bg-[#FFD9EE] rounded-lg mb-1">
                                 {icon}
@@ -120,7 +120,7 @@ export default function MobileAccountLinks() {
                         <Link
                             href={url}
                             key={index}
-                            className="flex flex-col items-center justify-center gap-1"
+                            className="flex flex-col items-center justify-center gap-1 transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
                         >
                             <div className="w-9 h-9 flex items-center justify-center bg-[#FFD9EE] rounded-lg mb-1">
                                 {icon}

@@ -1,10 +1,16 @@
-// "use client";
+"use client";
 
+import Butterflies from "@/components/svgs/Butterflies";
 import { usePullToRefresh } from "./PullToRefreshProvider";
+import CustomSvg from "@/components/svgs/CustomSvg";
+
 export default function PullToRefreshHeader() {
     const { pull, refreshing } = usePullToRefresh();
 
     const progress = Math.min(pull / 180, 1);
+
+    // Vertical translation based on pull distance: 0px at no pull, -15px at max pull
+    const translateY = -progress * 15;
 
     return (
         <div
@@ -44,19 +50,46 @@ export default function PullToRefreshHeader() {
                 className="absolute w-full text-center text-white text-sm"
                 style={{
                     top: pull / 2 - 10,
-                    opacity: progress,
+                    opacity: refreshing ? 1 : progress,
                 }}>
-                <svg width="142" height="42" viewBox="0 0 142 42" fill="none" xmlns="http://www.w3.org/2000/svg" xlinkHref="http://www.w3.org/1999/xlink">
-                    <rect width="142" height="42" fill="url(#pattern0_1335_14313)" />
-                    <defs>
-                        <pattern id="pattern0_1335_14313" patternContentUnits="objectBoundingBox" width="1" height="1">
-                            <use xlinkHref="#image0_1335_14313" transform="matrix(0.000486471 0 0 0.00164474 -0.00155208 0)" />
-                        </pattern>
-                    </defs>
-                </svg>
-
-                {progress > 0.8 ? "Release to refresh" : "Pull to refresh"}
+                <div className="flex flex-col gap-2 items-center">
+                    {/* Wave Loader - Applied to CustomSvg */}
+                    <div>
+                        <div
+                            style={{
+                                opacity: refreshing ? 0.8 : Math.max(0.2, progress),
+                                animation: refreshing
+                                    ? `wave 1.2s ease-in-out infinite`
+                                    : "none",
+                                transform: refreshing ? "none" : `translateY(${-progress * 15}px)`,
+                                transition: refreshing ? "none" : "transform 0.2s ease-out, opacity 0.2s ease-out",
+                            }}
+                        >
+                            <CustomSvg imageHref="/logorefresh.png" />
+                        </div>
+                        <p
+                            className="text-white text-xs mt-1"
+                            style={{
+                                opacity: refreshing || progress > 0.8 ? 1 : 0,
+                                transition: "opacity 0.2s ease-out",
+                            }}
+                        >
+                            {progress > 0.1 || refreshing ? "Release to refresh" : "Pull to refresh"}
+                        </p>
+                    </div>
+                </div>
             </div>
+
+            <style jsx>{`
+                @keyframes wave {
+                    0%, 100% {
+                        transform: scaleY(0.5);
+                    }
+                    50% {
+                        transform: scaleY(1.2);
+                    }
+                }
+            `}</style>
         </div>
     );
 }

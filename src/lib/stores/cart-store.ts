@@ -32,7 +32,6 @@ export enum CheckoutStep {
   ORDER_SUMMARY,
 }
 
-
 type SyncAction =
   | { type: "add"; item: CartItem }
   | { type: "remove"; id: string }
@@ -71,7 +70,6 @@ type CartStore = {
   applyCoupon: (coupon: AppliedCoupon) => void;
   removeCoupon: () => void;
 
-
   /* CHECKOUT FLOW */
   checkoutStep: CheckoutStep;
   setCheckoutStep: (step: CheckoutStep) => void;
@@ -89,9 +87,6 @@ type CartStore = {
 };
 
 export const useCartStore = create<CartStore>()(
-
-
-
   persist(
     (set, get) => ({
       items: [],
@@ -110,7 +105,6 @@ export const useCartStore = create<CartStore>()(
       applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
 
       removeCoupon: () => set({ appliedCoupon: null }),
-
 
       /* CHECKOUT FLOW */
       checkoutStep: CheckoutStep.ADDRESS_FORM,
@@ -141,7 +135,7 @@ export const useCartStore = create<CartStore>()(
           newItems = get().items.map((i) =>
             i._id === item._id
               ? { ...i, quantity: i.quantity + item.quantity, synced: false }
-              : i
+              : i,
           );
         } else {
           newItems = [...get().items, { ...item, synced: false }];
@@ -150,39 +144,50 @@ export const useCartStore = create<CartStore>()(
         // Update local first
         set({ items: newItems });
 
-        // Try to sync
-        addToCart(newItems)
-          .then(() => {
+        const token = getBearerToken();
 
-            // mark all as synced
+        // 🚨 If guest user, skip backend sync
+        if (!token) return;
+
+        // Try to sync ONLY changed item
+        addToCart([item])
+          .then(() => {
             set({
-              items: newItems.map((i) => ({ ...i, synced: true })),
-              syncQueue: [],
+              items: get().items.map((i) =>
+                i._id === item._id ? { ...i, synced: true } : i,
+              ),
             });
           })
           .catch(() => {
-            // add to retry queue
-            set({ syncQueue: [...get().syncQueue, { type: "add", item }] });
+            set({
+              syncQueue: [...get().syncQueue, { type: "add", item }],
+            });
             toast.error("Couldn't sync cart. Will retry.");
           });
       },
+
       setSelectedVariants: (id: string, variants: Variant[]) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, selectedVariants: variants, synced: false } : i
+          i._id === id
+            ? { ...i, selectedVariants: variants, synced: false }
+            : i,
         );
+
         const updatedItem = updatedItems.find((i) => i._id === id);
 
-        set({
-          items: updatedItems,
-        });
+        // Update local state first
+        set({ items: updatedItems });
+        const token = getBearerToken();
 
-        // Try to sync
+        if (!token) return; // 🚨 skip backend sync for guest users
+        // Sync ONLY changed item
         if (updatedItem) {
-          addToCart(updatedItems)
+          addToCart([updatedItem])
             .then(() => {
               set({
-                items: updatedItems.map((i) => ({ ...i, synced: true })),
-                syncQueue: [],
+                items: get().items.map((i) =>
+                  i._id === id ? { ...i, synced: true } : i,
+                ),
               });
             })
             .catch(() => {
@@ -192,6 +197,7 @@ export const useCartStore = create<CartStore>()(
                   { type: "update", item: updatedItem },
                 ],
               });
+
               toast.error("Couldn't sync cart. Will retry.");
             });
         }
@@ -208,34 +214,70 @@ export const useCartStore = create<CartStore>()(
       toggleItemSelect: (id: string) =>
         set({
           items: get().items.map((i) =>
-            i._id === id ? { ...i, selected: !i.selected } : i
+            i._id === id ? { ...i, selected: !i.selected } : i,
           ),
         }),
+      // setQuantity: (id: string, quantity: number) => {
+      //   const updatedItems = get().items.map((i) =>
+      //     i._id === id ? { ...i, quantity, synced: false } : i,
+      //   );
+      //   const updatedItem = updatedItems.find((i) => i._id === id);
+      //   set({ items: updatedItems });
+
+      //   // Try to sync
+      //   if (updatedItem) {
+      //     addToCart(updatedItems)
+      //       .then(() => {
+      //         // mark all as synced
+      //         set({
+      //           items: updatedItems.map((i) => ({ ...i, synced: true })),
+      //           syncQueue: [],
+      //         });
+      //       })
+      //       .catch(() => {
+      //         // add to retry queue
+      //         set({
+      //           syncQueue: [
+      //             ...get().syncQueue,
+      //             { type: "update", item: updatedItem },
+      //           ],
+      //         });
+      //         toast.error("Couldn't sync cart. Will retry.");
+      //       });
+      //   }
+      // },
       setQuantity: (id: string, quantity: number) => {
         const updatedItems = get().items.map((i) =>
-          i._id === id ? { ...i, quantity, synced: false } : i
+          i._id === id ? { ...i, quantity, synced: false } : i,
         );
+
         const updatedItem = updatedItems.find((i) => i._id === id);
+
+        // Update local state first (instant UI)
         set({ items: updatedItems });
 
-        // Try to sync
+        const token = getBearerToken();
+
+        if (!token) return; // 🚨 skip backend sync for guest users
+
+        // Sync ONLY changed item
         if (updatedItem) {
-          addToCart(updatedItems)
+          addToCart([updatedItem])
             .then(() => {
-              // mark all as synced
               set({
-                items: updatedItems.map((i) => ({ ...i, synced: true })),
-                syncQueue: [],
+                items: get().items.map((i) =>
+                  i._id === id ? { ...i, synced: true } : i,
+                ),
               });
             })
             .catch(() => {
-              // add to retry queue
               set({
                 syncQueue: [
                   ...get().syncQueue,
                   { type: "update", item: updatedItem },
                 ],
               });
+
               toast.error("Couldn't sync cart. Will retry.");
             });
         }
@@ -243,7 +285,8 @@ export const useCartStore = create<CartStore>()(
       removeItem: async (id) => {
         try {
           set({ items: get().items.filter((i) => i._id !== id) });
-
+          const token = getBearerToken();
+          if (!token) return;
           removeCartItem(id)
             .then(() => {
               // mark all as synced
@@ -275,22 +318,23 @@ export const useCartStore = create<CartStore>()(
           items: [],
           selectedLogistic: null,
         }),
-      increaseQuantity: (id) =>
-        set({
-          items: get().items.map((i) =>
-            i._id === id
-              ? { ...i, quantity: Math.min(i.quantity + 1, i.stock || 0) }
-              : i
-          ),
-        }),
-      decreaseQuantity: (id) =>
-        set({
-          items: get()
-            .items.map((i) =>
-              i._id === id ? { ...i, quantity: Math.max(i.quantity - 1, 1) } : i
-            )
-            .filter((i) => i.quantity > 0),
-        }),
+
+      increaseQuantity: (id) => {
+        const item = get().getItem(id);
+        if (!item) return;
+
+        get().setQuantity(
+          id,
+          Math.min(item.quantity + 1, item.stock || item.quantity + 1),
+        );
+      },
+
+      decreaseQuantity: (id) => {
+        const item = get().getItem(id);
+        if (!item) return;
+
+        get().setQuantity(id, Math.max(item.quantity - 1, 1));
+      },
       orderSummary: () => {
         const items = get().items.filter((i) => i.selected);
 
@@ -298,8 +342,9 @@ export const useCartStore = create<CartStore>()(
 
         const discount = items.reduce(
           (sum, i) =>
-            sum + calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
-          0
+            sum +
+            calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
+          0,
         );
 
         // const coupon = 0;
@@ -311,7 +356,7 @@ export const useCartStore = create<CartStore>()(
 
           if (appliedCoupon.type === "percent") {
             coupon = Math.round(
-              (appliedCoupon.value / 100) * discountedSubtotal
+              (appliedCoupon.value / 100) * discountedSubtotal,
             );
           }
 
@@ -319,8 +364,6 @@ export const useCartStore = create<CartStore>()(
             coupon = Math.min(appliedCoupon.value, discountedSubtotal);
           }
         }
-
-
 
         // 👇 pull logistics from the global store
         const deliveryFee = get().selectedLogistic?.total ?? 0;
@@ -364,6 +407,26 @@ export const useCartStore = create<CartStore>()(
           toast.warning(`${newQueue.length} cart actions pending`);
         }
       },
+
+      syncGuestCartOnLogin: async () => {
+        const token = getBearerToken();
+        if (!token) return;
+
+        const items = get().items.filter((i) => !i.synced);
+
+        if (items.length === 0) return;
+
+        try {
+          await addToCart(items);
+
+          set({
+            items: get().items.map((i) => ({ ...i, synced: true })),
+            syncQueue: [],
+          });
+        } catch (error) {
+          console.error("Cart merge failed", error);
+        }
+      },
     }),
     {
       name: "cart-storage",
@@ -374,12 +437,12 @@ export const useCartStore = create<CartStore>()(
         requestToken: state.requestToken,
         checkoutStep: state.checkoutStep,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // derived getter instead of in-store `get total()`
 export const useCartTotal = () =>
   useCartStore((state) =>
-    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
   );

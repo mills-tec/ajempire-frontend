@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { getUsersWishlist } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 
 export default function ProductCard({
@@ -25,6 +26,9 @@ export default function ProductCard({
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
   const showSellerTag = Math.random() > 0.4;
+  const openModal = useModalStore((s) => s.openModal);
+
+
   const [imgLoading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,12 +40,7 @@ export default function ProductCard({
     fetchWishlist();
   }, []);
 
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-  };
+
 
 
   const filledStar = (
@@ -78,11 +77,14 @@ export default function ProductCard({
   return (
     <section
       onClick={() => router.push(`/product/${product._id}`)}
-      className={`space-y-2 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid md:h-fit   ${index % 2 === 0 ? "h-[20rem]" : `h-[14rem] ${index !== 1 ? "-translate-y-10 md:translate-y-0" : ""}`} `}
+
+      className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
+        }`}
+
     >
 
       <Link href={`/product/${product._id}`}>
-        <div className={`relative h-[60%] lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
+        <div className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
 
           <Image
             src={product.cover_image ?? ""}
@@ -186,7 +188,7 @@ export default function ProductCard({
                   width="23"
                   height="22"
                   viewBox="0 0 23 22"
-                  className="cursor-pointer size-4"
+                  className="cursor-pointer size-4 transition-transform duration-200 ease-out hover:scale-105 active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
@@ -204,16 +206,17 @@ export default function ProductCard({
                 </div>
               )}
               <svg
+
                 width="44"
                 height="30"
                 viewBox="0 0 44 30"
                 fill="none"
                 onClick={(e) => {
-                  // addItem({ ...product, quantity: 1 });
                   e.stopPropagation();
                   setSelectedItem(product);
+                  openModal("cart");
                 }}
-                className="cursor-pointer h-5"
+                className="cursor-pointer h-5 transition-transform duration-200 ease-out hover:scale-105 active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <rect

@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import CountdownTimer from "@/components/CountDownTimer";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useProductVariants } from "@/lib/useProductVariants";
+import { useRef } from "react";
 
 export default function ProductDescription({
   product_data,
@@ -17,11 +20,8 @@ export default function ProductDescription({
   product_data: ProductResponse;
   handleSelectCover: (src: string, type: string) => void;
 }) {
-  // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-
   let { product } = product_data.message;
+  console.log("product: ", product.variants);
   const {
     getItem,
     addItem,
@@ -31,8 +31,13 @@ export default function ProductDescription({
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
   } = useCartStore();
-
-  const { items: wishlistItems, addItem: addWishlistItem, removeItem: removeWishlistItem, isInWishlist } = useWishlistStore();
+  const {
+    items: wishlistItems,
+    addItem: addWishlistItem,
+    removeItem: removeWishlistItem,
+    isInWishlist,
+  } = useWishlistStore();
+  const openModal = useModalStore((s) => s.openModal);
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -42,51 +47,71 @@ export default function ProductDescription({
     };
     fetchWishlist();
   }, []);
-
   const checkoutHandler = () => {
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout");
+      openModal("authwrapper");
       return;
     }
+
+    if (hasVariants) {
+      const missing = product.variants.filter((v) => !selectedOptions[v.name]);
+
+      if (missing.length > 0) {
+        triggerVariantError(missing[0].name);
+        toast.error(`Please select ${missing[0].name}`);
+        return;
+      }
+    }
+
+    const selectedVariantsArray = Object.entries(selectedOptions).map(
+      ([name, value]) => ({ name, value }),
+    );
 
     const { getItem, addItem, selectAllCartItems, getSelectedItems } =
       useCartStore.getState();
 
-    // 1️⃣ Check if product already exists in cart
-    const existingItem = getItem(product._id);
+    // const existingItem = getItem(product._id);
+    const existingItem = useCartStore
+      .getState()
+      .items.find(
+        (i) =>
+          i._id === product._id &&
+          JSON.stringify(i.selectedVariants) ===
+            JSON.stringify(selectedVariantsArray),
+      );
 
-    // 2️⃣ If not in cart, add it
     if (!existingItem) {
       addItem({
         ...product,
         quantity,
-        selectedVariants: selectedVariants ?? [],
-        selected: true, // IMPORTANT
+        selectedVariants: selectedVariantsArray, // ✅ FIXED
+        selected: true,
       });
     }
 
-    // 3️⃣ Select ALL cart items
     selectAllCartItems();
 
-    // 4️⃣ Wait for state update, then get selected items
     setTimeout(() => {
       const selectedItems = getSelectedItems();
       console.log("Selected items:", selectedItems);
-
-      // 5️⃣ Proceed to checkout
-      setIsAdress(true);
+      openModal("checkout");
     }, 0);
   };
   const item = getItem(product._id);
-
   const [quantity, setQuantity] = useState(() =>
-    item ? (item.quantity === 0 ? 1 : item.quantity) : 1
+    item ? (item.quantity === 0 ? 1 : item.quantity) : 1,
   );
 
-  const [selectedVariants, setSelectedVariants] = useState(
-    () => item?.selectedVariants ?? null
-  );
+  const {
+    selectedOptions,
+    selectOption,
+    isValidOption,
+    selectedCombination,
+    currentStock,
+    hasVariants,
+  } = useProductVariants(product);
 
   useEffect(() => {
     // If the item no longer exists, do nothing
@@ -117,21 +142,6 @@ export default function ProductDescription({
   for (const variant of product?.variants || []) {
     variant_set.add(variant.name);
   }
-
-  function getAllVariantItems(variant_name: string) {
-    return product.variants!.length > 0
-      ? product.variants!.filter(
-        (item) => item.name == variant_name && item.stock > 0
-      )
-      : [];
-  }
-
-  useEffect(() => {
-    if (!selectedVariants || selectedVariants.length === 0) return;
-    setCartSelectedVariants(product._id, selectedVariants);
-  }, [selectedVariants]);
-
-
 
   const filledStar = (
     <svg
@@ -165,6 +175,34 @@ export default function ProductDescription({
     </svg>
   );
 
+  console.log("currentStock: ", currentStock);
+
+  const missingVariants = product.variants!.filter(
+    (v) => !selectedOptions[v.name],
+  );
+  const variantRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const triggerVariantError = (variantName: string) => {
+    const el = variantRefs.current[variantName];
+    if (!el) return;
+
+    // scroll into view
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // add shake animation
+    el.classList.add("shake");
+
+    setTimeout(() => {
+      el.classList.remove("shake");
+    }, 500);
+  };
+
+  // ✅ DEBUG: log what user selects
+  useEffect(() => {
+    console.log("Selected Options:", selectedOptions);
+    console.log("Selected Combination:", selectedCombination);
+  }, [selectedOptions, selectedCombination]);
+
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
@@ -175,7 +213,12 @@ export default function ProductDescription({
       <div className="space-y-3">
         <div className="flex justify-between">
           {product.itemsSold! > 0 && (
-            <p className="text-sm text-black/60">{product.itemsSold! > 1000 ? (product.itemsSold! / 1000).toFixed(1) + "k" : product.itemsSold!} Sold</p>
+            <p className="text-sm text-black/60">
+              {product.itemsSold! > 1000
+                ? (product.itemsSold! / 1000).toFixed(1) + "k"
+                : product.itemsSold!}{" "}
+              Sold
+            </p>
           )}
           <div className="flex items-center gap-2">
             {
@@ -185,7 +228,7 @@ export default function ProductDescription({
                     <span key={i}>{filledStar}</span>
                   ) : (
                     <span key={i}>{unfilledStar}</span>
-                  )
+                  ),
                 )}
               </div>
             }
@@ -194,45 +237,82 @@ export default function ProductDescription({
         </div>
 
         <div className="flex items-center">
-
           {product.flashSales ? (
             <>
-
               <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                {Number(calcDiscountPrice(product.price, product.flashSales.discount!)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                {Number(
+                  calcDiscountPrice(
+                    product.price,
+                    product.flashSales.discount!,
+                  ),
+                ).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}
               </h3>
               <h4 className="text-[10px] lg:text-xs ml-2 line-through">
-                {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                {Number(product.price).toLocaleString("en-NG", {
+                  style: "currency",
+                  currency: "NGN",
+                })}
               </h4>
             </>
           ) : (
             <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              {/* {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} */}
+              {/* ✅ NEW: use combination price if selected */}
+              {Number(
+                hasVariants && selectedCombination
+                  ? product.price + selectedCombination.additionalPrice // ✅ added extra price
+                  : product.price,
+              ).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
             </h3>
           )}
 
-
-          {
-            product.flashSales && (
-              <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-                <p>{product.flashSales.discount}% OFF Limited time</p>
-              </div>
-            )
-          }
+          {product.flashSales && (
+            <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+              <p>{product.flashSales.discount}% OFF Limited time</p>
+            </div>
+          )}
+        </div>
+        <div>
+          {currentStock < 10 ? (
+            <p className="text-sm font-semibold text-red-500">
+              {currentStock} left in stock
+            </p>
+          ) : (
+            <p className="text-[0.65rem] font-semibold text-brand_purple">
+              {currentStock} left in stock
+            </p>
+          )}
         </div>
 
-        {
-          product.flashSales && (
-            <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
-              <p className="font-medium">
-                Only {Number(calcDiscountPrice(product.price, 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} with extra {Number((product.price - calcDiscountPrice(product.price, product.flashSales.discount!))).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} off | Ends in
-              </p>
-              <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
-                <CountdownTimer endTime={product.flashSales!.endTime} />
-              </p>
-            </div>
-          )
-        }
+        {product.flashSales && (
+          <div className=" text-[11.11px] lg:text-xs flex items-center gap-4 text-brand_pink">
+            <p className="font-medium">
+              Only{" "}
+              {Number(calcDiscountPrice(product.price, 0)).toLocaleString(
+                "en-NG",
+                { style: "currency", currency: "NGN" },
+              )}{" "}
+              with extra{" "}
+              {Number(
+                product.price -
+                  calcDiscountPrice(
+                    product.price,
+                    product.flashSales.discount!,
+                  ),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}{" "}
+              off | Ends in
+            </p>
+            <p className="border border-brand_pink p-[0.1rem] px-1 rounded-sm">
+              <CountdownTimer endTime={product.flashSales!.endTime} />
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-5">
@@ -247,7 +327,7 @@ export default function ProductDescription({
           <p className="text-sm">{quantity}</p>
           <button
             onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, product.stock!))
+              setQuantity((prev) => Math.min(prev + 1, currentStock!))
             }
             className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
           >
@@ -256,182 +336,56 @@ export default function ProductDescription({
         </div>
       </div>
 
-      {/* <div className="space-y-2 hidden lg:block">
-        <h4 className="text-xs text-brand_gray_dark">Images: </h4>
-        <div className="flex gap-2">
-          {product.images!.length > 0 ? <>
-            {[...product.images!, product.cover_image!].map((image, key) => (
-              <div key={key} className="size-[4rem] cursor-pointer relative object-cover bg-gray-400 rounded-xl" onClick={() => handleSelectCover(image, "image")}>
-                <Image
-                  src={image}
-                  alt="variant images"
-                  fill
-                  className="absolute object-cover"
-                />
+      <div className="lg:flex gap-6">
+        {/* ✅ ONLY show if product has variants */}
+        {hasVariants && (
+          <div className="lg:flex gap-6">
+            {product.variants!.map((variant, key) => (
+              <div
+                key={key}
+                ref={(el) => (variantRefs.current[variant.name] = el)}
+                className="space-y-2 mt-4 lg:mt-0"
+              >
+                <p className="text-xs text-brand_gray_dark capitalize">
+                  Select Property ({variant.name}):
+                </p>
+
+                <div className="flex gap-2">
+                  {variant.values.map((value, idx) => {
+                    const isValid = isValidOption(variant.name, value);
+                    const isSelected = selectedOptions[variant.name] === value;
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          if (!isValid) return;
+                          selectOption(variant.name, value);
+                        }}
+                        className={`relative size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                                  ${
+                                    isSelected
+                                      ? "after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
+                                      : ""
+                                  } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
+                        style={{
+                          backgroundColor:
+                            variant.name.toLowerCase() === "color"
+                              ? value
+                              : undefined,
+                        }}
+                      >
+                        {variant.name.toLowerCase() === "size"
+                          ? value.toUpperCase()
+                          : ""}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ))}
-            {product.video && (
-              <div className="size-[4rem] cursor-pointer relative object-cover bg-gray-400 rounded-xl" onClick={() => handleSelectCover(product.video!, "video")}>
-                <video
-                  preload="none"
-                  src={product.video}
-                  className="absolute object-cover h-full w-full"
-                  muted
-                  onLoadedMetadata={(e) => {
-                    e.currentTarget.currentTime = 0;
-                  }}
-                  ref={setVideoRef}
-                  onMouseEnter={() => {
-                    videoRef?.play();
-                  }}
-                  onMouseLeave={() => {
-                    videoRef?.pause();
-                  }}
-                  playsInline
-                />
-              </div>
-            )}
-          </> : (
-            <p className="text-gray-400 text-xs">
-              This data is currently unavailable
-            </p>
-          )}
-        </div>
-      </div> */}
-
-      <div className="lg:flex gap-6">
-        {/* <div className="space-y-2">
-          <p className="text-xs text-brand_gray_dark">
-            Select Property (Color):
-          </p>
-          <div>
-            <div className="flex gap-2">
-              {color_variant && color_variant.length > 0 ? (
-                color_variant.map((variant) => (
-                  <div
-                    className={`size-[2rem] relative rounded border border-[#BFBFBF] bg-[${variant.value}]`}
-                  >
-                    <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400 text-xs">
-                  This data is currently unavailable
-                </p>
-              )}
-            </div>
           </div>
-        </div>
-        <div className="space-y-2  mt-4 lg:mt-0">
-          <p className="text-xs text-brand_gray_dark">
-            Select Property (Size):
-          </p>
-          <div className="pt-1 lg:pt-0">
-            <div className="flex gap-2">
-              {size_variant && size_variant.length > 0 ? (
-                size_variant.map((variant) => (
-                  <div className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]">
-                    {variant.value.toUpperCase()}
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400 text-xs">
-                  This data is currently unavailable
-                </p>
-              )}
-            </div>
-          </div>
-        </div> */}
-        {[...variant_set].map((variant, key) => (
-          <div key={key} className="space-y-2  mt-4 lg:mt-0">
-            <p className="text-xs text-brand_gray_dark capitalize">
-              Select Property ({variant}):
-            </p>
-            <div className="pt-1 lg:pt-0">
-              <div className="flex gap-2">
-                {getAllVariantItems(variant).map((variantItem, idx) => {
-                  if (
-                    typeof variant === "string" &&
-                    variant.toLowerCase() === "size"
-                  ) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedVariants((prev) => {
-                            // If prev is null, start with empty array
-                            const selectedArr = prev ?? [];
-                            // Check if item is already in arr by name+value
-                            const exists = selectedArr.some(
-                              (v) =>
-                                v.name === variantItem.name &&
-                                v.value === variantItem.value
-                            );
-                            if (exists) {
-                              return selectedArr.filter(
-                                (v) =>
-                                  !(
-                                    v.name === variantItem.name &&
-                                    v.value === variantItem.value
-                                  )
-                              );
-                            } else {
-                              return [...selectedArr, variantItem];
-                            }
-                          });
-                        }}
-                        className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]"
-                      >
-                        {variantItem.value?.toUpperCase?.() ?? ""}
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setSelectedVariants((prev) => {
-                            // If prev is null, start with empty array
-                            const selectedArr = prev ?? [];
-                            // Check if item is already in arr by name+value
-                            const exists = selectedArr.some(
-                              (v) =>
-                                v.name === variantItem.name &&
-                                v.value === variantItem.value
-                            );
-                            if (exists) {
-                              return selectedArr.filter(
-                                (v) =>
-                                  !(
-                                    v.name === variantItem.name &&
-                                    v.value === variantItem.value
-                                  )
-                              );
-                            } else {
-                              return [...selectedArr, variantItem];
-                            }
-                          });
-                        }}
-                        className={`size-[2rem] relative rounded border border-[#BFBFBF]`}
-                        style={{
-                          background: variantItem.value
-                            ? `${variantItem.value}`
-                            : undefined,
-                        }}
-                      >
-                        {selectedVariants?.some(
-                          (v) => v._id === variantItem._id
-                        ) && (
-                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                          )}
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            </div>
-          </div>
-        ))}
+        )}
       </div>
 
       <div className="p-6 border rounded-lg space-y-2">
@@ -502,14 +456,28 @@ export default function ProductDescription({
         <div className="flex gap-4 items-center">
           {!item ? (
             <button
-              onClick={() =>
+              onClick={() => {
+                if (hasVariants) {
+                  const missing = product.variants.filter(
+                    (v) => !selectedOptions[v.name],
+                  );
+
+                  if (missing.length > 0) {
+                    triggerVariantError(missing[0].name);
+                    toast.error(`Please select ${missing[0].name}`);
+                    return;
+                  }
+                }
+
                 addItem({
                   ...product,
                   quantity,
                   selected: false,
-                  selectedVariants: selectedVariants ?? [],
-                })
-              }
+                  selectedVariants: Object.entries(selectedOptions).map(
+                    ([name, value]) => ({ name, value }),
+                  ),
+                });
+              }}
               className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]"
             >
               Add to Cart
@@ -534,23 +502,7 @@ export default function ProductDescription({
               </button>
             </div>
           )}
-          {/* Wishlist button */}
-          {/* <button className="">
-            <svg
-              width="42"
-              height="42"
-              className="size-[2.5rem]"
-              viewBox="0 0 42 42"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="21" cy="21" r="20.5" stroke="#999999" />
-              <path
-                d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154ZM28.1169 21.2708C28.9938 20.3846 29.5385 19.1846 29.5385 17.8462C29.5385 16.5609 29.0279 15.3283 28.1191 14.4194C27.2102 13.5106 25.9776 13 24.6923 13C23.0769 13 21.6462 13.7846 20.7692 15.0031C20.3216 14.3814 19.7323 13.8754 19.05 13.527C18.3677 13.1787 17.6122 12.998 16.8462 13C15.5609 13 14.3282 13.5106 13.4194 14.4194C12.5106 15.3283 12 16.5609 12 17.8462C12 19.1846 12.5446 20.3846 13.4215 21.2708L20.7692 28.6185L28.1169 21.2708Z"
-                fill="black"
-              />
-            </svg>
-          </button> */}
+
           <button
             onClick={() => {
               if (isInWishlist(product._id)) removeWishlistItem(product._id);
@@ -582,7 +534,6 @@ export default function ProductDescription({
         >
           Check Out
         </button>
-        {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
       </div>
     </div>
   );

@@ -22,6 +22,13 @@ export type Coupon = {
   users: string[];
 };
 
+export interface UsageStats {
+  ordersThisMonth: number;
+  totalSpentThisMonth: number;
+  totalCoupons: number;
+  spendingTrendData: any[];
+  recentPurchases: any[];
+}
 
 // lib/api.ts
 const API_URL = "https://ajempire-backend.vercel.app/api";
@@ -381,18 +388,15 @@ export async function likeFeedCommentPost(postId: string) {
   return res.json();
 }
 
-// get categories
 
-// {{base_url}}/
 export async function getCategories(): Promise<{ message: Category[] }> {
   const token = getBearerToken();
-  if (!token) throw new Error("User not authenticated");
 
   const res = await fetch(`${API_URL}/category`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      // Authorization: `Bearer ${token}`,
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
   });
 
@@ -400,60 +404,6 @@ export async function getCategories(): Promise<{ message: Category[] }> {
   return res.json();
 }
 
-
-// export async function getProductsByCategory(
-//   category: string
-// ): Promise<ProductsResponse | null> {
-//   const res = await fetch(API_URL + "/category/" + category + "/product");
-//   if (!res.ok) return null;
-//   return res.json();
-
-// }
-// export async function getProductsByCategory(category: string): Promise<ProductsResponse | null> {
-//   console.log("Fetching products for category:", category); // <--- log here
-//   const res = await fetch(API_URL + "/category/" + category + "/product");
-//   if (!res.ok) return null;
-//   const data = await res.json();
-//   console.log("Response data:", data); // <--- log API response
-//   return data;
-// }
-
-// export const getProductsByCategory = async (slug: any) => {
-//   const response = await fetch(`/api/products?category=${slug}`);
-//   console.log("Fetching products for category slug:", slug); // Log the slug being used
-//   console.log("Response status:", response);
-//   return response.json();
-// };
-
-// export async function getProductsByCategory(category: string) {
-//   try {
-//     console.log("➡️ getProductsByCategory called");
-//     console.log("➡️ category received:", category);
-
-//     const url = `${API_URL}/category/${category}/product`;
-//     console.log("➡️ Fetching URL:", url);
-
-//     const response = await fetch(url);
-
-//     console.log("➡️ Response status:", response.status);
-//     console.log("➡️ Response ok?:", response.ok);
-
-//     if (!response.ok) {
-//       console.error("❌ Request failed");
-//       return null;
-//     }
-
-//     const data = await response.json();
-
-//     console.log("✅ Raw API response:", data);
-//     console.log("✅ Products array:", data?.message?.products);
-
-//     return data;
-//   } catch (error) {
-//     console.error("🔥 Fetch error:", error);
-//     return null;
-//   }
-// }
 
 export async function getProductsByCategory(
   category: string
@@ -464,6 +414,26 @@ export async function getProductsByCategory(
   const data = await res.json();
   console.log("Products by category response data:", data);
   return data.message.products;
+}
+
+// SEARCH API
+export async function searchProducts(
+  searchQuery: string
+): Promise<Product[]> {
+  console.log("📡 calling searchProducts with query:", searchQuery);
+  const res = await fetch(`${API_URL}/product/search?name=${encodeURIComponent(searchQuery)}`);
+  if (!res.ok) return [];
+
+  const data = await res.json();
+  console.log("Search response data:", data);
+  console.log("Message structure:", data.message);
+
+  // The API returns { message: { items: [...], pagination: {...} } }
+  if (Array.isArray(data.message?.items)) {
+    return data.message.items;
+  }
+
+  return [];
 }
 
 // COUPON API

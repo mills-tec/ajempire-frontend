@@ -15,6 +15,7 @@ import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
 import { toast, Toaster } from "sonner";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 export type SideBarItem = {
   title: string;
@@ -22,6 +23,7 @@ export type SideBarItem = {
   icon?: ReactNode;
   children?: SideBarItem[];
   onClick?: () => void;
+  action?: "logout";
 };
 
 const handleShareApp = async () => {
@@ -38,6 +40,7 @@ const handleShareApp = async () => {
     toast.success("copied app link", { position: "top-right" })
   }
 };
+
 
 
 export const sidebarItems: SideBarItem[] = [
@@ -127,7 +130,8 @@ export const sidebarItems: SideBarItem[] = [
       },
       {
         title: "Logout",
-        route: "/signout"
+        action: "logout"
+
       }
     ],
   },

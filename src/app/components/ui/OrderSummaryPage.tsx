@@ -12,69 +12,72 @@ import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
+
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
+  console.log("selected logistic in order summary:", selectedLogistic?.delivery_eta);
+
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => { });
-  // const syncCartToBackend = async () => {
-  //   const token = getBearerToken();
-  //   if (!token) return;
 
-  //   const selectedItems = getSelectedItems();
+  const syncCartToBackend = async () => {
+    const token = getBearerToken();
+    if (!token) return;
 
-  //   if (!selectedItems || selectedItems.length === 0) {
-  //     toast.error("No selected items to sync for testing.");
-  //     return;
-  //   }
+    const selectedItems = getSelectedItems();
+
+    if (!selectedItems || selectedItems.length === 0) {
+      toast.error("No selected items to sync for testing.");
+      return;
+    }
 
 
-  //   try {
-  //     // await axios.delete(
-  //     //   "https://ajempire-backend.vercel.app/api/cart/",
-  //     //   {
-  //     //     headers: {
-  //     //       Authorization: `Bearer ${token}`,
-  //     //       "Content-Type": "application/json",
-  //     //     },
-  //     //     data: {
-  //     //       // Map to backend format
-  //     //       items: selectedItems.map(item => ({
-  //     //         productId: item._id,
-  //     //         qty: item.quantity,
-  //     //       })),
-  //     //     },
-  //     //   }
-  //     // );
+    try {
+      await axios.delete(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          data: {
+            // Map to backend format
+            items: selectedItems.map(item => ({
+              productId: item._id,
+              qty: item.quantity,
+            })),
+          },
+        }
+      );
 
-  //     // Optionally, you can also POST items to cart if DELETE clears it first
-  //     // await axios.post(
-  //     //   "https://ajempire-backend.vercel.app/api/cart/",
-  //     //   {
-  //     //     items: selectedItems.map(item => ({
-  //     //       productId: item._id,
-  //     //       qty: item.quantity,
-  //     //     })),
-  //     //   },
-  //     //   {
-  //     //     headers: {
-  //     //       Authorization: `Bearer ${token}`,
-  //     //       "Content-Type": "application/json",
-  //     //     },
-  //     //   }
-  //     // );
+      // Optionally, you can also POST items to cart if DELETE clears it first
+      await axios.post(
+        "https://ajempire-backend.vercel.app/api/cart/",
+        {
+          items: selectedItems.map(item => ({
+            productId: item._id,
+            qty: item.quantity,
+          })),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  //     toast.success("Cart synced to backend for testing!");
-  //   } catch (error) {
-  //     console.error("Error syncing cart:", error);
-  //     toast.error("Failed to sync cart for testing.");
-  //   }
-  // };
-  const initiateCheckout = async (couponCode: string) => {
+      toast.success("Cart synced to backend for testing!");
+    } catch (error) {
+      console.error("Error syncing cart:", error);
+      toast.error("Failed to sync cart for testing.");
+    }
+  };
+  const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
@@ -110,7 +113,7 @@ export default function OrderSummaryPage() {
     }
 
     // For testing: sync cart to backend
-    // await syncCartToBackend();
+    await syncCartToBackend();
 
     try {
       const response = await axios.post(
@@ -122,7 +125,6 @@ export default function OrderSummaryPage() {
             courier_id: selectedLogistic.courier_id,
             service_code: selectedLogistic.courier_id,
           },
-          couponCode
         },
         {
           headers: {
@@ -180,7 +182,7 @@ export default function OrderSummaryPage() {
         </p>
       </div>
       {/* Progress indicators */}
-      <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scroll-smooth scrollbar-hide">
+      <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
         <div className="flex items-center gap-1 flex-shrink-0">
           <svg
             width="24"
@@ -276,8 +278,29 @@ export default function OrderSummaryPage() {
         Please Confirm and submit your order
       </p>
       <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
-        <GetshippingAddress />
-        <CheckoutSummeryCard initiateCheckout={(couponCode: string) => initiateCheckout(couponCode)} />
+        <div className="w-full">
+          <GetshippingAddress />
+          <div className="mt-4 lg:block hidden">
+            <p className="text-lg font-semibold">Delivery details</p>
+            <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
+              <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
+              <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
+                <span className="text-brand_solid_gradient">
+                  {selectedLogistic?.delivery_eta_time &&
+                    new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      }
+                    )}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
       </div>
     </div>
   );

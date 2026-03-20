@@ -8,6 +8,8 @@ import Spinner from "../Spinner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCartStore, CheckoutStep } from "@/lib/stores/cart-store";
+import { useEffect, useRef } from "react";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 // import { useCartStore, CheckoutStep } from "@/store/cartStore";
 
@@ -21,33 +23,47 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     const checkoutStep = useCartStore((s) => s.checkoutStep);
     const setCheckoutStep = useCartStore((s) => s.setCheckoutStep);
 
+    // inside the component
+    const closeModal = useModalStore((s) => s.closeModal);
+
+
+    const steps = [
+        CheckoutStep.ADDRESS_FORM,
+        CheckoutStep.PAYMENT_METHOD,
+        CheckoutStep.LOGISTICS,
+        CheckoutStep.ORDER_SUMMARY,
+    ];
+
     const goToNextStep = () => {
-        setCheckoutStep(
-            checkoutStep === CheckoutStep.ADDRESS_FORM
-                ? CheckoutStep.PAYMENT_METHOD
-                : checkoutStep === CheckoutStep.PAYMENT_METHOD
-                    ? CheckoutStep.LOGISTICS
-                    : CheckoutStep.ORDER_SUMMARY
-        );
+        const i = steps.indexOf(checkoutStep);
+        if (i < steps.length - 1) {
+            setCheckoutStep(steps[i + 1]);
+        }
     };
 
     const goToPreviousStep = () => {
-        setCheckoutStep(
-            checkoutStep === CheckoutStep.LOGISTICS
-                ? CheckoutStep.PAYMENT_METHOD
-                : CheckoutStep.ADDRESS_FORM
-        );
+        const i = steps.indexOf(checkoutStep);
+        if (i > 0) {
+            setCheckoutStep(steps[i - 1]);
+        }
     };
 
-    // Redirect only when we HIT final step
-    if (checkoutStep === CheckoutStep.ORDER_SUMMARY) {
-        router.push("/checkoutpage");
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <Spinner />
-            </div>
-        );
-    }
+    // useEffect(() => {
+    //     if (checkoutStep === CheckoutStep.ORDER_SUMMARY) {
+    //         router.push("/checkoutpage");
+    //     }
+    // }, [checkoutStep, router]);
+    const redirected = useRef(false);
+
+    useEffect(() => {
+        if (
+            checkoutStep === CheckoutStep.ORDER_SUMMARY &&
+            !redirected.current
+        ) {
+            redirected.current = true;
+            router.replace("/checkoutpage");
+        }
+    }, [checkoutStep, router]);
 
     const stepVariants = {
         initial: { opacity: 0 },
@@ -62,6 +78,7 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
                     <ShippingAdressForm
                         onContinue={goToNextStep}
                         setIsadress={setIsadress}
+                        onClose={closeModal}
                     />
                 </motion.div>
             );
@@ -72,6 +89,7 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
                     onNext={goToNextStep}
                     goToPreviousStep={goToPreviousStep}
                     setIsadress={setIsadress}
+                    onClose={closeModal}
                 />
             );
 
@@ -81,6 +99,7 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
                     onContinue={goToNextStep}
                     onBack={goToPreviousStep}
                     setIsadress={setIsadress}
+                    onClose={closeModal}
                 />
             );
 
