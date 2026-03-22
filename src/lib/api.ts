@@ -271,11 +271,18 @@ export async function addToCart(products: CartItem[]) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const items = products.map((product) => ({
-    productId: product._id,
-    qty: product.quantity,
-    variant: product.selectedVariants,
-  }));
+ const items = products.map((product) => ({
+  productId: product._id,
+  qty: product.quantity,
+ variant:
+  product.selectedVariants?.length
+    ? Object.fromEntries(
+        product.selectedVariants.map(v => [v.name, v.value])
+      )
+    : undefined,
+}));
+// 🔥 Log payload here to check
+  console.log("Sending cart payload:", items);
   const res = await fetch(API_URL + "/cart", {
     method: "POST",
     headers: {
