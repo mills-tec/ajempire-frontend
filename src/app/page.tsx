@@ -56,7 +56,11 @@ export default function Home() {
   };
 
   return (
-    <PullToRefreshProvider onRefresh={handleRefresh}>
+    <PullToRefreshProvider
+      onRefresh={async (): Promise<void> => {
+        await refetch();
+      }}
+    >
       <HomeContent data={data} isLoading={isLoading} />
     </PullToRefreshProvider>
   );

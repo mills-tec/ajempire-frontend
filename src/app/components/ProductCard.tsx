@@ -134,7 +134,8 @@ export default function ProductCard({
               {Number(
                 calcDiscountPrice(
                   product.price,
-                  product.flashSales?.discount ?? 0,
+                  product.flashSales?.discountValue,
+                  product.flashSales?.discountType,
                 ),
               ).toLocaleString("en-NG", {
                 style: "currency",
@@ -144,7 +145,7 @@ export default function ProductCard({
             </p>
 
             <span className="text-brand_pink  font-bold">
-              <CountdownTimer endTime={product.flashSales.endTime} />
+              <CountdownTimer endTime={product.flashSales.endDate} />
             </span>
           </div>
         )}
@@ -154,7 +155,8 @@ export default function ProductCard({
               {Number(
                 calcDiscountPrice(
                   product.price,
-                  product.flashSales?.discount ?? 0,
+                  product.flashSales?.discountValue ?? 0,
+                  product.flashSales?.discountType ?? "percent",
                 ),
               ).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
             </h3>

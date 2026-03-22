@@ -5,13 +5,10 @@ import CartPopupProductDescription from "./CartPopupProductDescription";
 import { useCartStore } from "@/lib/stores/cart-store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import CheckoutRequirement from "./CheckoutRequirement";
-import { useModalStore } from "@/lib/stores/modal-store";
-
 
 export default function CartPopup() {
-
-  const { selectedItem, items } = useCartStore();
+  const selectedItem = useCartStore((s) => s.selectedItem);
+  const items = useCartStore((s) => s.items);
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
   const cartRef = useRef<HTMLAnchorElement>(null);
   const router = useRouter();
@@ -19,7 +16,6 @@ export default function CartPopup() {
   // local state for animation
   const [isVisible, setIsVisible] = useState(false); // for opacity/slide
   const [shouldRender, setShouldRender] = useState(false); // for mounting
-
 
   useEffect(() => {
     if (selectedItem) {
@@ -50,19 +46,19 @@ export default function CartPopup() {
   console.log("🧠 selectedItem:", selectedItem);
   console.log("🧠 items:", items);
 
-
-
   return (
     <>
       <div
-        className={`fixed bottom-0 flex items-end lg:items-start backdrop-blur-sm pb-[0rem] lg:pb-0 z-50 lg:justify-center h-full w-full bg-black/10 overflow-hidden transition-opacity duration-300  ${isVisible ? "opacity-100 animate-dropdown-in" : "opacity-0 animate-dropdown-out"
-          }`}
+        className={`fixed bottom-0 flex items-end lg:items-start backdrop-blur-sm pb-[0rem] lg:pb-0 z-50 lg:justify-center h-full w-full bg-black/10 overflow-hidden transition-opacity duration-300  ${
+          isVisible
+            ? "opacity-100 animate-dropdown-in"
+            : "opacity-0 animate-dropdown-out"
+        }`}
         onClick={(e) => {
           // Close popup when clicking on overlay
           if (e.target === e.currentTarget) {
             clearSelectedItem();
           }
-
         }}
       >
         <div
@@ -79,11 +75,7 @@ export default function CartPopup() {
         >
           <div className="p-4 sticky top-0 rounded-t-2xl z-30 bg-white">
             <div className="flex items-center justify-between">
-              <Link
-                href="/pages/cart"
-                ref={cartRef}
-                className="relative"
-              >
+              <Link href="/pages/cart" ref={cartRef} className="relative">
                 <svg
                   width="65"
                   height="65"
@@ -144,28 +136,33 @@ export default function CartPopup() {
               <div className="space-y-4 p-4  flex gap-3 items-end ">
                 <div className="relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip">
                   <Image
-                    src={selectedItem.cover_image || selectedItem.images?.[0] || "/placeholder.png"}
+                    src={
+                      selectedItem.cover_image ||
+                      selectedItem.images?.[0] ||
+                      "/placeholder.png"
+                    }
                     alt="product image"
                     fill
                     className="absolute object-cover"
                   />
-
                 </div>
                 {Array.isArray(selectedItem.images) && (
                   <div className="flex gap-2 lg:gap-5">
-                    {selectedItem.images?.filter(Boolean).map((image, index) => (
-                      <div
-                        key={index}
-                        className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
-                      >
-                        <Image
-                          src={image}
-                          alt="product image"
-                          fill
-                          className="absolute object-cover"
-                        />
-                      </div>
-                    ))}
+                    {selectedItem.images
+                      ?.filter(Boolean)
+                      .map((image, index) => (
+                        <div
+                          key={index}
+                          className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
+                        >
+                          <Image
+                            src={image}
+                            alt="product image"
+                            fill
+                            className="absolute object-cover"
+                          />
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>
@@ -179,7 +176,6 @@ export default function CartPopup() {
                   }}
                   cartRef={cartRef}
                 />
-
               </div>
             </div>
           )}

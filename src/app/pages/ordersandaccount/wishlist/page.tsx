@@ -14,57 +14,121 @@ import { useRouter } from "next/navigation";
 import CountdownTimer from "@/components/CountDownTimer";
 
 export default function WishlistProductsPage() {
-    const { items, initWishlist, removeItem } = useWishlistStore();
-    const { addItem: addToCart, getItem: getCartItem, } = useCartStore();
-    const [loading, setLoading] = useState(true);
-    const { getItem } = useCartStore();
-    const setSelectedItem = useCartStore((state) => state.setSelectedItem);
-    const router = useRouter();
+  const { items, initWishlist, removeItem } = useWishlistStore();
+  const { addItem: addToCart, getItem: getCartItem } = useCartStore();
+  const [loading, setLoading] = useState(true);
+  const { getItem } = useCartStore();
+  const setSelectedItem = useCartStore((state) => state.setSelectedItem);
+  const router = useRouter();
 
+  useEffect(() => {
+    initWishlist(); // ✅ load wishlist into Zustand store
+    setTimeout(() => setLoading(false), 500); // optional delay for smooth UX
+  }, []);
 
+  if (loading) return <WishlistSkeleton />;
+  if (!items) return <p>Loading wishlist...</p>;
 
-    useEffect(() => {
-        initWishlist(); // ✅ load wishlist into Zustand store
-        setTimeout(() => setLoading(false), 500); // optional delay for smooth UX
-    }, []);
+  const filledStar = (
+    <svg
+      width="16"
+      height="16"
+      className="size-4"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8.16382 0.828125L9.99671 6.46919H15.9281L11.1295 9.95557L12.9624 15.5966L8.16382 12.1103L3.36525 15.5966L5.19814 9.95557L0.399566 6.46919H6.33092L8.16382 0.828125Z"
+        fill="#403C39"
+      />
+    </svg>
+  );
+  const unfilledStar = (
+    <svg
+      width="16"
+      height="16"
+      className="size-4"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M9.40625 6.55859L9.4707 6.75781H14.7236L10.6436 9.72168L10.4736 9.8457L10.5381 10.0449L12.0967 14.8408L8.0166 11.877L7.84766 11.7539L7.67773 11.877L3.59668 14.8408L5.15625 10.0449L5.2207 9.8457L5.05176 9.72168L0.97168 6.75781H6.22461L6.28906 6.55859L7.84766 1.76074L9.40625 6.55859Z"
+        stroke="#403C39"
+        strokeWidth="0.57732"
+      />
+    </svg>
+  );
 
+  return (
+    <div className="flex flex-col gap-4">
+      {items.length === 0 ? (
+        <p>Your wishlist is empty.</p>
+      ) : (
+        <AnimatePresence>
+          {items.map((product) => (
+            <motion.div
+              key={product._id}
+              initial={{ opacity: 0, x: 0 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 200 }} // slide to right and fade out
+              transition={{ duration: 0.3 }}
+              className="w-full border rounded flex justify-between p-4 gap-4 bg-white"
+              onClick={(e) => {
+                // Navigate to product detail page
+                e.stopPropagation();
+                router.push(`/product/${product._id}`);
+              }}
+            >
+              <Link
+                href={`/product/${product._id}`}
+                key={product._id}
+                className="w-[90%] "
+              >
+                {/* LEFT SIDE */}
+                <div className="flex gap-4 w-full">
+                  {/* IMAGE */}
+                  <div className="relative lg:w-[110px] w-[100px] h-auto flex-shrink-0 rounded overflow-hidden bg-[#f9f8f8]">
+                    <Image
+                      src={product.cover_image || "/placeholder.png"}
+                      alt={product.name || "product image"}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
 
+                  {/* TEXT */}
+                  <div className="flex flex-col gap-1 w-full min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {product.name || "No name"}
+                    </p>
 
-    if (loading) return <WishlistSkeleton />;
-    if (!items) return <p>Loading wishlist...</p>;
+                    <p className="text-[0.65rem] px-2 py-[2px] bg-brand_purple text-white w-max rounded-sm">
+                      Seller Tag
+                    </p>
 
+                    <div className="flex items-center gap-2">
+                      <div className="flex text-brand_gray_dark">
+                        {[...Array(5)].map((_, i) =>
+                          i <
+                          (product.averageRating
+                            ? Number(product.averageRating)
+                            : 0) ? (
+                            <span key={i}>{filledStar}</span>
+                          ) : (
+                            <span key={i}>{unfilledStar}</span>
+                          ),
+                        )}
+                      </div>
+                      <p className="text-xs text-black/60">
+                        {product.numReviews || 0}
+                      </p>
+                    </div>
 
-    const filledStar = (
-        <svg
-            width="16"
-            height="16"
-            className="size-4"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path
-                d="M8.16382 0.828125L9.99671 6.46919H15.9281L11.1295 9.95557L12.9624 15.5966L8.16382 12.1103L3.36525 15.5966L5.19814 9.95557L0.399566 6.46919H6.33092L8.16382 0.828125Z"
-                fill="#403C39"
-            />
-        </svg>
-    );
-    const unfilledStar = (
-        <svg
-            width="16"
-            height="16"
-            className="size-4"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path
-                d="M9.40625 6.55859L9.4707 6.75781H14.7236L10.6436 9.72168L10.4736 9.8457L10.5381 10.0449L12.0967 14.8408L8.0166 11.877L7.84766 11.7539L7.67773 11.877L3.59668 14.8408L5.15625 10.0449L5.2207 9.8457L5.05176 9.72168L0.97168 6.75781H6.22461L6.28906 6.55859L7.84766 1.76074L9.40625 6.55859Z"
-                stroke="#403C39"
-                strokeWidth="0.57732"
-            />
-        </svg>
-    );
+                    <p className="text-[0.65rem] text-brand_purple">
+                      Only {product.stock ?? 0} left
+                    </p>
 
     return (
         <div className="flex flex-col gap-4">
@@ -95,18 +159,45 @@ export default function WishlistProductsPage() {
                                 {/* LEFT SIDE */}
                                 <div className="flex lg:gap-4 gap-4">
 
-                                    {/* IMAGE */}
-                                    <div className="relative lg:w-[110px] w-[100px] h-auto flex-shrink-0 rounded overflow-hidden bg-[#f9f8f8]">
-                                        <Image
-                                            src={product.cover_image || "/placeholder.png"}
-                                            alt={product.name || "product image"}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-medium text-brand_pink">
+                        {/* ₦{calcDiscountPrice(product.price || 0, product.discountedPrice ?? 0, product.discountType ?? "percent")} */}
+                      </h3>
+                      <p className="text-xs text-black/60">1k+ sold</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
 
-                                    {/* TEXT */}
-                                    <div className="flex flex-col gap-1 w-full min-w-0">
+              {/* RIGHT SIDE ICONS */}
+              <div className="hidden lg:flex flex-col items-end justify-between gap-2 flex-shrink-0">
+                {/* cancel/remove icon*/}
+                <div
+                  className=" cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeItem(product._id!);
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M14 7C14 5.61553 13.5895 4.26216 12.8203 3.11101C12.0511 1.95987 10.9579 1.06266 9.67879 0.532846C8.3997 0.003033 6.99224 -0.13559 5.63437 0.134506C4.2765 0.404603 3.02922 1.07129 2.05026 2.05026C1.07129 3.02922 0.404603 4.2765 0.134506 5.63437C-0.13559 6.99224 0.003033 8.3997 0.532846 9.67879C1.06266 10.9579 1.95987 12.0511 3.11101 12.8203C4.26216 13.5895 5.61553 14 7 14C8.85652 14 10.637 13.2625 11.9498 11.9498C13.2625 10.637 14 8.85652 14 7ZM9.7475 8.91334C9.85615 9.02263 9.91713 9.17048 9.91713 9.32459C9.91713 9.4787 9.85615 9.62654 9.7475 9.73584C9.69328 9.79051 9.62876 9.83391 9.55767 9.86352C9.48659 9.89314 9.41034 9.90839 9.33334 9.90839C9.25633 9.90839 9.18009 9.89314 9.109 9.86352C9.03792 9.83391 8.9734 9.79051 8.91917 9.73584L7.105 7.92167C7.07708 7.89626 7.04068 7.88217 7.00292 7.88217C6.96516 7.88217 6.92876 7.89626 6.90084 7.92167L5.08667 9.73584C4.97508 9.8314 4.83153 9.88134 4.68472 9.87567C4.53791 9.87 4.39865 9.80914 4.29476 9.70525C4.19087 9.60136 4.13001 9.4621 4.12434 9.31528C4.11867 9.16847 4.1686 9.02493 4.26417 8.91334L6.07834 7.09917C6.10375 7.07125 6.11784 7.03485 6.11784 6.99709C6.11784 6.95933 6.10375 6.92293 6.07834 6.895L4.26417 5.08084C4.2095 5.02661 4.1661 4.96209 4.13648 4.89101C4.10687 4.81992 4.09162 4.74368 4.09162 4.66667C4.09162 4.58966 4.10687 4.51342 4.13648 4.44233C4.1661 4.37125 4.2095 4.30673 4.26417 4.2525C4.37346 4.14386 4.52131 4.08287 4.67542 4.08287C4.82953 4.08287 4.97738 4.14386 5.08667 4.2525L6.90084 6.06667C6.91393 6.08062 6.92974 6.09174 6.9473 6.09934C6.96486 6.10694 6.98379 6.11086 7.00292 6.11086C7.02205 6.11086 7.04098 6.10694 7.05854 6.09934C7.0761 6.09174 7.09191 6.08062 7.105 6.06667L8.91917 4.2525C8.97356 4.19811 9.03813 4.15497 9.10919 4.12554C9.18025 4.0961 9.25642 4.08095 9.33334 4.08095C9.41026 4.08095 9.48642 4.0961 9.55748 4.12554C9.62854 4.15497 9.69311 4.19811 9.7475 4.2525C9.80189 4.30689 9.84504 4.37146 9.87447 4.44252C9.90391 4.51359 9.91906 4.58975 9.91906 4.66667C9.91906 4.74359 9.90391 4.81975 9.87447 4.89082C9.84504 4.96188 9.80189 5.02645 9.7475 5.08084L7.93334 6.895C7.91939 6.9081 7.90827 6.92391 7.90067 6.94147C7.89307 6.95903 7.88914 6.97795 7.88914 6.99709C7.88914 7.01622 7.89307 7.03515 7.90067 7.05271C7.90827 7.07026 7.91939 7.08608 7.93334 7.09917L9.7475 8.91334Z"
+                      fill="black"
+                      fillOpacity="0.5"
+                    />
+                  </svg>
+                </div>
+                {/* add to cart icon */}
+                <div
+                  className="cursor-pointer relative"
+                  onClick={(e) => {
+                    e.stopPropagation();
 
                                         <p className="text-sm font-medium truncate">
                                             {product.name || "No name"}
