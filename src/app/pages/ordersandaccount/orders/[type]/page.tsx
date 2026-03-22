@@ -182,7 +182,7 @@ export default function Orders({
           )}
         </div>
       ) : (
-        <EmptyList message={searchInput.length > 0
+        <EmptyList writeup="" message={searchInput.length > 0
           ? "Couldn't find any order with that Id"
           : "You do not have any order yet."} />
       )}

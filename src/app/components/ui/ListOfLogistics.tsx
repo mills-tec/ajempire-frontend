@@ -16,7 +16,7 @@ export default function ListOfLogistics() {
     const [loading, setLoading] = useState(false);
 
     const { selectedLogistic, setSelectedLogistic } = useCartStore();
-    // console.log("Selected Logistic:", selectedLogistic);
+    console.log("Selected Logistic:", selectedLogistic);
 
     useEffect(() => {
         fetchLogistics();

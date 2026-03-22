@@ -17,6 +17,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import ProductItem from "@/components/ProductItem";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import RelatedProducts from "@/components/RelatedProducts";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -37,8 +38,6 @@ export default function ProductDetailPage() {
     selectedItem,
     setQuantity: setCartItemQty,
   } = useCartStore();
-
-  const [isAdress, setIsAdress] = useState(false);
 
   const { data, isLoading } = useQuery(
     ["product", id],
@@ -64,10 +63,12 @@ export default function ProductDetailPage() {
     }
   }, [data]);
 
+  const openModal = useModalStore((s) => s.openModal);
   const checkoutHandler = () => {
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout");
+      openModal("authwrapper");
       return;
     }
 
@@ -91,7 +92,7 @@ export default function ProductDetailPage() {
     }
 
     store.selectAllCartItems();
-    setIsAdress(true);
+    openModal("checkout");
   };
 
   const [video, setVideo] = useState({
@@ -405,24 +406,18 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
-          {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
         </div>
-        <div className="font-poppins py-10 space-y-5">
-          <h1 className="text-2xl">Related Products</h1>
-          <RelatedProducts category={item.category?._id!} />
-        </div>
-        {/* {
-          item.relatedProducts!.length > 0 && (
-            <div className="font-poppins py-10 space-y-5">
-              <h1 className="text-2xl">Related Products</h1>
-              <RelatedProducts category={item.category?._id!} />
 
-            </div>
-          )
-        } */}
+        {item.relatedProducts && item.relatedProducts.length > 0 && (
+          <div className="font-poppins py-10 space-y-5">
+            <h1 className="text-2xl">Related Products</h1>
+            <RelatedProducts category={item.category?._id!} />
+          </div>
+        )}
       </div>
 
-      <div className="w-full flex items-center sticky left-0 bottom-20 pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
+      {/* add to cart div  */}
+      <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
@@ -484,7 +479,7 @@ export default function ProductDetailPage() {
           </button>
         </div>
         <button
-          className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full"
+          className="h-[2rem] lg:h-[3rem]  text-xs bg-brand_pink text-white rounded-full w-full"
           onClick={checkoutHandler}
         >
           Check Out

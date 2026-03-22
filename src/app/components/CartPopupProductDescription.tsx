@@ -6,24 +6,32 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { animateToCart } from "@/lib/animateToCart";
-
+import CountdownTimer from "@/components/CountDownTimer";
+import { useModalStore } from "@/lib/stores/modal-store";
 interface Props {
   item: CartItem;
   cartRef: React.RefObject<HTMLAnchorElement | null>;
+
 }
-import CountdownTimer from "@/components/CountDownTimer";
 
 export default function CartPopupProductDescription({ item, cartRef }: Props) {
   // const [rating, setRating] = React.useState(4);
-  const [isAdress, setIsAdress] = useState(false);
+
   const { items: selectedItem, selectAllCartItems } = useCartStore();
+  const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
+  const openModal = useModalStore((s) => s.openModal);
+
 
   const checkoutHandler = () => {
     const token = getBearerToken();
     if (!token) {
-      toast.error("Please log in to checkout");
+      toast.error("Please log in to checkout", { position: "top-right" });
+      openModal("authwrapper");
       return;
     }
+
+    clearSelectedItem();      // close cart
+    openModal("checkout")
 
     if (!cartItem) {
       addItem({
@@ -33,8 +41,9 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
       });
     }
 
+
+
     selectAllCartItems();
-    setIsAdress(true);
     setTimeout(() => {
       console.log("Selected items:", selectedItem);
     }, 50);
@@ -51,6 +60,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
   const cartItem = getItem(item._id);
 
   const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
+
 
   const [selectedVariants, setSelectedVariants] = useState(
     () => cartItem?.selectedVariants ?? null,
@@ -78,9 +88,14 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     }
   }, [quantity]);
 
+  // const variant_set = new Set<string>();
+
+  // for (const variant of item?.variants!) {
+  //   variant_set.add(variant.name);
+  // }
   const variant_set = new Set<string>();
 
-  for (const variant of item?.variants!) {
+  for (const variant of item?.variants ?? []) {
     variant_set.add(variant.name);
   }
 
@@ -103,12 +118,14 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
   //   item?.selectedVariants,
   //   items
   // );
-  let size_variant =
-    item.variants!.length > 0 &&
-    item.variants!.filter((item) => item.name == "size" && item.stock > 0);
-  let color_variant =
-    item.variants!.length > 0 &&
-    item.variants!.filter((item) => item.name == "color" && item.stock > 0);
+  // let size_variant =
+  //   item.variants!.length > 0 &&
+  //   item.variants!.filter((item) => item.name == "size" && item.stock > 0);
+  // let color_variant =
+  //   item.variants!.length > 0 &&
+  //   item.variants!.filter((item) => item.name == "color" && item.stock > 0);
+
+
 
   const filledStar = (
     <svg
@@ -518,15 +535,13 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
           </button>
         </div>
         <div className="w-full">
-          <button
-            className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full"
-            onClick={checkoutHandler}
-          >
+          <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={() => {
+            checkoutHandler(); // open checkout modal
+          }}>
             Check Out
           </button>
         </div>
       </div>
-      {isAdress && <CheckoutRequirement setIsadress={setIsAdress} />}
     </div>
   );
 }

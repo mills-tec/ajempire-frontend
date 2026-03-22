@@ -18,6 +18,7 @@ interface ShippingAdressProps {
   };
   onContinue?: () => void;
   onAddressUpdated?: () => void;
+  onClose: () => void;
 }
 
 export default function ShippingAdressForm({
@@ -25,6 +26,7 @@ export default function ShippingAdressForm({
   existingAddress,
   onContinue,
   onAddressUpdated,
+  onClose,
 }: ShippingAdressProps) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -36,7 +38,6 @@ export default function ShippingAdressForm({
   const [selectedState, setSelectedState] = useState("Delta");
   const [selectedCountry, setSelectedCountry] = useState("Nigeria");
   const [loading, setLoading] = useState(false);
-  const [singin, setSingin] = useState(false);
 
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
   const convertToLocalPhone = (phone: string) => {
@@ -188,7 +189,7 @@ export default function ShippingAdressForm({
     <div className="fixed inset-0  bg-[#FFFFFF] flex lg:items-center items-start   lg:justify-center  z-50">
       {loading && <Spinner />}
       {showInitialSpinner && <Spinner />}
-      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-[600px] lg:px-10 px-5 py-8 overflow-y-scroll">
+      <div className="w-full relative lg:shadow-lg font-poppins text-[14px] lg:w-[50%] lg:h-[500px] h-full lg:px-10 px-5 py-8 overflow-y-scroll">
         <p className="font-semibold text-[15px] opacity-80 text-center mb-5">
           Shipping Address
         </p>
@@ -469,9 +470,7 @@ export default function ShippingAdressForm({
 
         <div
           className="absolute top-9 right-6 cursor-pointer "
-          onClick={() => {
-            setIsadress && setIsadress(false);
-          }}>
+          onClick={onClose}>
           <svg
             width="15"
             height="15"

@@ -65,7 +65,7 @@ export default function ProfileSettingsPage() {
                 </div>
             </div>
 
-            <div className="flex  flex-col gap-6 w-full ">
+            <div className="lg:flex gap-3  flex-col lg:flex-row ">
 
                 {/* LEFT – PROFILE SUMMARY */}
                 {profileData && (

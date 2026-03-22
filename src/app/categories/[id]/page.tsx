@@ -47,14 +47,35 @@ export default function CategoryPage() {
   // React.useEffect(() => {
   //     if (!searchActive) return;
 
-  //     setSearchLoading(true);
+    if (isError) return <p>Error loading products.</p>;
+    return (
+        <>
+            <div className="lg:hidden w-full flex flex-col gap-3 ">
+                {!isLoading && filteredProducts.length === 0 && (
+                    <div className="col-span-full" >
+                        <Image
+                            src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
+                            alt="No results"
+                            width={150}
+                            height={150}
+                            className="mx-auto mt-10"
+                        />
 
   //     const timer = setTimeout(() => {
   //         setSearchLoading(false);
   //     }, 500); // 200ms is enough for skeleton to show
 
-  //     return () => clearTimeout(timer);
-  // }, [searchedQuery]);
+                                <div
+                                    onClick={
+                                        (e) => {
+                                            // Navigate to product detail page
+                                            e.stopPropagation();
+                                            router.push(`/product/${product._id}`);
+                                            ;
+                                        }
+                                    }
+                                    key={index}
+                                    className="w-full"
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -110,20 +131,9 @@ export default function CategoryPage() {
     }
   };
 
-  if (isError) return <p>Error loading products.</p>;
-  console.log(filteredProducts);
-  return (
-    <>
-      <div className="lg:hidden w-full flex flex-col gap-3 h-[600px] overflow-y-auto scrollbar-hide">
-        {!isLoading && filteredProducts.length === 0 && (
-          <div className="col-span-full">
-            <Image
-              src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
-              alt="No results"
-              width={150}
-              height={150}
-              className="mx-auto mt-10"
-            />
+                                            {/* Text */}
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-sm font-medium leading-tight truncate w-full">{product.name.length > 10 ? product.name.substring(0, 10) + '...' : product.name}</p>
 
             <p className="text-center text-sm text-gray-500 mt-10">
               No products match your search.
@@ -161,9 +171,31 @@ export default function CategoryPage() {
                       {product.name}
                     </p>
 
-                    <p className="text-[0.65rem] text-brand_purple">
-                      Only {product.stock} left
-                    </p>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
+                                                        {Number(calcDiscountPrice(product.price, product.flashSales?.discount ?? 0)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+                                                    </h3>
+                                                    <p className="text-[9px] text-black/60">1k+ sold</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* RIGHT SIDE (cart icon) */}
+                                        <button className="relative  flex-shrink-0 flex items-end cursor-pointer" onClick={((e) => {
+                                            e.stopPropagation();
+                                            setSelectedItem(product)
+                                        })}>
+                                            {getItem(product._id) && (
+                                                <div className="absolute size-4 rounded-full left-5 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
+                                                    <p>{getItem(product._id)?.quantity}</p>
+                                                </div>
+                                            )}
+                                            <svg width="30" height="20" viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <rect x="0.35" y="0.35" width="28.4667" height="18.9667" rx="9.48333" stroke="black" strokeWidth="0.7" />
+                                                <path d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.5613 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667" stroke="black" strokeWidth="0.7" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
 
                     <div className="flex items-center gap-1">
                       <div className="flex">
