@@ -243,7 +243,8 @@ export default function ProductDescription({
                 {Number(
                   calcDiscountPrice(
                     product.price,
-                    product.flashSales.discount!,
+                    product.flashSales.discountValue!,
+                    product.flashSales.discountType!,
                   ),
                 ).toLocaleString("en-NG", {
                   style: "currency",
