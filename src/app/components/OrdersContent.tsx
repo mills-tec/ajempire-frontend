@@ -61,17 +61,17 @@ export default function OrdersContent({
 
   const handleBuyAgain = () => {
     items.forEach((item) => {
-      addItem({
-        _id: item.product, // match CartItem _id
-        name: item.name,
-        price: item.price,
-        discountedPrice: item.discountedPrice,
-        stock: 9999, // or pull actual stock if available
-        image: item.image,
-        quantity: item.qty, // keep same quantity
-        selectedVariants: item.variant ? item.variant : [], // preserve selected variant
-        selected: true, // mark selected in cart
-      });
+      // addItem({
+      //   _id: item.product, // match CartItem _id
+      //   name: item.name,
+      //   price: item.price,
+      //   discountedPrice: item.discountedPrice,
+      //   stock: 9999, // or pull actual stock if available
+      //   images: [item.image],
+      //   quantity: item.qty, // keep same quantity
+      //   selectedVariants: [], // preserve selected variant
+      //   selected: true, // mark selected in cart
+      // });
     });
 
     toast.success("Items added to cart!");

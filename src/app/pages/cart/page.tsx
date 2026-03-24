@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
 
@@ -29,7 +30,6 @@ export default function CartPage() {
     selectAllCartItems,
     orderSummary,
     selectedItem,
-    syncQueue,
   } = useCartStore();
 
   const [expand, setExpand] = useState(false);
@@ -38,6 +38,10 @@ export default function CartPage() {
   const selectedItems = items.filter((item) => item.selected);
   const selectedCount = selectedItems.length;
   const openModal = useModalStore((s) => s.openModal);
+  const [cartAmount, setCartAmount] = useState<
+    { total: number; discount: number; _id: string }[]
+  >([]);
+
   const checkoutHandler = () => {
     const token = getBearerToken();
     const seletedItem = items.filter((item) => item.selected);
@@ -82,6 +86,10 @@ export default function CartPage() {
     }, 800); // you can adjust based on actual fetch time
     return () => clearTimeout(timer);
   }, [items]);
+
+  useEffect(() => {
+    setCartAmount([]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -134,8 +142,8 @@ export default function CartPage() {
         </section>
       </RefreshWrapper>
     );
+  console.log(cartAmount);
   return (
-
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
       {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
       <div className="w-full lg:px-0 space-y-6 lg:overflow-y-scroll scrollbar-hide lg:h-[calc(100vh-8rem)]">
@@ -173,7 +181,29 @@ export default function CartPage() {
           </svg>
         </div>
         {items.map((item, i) => (
-          <CartCard item={item} key={i} />
+          <CartCard
+            item={item}
+            key={i}
+            handleUpdateCartTotal={({
+              total,
+              discount,
+              _id,
+            }: {
+              total: number;
+              discount: number;
+              _id: string;
+            }) => {
+              setCartAmount((prev) => {
+                const existing = prev.find((i) => i._id === _id);
+                if (existing) {
+                  return prev.map((i) =>
+                    i._id === _id ? { ...i, total, discount } : i,
+                  );
+                }
+                return [...prev, { total, discount, _id }];
+              });
+            }}
+          />
         ))}
       </div>
       {!selectedItem && (
@@ -242,11 +272,15 @@ export default function CartPage() {
                 ))}
             </div> */}
             <div className="flex gap-2 min-h-[5rem] transition-all duration-300">
-              {selectedItems.map((item) => {
+              {selectedItems.map((item, i) => {
                 const isLoaded = loadedImages[item._id];
-
+                const cartItemAmount: {
+                  total: number;
+                  discount: number;
+                  _id: string;
+                } = cartAmount.find((i) => i._id === item._id)!;
                 return (
-                  <div key={item._id} className="transition-all duration-300">
+                  <div key={i} className="transition-all duration-300">
                     <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
                       {isLoaded && <SelectedItemSkeleton />}
 
@@ -264,11 +298,9 @@ export default function CartPage() {
 
                     <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
                       {formatPrice(
-                        calcDiscountPrice(
-                          item.price,
-                          item.flashSales?.discountValue ?? 0!,
-                          item.flashSales?.discountType!,
-                        ),
+                        cartItemAmount?.discount > 0
+                          ? cartItemAmount?.total - cartItemAmount?.discount
+                          : cartItemAmount?.total,
                       )}
                       <span className="text-brand_pink"> x{item.quantity}</span>
                     </p>
@@ -282,13 +314,15 @@ export default function CartPage() {
               <div className="flex justify-between items-center">
                 <p>Item(s) total:</p>
                 <p className="font-medium">
-                  {formatPrice(orderSummary().total)}
+                  {formatPrice(cartAmount.reduce((acc, i) => acc + i.total, 0))}
                 </p>
               </div>
               <div className="flex justify-between items-center">
                 <p>Item(s) discount:</p>
                 <p className="text-brand_pink">
-                  - {formatPrice(orderSummary().discount)}
+                  {formatPrice(
+                    cartAmount.reduce((acc, i) => acc + i.discount, 0),
+                  )}
                 </p>
               </div>
             </div>
@@ -301,7 +335,12 @@ export default function CartPage() {
               <div className="flex justify-between text-sm items-center">
                 <p>Total:</p>
                 <p className="font-semibold">
-                  {formatPrice(orderSummary().finalTotal)}
+                  {formatPrice(
+                    cartAmount.reduce(
+                      (acc, i) => acc + i.total - i.discount,
+                      0,
+                    ),
+                  )}
                 </p>
               </div>
             </div>
@@ -356,10 +395,15 @@ export default function CartPage() {
               <div className="flex justify-between items-end">
                 <div>
                   <h3 className="font-medium">
-                    {formatPrice(orderSummary().total)}
+                    {formatPrice(
+                      cartAmount.reduce((acc, i) => acc + i.total, 0),
+                    )}
                   </h3>
                   <p className="text-xs text-brand_pink">
-                    {formatPrice(orderSummary().discount)} discount applied
+                    {formatPrice(
+                      cartAmount.reduce((acc, i) => acc + i.discount, 0),
+                    )}
+                    discount applied
                   </p>
                 </div>
                 <button
@@ -371,10 +415,8 @@ export default function CartPage() {
               </div>
             </div>
           </div>
-
         </div>
       )}
     </div>
-
   );
 }

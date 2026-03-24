@@ -164,6 +164,8 @@ export default function ProductDetailPage() {
 
     return media.length === videoLoaded.length;
   };
+
+  console.log("item: ", item.video);
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -189,18 +191,18 @@ export default function ProductDetailPage() {
           <div className="lg:w-1/2 h-full space-y-8">
             <div className="space-y-4">
               <div
-                className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+                className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${!preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
               >
                 {currentCoverItem.type === "image" ? (
                   <Image
                     src={currentCoverItem.src || ""}
                     alt="product image"
                     fill
-                    className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                    className={`absolute object-cover ${!preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                   />
                 ) : (
                   <div
-                    className={`absolute w-full h-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                    className={`absolute w-full h-full ${!preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                   >
                     <VideoPlayer
                       handleVideoPlay={handleVideoPlay}
@@ -223,7 +225,7 @@ export default function ProductDetailPage() {
                     {[...item.images!, item.cover_image!].map((image, key) => (
                       <div
                         key={key}
-                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${!preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
                         onClick={() => {
                           setCurrentCoverItem({
                             src: image,
@@ -235,7 +237,7 @@ export default function ProductDetailPage() {
                           src={image}
                           alt="product image"
                           fill
-                          className={`absolute object-cover ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                          className={`absolute object-cover ${!preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                           onLoad={() => {
                             setMediaLoaded((prev) =>
                               prev.find((it) => it == image)
@@ -249,7 +251,7 @@ export default function ProductDetailPage() {
 
                     {item.video && (
                       <div
-                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
+                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer ${!preLoadFunc() ? "" : "bg-gray-200 animate-fast-pulse"}`}
                         onClick={() => {
                           setCurrentCoverItem({
                             src: item.video!,
@@ -261,7 +263,7 @@ export default function ProductDetailPage() {
                           preload="metadata"
                           ref={setVideoRef}
                           src={item.video}
-                          className={`absolute object-cover h-full w-full ${preLoadFunc() ? "opacity-100" : "opacity-0"}`}
+                          className={`absolute object-cover h-full w-full ${!preLoadFunc() ? "opacity-100" : "opacity-0"}`}
                           onLoadedMetadata={(e) => {
                             e.currentTarget.currentTime = 0; // start at 3 seconds
                           }}

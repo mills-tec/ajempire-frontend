@@ -85,7 +85,7 @@ export default function ProductCard({
             alt="product image"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             fill
-            className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
+            className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${!imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
             onLoad={() => {
               setLoading(false);
             }}

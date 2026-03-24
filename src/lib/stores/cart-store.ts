@@ -7,7 +7,10 @@ import { toast } from "sonner";
 
 export type CartItem = Product & {
   quantity: number;
-  selectedVariants: Variant[];
+  selectedVariants: {
+    name: string;
+    value: string;
+  }[];
   selected: boolean;
   synced?: boolean;
 };
@@ -205,32 +208,14 @@ export const useCartStore = create<CartStore>()(
         const updatedItem = updatedItems.find((i) => i._id === id);
 
         // Update local state first
-        set({ items: updatedItems });
+        set({ items: updatedItems as any });
         const token = getBearerToken();
 
         if (!token) return; // 🚨 skip backend sync for guest users
         // Sync ONLY changed item
         if (updatedItem) {
-          // addToCart([updatedItem])
-          //   .then(() => {
-          //     set({
-          //       items: get().items.map((i) =>
-          //         i._id === id ? { ...i, synced: true } : i,
-          //       ),
-          //     });
-          //   })
-          //   .catch(() => {
-          //     set({
-          //       syncQueue: [
-          //         ...get().syncQueue,
-          //         { type: "update", item: updatedItem },
-          //       ],
-          //     });
-
-          //     toast.error("Couldn't sync cart. Will retry.");
-          //   });
           setTimeout(() => {
-            addToCart([updatedItem])
+            addToCart([updatedItem as any])
               .then(() => {
                 set({
                   items: get().items.map((i) =>
@@ -242,7 +227,7 @@ export const useCartStore = create<CartStore>()(
                 set({
                   syncQueue: [
                     ...get().syncQueue,
-                    { type: "update", item: updatedItem },
+                    { type: "update", item: updatedItem as any },
                   ],
                 });
 
@@ -380,11 +365,15 @@ export const useCartStore = create<CartStore>()(
         const items = get().items.filter((i) => i.selected);
 
         const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-
         const discount = items.reduce(
           (sum, i) =>
             sum +
-            calcDiscount(i.price, i.flashSales?.discount ?? 0) * i.quantity,
+            calcDiscount(
+              i.price,
+              i.flashSales?.discountValue ?? 0,
+              i.flashSales?.discountType!,
+            ) *
+              i.quantity,
           0,
         );
 

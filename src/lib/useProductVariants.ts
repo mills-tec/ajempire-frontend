@@ -12,15 +12,12 @@ export function useProductVariants(product: any) {
     return product.variantCombinations.some((combo: any) => {
       return (
         combo.options.some(
-          (opt: any) =>
-            opt.name === variantName && opt.value === value
+          (opt: any) => opt.name === variantName && opt.value === value,
         ) &&
         Object.entries(selectedOptions)
           .filter(([k]) => k !== variantName)
           .every(([k, v]) =>
-            combo.options.some(
-              (opt: any) => opt.name === k && opt.value === v
-            )
+            combo.options.some((opt: any) => opt.name === k && opt.value === v),
           )
       );
     });
@@ -41,7 +38,7 @@ export function useProductVariants(product: any) {
     }));
 
     // 🔥 Sync with cart
-    setSelectedVariants(product._id, variantArray);
+    setSelectedVariants(product._id, []);
   };
 
   const selectedCombination =
@@ -52,9 +49,9 @@ export function useProductVariants(product: any) {
             combo.options.some(
               (opt: any) =>
                 opt.name === variant.name &&
-                opt.value === selectedOptions[variant.name]
-            )
-          )
+                opt.value === selectedOptions[variant.name],
+            ),
+          ),
         )
       : null;
 
@@ -63,11 +60,11 @@ export function useProductVariants(product: any) {
     : product.stock;
 
   return {
-  selectedOptions,
-  selectOption,
-  isValidOption,
-  selectedCombination, // ✅ ADD THIS
-  currentStock,
-  hasVariants,
-};
+    selectedOptions,
+    selectOption,
+    isValidOption,
+    selectedCombination, // ✅ ADD THIS
+    currentStock,
+    hasVariants,
+  };
 }

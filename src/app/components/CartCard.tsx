@@ -2,13 +2,28 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import { useEffect } from "react";
 import CartPopup from "./CartPopup";
 import { useRouter } from "next/navigation";
 import CountdownTimer from "@/components/CountDownTimer";
 import { formatPrice } from "../pages/cart/page";
+import { useProductVariants } from "@/lib/useProductVariants";
 
-function CartCard({ item }: { item: CartItem }) {
+function CartCard({
+  item,
+  handleUpdateCartTotal,
+}: {
+  item: CartItem;
+  handleUpdateCartTotal: ({
+    total,
+    discount,
+    _id,
+  }: {
+    total: number;
+    discount: number;
+    _id: string;
+  }) => void;
+}) {
   const {
     removeItem,
     getItem,
@@ -23,6 +38,25 @@ function CartCard({ item }: { item: CartItem }) {
 
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
+
+  const { selectedOptions, selectOption, isValidOption, selectedCombination } =
+    useProductVariants(item);
+
+  useEffect(() => {
+    const total = Number(item.price + selectedCombination?.additionalPrice);
+    const discount = item.flashSales
+      ? calcDiscountPrice(
+          total,
+          item.flashSales?.discountValue ?? 0,
+          item.flashSales?.discountType ?? "percent",
+        )
+      : 0;
+    handleUpdateCartTotal({
+      total: total * cartItem!.quantity,
+      discount: discount * cartItem!.quantity,
+      _id: item._id,
+    });
+  }, [selectedCombination, cartItem?.quantity]);
 
   return (
     <section>
@@ -55,51 +89,95 @@ function CartCard({ item }: { item: CartItem }) {
             />
           </div>
           <div className="flex w-full flex-col justify-between overflow-clip">
-            <div className="space-y-1">
-              <h1 className="text-sm text-black font-medium">{item.name}</h1>
-              <div className="">
-                <p className="text-xs" onClick={() => setSelectedItem(item)}>
-                  Select Properties
-                </p>
-                <p className="text-xs text-[#737373]">Color: </p>
-                <div className="flex gap-1">
-                  <div className="size-[1.4rem] bg-gray-300 rounded-sm" />
-                  <div className="size-[1.4rem] bg-gray-300 rounded-sm" />
-                  <div className="size-[1.4rem] bg-gray-300 rounded-sm" />
+            {item.variants && (
+              <div className="space-y-1">
+                <h1 className="text-sm text-black font-medium">{item.name}</h1>
+                {item.variants?.map((variant) => (
+                  <div className="" key={variant.name}>
+                    <p
+                      className="text-xs capitalize"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      {variant.name}:
+                    </p>
+
+                    <div className="flex gap-3 p-1">
+                      {variant.values.map((value) => {
+                        const isValid = isValidOption(variant.name, value);
+                        const isSelected =
+                          selectedOptions[variant.name] === value;
+                        return (
+                          <div
+                            className={`relative  ${variant.name.toLowerCase().includes("color") ? "rounded-full" : "rounded-sm"} size-[1.2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                                  ${
+                                    isSelected
+                                      ? variant.name
+                                          .toLowerCase()
+                                          .includes("color")
+                                        ? "outline outline-1 outline-offset-2  outline-purple-600 "
+                                        : "outline outline-1 outline-offset-2 outline-purple-600"
+                                      : ""
+                                  } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              selectOption(variant.name, value);
+                            }}
+                            key={value}
+                          >
+                            {variant.name.toLowerCase().includes("color") ? (
+                              <div
+                                className="size-full rounded-full"
+                                style={{ backgroundColor: value }}
+                              />
+                            ) : !variant.name
+                                .toLowerCase()
+                                .includes("color") ? (
+                              value.toUpperCase()
+                            ) : (
+                              ""
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="px-[0.2rem] bg-brand_purple w-max text-white py-[0.12rem] rounded-sm text-[0.6rem]">
+                  {item.category?.name}
                 </div>
+                {item.flashSales && (
+                  <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
+                    <p className="text-brand_pink font-semibold">
+                      Save{" "}
+                      {Number(
+                        item.price -
+                          calcDiscountPrice(
+                            item.price,
+                            item.flashSales?.discountValue ?? 0,
+                            item.flashSales?.discountType ?? "percent",
+                          ),
+                      ).toLocaleString("en-NG", {
+                        style: "currency",
+                        currency: "NGN",
+                      })}{" "}
+                      extra
+                    </p>
+                    <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
+                      <CountdownTimer endTime={item.flashSales?.endDate!} />
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="px-[0.2rem] bg-brand_purple w-max text-white py-[0.12rem] rounded-sm text-[0.6rem]">
-                Seller Tag
-              </div>
-              {item.flashSales && (
-                <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
-                  <p className="text-brand_pink font-semibold">
-                    Save{" "}
-                    {Number(
-                      item.price -
-                        calcDiscountPrice(
-                          item.price,
-                          item.flashSales?.discountValue ?? 0,
-                          item.flashSales?.discountType ?? "percent",
-                        ),
-                    ).toLocaleString("en-NG", {
-                      style: "currency",
-                      currency: "NGN",
-                    })}{" "}
-                    extra
-                  </p>
-                  <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
-                    <CountdownTimer endTime={item.flashSales?.endDate!} />
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
             <div className="space-x-2 flex items-baseline justify-between w-full mt-6">
               <div className="flex items-center gap-1">
                 {item.flashSales ? (
                   <>
                     <p className="text-black/60 text-xs line-through">
-                      {Number(item.price).toLocaleString("en-NG", {
+                      {Number(
+                        item.price +
+                          (selectedCombination?.additionalPrice ?? 0),
+                      ).toLocaleString("en-NG", {
                         style: "currency",
                         currency: "NGN",
                       })}
@@ -107,7 +185,8 @@ function CartCard({ item }: { item: CartItem }) {
                     <p className="text-brand_pink">
                       {Number(
                         calcDiscountPrice(
-                          item.price,
+                          item.price +
+                            (selectedCombination?.additionalPrice ?? 0),
                           item.flashSales?.discountValue!,
                           item.flashSales?.discountType!,
                         ),
@@ -118,7 +197,11 @@ function CartCard({ item }: { item: CartItem }) {
                     </p>
                   </>
                 ) : (
-                  <p className="text-brand_pink">{formatPrice(item.price)}</p>
+                  <p className="text-brand_pink">
+                    {formatPrice(
+                      item.price + (selectedCombination?.additionalPrice ?? 0),
+                    )}
+                  </p>
                 )}
               </div>
 

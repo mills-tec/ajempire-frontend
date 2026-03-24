@@ -15,6 +15,14 @@ export interface ShippingFeeInfo {
   _id: string;
 }
 
+export interface CombinedVariant {
+  _id: string;
+  name: string;
+  price: number;
+  stock: number;
+  additionalPrice: number;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -37,6 +45,7 @@ export interface Product {
   isActive?: boolean;
   reviews?: Review[];
   variants?: Variant[];
+  variantCombinations?: variantCombinations[];
   flashSales?: {
     startDate: string;
     endDate: string;
@@ -63,9 +72,13 @@ export interface Review {
 
 export interface Variant {
   name: string;
-  price: number;
+  values: string[];
+}
+
+export interface variantCombinations {
+  options: { name: string; value: string }[];
+  additionalPrice: number;
   stock: number;
-  value: string;
   _id: string;
 }
 
