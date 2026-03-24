@@ -55,9 +55,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
       addItem({
         ...item,
         quantity,
-        selectedVariants: Object.entries(selectedOptions).map(
-          ([name, value]) => ({ name, value }),
-        ),
+        selectedVariants: [],
       });
     }
 
@@ -92,7 +90,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
       ([name, value]) => ({ name, value }),
     );
 
-    setCartSelectedVariants(item._id, selectedVariantsArray);
+    setCartSelectedVariants(item._id, []);
   }, [selectedOptions, cartItem]);
   useEffect(() => {
     if (cartItem) {
@@ -346,9 +344,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                     addItem({
                       ...item,
                       quantity: quantity || 1,
-                      selectedVariants: Object.entries(selectedOptions).map(
-                        ([name, value]) => ({ name, value }),
-                      ),
+                      selectedVariants: [],
                     }),
                 });
               }}

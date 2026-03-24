@@ -271,17 +271,15 @@ export async function addToCart(products: CartItem[]) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
- const items = products.map((product) => ({
-  productId: product._id,
-  qty: product.quantity,
- variant:
-  product.selectedVariants?.length
-    ? Object.fromEntries(
-        product.selectedVariants.map(v => [v.name, v.value])
-      )
-    : undefined,
-}));
-// 🔥 Log payload here to check
+  const items = products.map((product) => ({
+    productId: product._id,
+    qty: product.quantity,
+    variants: product.selectedVariants?.length
+      ? products.flatMap((product) => product.selectedVariants)
+      : undefined,
+  }));
+
+  // 🔥 Log payload here to check
   console.log("Sending cart payload:", items);
   const res = await fetch(API_URL + "/cart", {
     method: "POST",
@@ -416,7 +414,6 @@ export async function likeFeedCommentPost(postId: string) {
   return res.json();
 }
 
-
 export async function getCategories(): Promise<{ message: Category[] }> {
   const token = getBearerToken();
 
@@ -432,7 +429,6 @@ export async function getCategories(): Promise<{ message: Category[] }> {
   return res.json();
 }
 
-
 export async function getProductsByCategory(
   category: string,
 ): Promise<Product[]> {
@@ -445,11 +441,11 @@ export async function getProductsByCategory(
 }
 
 // SEARCH API
-export async function searchProducts(
-  searchQuery: string
-): Promise<Product[]> {
+export async function searchProducts(searchQuery: string): Promise<Product[]> {
   console.log("📡 calling searchProducts with query:", searchQuery);
-  const res = await fetch(`${API_URL}/product/search?name=${encodeURIComponent(searchQuery)}`);
+  const res = await fetch(
+    `${API_URL}/product/search?name=${encodeURIComponent(searchQuery)}`,
+  );
   if (!res.ok) return [];
 
   const data = await res.json();
@@ -463,8 +459,6 @@ export async function searchProducts(
 
   return [];
 }
-
-
 
 export async function getCoupons(
   type: string,
