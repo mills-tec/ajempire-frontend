@@ -2,16 +2,16 @@
 import { getBearerToken } from "@/lib/api";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import CheckoutRequirement from "./CheckoutRequirement";
 import { animateToCart } from "@/lib/animateToCart";
 import CountdownTimer from "@/components/CountDownTimer";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useProductVariants } from "@/lib/useProductVariants";
 interface Props {
   item: CartItem;
   cartRef: React.RefObject<HTMLAnchorElement | null>;
-
 }
 
 export default function CartPopupProductDescription({ item, cartRef }: Props) {
@@ -20,35 +20,6 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
   const { items: selectedItem, selectAllCartItems } = useCartStore();
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
   const openModal = useModalStore((s) => s.openModal);
-
-
-  const checkoutHandler = () => {
-    const token = getBearerToken();
-    if (!token) {
-      toast.error("Please log in to checkout", { position: "top-right" });
-      openModal("authwrapper");
-      return;
-    }
-
-    clearSelectedItem();      // close cart
-    openModal("checkout")
-
-    if (!cartItem) {
-      addItem({
-        ...item,
-        quantity,
-        selectedVariants: selectedVariants ?? [],
-      });
-    }
-
-
-
-    selectAllCartItems();
-    setTimeout(() => {
-      console.log("Selected items:", selectedItem);
-    }, 50);
-  };
-
   const {
     addItem,
     getItem,
@@ -60,18 +31,69 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
   const cartItem = getItem(item._id);
 
   const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
+  const {
+    selectedOptions,
+    selectOption,
+    isValidOption,
+    selectedCombination,
+    currentStock,
+    hasVariants,
+  } = useProductVariants(item);
 
+  const checkoutHandler = () => {
+    const token = getBearerToken();
+    if (!token) {
+      toast.error("Please log in to checkout", { position: "top-right" });
+      openModal("authwrapper");
+      return;
+    }
 
-  const [selectedVariants, setSelectedVariants] = useState(
-    () => cartItem?.selectedVariants ?? null,
+    clearSelectedItem(); // close cart
+    openModal("checkout");
+
+    if (!cartItem) {
+      addItem({
+        ...item,
+        quantity,
+        selectedVariants: Object.entries(selectedOptions).map(
+          ([name, value]) => ({ name, value }),
+        ),
+      });
+    }
+
+    selectAllCartItems();
+    setTimeout(() => {
+      console.log("Selected items:", selectedItem);
+    }, 50);
+  };
+
+  const variant_set = new Set<string>();
+
+  for (const variant of item?.variants ?? []) {
+    variant_set.add(variant.name);
+  }
+  const stableSelectedOptions = useMemo(
+    () => selectedOptions,
+    [selectedOptions],
   );
-
   // useEffect(() => {
-  //   if (quantity == 0) {
-  //     removeItem(item._id);
-  //   }
-  //   setCartItemQty(item._id, quantity);
-  // }, [quantity]);
+  //   if (!stableSelectedOptions) return;
+
+  //   const selectedVariantsArray = Object.entries(stableSelectedOptions).map(
+  //     ([name, value]) => ({ name, value }),
+  //   );
+
+  //   setCartSelectedVariants(item._id, selectedVariantsArray);
+  // }, [stableSelectedOptions]);
+  useEffect(() => {
+    if (!cartItem) return; // 🚨 ONLY update if item exists in cart
+
+    const selectedVariantsArray = Object.entries(selectedOptions).map(
+      ([name, value]) => ({ name, value }),
+    );
+
+    setCartSelectedVariants(item._id, selectedVariantsArray);
+  }, [selectedOptions, cartItem]);
   useEffect(() => {
     if (cartItem) {
       setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
@@ -87,45 +109,6 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
       setCartItemQty(item._id, quantity);
     }
   }, [quantity]);
-
-  // const variant_set = new Set<string>();
-
-  // for (const variant of item?.variants!) {
-  //   variant_set.add(variant.name);
-  // }
-  const variant_set = new Set<string>();
-
-  for (const variant of item?.variants ?? []) {
-    variant_set.add(variant.name);
-  }
-
-  function getAllVariantItems(variant_name: string) {
-    return item.variants!.length > 0
-      ? item.variants!.filter(
-          (variant) => variant.name == variant_name && variant.stock > 0,
-        )
-      : [];
-  }
-
-  useEffect(() => {
-    if (!selectedVariants || selectedVariants.length === 0) return;
-    setCartSelectedVariants(item._id, selectedVariants);
-  }, [selectedVariants]);
-
-  // console.log(
-  //   "selectedVariants",
-  //   selectedVariants,
-  //   item?.selectedVariants,
-  //   items
-  // );
-  // let size_variant =
-  //   item.variants!.length > 0 &&
-  //   item.variants!.filter((item) => item.name == "size" && item.stock > 0);
-  // let color_variant =
-  //   item.variants!.length > 0 &&
-  //   item.variants!.filter((item) => item.name == "color" && item.stock > 0);
-
-
 
   const filledStar = (
     <svg
@@ -158,87 +141,18 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
       />
     </svg>
   );
-  // const animateToCart = (
-  //   e: React.MouseEvent<HTMLButtonElement>
-  // ) => {
-  //   const button = e.currentTarget;
-  //   const cartIcon = document.getElementById("cart-icon");
+  const basePrice =
+    hasVariants && selectedCombination
+      ? item.price + selectedCombination.additionalPrice
+      : item.price;
 
-  //   if (!cartIcon) {
-  //     addItem({
-  //       ...item,
-  //       quantity,
-  //       selectedVariants: selectedVariants ?? [],
-  //     });
-  //     return;
-  //   }
-
-  //   const buttonRect = button.getBoundingClientRect();
-  //   const cartRect = cartIcon.getBoundingClientRect();
-
-  //   // Calculate centers
-  //   const startX = buttonRect.left + buttonRect.width / 2;
-  //   const startY = buttonRect.top + buttonRect.height / 2;
-
-  //   const endX = cartRect.left + cartRect.width / 2;
-  //   const endY = cartRect.top + cartRect.height / 2;
-
-  //   const deltaX = endX - startX;
-  //   const deltaY = endY - startY;
-
-  //   // Create circle
-  //   const circle = document.createElement("div");
-  //   circle.style.position = "fixed";
-  //   circle.style.left = `${startX}px`;
-  //   circle.style.top = `${startY}px`;
-  //   circle.style.width = "14px";
-  //   circle.style.height = "14px";
-  //   circle.style.borderRadius = "50%";
-  //   circle.style.background = "#FF008C";
-  //   circle.style.zIndex = "9999";
-  //   circle.style.pointerEvents = "none";
-  //   circle.style.transform = "translate(0px, 0px) scale(1)";
-  //   circle.style.transition =
-  //     "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)";
-
-  //   document.body.appendChild(circle);
-
-  //   // Add arc jump
-  //   const jumpHeight = deltaY < 0 ? -80 : -40;
-
-  //   requestAnimationFrame(() => {
-  //     circle.style.transform = `
-  //     translate(${deltaX}px, ${deltaY + jumpHeight}px)
-  //     scale(0.8)
-  //   `;
-  //   });
-
-  //   // Drop into cart
-  //   setTimeout(() => {
-  //     circle.style.transform = `
-  //     translate(${deltaX}px, ${deltaY}px)
-  //     scale(0.5)
-  //   `;
-  //   }, 300);
-
-  //   // Finish
-  //   setTimeout(() => {
-  //     circle.remove();
-
-  //     cartIcon.classList.add("cart-bounce");
-
-  //     setTimeout(() => {
-  //       cartIcon.classList.remove("cart-bounce");
-  //     }, 350);
-
-  //     addItem({
-  //       ...item,
-  //       quantity,
-  //       selectedVariants: selectedVariants ?? [],
-  //     });
-  //   }, 650);
-  // };
-
+  const finalPrice = item.flashSales
+    ? calcDiscountPrice(
+        basePrice,
+        item.flashSales.discountValue!,
+        item.flashSales.discountType!,
+      )
+    : basePrice;
   return (
     <div className="space-y-4 lg:space-y-8">
       <div className="space-y-1 px-4">
@@ -268,20 +182,14 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
             {item.flashSales ? (
               <>
                 <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                  {Number(
-                    calcDiscountPrice(
-                      item.price,
-                      item.flashSales.discountValue!,
-                      item.flashSales.discountType!,
-                    ),
-                  ).toLocaleString("en-NG", {
+                  {Number(finalPrice).toLocaleString("en-NG", {
                     style: "currency",
                     currency: "NGN",
                   })}
                 </h3>
 
-                <h4 className="text-[10px] lg:text-xs ml-2">
-                  {Number(item.price).toLocaleString("en-NG", {
+                <h4 className="text-[10px] lg:text-xs ml-2 line-through">
+                  {Number(basePrice).toLocaleString("en-NG", {
                     style: "currency",
                     currency: "NGN",
                   })}
@@ -369,96 +277,53 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
 
       <div className="flex justify-between px-4">
         <div className="flex gap-6">
-          {[...variant_set].map((variant) => (
-            <div className="space-y-2  mt-4 lg:mt-0">
-              <p className="text-xs text-brand_gray_dark capitalize">
-                Select Property ({variant}):
-              </p>
-              <div className="pt-1 lg:pt-0">
-                <div className="flex gap-2">
-                  {getAllVariantItems(variant).map((variantItem, idx) => {
-                    if (
-                      typeof variant === "string" &&
-                      variant.toLowerCase() === "size"
-                    ) {
+          {hasVariants && (
+            <div className="flex gap-6 px-4">
+              {item.variants!.map((variant, key) => (
+                <div key={key} className="space-y-2 mt-4">
+                  <p className="text-xs text-brand_gray_dark capitalize">
+                    Select Property ({variant.name}):
+                  </p>
+
+                  <div className="flex gap-2">
+                    {variant.values.map((value, idx) => {
+                      const isValid = isValidOption(variant.name, value);
+                      const isSelected =
+                        selectedOptions[variant.name] === value;
+
                       return (
                         <div
                           key={idx}
                           onClick={() => {
-                            setSelectedVariants((prev) => {
-                              // If prev is null, start with empty array
-                              const selectedArr = prev ?? [];
-                              // Check if item is already in arr by name+value
-                              const exists = selectedArr.some(
-                                (v) =>
-                                  v.name === variantItem.name &&
-                                  v.value === variantItem.value,
-                              );
-                              if (exists) {
-                                return selectedArr.filter(
-                                  (v) =>
-                                    !(
-                                      v.name === variantItem.name &&
-                                      v.value === variantItem.value
-                                    ),
-                                );
-                              } else {
-                                return [...selectedArr, variantItem];
-                              }
-                            });
+                            if (!isValid) return;
+                            selectOption(variant.name, value);
                           }}
-                          className="h-[1.5rem] w-[2.5rem] relative rounded-full text-[0.6rem] flex items-center justify-center border bg-[#E6E6E6]"
-                        >
-                          {variantItem.value?.toUpperCase?.() ?? ""}
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            setSelectedVariants((prev) => {
-                              // If prev is null, start with empty array
-                              const selectedArr = prev ?? [];
-                              // Check if item is already in arr by name+value
-                              const exists = selectedArr.some(
-                                (v) =>
-                                  v.name === variantItem.name &&
-                                  v.value === variantItem.value,
-                              );
-                              if (exists) {
-                                return selectedArr.filter(
-                                  (v) =>
-                                    !(
-                                      v.name === variantItem.name &&
-                                      v.value === variantItem.value
-                                    ),
-                                );
-                              } else {
-                                return [...selectedArr, variantItem];
-                              }
-                            });
-                          }}
-                          className={`size-[2rem] relative rounded border border-[#BFBFBF]`}
+                          className={`relative size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                  ${
+                    isSelected
+                      ? "after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
+                      : ""
+                  }
+                  ${!isValid ? "opacity-30 cursor-not-allowed" : ""}
+                `}
                           style={{
-                            background: variantItem.value
-                              ? `${variantItem.value}`
-                              : undefined,
+                            backgroundColor:
+                              variant.name.toLowerCase() === "color"
+                                ? value
+                                : undefined,
                           }}
                         >
-                          {selectedVariants?.some(
-                            (v) => v._id === variantItem._id,
-                          ) && (
-                            <div className="w-full h-1 rounded-full absolute -bottom-2 bg-[#A600FF]"></div>
-                          )}
+                          {variant.name.toLowerCase() === "size"
+                            ? value.toUpperCase()
+                            : ""}
                         </div>
                       );
-                    }
-                  })}
+                    })}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -481,7 +346,9 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                     addItem({
                       ...item,
                       quantity: quantity || 1,
-                      selectedVariants: selectedVariants ?? [],
+                      selectedVariants: Object.entries(selectedOptions).map(
+                        ([name, value]) => ({ name, value }),
+                      ),
                     }),
                 });
               }}
@@ -535,9 +402,12 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
           </button>
         </div>
         <div className="w-full">
-          <button className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full" onClick={() => {
-            checkoutHandler(); // open checkout modal
-          }}>
+          <button
+            className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-full"
+            onClick={() => {
+              checkoutHandler(); // open checkout modal
+            }}
+          >
             Check Out
           </button>
         </div>

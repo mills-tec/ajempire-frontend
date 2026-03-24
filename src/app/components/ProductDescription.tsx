@@ -37,6 +37,14 @@ export default function ProductDescription({
     removeItem: removeWishlistItem,
     isInWishlist,
   } = useWishlistStore();
+  const {
+    selectedOptions,
+    selectOption,
+    isValidOption,
+    selectedCombination,
+    currentStock,
+    hasVariants,
+  } = useProductVariants(product);
   const openModal = useModalStore((s) => s.openModal);
 
   useEffect(() => {
@@ -56,7 +64,7 @@ export default function ProductDescription({
     }
 
     if (hasVariants) {
-      const missing = product.variants.filter((v) => !selectedOptions[v.name]);
+      const missing = product.variants!.filter((v) => !selectedOptions[v.name]);
 
       if (missing.length > 0) {
         triggerVariantError(missing[0].name);
@@ -104,15 +112,6 @@ export default function ProductDescription({
     item ? (item.quantity === 0 ? 1 : item.quantity) : 1,
   );
 
-  const {
-    selectedOptions,
-    selectOption,
-    isValidOption,
-    selectedCombination,
-    currentStock,
-    hasVariants,
-  } = useProductVariants(product);
-
   useEffect(() => {
     // If the item no longer exists, do nothing
     if (!item) return;
@@ -142,6 +141,19 @@ export default function ProductDescription({
   for (const variant of product?.variants || []) {
     variant_set.add(variant.name);
   }
+
+  const basePrice =
+    hasVariants && selectedCombination
+      ? product.price + selectedCombination.additionalPrice
+      : product.price;
+
+  const finalPrice = product.flashSales
+    ? calcDiscountPrice(
+        basePrice,
+        product.flashSales.discountValue,
+        product.flashSales.discountType,
+      )
+    : basePrice;
 
   const filledStar = (
     <svg
@@ -237,45 +249,36 @@ export default function ProductDescription({
         </div>
 
         <div className="flex items-center">
-          {product.flashSales ? (
-            <>
-              <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                {Number(
-                  calcDiscountPrice(
-                    product.price,
-                    product.flashSales.discountValue!,
-                    product.flashSales.discountType!,
-                  ),
-                ).toLocaleString("en-NG", {
-                  style: "currency",
-                  currency: "NGN",
-                })}
-              </h3>
-              <h4 className="text-[10px] lg:text-xs ml-2 line-through">
-                {Number(product.price).toLocaleString("en-NG", {
-                  style: "currency",
-                  currency: "NGN",
-                })}
-              </h4>
-            </>
-          ) : (
-            <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-              {/* {Number(product.price).toLocaleString("en-NG", { style: "currency", currency: "NGN" })} */}
-              {/* ✅ NEW: use combination price if selected */}
-              {Number(
-                hasVariants && selectedCombination
-                  ? product.price + selectedCombination.additionalPrice // ✅ added extra price
-                  : product.price,
-              ).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
-            </h3>
-          )}
+         {product.flashSales && (
+  <>
+    <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
+      {Number(
+        calcDiscountPrice(
+          product.price,
+          product.flashSales.discountValue,
+          product.flashSales.discountType,
+        ),
+      ).toLocaleString("en-NG", {
+        style: "currency",
+        currency: "NGN",
+      })}
+    </h3>
 
-          {product.flashSales && (
-            <div className="text-[11.11px] lg:text-xs text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
-              <p>{product.flashSales.discount}% OFF Limited time</p>
-            </div>
-          )}
-        </div>
+    <h4 className="text-[10px] lg:text-xs ml-2 line-through">
+      {Number(basePrice).toLocaleString("en-NG", {
+        style: "currency",
+        currency: "NGN",
+      })}
+    </h4>
+
+    <div className="text-[11px] text-brand_pink border border-brand_pink ml-4 p-1 rounded-sm">
+      <p>
+        {product.flashSales.discountValue}
+        {product.flashSales.discountType === "percent" ? "%" : ""} OFF Limited time
+      </p>
+    </div>
+  </>
+)}
         <div>
           {currentStock < 10 ? (
             <p className="text-sm font-semibold text-red-500">
@@ -465,13 +468,13 @@ export default function ProductDescription({
             <button
               onClick={() => {
                 if (hasVariants) {
-                  const missing = product.variants.filter(
+                  const missing = product.variants?.filter(
                     (v) => !selectedOptions[v.name],
                   );
 
-                  if (missing.length > 0) {
-                    triggerVariantError(missing[0].name);
-                    toast.error(`Please select ${missing[0].name}`);
+                  if (missing?.length! > 0) {
+                    triggerVariantError(missing![0].name);
+                    toast.error(`Please select ${missing![0].name}`);
                     return;
                   }
                 }

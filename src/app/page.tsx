@@ -36,9 +36,7 @@ export default function Home() {
     if (products.length > 0) {
       // rotate the list by a random offset so the mid index moves
       const offset = Math.floor(Math.random() * products.length);
-      const rotated = products
-        .slice(offset)
-        .concat(products.slice(0, offset));
+      const rotated = products.slice(offset).concat(products.slice(0, offset));
 
       // optionally shuffle a little inside the rotated list to add variation
       const rearranged = rotated.sort(() => Math.random() - 0.5);
@@ -198,13 +196,11 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
     <>
       <PullToRefreshHeader />
       <PullToRefreshContainer>
-
-        <div className="w-full bg-[#FFF9FC]">
+        <div className="w-full ">
           {selectedItem && <CartPopup />}
 
           <div
             className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
-
             style={{
               transform: `translateY(-${pull * 0.7}px)`,
               opacity: 1 - Math.min(pull / 150, 1),
@@ -275,17 +271,19 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
                     {products.map((product: any, index: number) => (
-                      <div ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null} key={index}>
-                        <ProductItem key={product._id} product={product} index={index} />
-                      </div>
-
-                    ))}
-
-                    {!hasNextPage && [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-                      <div key={i}>
-
-                        <Skeleton />
-
+                      <div
+                        ref={
+                          !hasNextPage && index === products.length - 1
+                            ? lastItemRef
+                            : null
+                        }
+                        key={index}
+                      >
+                        <ProductItem
+                          key={product._id}
+                          product={product}
+                          index={index}
+                        />
                       </div>
                     ))}
 
@@ -296,7 +294,10 @@ function HomeContent({ data, isLoading }: { data: any; isLoading: boolean }) {
                         </div>
                       ))}
                   </div>
-                  <EndlessScrollLoading infiniteRef={infiniteRef} hasNextPage={hasNextPage} />
+                  <EndlessScrollLoading
+                    infiniteRef={infiniteRef}
+                    hasNextPage={hasNextPage}
+                  />
                 </>
               )}
             </div>

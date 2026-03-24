@@ -32,6 +32,12 @@ export enum CheckoutStep {
   ORDER_SUMMARY,
 }
 
+type AddToCartPayload = {
+  product_id: string;
+  quantity: number;
+  variants: Record<string, string>;
+};
+
 type SyncAction =
   | { type: "add"; item: CartItem }
   | { type: "remove"; id: string }
@@ -128,7 +134,12 @@ export const useCartStore = create<CartStore>()(
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
       addItem: (item) => {
-        const existing = get().items.find((i) => i._id === item._id);
+        const existing = get().items.find(
+          (i) =>
+            i._id === item._id &&
+            JSON.stringify(i.selectedVariants) ===
+              JSON.stringify(item.selectedVariants),
+        );
         let newItems;
 
         if (existing) {
@@ -150,23 +161,41 @@ export const useCartStore = create<CartStore>()(
         if (!token) return;
 
         // Try to sync ONLY changed item
+
+        // addToCart([item])
+        //   .then(() => {
+        //     set({
+        //       items: get().items.map((i) =>
+        //         i._id === item._id ? { ...i, synced: true } : i,
+        //       ),
+        //     });
+        //   })
+        //   .catch(() => {
+        //     set({
+        //       syncQueue: [...get().syncQueue, { type: "add", item }],
+        //     });
+        //     toast.error("Couldn't sync cart. Will retry.");
+        //   });
         addToCart([item])
-          .then(() => {
-            set({
-              items: get().items.map((i) =>
-                i._id === item._id ? { ...i, synced: true } : i,
-              ),
-            });
+          .then((res) => {
+            console.log("SYNC SUCCESS:", res);
           })
-          .catch(() => {
-            set({
-              syncQueue: [...get().syncQueue, { type: "add", item }],
-            });
+          .catch((err) => {
+            console.log("SYNC ERROR:", err);
             toast.error("Couldn't sync cart. Will retry.");
           });
       },
 
       setSelectedVariants: (id: string, variants: Variant[]) => {
+        const currentItem = get().items.find((i) => i._id === id);
+
+        // 🚨 PREVENT LOOP: don't update if nothing changed
+        const isSame =
+          JSON.stringify(currentItem?.selectedVariants) ===
+          JSON.stringify(variants);
+
+        if (isSame) return;
+
         const updatedItems = get().items.map((i) =>
           i._id === id
             ? { ...i, selectedVariants: variants, synced: false }
@@ -182,24 +211,44 @@ export const useCartStore = create<CartStore>()(
         if (!token) return; // 🚨 skip backend sync for guest users
         // Sync ONLY changed item
         if (updatedItem) {
-          addToCart([updatedItem])
-            .then(() => {
-              set({
-                items: get().items.map((i) =>
-                  i._id === id ? { ...i, synced: true } : i,
-                ),
-              });
-            })
-            .catch(() => {
-              set({
-                syncQueue: [
-                  ...get().syncQueue,
-                  { type: "update", item: updatedItem },
-                ],
-              });
+          // addToCart([updatedItem])
+          //   .then(() => {
+          //     set({
+          //       items: get().items.map((i) =>
+          //         i._id === id ? { ...i, synced: true } : i,
+          //       ),
+          //     });
+          //   })
+          //   .catch(() => {
+          //     set({
+          //       syncQueue: [
+          //         ...get().syncQueue,
+          //         { type: "update", item: updatedItem },
+          //       ],
+          //     });
 
-              toast.error("Couldn't sync cart. Will retry.");
-            });
+          //     toast.error("Couldn't sync cart. Will retry.");
+          //   });
+          setTimeout(() => {
+            addToCart([updatedItem])
+              .then(() => {
+                set({
+                  items: get().items.map((i) =>
+                    i._id === id ? { ...i, synced: true } : i,
+                  ),
+                });
+              })
+              .catch(() => {
+                set({
+                  syncQueue: [
+                    ...get().syncQueue,
+                    { type: "update", item: updatedItem },
+                  ],
+                });
+
+                toast.error("Couldn't sync cart. Will retry.");
+              });
+          }, 300);
         }
       },
       resetSelectedItem: () => set({ selectedItem: null }),
@@ -217,35 +266,7 @@ export const useCartStore = create<CartStore>()(
             i._id === id ? { ...i, selected: !i.selected } : i,
           ),
         }),
-      // setQuantity: (id: string, quantity: number) => {
-      //   const updatedItems = get().items.map((i) =>
-      //     i._id === id ? { ...i, quantity, synced: false } : i,
-      //   );
-      //   const updatedItem = updatedItems.find((i) => i._id === id);
-      //   set({ items: updatedItems });
 
-      //   // Try to sync
-      //   if (updatedItem) {
-      //     addToCart(updatedItems)
-      //       .then(() => {
-      //         // mark all as synced
-      //         set({
-      //           items: updatedItems.map((i) => ({ ...i, synced: true })),
-      //           syncQueue: [],
-      //         });
-      //       })
-      //       .catch(() => {
-      //         // add to retry queue
-      //         set({
-      //           syncQueue: [
-      //             ...get().syncQueue,
-      //             { type: "update", item: updatedItem },
-      //           ],
-      //         });
-      //         toast.error("Couldn't sync cart. Will retry.");
-      //       });
-      //   }
-      // },
       setQuantity: (id: string, quantity: number) => {
         const updatedItems = get().items.map((i) =>
           i._id === id ? { ...i, quantity, synced: false } : i,
@@ -262,24 +283,44 @@ export const useCartStore = create<CartStore>()(
 
         // Sync ONLY changed item
         if (updatedItem) {
-          addToCart([updatedItem])
-            .then(() => {
-              set({
-                items: get().items.map((i) =>
-                  i._id === id ? { ...i, synced: true } : i,
-                ),
-              });
-            })
-            .catch(() => {
-              set({
-                syncQueue: [
-                  ...get().syncQueue,
-                  { type: "update", item: updatedItem },
-                ],
-              });
+          // addToCart([updatedItem])
+          //   .then(() => {
+          //     set({
+          //       items: get().items.map((i) =>
+          //         i._id === id ? { ...i, synced: true } : i,
+          //       ),
+          //     });
+          //   })
+          //   .catch(() => {
+          //     set({
+          //       syncQueue: [
+          //         ...get().syncQueue,
+          //         { type: "update", item: updatedItem },
+          //       ],
+          //     });
 
-              toast.error("Couldn't sync cart. Will retry.");
-            });
+          //     toast.error("Couldn't sync cart. Will retry.");
+          //   });
+          setTimeout(() => {
+            addToCart([updatedItem])
+              .then(() => {
+                set({
+                  items: get().items.map((i) =>
+                    i._id === id ? { ...i, synced: true } : i,
+                  ),
+                });
+              })
+              .catch(() => {
+                set({
+                  syncQueue: [
+                    ...get().syncQueue,
+                    { type: "update", item: updatedItem },
+                  ],
+                });
+
+                toast.error("Couldn't sync cart. Will retry.");
+              });
+          }, 300);
         }
       },
       removeItem: async (id) => {

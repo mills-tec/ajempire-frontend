@@ -27,8 +27,7 @@ export default function ProductCard({
   const showSellerTag = Math.random() > 0.4;
   const openModal = useModalStore((s) => s.openModal);
 
-
-  const [imgLoading, setLoading] = useState(true)
+  const [imgLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -38,8 +37,6 @@ export default function ProductCard({
     };
     fetchWishlist();
   }, []);
-
-
 
   const filledStar = (
     <svg
@@ -75,14 +72,14 @@ export default function ProductCard({
   return (
     <section
       onClick={() => router.push(`/product/${product._id}`)}
-
-      className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
-        }`}
-
+      className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${
+        index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
+      }`}
     >
       <Link href={`/product/${product._id}`}>
-        <div className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}>
-
+        <div
+          className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}
+        >
           <Image
             src={product.cover_image ?? ""}
             alt="product image"
@@ -222,7 +219,6 @@ export default function ProductCard({
                 </div>
               )}
               <svg
-
                 width="44"
                 height="30"
                 viewBox="0 0 44 30"
