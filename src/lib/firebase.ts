@@ -2,7 +2,12 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
+import {
+  getMessaging,
+  getToken,
+  isSupported,
+  onMessage,
+} from "firebase/messaging";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -15,7 +20,7 @@ const firebaseConfig = {
   storageBucket: "aj-empire-project-1ff70.firebasestorage.app",
   messagingSenderId: "979966867892",
   appId: "1:979966867892:web:f253c0209786c1348c5ae1",
-  measurementId: "G-TXVDN58E4F"
+  measurementId: "G-TXVDN58E4F",
 };
 
 // Initialize Firebase
@@ -34,9 +39,11 @@ export const generateToken = async () => {
   const permission = await Notification.requestPermission();
 
   if (permission === "granted") {
-    const token = await getToken(messaging, { vapidKey: "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg" });
+    const token = await getToken(messaging, {
+      vapidKey:
+        "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
+    });
     // useAuthStore.getState().setPushToken(token);
     return token;
   }
-}
-
+};

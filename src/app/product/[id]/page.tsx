@@ -165,7 +165,7 @@ export default function ProductDetailPage() {
     return media.length === videoLoaded.length;
   };
 
-  console.log("item: ", item.video);
+  console.log(item.relatedProducts);
   return (
     <section className="">
       <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -410,12 +410,10 @@ export default function ProductDetailPage() {
           )}
         </div>
 
-        {item.relatedProducts && item.relatedProducts.length > 0 && (
-          <div className="font-poppins py-10 space-y-5">
-            <h1 className="text-2xl">Related Products</h1>
-            <RelatedProducts category={item.category?._id!} />
-          </div>
-        )}
+        <div className="font-poppins py-10 space-y-5">
+          <h1 className="text-2xl">Related Products</h1>
+          {item.category && <RelatedProducts category={item.category?._id!} />}
+        </div>
       </div>
 
       {/* add to cart div  */}
