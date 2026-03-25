@@ -278,9 +278,10 @@ export async function addToCart(products: CartItem[]) {
       ? products.flatMap((product) => product.selectedVariants)
       : undefined,
   }));
+  // return;
 
   // 🔥 Log payload here to check
-  console.log("Sending cart payload:", items);
+  // console.log("Sending cart payload:", items);
   const res = await fetch(API_URL + "/cart", {
     method: "POST",
     headers: {

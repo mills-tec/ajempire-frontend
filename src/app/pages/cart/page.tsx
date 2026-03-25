@@ -2,15 +2,12 @@
 import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
 import CartCardSkeleton from "@/app/components/CartCardSkeleton";
-import CheckoutRequirement from "@/app/components/CheckoutRequirement";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
-import { useProductVariants } from "@/lib/useProductVariants";
-import { calcDiscountPrice } from "@/lib/utils";
 import clsx from "clsx";
 
 import Image from "next/image";
@@ -88,8 +85,12 @@ export default function CartPage() {
   }, [items]);
 
   useEffect(() => {
-    setCartAmount([]);
-  }, []);
+    if (cartAmount.length > 0) {
+      setCartAmount((prev) =>
+        prev.filter((item) => items.some((i) => i._id === item._id)),
+      );
+    }
+  }, [items.length]);
 
   if (isLoading) {
     return (
@@ -142,7 +143,7 @@ export default function CartPage() {
         </section>
       </RefreshWrapper>
     );
-  console.log(cartAmount);
+
   return (
     <div className="relative w-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">
       {signIn && <AuthWrapper onClose={() => setSingin(false)} />}
@@ -180,31 +181,37 @@ export default function CartPage() {
             />
           </svg>
         </div>
-        {items.map((item, i) => (
-          <CartCard
-            item={item}
-            key={i}
-            handleUpdateCartTotal={({
-              total,
-              discount,
-              _id,
-            }: {
-              total: number;
-              discount: number;
-              _id: string;
-            }) => {
-              setCartAmount((prev) => {
-                const existing = prev.find((i) => i._id === _id);
-                if (existing) {
-                  return prev.map((i) =>
-                    i._id === _id ? { ...i, total, discount } : i,
-                  );
-                }
-                return [...prev, { total, discount, _id }];
-              });
-            }}
-          />
-        ))}
+        {items.map((item, i) => {
+          return (
+            <CartCard
+              item={item}
+              selectedItems={selectedItems}
+              key={i}
+              handleUpdateCartTotal={({
+                total,
+                discount,
+                _id,
+              }: {
+                total: number;
+                discount: number;
+                _id: string;
+              }) => {
+                setCartAmount((prev) => {
+                  if (!item.selected) {
+                    return prev.filter((i) => i._id !== _id);
+                  }
+                  const existing = prev.find((i) => i._id === _id);
+                  if (existing) {
+                    return prev.map((i) =>
+                      i._id === _id ? { ...i, total, discount } : i,
+                    );
+                  }
+                  return [...prev, { total, discount, _id }];
+                });
+              }}
+            />
+          );
+        })}
       </div>
       {!selectedItem && (
         <div className="lg:h-{calc(100vh-8rem)}">
