@@ -4,13 +4,17 @@ import { usePathname, useRouter } from "next/navigation";
 import Profile from "./components/Profile";
 import MobileAccountLinks from "./components/MobileAccountLinks";
 import Spinner from "@/app/components/Spinner";
-import { ToastContainer } from "react-toastify";
 import BrowserHistory from "@/app/components/BrowserHistory";
+import { useBrowsingHistory } from "@/api/customHooks";
+import { Product } from "@/lib/types";
 
 export default function OrdersAndAccountPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true); // start with spinner showing
+  const [isLoading, setIsLoading] = useState(true);
+  // start with spinner showing
+  const { getBrowsingHistory } = useBrowsingHistory();
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     const handleRedirect = () => {
@@ -40,6 +44,17 @@ export default function OrdersAndAccountPage() {
     return () => window.removeEventListener("resize", handleRedirect);
   }, [pathname, router]);
 
+  useEffect(() => {
+    (async () => {
+      const res = await getBrowsingHistory("", 10);
+      const browsingHistory = res.browsingHistory.flatMap(
+        (item: { products: { product: Product }[] }) =>
+          item.products.map((product: { product: Product }) => product.product),
+      );
+      setProducts(browsingHistory);
+    })();
+  }, []);
+
   // If loading, show spinner only
   if (isLoading) {
     return <Spinner />;
@@ -48,7 +63,6 @@ export default function OrdersAndAccountPage() {
   // Once loaded or redirected (for mobile)
   return (
     <div className="w-full flex flex-col gap-[20px] px-[20px]">
-
       <div>
         <Profile />
       </div>
@@ -56,7 +70,7 @@ export default function OrdersAndAccountPage() {
         <MobileAccountLinks />
       </div>
       <div>
-        <BrowserHistory />
+        <BrowserHistory products={products} />
       </div>
     </div>
   );

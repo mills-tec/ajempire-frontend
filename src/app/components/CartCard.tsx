@@ -1,8 +1,9 @@
+"use client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
 import { useRouter } from "next/navigation";
 import CountdownTimer from "@/components/CountDownTimer";
@@ -12,6 +13,7 @@ import { useProductVariants } from "@/lib/useProductVariants";
 function CartCard({
   item,
   handleUpdateCartTotal,
+  selectedItems,
 }: {
   item: CartItem;
   handleUpdateCartTotal: ({
@@ -23,6 +25,7 @@ function CartCard({
     discount: number;
     _id: string;
   }) => void;
+  selectedItems: CartItem[];
 }) {
   const {
     removeItem,
@@ -42,8 +45,12 @@ function CartCard({
   const { selectedOptions, selectOption, isValidOption, selectedCombination } =
     useProductVariants(item);
 
+  const [remove, setRemove] = useState(false);
+
   useEffect(() => {
-    const total = Number(item.price + selectedCombination?.additionalPrice);
+    const total = Number(
+      item.price + (selectedCombination?.additionalPrice ?? 0),
+    );
     const discount = item.flashSales
       ? calcDiscountPrice(
           total,
@@ -56,8 +63,7 @@ function CartCard({
       discount: discount * cartItem!.quantity,
       _id: item._id,
     });
-  }, [selectedCombination, cartItem?.quantity]);
-
+  }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
   return (
     <section>
       {selectedItem && <CartPopup />}
@@ -240,6 +246,7 @@ function CartCard({
           onClick={(e) => {
             e.stopPropagation();
             removeItem(item._id);
+            setRemove(true);
           }}
           xmlns="http://www.w3.org/2000/svg"
         >
