@@ -5,23 +5,14 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import Spinner from "../Spinner";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
-interface Props {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-      | "deals"
-  ) => void;
-}
-
-export default function VerifyEmailComp({ onClose, setScreen }: Props) {
+export default function VerifyEmailComp({
+  onBack,
+  canGoBack,
+  setScreen,
+}: AuthStepProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   let email = searchParams.get("email");
@@ -54,7 +45,7 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
 
     setIsVerifying(true);
     try {
-      const res = await emailVerification(email, otp);
+      await emailVerification(email, otp);
       toast.success("Email verified successfully!");
       //   router.push("/auth/signin");
       setScreen("signin");
@@ -89,7 +80,8 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isVerifying && <Spinner />}
-      <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
+      <div className="relative bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
           <h1>Verify your account</h1>
@@ -109,7 +101,7 @@ export default function VerifyEmailComp({ onClose, setScreen }: Props) {
                 Verifying your email adds an extra layer of Security and ensures
                 important notifications reach you <br />
                 <br />
-                We've sent a verification code to your email{" "}
+                We&apos;ve sent a verification code to your email{" "}
                 <b className="text-black font-medium">
                   {localStorage.getItem("ajempire_signup_email") ||
                     email ||

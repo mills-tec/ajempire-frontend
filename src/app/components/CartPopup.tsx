@@ -5,6 +5,7 @@ import CartPopupProductDescription from "./CartPopupProductDescription";
 import { useCartStore } from "@/lib/stores/cart-store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import VideoPlayer from "@/components/VideoPlayer";
 
 export default function CartPopup() {
   const selectedItem = useCartStore((s) => s.selectedItem);
@@ -16,6 +17,21 @@ export default function CartPopup() {
   // local state for animation
   const [isVisible, setIsVisible] = useState(false); // for opacity/slide
   const [shouldRender, setShouldRender] = useState(false); // for mounting
+  const [currentCoverItem, setCurrentCoverItem] = useState<{
+    src: string;
+    type: "image" | "video";
+  }>({
+    src: "",
+    type: "image",
+  });
+  const [video, setVideo] = useState({
+    showPlay: true,
+    muted: true,
+  });
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
+  const [thumbnailVideoRef, setThumbnailVideoRef] =
+    useState<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (selectedItem) {
@@ -30,6 +46,24 @@ export default function CartPopup() {
       const timeout = setTimeout(() => setShouldRender(false), 300); // match transition duration
       return () => clearTimeout(timeout);
     }
+  }, [selectedItem, shouldRender]);
+
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    setCurrentCoverItem({
+      src:
+        selectedItem.video ||
+        selectedItem.cover_image ||
+        selectedItem.images?.[0] ||
+        "/placeholder.png",
+      type: selectedItem.video ? "video" : "image",
+    });
+    setVideo({
+      showPlay: true,
+      muted: true,
+    });
+    setPlayingMap({});
   }, [selectedItem]);
 
   // 2️⃣ debug effect — MUST be before return
@@ -45,6 +79,41 @@ export default function CartPopup() {
 
   console.log("🧠 selectedItem:", selectedItem);
   console.log("🧠 items:", items);
+
+  const openSelectedProduct = () => {
+    if (!selectedItem?._id) return;
+    clearSelectedItem();
+    router.push(`/product/${selectedItem._id}`);
+  };
+
+  const handleVideoPlay = (id: string) => {
+    setPlayingMap((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+
+    setVideo((prev) => ({
+      ...prev,
+      showPlay: true,
+    }));
+
+    const selectedVideo = videoRefs.current[id];
+    if (selectedVideo?.paused) {
+      void selectedVideo.play();
+    } else {
+      selectedVideo?.pause();
+    }
+  };
+
+  const galleryImages = Array.from(
+    new Set((selectedItem?.images ?? []).filter(Boolean)),
+  );
+  const thumbnailImages = Array.from(
+    new Set([
+      ...galleryImages,
+      ...(selectedItem?.cover_image ? [selectedItem.cover_image] : []),
+    ]),
+  );
 
   return (
     <>
@@ -133,38 +202,152 @@ export default function CartPopup() {
 
           {selectedItem && (
             <div key={selectedItem._id}>
-              <div className="space-y-4 p-4  flex gap-3 items-end ">
-                <div className="relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip">
-                  <Image
-                    src={
-                      selectedItem.cover_image ||
-                      selectedItem.images?.[0] ||
-                      "/placeholder.png"
+              <div className="space-y-4 p-4">
+                <div className="flex gap-3 items-end">
+                  <div
+                    className={`relative h-[144px] w-[196px] lg:w-[216px] lg:h-[184px] rounded-xl overflow-clip bg-gray-100 ${
+                      currentCoverItem.type === "image" ? "cursor-pointer" : ""
+                    }`}
+                    onClick={
+                      currentCoverItem.type === "image"
+                        ? openSelectedProduct
+                        : undefined
                     }
-                    alt="product image"
-                    fill
-                    className="absolute object-cover"
-                  />
-                </div>
-                {Array.isArray(selectedItem.images) && (
-                  <div className="flex gap-2 lg:gap-5">
-                    {selectedItem.images
-                      ?.filter(Boolean)
-                      .map((image, index) => (
-                        <div
-                          key={index}
-                          className="w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative bg-gray-400 rounded-lg"
-                        >
-                          <Image
-                            src={image}
-                            alt="product image"
-                            fill
-                            className="absolute object-cover"
-                          />
-                        </div>
-                      ))}
+                    role={
+                      currentCoverItem.type === "image" ? "button" : undefined
+                    }
+                    tabIndex={currentCoverItem.type === "image" ? 0 : -1}
+                    onKeyDown={(e) => {
+                      if (
+                        currentCoverItem.type === "image" &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault();
+                        openSelectedProduct();
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 z-20 rounded-full bg-white/90 px-3 py-1 text-[10px] font-medium text-black shadow-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openSelectedProduct();
+                      }}
+                    >
+                      View details
+                    </button>
+
+                    {currentCoverItem.type === "video" ? (
+                      <div className="absolute inset-0">
+                        <VideoPlayer
+                          handleVideoPlay={handleVideoPlay}
+                          item={selectedItem}
+                          video={video}
+                          playingMap={playingMap}
+                          videoRefs={videoRefs}
+                          src={currentCoverItem.src}
+                          setPlayingMap={setPlayingMap}
+                          handleSetVideo={(data) =>
+                            setVideo((prev) => ({ ...prev, ...data }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <Image
+                        src={currentCoverItem.src || "/placeholder.png"}
+                        alt={selectedItem.name}
+                        fill
+                        className="absolute object-cover"
+                      />
+                    )}
                   </div>
-                )}
+
+                  {(thumbnailImages.length > 0 || selectedItem.video) && (
+                    <div className="flex gap-2 lg:gap-3 flex-wrap max-w-[170px] lg:max-w-[240px]">
+                      {thumbnailImages.map((image, index) => {
+                        const isActive =
+                          currentCoverItem.type === "image" &&
+                          currentCoverItem.src === image;
+
+                        return (
+                          <button
+                            type="button"
+                            key={index}
+                            className={`w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative rounded-lg border-2 ${
+                              isActive
+                                ? "border-brand_pink"
+                                : "border-transparent"
+                            }`}
+                            onClick={() => {
+                              setCurrentCoverItem({
+                                src: image,
+                                type: "image",
+                              });
+                            }}
+                          >
+                            <Image
+                              src={image}
+                              alt={`${selectedItem.name} thumbnail ${index + 1}`}
+                              fill
+                              className="absolute object-cover"
+                            />
+                          </button>
+                        );
+                      })}
+
+                      {selectedItem.video && (
+                        <button
+                          type="button"
+                          className={`w-[51px] h-[38px] lg:w-[71px] lg:h-[58px] overflow-clip relative rounded-lg border-2 ${
+                            currentCoverItem.type === "video"
+                              ? "border-brand_pink"
+                              : "border-transparent"
+                          }`}
+                          onClick={() => {
+                            setCurrentCoverItem({
+                              src: selectedItem.video!,
+                              type: "video",
+                            });
+                            setVideo((prev) => ({
+                              ...prev,
+                              showPlay: true,
+                            }));
+                          }}
+                        >
+                          <video
+                            preload="metadata"
+                            ref={setThumbnailVideoRef}
+                            src={selectedItem.video}
+                            className="absolute h-full w-full object-cover"
+                            onLoadedMetadata={(e) => {
+                              e.currentTarget.currentTime = 0;
+                            }}
+                            muted
+                            onMouseEnter={() => {
+                              void thumbnailVideoRef?.play();
+                            }}
+                            onMouseLeave={() => {
+                              thumbnailVideoRef?.pause();
+                            }}
+                            playsInline
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path d="M5 4.5L11.5 8L5 11.5V4.5Z" fill="white" />
+                            </svg>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className=" ">
                 <CartPopupProductDescription

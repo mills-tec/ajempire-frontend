@@ -2,35 +2,24 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import z from "zod";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { fogortPassword } from "@/lib/api";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
-
-interface ForgotPasswordProps {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifypassresetcode"
-  ) => void;
-}
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
 export default function ForgotPassword({
   onClose,
+  onBack,
+  canGoBack,
   setScreen,
-}: ForgotPasswordProps) {
+}: AuthStepProps) {
   const [form, setForm] = useState({ email: "" });
   const [errors, setErrors] = useState<{
     email?: string;
   }>({});
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   // Schema: password must be at least 6 chars, confirm_password must match password
@@ -51,10 +40,10 @@ export default function ForgotPassword({
       result.error.issues.forEach((err) => {
         const field = err.path[0] as "email";
         if (field === "email") {
-          (fieldErrors as any)[field] = err.message;
+          fieldErrors[field] = err.message;
         }
       });
-      setErrors(fieldErrors as any);
+      setErrors(fieldErrors);
       return;
     }
     setErrors({});
@@ -72,7 +61,7 @@ export default function ForgotPassword({
       setIsLoading(false);
       setScreen("verifypassresetcode");
       // router.push("/dashboard");
-    } catch (_err) {
+    } catch {
       toast("Password reset failed");
       setIsLoading(false);
     }
@@ -82,6 +71,7 @@ export default function ForgotPassword({
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isLoading && <Spinner />}
       <div className="relative bg-white rounded-3xl text-left flex flex-col justify-between w-full h-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <div className="flex  items-center  justify-center border-b px-4 border-b-black/10 pt-8 pb-3">
           <h1 className="text-center">Forgot Password</h1>
         </div>

@@ -1,5 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Logo from "@/assets/logo.png";
@@ -13,37 +12,26 @@ import {
 import Image from "next/image";
 import React, { useState } from "react";
 import z from "zod";
-import { useRouter } from "next/navigation";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { phoneNumberBackend } from "@/lib/api";
 import { toast } from "sonner";
 import clsx from "clsx";
 import Spinner from "../Spinner";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
-interface PhoneNumberCompProps {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-  ) => void;
-}
 export default function PhoneNumberComp({
   onClose,
+  onBack,
+  canGoBack,
   setScreen,
-}: PhoneNumberCompProps) {
+}: AuthStepProps) {
   // Use phone and countryCode for phone number input
   const [form, setForm] = useState({ phone: "", countryCode: "+234" });
   const [errors, setErrors] = useState<{
     phone?: string;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   // Schema: phone must be at least 7 digits, countryCode must be present
   const schema = z.object({
@@ -89,7 +77,7 @@ export default function PhoneNumberComp({
       setIsLoading(false);
       setScreen("verifyphone");
       // router.push("/auth/");
-    } catch (error) {
+    } catch {
       toast("Phone number verification failed");
       setIsLoading(false);
     }
@@ -99,6 +87,7 @@ export default function PhoneNumberComp({
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isLoading && <Spinner />}
       <div className="relative bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <Image
           src={Logo}
           alt=""

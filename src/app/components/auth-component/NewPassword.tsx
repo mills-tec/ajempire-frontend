@@ -3,26 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Eye, EyeClosed, X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import z from "zod";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
-interface Props {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-  ) => void;
-}
-
-export default function NewPassword({ onClose, setScreen }: Props) {
+export default function NewPassword({
+  onClose,
+  onBack,
+  canGoBack,
+}: AuthStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({ password: "", confirm_password: "" });
@@ -59,10 +50,10 @@ export default function NewPassword({ onClose, setScreen }: Props) {
       result.error.issues.forEach((err) => {
         const field = err.path[0] as "password" | "confirm_password";
         if (field === "password" || field === "confirm_password") {
-          (fieldErrors as any)[field] = err.message;
+          fieldErrors[field] = err.message;
         }
       });
-      setErrors(fieldErrors as any);
+      setErrors(fieldErrors);
       return;
     }
     setErrors({});
@@ -73,13 +64,14 @@ export default function NewPassword({ onClose, setScreen }: Props) {
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
+      <div className="relative bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <div className="flex justify-between items-center border-b px-4 border-b-black/10 pt-8 pb-3">
           <div></div>
           <h1>Create a new password</h1>
-          <Link href={"password-reset-verification"}>
+          <button type="button" onClick={onClose}>
             <X className="h-4 cursor-pointer" />
-          </Link>
+          </button>
         </div>
         <div className="flex-1 space-y-8 py-8">
           <div className="w-[80%] mx-auto space-y-2">

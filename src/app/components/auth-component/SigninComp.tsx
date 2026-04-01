@@ -5,13 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { email, z } from "zod";
+import { z } from "zod";
 import { Eye, EyeClosed } from "lucide-react";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { loginBackend } from "@/lib/api";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -20,14 +22,12 @@ const schema = z.object({
     .min(6, { message: "Password must be at least 6 characters" }),
 });
 
-interface SigninCompProps {
-  onClose: () => void;
-  setScreen: (
-    screen: "intro" | "signin" | "phonenumber" | "signup" | "forgotpassword"
-  ) => void;
-}
-
-export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
+export default function SigninComp({
+  onClose,
+  onBack,
+  canGoBack,
+  setScreen,
+}: AuthStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
@@ -61,7 +61,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
       const res = await loginBackend(email, password);
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
       if (res?.message) {
-        res.message.token ? setIsLoggedIn(true) : setIsLoggedIn(false);
+        setIsLoggedIn(Boolean(res.message.token));
         setUser({ email: res.message.user.email, name: res.message.user.fullname, id: res.message.user._id });
         localStorage.setItem(
           "ajempire_signin_user",
@@ -74,7 +74,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
       setIsLoading(false);
       onClose();
       // router.push("/dashboard");
-    } catch (err) {
+    } catch {
       toast("Login failed");
       setIsLoading(false);
     }
@@ -84,6 +84,7 @@ export default function SigninComp({ onClose, setScreen }: SigninCompProps) {
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isLoading && <Spinner />}
       <div className=" relative bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <Image
           src={Logo}
           alt=""

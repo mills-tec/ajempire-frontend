@@ -22,7 +22,9 @@ export type Coupon = {
 };
 
 // lib/api.ts
-const API_URL = "https://ajempire-backend.vercel.app/api";
+export const API_URL = "https://ajempire-backend.vercel.app/api";
+export const BASE_URL = "https://ajempire-backend.vercel.app";
+const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
   const res = await fetch(API_URL + "/auth/login", {
@@ -135,17 +137,22 @@ export async function getSessionBackend() {
 export async function getProducts(
   query: string,
 ): Promise<ProductsResponse | null> {
-  const res = await fetch(API_URL + "/product?" + query);
+  const normalizedQuery = query.trim();
+  const queryString = normalizedQuery
+    ? normalizedQuery
+    : `limit=${DEFAULT_PRODUCTS_LIMIT}`;
+  const res = await fetch(`${API_URL}/product?${queryString}`);
   if (!res.ok) return null;
   const resp = await res.json();
   console.log(resp.message);
   return resp;
 }
 
-export async function getProduct(id: string): Promise<ProductResponse | null> {
+export async function getProduct(id: string): Promise<ProductResponse> {
   const user = getUser();
-  const res = await fetch(API_URL + "/product/" + id + "?user=" + user?._id);
-  if (!res.ok) return null;
+  const userQuery = user?._id ? `?user=${encodeURIComponent(user._id)}` : "";
+  const res = await fetch(`${API_URL}/product/${id}${userQuery}`);
+  if (!res.ok) throw new Error("Failed to fetch product");
   return res.json();
 }
 
@@ -271,12 +278,22 @@ export async function addToCart(products: CartItem[]) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
+  // Validate that products with variants have selectedVariants
+  for (const product of products) {
+    if (product.variants && product.variants.length > 0 && (!product.selectedVariants || product.selectedVariants.length !== product.variants.length)) {
+      throw new Error(`Product "${product.name}" requires ${product.variants.length} variants but only ${product.selectedVariants?.length || 0} were selected.`);
+    }
+  }
+
   const items = products.map((product) => ({
     productId: product._id,
     qty: product.quantity,
     variants: product.selectedVariants?.length
-      ? products.flatMap((product) => product.selectedVariants)
-      : undefined,
+      ? product.selectedVariants.map((variant) => ({
+          name: variant.name,
+          value: variant.value,
+        }))
+      : [],
   }));
   // return;
 
@@ -290,7 +307,12 @@ export async function addToCart(products: CartItem[]) {
     },
     body: JSON.stringify({ items }),
   });
-  if (!res.ok) throw new Error("Cart update failed");
+  if (!res.ok) {
+    const errorData = await res.text();
+    console.error("🔥 BACKEND CART API REJECTED PAYLOAD:", errorData);
+    console.error("Sent Payload was:", JSON.stringify({ items }, null, 2));
+    throw new Error("Cart update failed: " + errorData);
+  }
   return res.json();
 }
 
@@ -519,4 +541,41 @@ export async function applyCouponCode(code: string): Promise<{
     console.error("Coupon fetch error:", error);
     return null;
   }
+}
+
+// SHIPPING API
+export async function getShippingRates(packageItems: any[]): Promise<{
+  message: {
+    couriers: Array<{
+      courier_id: string;
+      courier_image: string;
+      courier_name: string;
+      delivery_eta: string;
+      total: number;
+    }>;
+    request_token: string;
+  };
+} | null> {
+  const token = getBearerToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const res = await fetch(`${API_URL}/shippingRates`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      items: packageItems,
+      package_items: packageItems,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Shipping rates API error:", errorText);
+    throw new Error(`Failed to fetch shipping rates: ${res.status}`);
+  }
+
+  return res.json();
 }

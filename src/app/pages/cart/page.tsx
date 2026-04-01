@@ -28,6 +28,8 @@ export default function CartPage() {
     orderSummary,
     selectedItem,
   } = useCartStore();
+  const selectedCartItems = items.filter((item) => item.selected);
+  console.log("Selected Items", selectedCartItems);
 
   const [expand, setExpand] = useState(false);
   const [signIn, setSingin] = useState(false);

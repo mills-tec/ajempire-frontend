@@ -53,7 +53,7 @@ export default function OrdersAndAccountPage() {
       );
       setProducts(browsingHistory);
     })();
-  }, []);
+  }, [getBrowsingHistory]);
 
   // If loading, show spinner only
   if (isLoading) {

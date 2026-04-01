@@ -19,13 +19,17 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [placeholderClass, setPlaceholderClass] = useState(
-    "placeholder:animate-placeholderFromBottom"
+    "placeholder:animate-placeholderFromBottom",
   );
 
   const { query, setQuery, submitSearch } = useSearchStore();
   const router = useRouter();
 
-  const placeholders = ["Super deals 🔥", "New stock arrivals", "Discounted products"];
+  const placeholders = [
+    "Super deals 🔥",
+    "New stock arrivals",
+    "Discounted products",
+  ];
 
   // Mount effect
   useEffect(() => setMounted(true), []);
@@ -36,13 +40,13 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 2500);
     return () => clearInterval(interval);
-  }, []);
+  }, [placeholders.length]);
 
   useEffect(() => {
     setPlaceholderClass("");
     const timeout = setTimeout(
       () => setPlaceholderClass("placeholder:animate-placeholderFromBottom"),
-      10
+      10,
     );
     return () => clearTimeout(timeout);
   }, [placeholderIndex]);
@@ -63,7 +67,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     const handler = (e: MouseEvent) => {
       if (!wrapperRef.current) return;
       if (wrapperRef.current.contains(e.target as Node)) return;
-      if (e.target instanceof Element && e.target.closest(".search-dropdown")) return;
+      if (e.target instanceof Element && e.target.closest(".search-dropdown"))
+        return;
       setOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -71,9 +76,12 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   }, []);
 
   const handleSubmit = () => {
-    if (!query) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+
+    setQuery(trimmedQuery);
     submitSearch();
-    router.push(`/search?q=${encodeURIComponent(query)}`);
+    router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
     setOpen(false);
     inputRef.current?.blur();
   };
@@ -109,7 +117,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
       </div>
 
       {/* Dropdown portal */}
-      {mounted && open &&
+      {mounted &&
+        open &&
         createPortal(
           <SearchDropdown
             ref={dropdownRef}
@@ -117,7 +126,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
             onClose={() => setOpen(false)}
             position={dropdownPos}
           />,
-          document.body
+          document.body,
         )}
     </div>
   );

@@ -49,6 +49,8 @@ export default function NotificationWrapper() {
   }, [user]);
 
   useEffect(() => {
+    if (!messaging) return; // ✅ prevent crash
+
     const unsubscribe = onMessage(messaging, (payload) => {
       if (Notification.permission === "granted") {
         new Notification(payload.notification?.title || "Notification", {

@@ -65,10 +65,10 @@ function CartCard({
     });
   }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
   return (
-    <section>
+    <section className="w-full">
       {selectedItem && <CartPopup />}
       <div
-        className="flex items-start relative w-full px-4 lg:px-0 cursor-pointer"
+        className="flex items-start relative w-full px-4 cursor-pointer"
         onClick={(e) => {
           // Navigate to product detail page
           e.stopPropagation();
@@ -241,7 +241,7 @@ function CartCard({
           width="17"
           height="17"
           viewBox="0 0 17 17"
-          className="absolute right-4"
+          className="  absolute right-4"
           fill="none"
           onClick={(e) => {
             e.stopPropagation();
