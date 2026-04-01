@@ -22,9 +22,19 @@ export default function NotificationWrapper() {
       if (req) setIsPushTokenSet(true);
     })();
 
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER;
+
+    if (!pusherKey || !pusherCluster) {
+      console.warn(
+        "Pusher keys missing: set NEXT_PUBLIC_PUSHER_APP_KEY and NEXT_PUBLIC_PUSHER_APP_CLUSTER",
+      );
+      return;
+    }
+
     if (!pusherRef.current) {
-      pusherRef.current = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER!,
+      pusherRef.current = new Pusher(pusherKey, {
+        cluster: pusherCluster,
         forceTLS: true,
         // authEndpoint: "/api/pusher/auth",
       });

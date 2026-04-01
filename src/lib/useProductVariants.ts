@@ -11,10 +11,31 @@ const optionNameMatches = (optionName: string, variantName: string) =>
   optionName === variantName ||
   normalizeVariantName(optionName) === normalizeVariantName(variantName);
 
-const getAvailableVariants = (product: Product) =>
-  (product.variants ?? []).filter(
+const getAvailableVariants = (product: Product) => {
+  const explicitVariants = (product.variants ?? []).filter(
     (variant) => Array.isArray(variant.values) && variant.values.length > 0,
   );
+
+  if (explicitVariants.length > 0) return explicitVariants;
+
+  const combos = product.variantCombinations ?? [];
+  const variantNameMap = new Map<string, Set<string>>();
+
+  combos.forEach((combo) => {
+    combo.options.forEach((option) => {
+      const existing = variantNameMap.get(option.name) ?? new Set<string>();
+      existing.add(option.value);
+      variantNameMap.set(option.name, existing);
+    });
+  });
+
+  if (variantNameMap.size === 0) return [];
+
+  return Array.from(variantNameMap.entries()).map(([name, values]) => ({
+    name,
+    values: Array.from(values),
+  }));
+};
 
 const matchesSelections = (product: Product, selections: SelectedOptions) => {
   const combinations = product.variantCombinations ?? [];
