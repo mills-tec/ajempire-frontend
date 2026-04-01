@@ -71,27 +71,29 @@ export default function ProductCard({
   );
   return (
     <section
-      onClick={() => router.push(`/product/${product._id}`)}
+      onClick={() => {
+        console.log("clicked");
+        router.push(`/product/${product._id}`);
+      }}
       className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${
         index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
       }`}
     >
-      <Link href={`/product/${product._id}`}>
-        <div
-          className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}
-        >
-          <Image
-            src={product.cover_image ?? ""}
-            alt="product image"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            fill
-            className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${!imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
-            onLoad={() => {
-              setLoading(false);
-            }}
-          />
-        </div>
-      </Link>
+      <div
+        className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}
+      >
+        <Image
+          src={product.cover_image ?? ""}
+          alt="product image"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          fill
+          className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${!imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
+          onLoad={() => {
+            setLoading(false);
+          }}
+        />
+      </div>
+
       <div className="space-y-1">
         <h2 className="text-sm truncate w-full h-min">{product.name}</h2>
         <p className="text-[0.65rem] p-[0.1rem] px-2 bg-brand_purple text-white w-max rounded-sm capitalize">

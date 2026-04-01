@@ -11,13 +11,21 @@ import { useSearchStore } from "@/lib/search-store";
 interface CategoriesProps {
   cat?: string;
   categories?: Category[];
+  onCategorySelect?: (category: Category | null) => void;
+  selectedCategoryId?: string | null;
 }
 
-const Categories = ({ cat, categories }: CategoriesProps) => {
+const Categories = ({
+  cat,
+  categories,
+  onCategorySelect,
+  selectedCategoryId,
+}: CategoriesProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { clearSearch } = useSearchStore();
+  const isFilterMode = Boolean(onCategorySelect);
 
-  const { data, isLoading } = useQuery<{ message: Category[] }>({
+  const { data } = useQuery<{ message: Category[] }>({
     queryKey: ["categories"],
     queryFn: getCategories,
     onSuccess: (data) => {
@@ -69,17 +77,80 @@ const Categories = ({ cat, categories }: CategoriesProps) => {
           ref={scrollRef}
           className="flex gap-6 overflow-x-auto scrollbar-hide justify-between scroll-smooth flex-1"
         >
+          {isFilterMode && (
+            <button
+              type="button"
+              className={`whitespace-nowrap text-xs flex flex-col items-center transition ${
+                !selectedCategoryId ? "opacity-100" : "opacity-80 hover:opacity-100"
+              }`}
+              onClick={() => onCategorySelect?.(null)}
+              aria-pressed={!selectedCategoryId}
+            >
+              <div
+                className={`size-[3rem] rounded-full border flex items-center justify-center relative bg-white ${
+                  !selectedCategoryId
+                    ? "border-brand_pink ring-2 ring-brand_pink/20"
+                    : "border-gray-200"
+                }`}
+              >
+                <span className="text-[11px] font-semibold text-black">All</span>
+              </div>
+              <p
+                className={`mt-1 text-[10px] lg:text-base capitalize ${
+                  !selectedCategoryId ? "text-brand_pink font-medium" : "text-black"
+                }`}
+              >
+                All
+              </p>
+            </button>
+          )}
+
           {finalCategories?.map((category) => {
             const slug = category.name.toLowerCase().replace(/\s+/g, "-");
+            const isActive = selectedCategoryId === category._id;
+            const itemClassName = `whitespace-nowrap text-xs flex flex-col items-center transition ${
+              isActive ? "opacity-100" : "opacity-80 hover:opacity-100"
+            }`;
+            const imageWrapperClassName = `size-[3rem] rounded-full border flex items-center justify-center relative bg-white ${
+              isActive
+                ? "border-brand_pink ring-2 ring-brand_pink/20"
+                : "border-gray-200"
+            }`;
+            const labelClassName = `mt-1 text-[10px] lg:text-base text-black capitalize ${
+              isActive ? "text-brand_pink font-medium" : "text-black"
+            }`;
+
+            if (isFilterMode) {
+              return (
+                <button
+                  type="button"
+                  key={category._id}
+                  className={itemClassName}
+                  onClick={() => onCategorySelect?.(category)}
+                  aria-pressed={isActive}
+                >
+                  <div className={imageWrapperClassName}>
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      className="object-cover size-full absolute rounded-full"
+                      height={44}
+                      width={44}
+                    />
+                  </div>
+                  <p className={labelClassName}>{category.name}</p>
+                </button>
+              );
+            }
 
             return (
               <Link
                 href={`/categories/${slug}`}
                 key={category._id}
-                className="whitespace-nowrap text-xs flex flex-col items-center opacity-80 hover:opacity-100 transition"
+                className={itemClassName}
                 onClick={clearSearch}
               >
-                <div className="size-[3rem] rounded-full border flex items-center justify-center relative bg-white">
+                <div className={imageWrapperClassName}>
                   <Image
                     src={category.image}
                     alt={category.name}
@@ -88,11 +159,9 @@ const Categories = ({ cat, categories }: CategoriesProps) => {
                     width={44}
                   />
                 </div>
-                <p className="mt-1 text-[10px] lg:text-base text-black capitalize">
-                  {category.name}
-                </p>
+                <p className={labelClassName}>{category.name}</p>
               </Link>
-            )
+            );
           })}
         </div>
 

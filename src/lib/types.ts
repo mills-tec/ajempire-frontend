@@ -1,5 +1,10 @@
 export interface ProductsResponse {
-  message: { products: Product[]; shippingFees: ShippingFeeInfo[] };
+  message: {
+    products: Product[];
+    shippingFees: ShippingFeeInfo[];
+    nextCursor?: string;
+    hasMore?: boolean;
+  };
 }
 
 export interface ProductResponse {

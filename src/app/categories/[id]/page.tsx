@@ -44,25 +44,6 @@ export default function CategoryPage() {
     );
   }, [data, searchedQuery]);
 
-  // React.useEffect(() => {
-  //     if (!searchActive) return;
-
-  //     setSearchLoading(true);
-
-  //     const timer = setTimeout(() => {
-  //         setSearchLoading(false);
-  //     }, 500); // 200ms is enough for skeleton to show
-
-  //     return () => clearTimeout(timer);
-  // }, [searchedQuery]);
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-  };
-
   const filledStar = (
     <svg
       width="16"

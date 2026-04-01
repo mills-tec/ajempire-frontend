@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import { Product } from "../types";
 import {
   addToWishlistAPI,
+  getBearerToken,
   getUsersWishlist,
   removeFromWishlistAPI,
 } from "../api";
+import { useModalStore } from "./modal-store";
 
 type WishlistItem = Product;
 
@@ -20,6 +22,23 @@ type WishlistStore = {
   initWishlist: () => Promise<void>;
 };
 
+type WishlistSyncOperation = {
+  type: "add" | "remove";
+  id: string;
+};
+
+const getWishlistSyncQueue = (): WishlistSyncOperation[] =>
+  JSON.parse(localStorage.getItem("wishlist-sync") || "[]");
+
+const setWishlistSyncQueue = (queue: WishlistSyncOperation[]) => {
+  localStorage.setItem("wishlist-sync", JSON.stringify(queue));
+};
+
+const promptWishlistAuth = () => {
+  toast.error("Please sign in to use your wishlist");
+  useModalStore.getState().openModal("authwrapper");
+};
+
 export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set, get) => ({
@@ -27,6 +46,12 @@ export const useWishlistStore = create<WishlistStore>()(
 
       // 🔥 Fetch wishlist from server ONCE
       initWishlist: async () => {
+        const token = getBearerToken();
+        if (!token) {
+          set({ items: [] });
+          return;
+        }
+
         try {
           const data = await getUsersWishlist();
           if (!data) return;
@@ -41,8 +66,14 @@ export const useWishlistStore = create<WishlistStore>()(
       },
 
       addItem: async (item) => {
+        if (!getBearerToken()) {
+          promptWishlistAuth();
+          return;
+        }
+
         if (get().isInWishlist(item._id)) {
           toast.info("Already in wishlist");
+          
           return;
         }
 
@@ -56,15 +87,18 @@ export const useWishlistStore = create<WishlistStore>()(
           toast.error("Couldn't sync wishlist");
           console.error("addItem error:", err);
 
-          const queue = JSON.parse(
-            localStorage.getItem("wishlist-sync") || "[]"
-          );
+          const queue = getWishlistSyncQueue();
           queue.push({ type: "add", id: item._id });
-          localStorage.setItem("wishlist-sync", JSON.stringify(queue));
+          setWishlistSyncQueue(queue);
         }
       },
 
       removeItem: async (id) => {
+        if (!getBearerToken()) {
+          promptWishlistAuth();
+          return;
+        }
+
         set({ items: get().items.filter((i) => i._id !== id) });
 
         try {
@@ -74,11 +108,9 @@ export const useWishlistStore = create<WishlistStore>()(
           toast.error("Couldn't sync removal");
           console.error("removeItem error:", err);
 
-          const queue = JSON.parse(
-            localStorage.getItem("wishlist-sync") || "[]"
-          );
+          const queue = getWishlistSyncQueue();
           queue.push({ type: "remove", id });
-          localStorage.setItem("wishlist-sync", JSON.stringify(queue));
+          setWishlistSyncQueue(queue);
         }
       },
 
@@ -87,10 +119,12 @@ export const useWishlistStore = create<WishlistStore>()(
       clearWishlist: () => set({ items: [] }),
 
       retrySync: async () => {
-        const queue = JSON.parse(localStorage.getItem("wishlist-sync") || "[]");
+        if (!getBearerToken()) return;
+
+        const queue = getWishlistSyncQueue();
         if (!queue.length) return;
 
-        const remaining = [];
+        const remaining: WishlistSyncOperation[] = [];
         for (const op of queue) {
           try {
             if (op.type === "add") await addToWishlistAPI(op.id);
@@ -100,7 +134,7 @@ export const useWishlistStore = create<WishlistStore>()(
           }
         }
 
-        localStorage.setItem("wishlist-sync", JSON.stringify(remaining));
+        setWishlistSyncQueue(remaining);
       },
     }),
     {

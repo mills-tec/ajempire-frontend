@@ -7,6 +7,7 @@ import { searchProducts, getCategories, getProductsByCategory } from "@/lib/api"
 import { useSearchStore } from "@/lib/search-store";
 import ProductCard from "@/app/components/ProductCard";
 import SearchBar from "@/app/components/ui/SearchBar";
+import type { Product as CatalogProduct } from "@/lib/types";
 import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,7 @@ type Category = {
     _id: string;
 };
 
-type Product = {
+type SearchProduct = {
     _id: string;
     name: string;
     price: number;
@@ -29,14 +30,16 @@ type Product = {
     numReviews?: number;
     discountedPrice?: number;
     description?: string;
-    [key: string]: any; // allow other fields
+    [key: string]: unknown;
 };
 
 function SearchContent() {
     const { clearSearch, setQuery } = useSearchStore();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const query = searchParams.get("q") || "";
+    const rawQuery = searchParams.get("q") || "";
+    const query = rawQuery.trim();
+    const hasQuery = query.length > 0;
 
     const minParam = searchParams.get("min");
     const maxParam = searchParams.get("max");
@@ -46,42 +49,49 @@ function SearchContent() {
     const [searchLoading, setSearchLoading] = useState(false);
 
     // fetch name-based search results
-    const { data, isLoading, refetch, isError } = useQuery({
+    const { data, isLoading, isError } = useQuery({
         queryKey: ["search", query],
         queryFn: () => searchProducts(query),
-        enabled: !!query,
+        enabled: hasQuery,
     });
 
     // load all categories (used for category matching and suggestions)
-    const { data: allCategories } = useQuery({
+    const { data: allCategories, isLoading: isCategoriesLoading } = useQuery({
         queryKey: ["categories"],
         queryFn: () => getCategories(),
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
     useEffect(() => {
+        setQuery(query);
+    }, [query, setQuery]);
+
+    useEffect(() => {
         console.log("🔍 Query string:", query);
         console.log("Raw API data:", data);
-    }, [data]);
+    }, [data, query]);
 
     // when query changes we may want to refetch categories (they're cached anyway)
     useEffect(() => {
-        if (!query) return;
+        if (!hasQuery) return;
         console.log("normalizing for category match", normalize(query));
-    }, [query]);
+    }, [hasQuery, query]);
 
 
     // Simulate skeleton loading when query changes
     useEffect(() => {
-        if (!query) return;
+        if (!hasQuery) {
+            setSearchLoading(false);
+            return;
+        }
         setSearchLoading(true);
         const timer = setTimeout(() => setSearchLoading(false), 500);
         return () => clearTimeout(timer);
-    }, [query]);
+    }, [hasQuery, query]);
 
     useEffect(() => {
         console.log("Products array:", data ?? []);
-        (data ?? []).forEach((p, i) => {
+        (data ?? []).forEach((p) => {
             console.log("return only cat", p.category);
         });
     }, [data]);
@@ -91,16 +101,16 @@ function SearchContent() {
 
     // figure out which categories match the query (using the full category list)
     const matchedCategoryNames = useMemo(() => {
-        if (!query || !allCategories?.message) return [];
+        if (!hasQuery || !allCategories?.message) return [];
         const normQuery = normalize(query);
         return allCategories.message
             .map((c) => c.name)
             .filter((name) => normalize(name).includes(normQuery));
-    }, [allCategories, query]);
+    }, [allCategories, hasQuery, query]);
 
     // fetch products for matched categories
-    const { data: categoryProducts } = useQuery({
-        queryKey: ["categorySearch", matchedCategoryNames.sort().join(",")],
+    const { data: categoryProducts, isLoading: isCategoryProductsLoading } = useQuery({
+        queryKey: ["categorySearch", [...matchedCategoryNames].sort().join(",")],
         queryFn: async () => {
             const lists = await Promise.all(
                 matchedCategoryNames.map((cat) => getProductsByCategory(cat))
@@ -114,8 +124,8 @@ function SearchContent() {
     const productsMatchingQuery = useMemo(() => {
         const base = data ?? [];
         const extras = categoryProducts ?? [];
-        const map = new Map<string, Product>();
-        base.concat(extras).forEach((p) => map.set(p._id, p));
+        const map = new Map<string, SearchProduct>();
+        base.concat(extras).forEach((p) => map.set(p._id, p as SearchProduct));
         return Array.from(map.values());
     }, [data, categoryProducts]);
 
@@ -144,6 +154,14 @@ function SearchContent() {
             );
         });
     }, [productsMatchingQuery, localMinPrice, localMaxPrice]);
+
+    const hasDirectMatches = (data?.length ?? 0) > 0;
+    const showLoadingState =
+        hasQuery &&
+        (isLoading ||
+            searchLoading ||
+            (!hasDirectMatches && isCategoriesLoading) ||
+            (!hasDirectMatches && isCategoryProductsLoading));
 
     // 1️⃣ Get all categories from products
     // for backward compatibility we keep this, but suggestions now come from matchedCategoryNames
@@ -180,7 +198,7 @@ function SearchContent() {
 
     // suggestions come from any category name that matches the query
     const matchedCategories = useMemo(() => {
-        if (!query) return [];
+        if (!hasQuery) return [];
         // prefer category list from server, fallback to ones seen in results
         const source = allCategories?.message?.map((c) => c.name) ?? categoriesInResults;
         const normQuery = normalize(query);
@@ -189,7 +207,7 @@ function SearchContent() {
             (cat) => !normalize(cat).startsWith(normQuery) && normalize(cat).includes(normQuery)
         );
         return [...startMatches, ...containMatches];
-    }, [allCategories, categoriesInResults, query]);
+    }, [allCategories, categoriesInResults, hasQuery, query]);
 
     useEffect(() => {
         console.log("Products matching query:", productsMatchingQuery);
@@ -209,7 +227,13 @@ function SearchContent() {
 
             <div className="min-h-screen px-5 lg:px-10 pt-16 lg:pt-10 mt-10 lg:mt-10 font-poppins">
                 <h1 className="text-xl lg:text-2xl font-poppins font-medium mb-6">
-                    Search Results for: <span className="text-brand_pink">{query}</span>
+                    {hasQuery ? (
+                        <>
+                            Search Results for: <span className="text-brand_pink">{query}</span>
+                        </>
+                    ) : (
+                        "Search Products"
+                    )}
                 </h1>
 
                 {/* —–– Category Suggestions UI —–––– */}
@@ -220,7 +244,7 @@ function SearchContent() {
                             Categories
                         </h2>
                         <div className="flex flex-wrap gap-3">
-                            {matchedCategories.map((cat: any) => (
+                            {matchedCategories.map((cat) => (
                                 <button
                                     key={cat}
                                     className="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200"
@@ -283,7 +307,17 @@ function SearchContent() {
                         router.push(`/search?${params.toString()}`);
                     }}
                 />
-                {isLoading || searchLoading ? (
+                {!hasQuery ? (
+                    <div className="col-span-full text-center mt-20">
+                        <p className="text-sm text-gray-500">Search for a product to see results.</p>
+                        <button
+                            className="mt-4 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink_hover transition-colors"
+                            onClick={() => router.push("/")}
+                        >
+                            Go to Home Page
+                        </button>
+                    </div>
+                ) : showLoadingState ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
                         {[...Array(10)].map((_, i) => (
                             <div key={i} className="h-[300px] w-full bg-gray-200 rounded-xl animate-pulse" />
@@ -315,7 +349,7 @@ function SearchContent() {
                             <Tooltip key={product._id}>
                                 <TooltipTrigger asChild>
                                     <div>
-                                        <ProductCard product={product as any} index={index} />
+                                        <ProductCard product={product as CatalogProduct} index={index} />
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" align="center">

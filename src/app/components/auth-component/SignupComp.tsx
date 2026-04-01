@@ -3,7 +3,6 @@ import Image from "next/image";
 import Logo from "@/assets/logo.png";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +11,8 @@ import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { signupBackend } from "@/lib/api";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -19,21 +20,12 @@ const schema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters" }),
 });
-interface SignupCompProps {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-  ) => void;
-}
-
-export default function SignupComp({ onClose, setScreen }: SignupCompProps) {
+export default function SignupComp({
+  onClose,
+  onBack,
+  canGoBack,
+  setScreen,
+}: AuthStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
@@ -70,7 +62,7 @@ export default function SignupComp({ onClose, setScreen }: SignupCompProps) {
       setIsLoading(false);
       setScreen("verifyemail");
       // router.push("/dashboard");
-    } catch (err) {
+    } catch {
       toast("Signup failed");
       setIsLoading(false);
     }
@@ -80,6 +72,7 @@ export default function SignupComp({ onClose, setScreen }: SignupCompProps) {
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isLoading && <Spinner />}
       <div className="relative bg-white rounded-3xl flex flex-col justify-between size-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <Image
           src={Logo}
           alt=""
