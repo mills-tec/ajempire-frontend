@@ -148,8 +148,21 @@ export const useCartStore = create<CartStore>()(
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
       addItem: (item) => {
-        // Validate variants: if product has variants, selectedVariants must match the number
-        if (item.variants && item.variants.length > 0 && (!item.selectedVariants || item.selectedVariants.length !== item.variants.length)) {
+        // Determine if this item requires variants from either explicit variants or combination variants
+        const hasVariants =
+          (item.variants && item.variants.length > 0) ||
+          (item.variantCombinations && item.variantCombinations.length > 0);
+
+        const requiredVariantCount = item.variants?.length
+          ? item.variants.length
+          : Array.from(
+              new Set(
+                (item.variantCombinations ?? [])
+                  .flatMap((combo) => combo.options.map((option) => option.name)),
+              ),
+            ).length;
+
+        if (hasVariants && (!item.selectedVariants || item.selectedVariants.length !== requiredVariantCount)) {
           toast.error("Please select all required variants before adding to cart");
           return;
         }
