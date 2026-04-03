@@ -1,8 +1,8 @@
 "use client";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
 import { ProductResponse } from "@/lib/types";
 import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
@@ -16,16 +16,15 @@ export default function ProductDescription({
   handleSelectCover,
 }: {
   product_data: ProductResponse;
-  handleSelectCover: (src: string, type: string) => void;
+  handleSelectCover: (src: string, type: "image" | "video") => void;
 }) {
-  let { product } = product_data.message;
+  const { product } = product_data.message;
+  const cartItems = useCartStore((state) => state.items);
   const {
-    getItem,
     addItem,
     removeItem,
     decreaseQuantity,
     increaseQuantity,
-    setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
   } = useCartStore();
   const {
@@ -37,9 +36,12 @@ export default function ProductDescription({
     selectedOptions,
     selectOption,
     isValidOption,
+    selectedVariantsArray,
+    missingVariantName,
     selectedCombination,
     currentStock,
     hasVariants,
+    availableVariants,
   } = useProductVariants(product);
   const openModal = useModalStore((s) => s.openModal);
 
@@ -52,26 +54,16 @@ export default function ProductDescription({
     fetchWishlist();
   }, []);
   const checkoutHandler = () => {
+    if (!ensureVariantSelection()) {
+      return;
+    }
+
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout");
       openModal("authwrapper");
       return;
     }
-
-    if (hasVariants) {
-      const missing = product.variants!.filter((v) => !selectedOptions[v.name]);
-
-      if (missing.length > 0) {
-        triggerVariantError(missing[0].name);
-        toast.error(`Please select ${missing[0].name}`);
-        return;
-      }
-    }
-
-    const selectedVariantsArray = Object.entries(selectedOptions).map(
-      ([name, value]) => ({ name, value }),
-    );
 
     const { addItem, selectAllCartItems, getSelectedItems } =
       useCartStore.getState();
@@ -82,13 +74,14 @@ export default function ProductDescription({
       .items.find(
         (i) =>
           i._id === product._id &&
-          JSON.stringify(i.selectedVariants) ===
-            JSON.stringify(selectedVariantsArray),
+          areVariantsEqual(i.selectedVariants, selectedVariantsArray),
       );
 
     if (!existingItem) {
       addItem({
         ...product,
+        price: basePrice,
+        stock: currentStock,
         quantity,
         selectedVariants: selectedVariantsArray ?? null, // ✅ FIXED
         selected: true,
@@ -102,7 +95,28 @@ export default function ProductDescription({
       openModal("checkout");
     }, 0);
   };
-  const item = getItem(product._id);
+  const item = useMemo(() => {
+    if (!hasVariants) {
+      return cartItems.find((cartItem) => cartItem._id === product._id);
+    }
+
+    if (selectedVariantsArray.length !== availableVariants.length) {
+      return undefined;
+    }
+
+    return cartItems.find(
+      (cartItem) =>
+        cartItem._id === product._id &&
+        areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
+    );
+  }, [
+    availableVariants.length,
+    cartItems,
+    hasVariants,
+    product._id,
+    product.variants,
+    selectedVariantsArray,
+  ]);
   const [quantity, setQuantity] = useState(() =>
     item ? (item.quantity === 0 ? 1 : item.quantity) : 1,
   );
@@ -130,12 +144,6 @@ export default function ProductDescription({
       setQuantity(item.quantity === 0 ? 1 : item.quantity);
     }
   }, [item?.quantity]);
-
-  const variant_set = new Set<string>();
-
-  for (const variant of product?.variants || []) {
-    variant_set.add(variant.name);
-  }
 
   const basePrice =
     hasVariants && selectedCombination
@@ -182,9 +190,6 @@ export default function ProductDescription({
     </svg>
   );
 
-  const missingVariants = product.variants!.filter(
-    (v) => !selectedOptions[v.name],
-  );
   const variantRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const triggerVariantError = (variantName: string) => {
@@ -202,6 +207,17 @@ export default function ProductDescription({
     }, 500);
   };
 
+  const ensureVariantSelection = () => {
+    if (!hasVariants || !missingVariantName) return true;
+
+    triggerVariantError(missingVariantName);
+    toast.error(`Please select ${missingVariantName}`);
+    return false;
+  };
+
+  const formatVariantValue = (value: string) =>
+    value.replace(/[_-]+/g, " ").trim();
+  console.log("product: ", product);
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
@@ -340,7 +356,7 @@ export default function ProductDescription({
           {/* ✅ ONLY show if product has variants */}
           {hasVariants && (
             <div className="grid  gap-6">
-              {product.variants!.map((variant, key) => (
+              {availableVariants.map((variant, key) => (
                 <div
                   key={key}
                   ref={(el) => {
@@ -357,34 +373,42 @@ export default function ProductDescription({
                       const isValid = isValidOption(variant.name, value);
                       const isSelected =
                         selectedOptions[variant.name] === value;
+                      const isColorVariant = variant.name
+                        .toLowerCase()
+                        .includes("color");
+                      const isSizeVariant = variant.name
+                        .toLowerCase()
+                        .includes("size");
 
                       return (
                         <div
                           key={idx}
+                          title={value}
                           onClick={() => {
                             if (!isValid) return;
                             selectOption(variant.name, value);
                           }}
-                          className={`relative  ${variant.name.toLowerCase().includes("color") ? "rounded-full" : "rounded-sm"} size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                          className={`relative ${
+                            isColorVariant
+                              ? "rounded-full size-[2rem]"
+                              : "min-h-[2rem] min-w-[3rem] max-w-[9rem] rounded-sm px-2"
+                          } flex items-center justify-center overflow-hidden whitespace-nowrap text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
                                   ${
                                     isSelected
-                                      ? variant.name
-                                          .toLowerCase()
-                                          .includes("color")
+                                      ? isColorVariant
                                         ? "outline outline-1 outline-offset-2  outline-purple-600 "
                                         : "outline outline-1 outline-offset-2 outline-purple-600"
                                       : ""
                                   } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                           style={{
-                            backgroundColor:
-                              variant.name.toLowerCase() === "color"
-                                ? value
-                                : undefined,
+                            backgroundColor: isColorVariant ? value : undefined,
                           }}
                         >
-                          {variant.name.toLowerCase() === "size"
+                          {isSizeVariant
                             ? value.toUpperCase()
-                            : ""}
+                            : isColorVariant
+                              ? ""
+                              : formatVariantValue(value)}
                         </div>
                       );
                     })}
@@ -468,26 +492,17 @@ export default function ProductDescription({
             {!item ? (
               <button
                 onClick={() => {
-                  if (hasVariants) {
-                    const missing = product.variants?.filter(
-                      (v) => !selectedOptions[v.name],
-                    );
-
-                    if (missing?.length! > 0) {
-                      triggerVariantError(missing![0].name);
-                      toast.error(`Please select ${missing![0].name}`);
-                      return;
-                    }
+                  if (!ensureVariantSelection()) {
+                    return;
                   }
-                  const selectedVariantsArray = Object.entries(
-                    selectedOptions,
-                  ).map(([name, value]) => ({ name, value }));
 
                   addItem({
                     ...product,
+                    price: basePrice,
+                    stock: currentStock,
                     quantity,
                     selected: true,
-                    selectedVariants: selectedVariantsArray ?? null,
+                    selectedVariants: selectedVariantsArray,
                   });
                 }}
                 className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]"

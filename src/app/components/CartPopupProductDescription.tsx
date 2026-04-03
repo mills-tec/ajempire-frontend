@@ -1,14 +1,15 @@
 "use client";
 import { getBearerToken } from "@/lib/api";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { CartItem, useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import CheckoutRequirement from "./CheckoutRequirement";
 import { animateToCart } from "@/lib/animateToCart";
 import CountdownTimer from "@/components/CountDownTimer";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useProductVariants } from "@/lib/useProductVariants";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+
 interface Props {
   item: CartItem;
   cartRef: React.RefObject<HTMLAnchorElement | null>;
@@ -17,30 +18,56 @@ interface Props {
 export default function CartPopupProductDescription({ item, cartRef }: Props) {
   // const [rating, setRating] = React.useState(4);
 
-  const { items: selectedItem, selectAllCartItems } = useCartStore();
+  const cartItems = useCartStore((state) => state.items);
+  const selectAllCartItems = useCartStore((state) => state.selectAllCartItems);
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
   const openModal = useModalStore((s) => s.openModal);
   const {
     addItem,
-    getItem,
     removeItem,
-    setQuantity: setCartItemQty,
     setSelectedVariants: setCartSelectedVariants,
-    items,
+    setQuantity: setCartItemQty,
   } = useCartStore();
-  const cartItem = getItem(item._id);
 
-  const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
+  console.log("item: ", item);
+
   const {
     selectedOptions,
     selectOption,
     isValidOption,
+    selectedVariantsArray,
+    missingVariantName,
     selectedCombination,
     currentStock,
     hasVariants,
   } = useProductVariants(item);
+  const cartItem = useMemo(() => {
+    if (!hasVariants) {
+      return cartItems.find((cartItem) => cartItem._id === item._id);
+    }
+
+    if (selectedVariantsArray.length !== (item.variants?.length ?? 0)) {
+      return undefined;
+    }
+
+    return cartItems.find(
+      (cartItem) =>
+        cartItem._id === item._id &&
+        areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
+    );
+  }, [cartItems, hasVariants, item._id, item.variants, selectedVariantsArray]);
+  const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
+  const {
+    addItem: addWishlistItem,
+    removeItem: removeWishlistItem,
+    isInWishlist,
+  } = useWishlistStore();
 
   const checkoutHandler = () => {
+    if (!ensureVariantSelection()) {
+      return;
+    }
+
     const token = getBearerToken();
     if (!token) {
       toast.error("Please log in to checkout", { position: "top-right" });
@@ -54,44 +81,21 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     if (!cartItem) {
       addItem({
         ...item,
+        price: basePrice,
+        stock: currentStock,
         quantity,
-        selectedVariants: [],
+        selectedVariants: selectedVariantsArray,
       });
     }
 
     selectAllCartItems();
-    setTimeout(() => {
-      console.log("Selected items:", selectedItem);
-    }, 50);
   };
 
-  const variant_set = new Set<string>();
-
-  for (const variant of item?.variants ?? []) {
-    variant_set.add(variant.name);
-  }
-  const stableSelectedOptions = useMemo(
-    () => selectedOptions,
-    [selectedOptions],
-  );
-  // useEffect(() => {
-  //   if (!stableSelectedOptions) return;
-
-  //   const selectedVariantsArray = Object.entries(stableSelectedOptions).map(
-  //     ([name, value]) => ({ name, value }),
-  //   );
-
-  //   setCartSelectedVariants(item._id, selectedVariantsArray);
-  // }, [stableSelectedOptions]);
   useEffect(() => {
     if (!cartItem) return; // 🚨 ONLY update if item exists in cart
 
-    const selectedVariantsArray = Object.entries(selectedOptions).map(
-      ([name, value]) => ({ name, value }),
-    );
-
-    setCartSelectedVariants(item._id, []);
-  }, [selectedOptions, cartItem]);
+    setCartSelectedVariants(item._id, selectedVariantsArray);
+  }, [selectedVariantsArray, cartItem, item._id, setCartSelectedVariants]);
   useEffect(() => {
     if (cartItem) {
       setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
@@ -100,13 +104,24 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     }
   }, [cartItem]);
 
+  // useEffect(() => {
+  //   if (!cartItem) return;
+
+  //   if (quantity <= 0) {
+  //     removeItem(cartItem._id);
+  //   } else {
+  //     setCartItemQty(cartItem._id, quantity);
+  //   }
+  // }, [cartItem, quantity, removeItem, setCartItemQty]);
   useEffect(() => {
+    if (!cartItem) return;
+
     if (quantity <= 0) {
-      removeItem(item._id);
-    } else {
-      setCartItemQty(item._id, quantity);
+      removeItem(cartItem._id);
+    } else if (cartItem.quantity !== quantity) {
+      setCartItemQty(cartItem._id, quantity);
     }
-  }, [quantity]);
+  }, [cartItem, quantity]);
 
   const filledStar = (
     <svg
@@ -151,6 +166,27 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
         item.flashSales.discountType!,
       )
     : basePrice;
+  const variantRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+
+  const triggerVariantError = (variantName: string) => {
+    const el = variantRefs.current[variantName];
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("shake");
+
+    setTimeout(() => {
+      el.classList.remove("shake");
+    }, 500);
+  };
+
+  const ensureVariantSelection = () => {
+    if (!hasVariants || !missingVariantName) return true;
+
+    triggerVariantError(missingVariantName);
+    toast.error(`Please select ${missingVariantName}`);
+    return false;
+  };
   return (
     <div className="space-y-4 lg:space-y-8">
       <div className="space-y-1 px-4">
@@ -264,7 +300,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
           <p className="text-sm">{quantity}</p>
           <button
             onClick={() =>
-              setQuantity((prev) => Math.min(prev + 1, item.stock!))
+              setQuantity((prev) => Math.min(prev + 1, currentStock))
             }
             className="size-[1.5rem] rounded-md border border-black/40 flex items-center justify-center"
           >
@@ -278,7 +314,13 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
           {hasVariants && (
             <div className="flex gap-6 px-4">
               {item.variants!.map((variant, key) => (
-                <div key={key} className="space-y-2 mt-4">
+                <div
+                  key={key}
+                  ref={(el) => {
+                    variantRefs.current[variant.name] = el;
+                  }}
+                  className="space-y-2 mt-4"
+                >
                   <p className="text-xs text-brand_gray_dark capitalize">
                     Select Property ({variant.name}):
                   </p>
@@ -337,14 +379,20 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
               //   })
               // }
               onClick={(e) => {
+                if (!ensureVariantSelection()) {
+                  return;
+                }
+
                 animateToCart({
                   buttonElement: e.currentTarget,
                   cartElement: cartRef.current!,
                   addItemCallback: () =>
                     addItem({
                       ...item,
+                      price: basePrice,
+                      stock: currentStock,
                       quantity: quantity || 1,
-                      selectedVariants: [],
+                      selectedVariants: selectedVariantsArray,
                     }),
                 });
               }}
@@ -371,7 +419,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
               {quantity}
               <button
                 onClick={() =>
-                  setQuantity((prev) => Math.min(prev + 1, item.stock!))
+                  setQuantity((prev) => Math.min(prev + 1, currentStock))
                 }
                 className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
               >
@@ -380,21 +428,41 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
             </div>
           )}
 
-          <button className="">
-            <svg
-              width="42"
-              height="42"
-              className="size-[2rem] lg:size-[3rem]"
-              viewBox="0 0 42 42"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="21" cy="21" r="20.5" stroke="#999999" />
-              <path
-                d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154ZM28.1169 21.2708C28.9938 20.3846 29.5385 19.1846 29.5385 17.8462C29.5385 16.5609 29.0279 15.3283 28.1191 14.4194C27.2102 13.5106 25.9776 13 24.6923 13C23.0769 13 21.6462 13.7846 20.7692 15.0031C20.3216 14.3814 19.7323 13.8754 19.05 13.527C18.3677 13.1787 17.6122 12.998 16.8462 13C15.5609 13 14.3282 13.5106 13.4194 14.4194C12.5106 15.3283 12 16.5609 12 17.8462C12 19.1846 12.5446 20.3846 13.4215 21.2708L20.7692 28.6185L28.1169 21.2708Z"
-                fill="black"
-              />
-            </svg>
+          <button
+            type="button"
+            onClick={() => {
+              if (isInWishlist(item._id)) {
+                void removeWishlistItem(item._id);
+                return;
+              }
+
+              void addWishlistItem(item);
+            }}
+          >
+            {isInWishlist(item._id) ? (
+              <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
+                <path
+                  d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154Z"
+                  fill="#FF008C"
+                />
+              </svg>
+            ) : (
+              <svg
+                width="42"
+                height="42"
+                className="size-[2rem] lg:size-[3rem]"
+                viewBox="0 0 42 42"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle cx="21" cy="21" r="20.5" stroke="#999999" />
+                <path
+                  d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154ZM28.1169 21.2708C28.9938 20.3846 29.5385 19.1846 29.5385 17.8462C29.5385 16.5609 29.0279 15.3283 28.1191 14.4194C27.2102 13.5106 25.9776 13 24.6923 13C23.0769 13 21.6462 13.7846 20.7692 15.0031C20.3216 14.3814 19.7323 13.8754 19.05 13.527C18.3677 13.1787 17.6122 12.998 16.8462 13C15.5609 13 14.3282 13.5106 13.4194 14.4194C12.5106 15.3283 12 16.5609 12 17.8462C12 19.1846 12.5446 20.3846 13.4215 21.2708L20.7692 28.6185L28.1169 21.2708Z"
+                  fill="black"
+                />
+              </svg>
+            )}
           </button>
         </div>
         <div className="w-full">

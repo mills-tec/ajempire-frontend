@@ -1,97 +1,138 @@
 "use client";
 
 import React, {
-    createContext,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 
 type PullContextType = {
-    pull: number;
-    refreshing: boolean;
+  pull: number;
+  refreshing: boolean;
 };
 
 const PullContext = createContext<PullContextType | null>(null);
 
-const MAX_PULL = 220;
-const TRIGGER_PULL = 180;
+const MAX_PULL = 150;
+const TRIGGER_PULL = 120;
 
 export function PullToRefreshProvider({
-    children,
-    onRefresh,
+  children,
+  onRefresh,
 }: {
-    children: React.ReactNode;
-    onRefresh: () => Promise<void>;
+  children: React.ReactNode;
+  onRefresh: () => Promise<void>;
 }) {
-    const startY = useRef(0);
-    const pulling = useRef(false);
+  const startY = useRef(0);
+  const pulling = useRef(false);
 
-    const [pull, setPull] = useState(0);
-    const [refreshing, setRefreshing] = useState(false);
+  const [pull, setPull] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        const onTouchStart = (e: TouchEvent) => {
-            if (window.scrollY !== 0 || refreshing) return;
-            pulling.current = true;
-            startY.current = e.touches[0].clientY;
-        };
+  const triggerRefresh = async () => {
+    setRefreshing(true);
+    setPull(MAX_PULL);
+    await onRefresh();
+    setRefreshing(false);
+    setPull(0);
+  };
 
-        const onTouchMove = (e: TouchEvent) => {
-            if (!pulling.current || refreshing) return;
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      if (window.scrollY !== 0 || refreshing) return;
+      pulling.current = true;
+      startY.current = e.touches[0].clientY;
+    };
 
-            const delta = e.touches[0].clientY - startY.current;
+    const onTouchMove = (e: TouchEvent) => {
+      if (!pulling.current || refreshing) return;
 
-            if (delta > 0) {
-                e.preventDefault(); // 🔥 kills native refresh
-                // setPull(Math.min(delta, MAX_PULL));
-                const resistance = 0.6;
-                const damped = delta * resistance;
+      const delta = e.touches[0].clientY - startY.current;
 
-                setPull(
-                    delta < MAX_PULL
-                        ? damped
-                        : MAX_PULL + (delta - MAX_PULL) * 0.2
-                );
+      if (delta > 0) {
+        e.preventDefault(); // 🔥 kills native refresh
+        // setPull(Math.min(delta, MAX_PULL));
+        const resistance = 0.8; // Increased from 0.6 for more responsive feel
+        const damped = delta * resistance;
 
-            }
-        };
+        setPull(
+          delta < MAX_PULL ? damped : MAX_PULL + (delta - MAX_PULL) * 0.2,
+        );
+      }
+    };
 
-        const onTouchEnd = async () => {
-            if (!pulling.current) return;
-            pulling.current = false;
+    const onTouchEnd = async () => {
+      if (!pulling.current) return;
+      pulling.current = false;
 
-            if (pull >= TRIGGER_PULL) {
-                setRefreshing(true);
-                setPull(MAX_PULL);
-                await onRefresh();
-                setRefreshing(false);
-            }
+      if (pull >= TRIGGER_PULL) {
+        await triggerRefresh();
+      } else {
+        setPull(0);
+      }
+    };
 
-            setPull(0);
-        };
+    const onMouseDown = (e: MouseEvent) => {
+      if (window.scrollY !== 0 || refreshing) return;
+      pulling.current = true;
+      startY.current = e.clientY;
+    };
 
-        window.addEventListener("touchstart", onTouchStart, { passive: false });
-        window.addEventListener("touchmove", onTouchMove, { passive: false });
-        window.addEventListener("touchend", onTouchEnd);
+    const onMouseMove = (e: MouseEvent) => {
+      if (!pulling.current || refreshing) return;
 
-        return () => {
-            window.removeEventListener("touchstart", onTouchStart);
-            window.removeEventListener("touchmove", onTouchMove);
-            window.removeEventListener("touchend", onTouchEnd);
-        };
-    }, [pull, refreshing, onRefresh]);
+      const delta = e.clientY - startY.current;
 
-    return (
-        <PullContext.Provider value={{ pull, refreshing }}>
-            {children}
-        </PullContext.Provider>
-    );
+      if (delta > 0) {
+        e.preventDefault(); // Prevent default scrolling
+        const resistance = 0.8;
+        const damped = delta * resistance;
+
+        setPull(
+          delta < MAX_PULL ? damped : MAX_PULL + (delta - MAX_PULL) * 0.2,
+        );
+      }
+    };
+
+    const onMouseUp = async () => {
+      if (!pulling.current) return;
+      pulling.current = false;
+
+      if (pull >= TRIGGER_PULL) {
+        await triggerRefresh();
+      } else {
+        setPull(0);
+      }
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [pull, refreshing, triggerRefresh]);
+
+  return (
+    <PullContext.Provider value={{ pull, refreshing }}>
+      {children}
+    </PullContext.Provider>
+  );
 }
 
 export function usePullToRefresh() {
-    const ctx = useContext(PullContext);
-    if (!ctx) throw new Error("usePullToRefresh must be used inside provider");
-    return ctx;
+  const ctx = useContext(PullContext);
+  if (!ctx) throw new Error("usePullToRefresh must be used inside provider");
+  return ctx;
 }

@@ -1,16 +1,27 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Product, Variant } from "../types";
+import { Product } from "../types";
 import { calcDiscount } from "../utils";
 import { addToCart, getBearerToken, removeCartItem } from "../api";
 import { toast } from "sonner";
 
+export const areVariantsEqual = (v1?: SelectedVariant[] | null, v2?: SelectedVariant[] | null) => {
+  const arr1 = v1 || [];
+  const arr2 = v2 || [];
+  if (arr1.length !== arr2.length) return false;
+  const sorted1 = [...arr1].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted2 = [...arr2].sort((a, b) => a.name.localeCompare(b.name));
+  return JSON.stringify(sorted1) === JSON.stringify(sorted2);
+};
+
+export type SelectedVariant = {
+  name: string;
+  value: string;
+};
+
 export type CartItem = Product & {
   quantity: number;
-  selectedVariants: {
-    name: string;
-    value: string;
-  }[];
+  selectedVariants: SelectedVariant[];
   selected: boolean;
   synced?: boolean;
 };
@@ -64,7 +75,7 @@ type CartStore = {
   increaseQuantity: (id: string) => void;
   decreaseQuantity: (id: string) => void;
   getItem: (id: string) => CartItem | undefined;
-  setSelectedVariants: (id: string, variants: Variant[]) => void;
+  setSelectedVariants: (id: string, variants: SelectedVariant[]) => void;
   getSelectedItems: () => CartItem[]; // Should be used for CHECKOUT. It is used to retrieve all items that has been selected in the cart
   /* LOGISTICS */
   selectedLogistic: SelectedLogistic | null;
@@ -137,17 +148,35 @@ export const useCartStore = create<CartStore>()(
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
       addItem: (item) => {
+        // Determine if this item requires variants from either explicit variants or combination variants
+        const hasVariants =
+          (item.variants && item.variants.length > 0) ||
+          (item.variantCombinations && item.variantCombinations.length > 0);
+
+        const requiredVariantCount = item.variants?.length
+          ? item.variants.length
+          : Array.from(
+              new Set(
+                (item.variantCombinations ?? [])
+                  .flatMap((combo) => combo.options.map((option) => option.name)),
+              ),
+            ).length;
+
+        if (hasVariants && (!item.selectedVariants || item.selectedVariants.length !== requiredVariantCount)) {
+          toast.error("Please select all required variants before adding to cart");
+          return;
+        }
+
         const existing = get().items.find(
           (i) =>
             i._id === item._id &&
-            JSON.stringify(i.selectedVariants) ===
-              JSON.stringify(item.selectedVariants),
+            areVariantsEqual(i.selectedVariants, item.selectedVariants),
         );
         let newItems;
 
         if (existing) {
           newItems = get().items.map((i) =>
-            i._id === item._id
+            i._id === item._id && areVariantsEqual(i.selectedVariants, item.selectedVariants)
               ? { ...i, quantity: i.quantity + item.quantity, synced: false }
               : i,
           );
@@ -189,13 +218,11 @@ export const useCartStore = create<CartStore>()(
           });
       },
 
-      setSelectedVariants: (id: string, variants: Variant[]) => {
+      setSelectedVariants: (id: string, variants: SelectedVariant[]) => {
         const currentItem = get().items.find((i) => i._id === id);
 
         // 🚨 PREVENT LOOP: don't update if nothing changed
-        const isSame =
-          JSON.stringify(currentItem?.selectedVariants) ===
-          JSON.stringify(variants);
+        const isSame = currentItem && areVariantsEqual(currentItem.selectedVariants, variants);
 
         if (isSame) return;
 
@@ -268,24 +295,6 @@ export const useCartStore = create<CartStore>()(
 
         // Sync ONLY changed item
         if (updatedItem) {
-          // addToCart([updatedItem])
-          //   .then(() => {
-          //     set({
-          //       items: get().items.map((i) =>
-          //         i._id === id ? { ...i, synced: true } : i,
-          //       ),
-          //     });
-          //   })
-          //   .catch(() => {
-          //     set({
-          //       syncQueue: [
-          //         ...get().syncQueue,
-          //         { type: "update", item: updatedItem },
-          //       ],
-          //     });
-
-          //     toast.error("Couldn't sync cart. Will retry.");
-          //   });
           setTimeout(() => {
             addToCart([updatedItem])
               .then(() => {
@@ -423,6 +432,12 @@ export const useCartStore = create<CartStore>()(
               await addToCart([action.item]); // reuse API
             }
           } catch (err) {
+            // If it's a validation error (missing variants), don't retry
+            if (err instanceof Error && err.message.includes("requires")) {
+              toast.error(`Failed to sync: ${err.message}`);
+              // Don't add to newQueue, remove the invalid action
+              continue;
+            }
             // Keep failed actions for next retry
             newQueue.push(action);
           }

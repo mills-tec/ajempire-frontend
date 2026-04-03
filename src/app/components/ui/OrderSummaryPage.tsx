@@ -14,67 +14,84 @@ import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isCartSynced, setIsCartSynced] = useState(false);
   const { items, getSelectedItems, selectedLogistic, requestToken } =
     useCartStore();
-  console.log(
-    "selected logistic in order summary:",
-    selectedLogistic?.delivery_eta,
-  );
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
+    let isMounted = true;
 
-  const syncCartToBackend = async () => {
-    const token = getBearerToken();
-    if (!token) return;
+    const syncCart = async () => {
+      setIsLoading(true);
+      const token = getBearerToken();
 
-    const selectedItems = getSelectedItems();
+      if (!token) {
+        if (isMounted) {
+          setIsCartSynced(true);
+          setIsLoading(false);
+        }
+        return;
+      }
 
-    if (!selectedItems || selectedItems.length === 0) {
-      toast.error("No selected items to sync for testing.");
-      return;
-    }
+      const selectedItems = getSelectedItems();
+      if (!selectedItems || selectedItems.length === 0) {
+        toast.error("No selected items to sync for checkout.");
+        if (isMounted) {
+          setIsCartSynced(true);
+          setIsLoading(false);
+        }
+        return;
+      }
 
-    try {
-      await axios.delete("https://ajempire-backend.vercel.app/api/cart/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        data: {
-          // Map to backend format
-          items: selectedItems.map((item) => ({
-            productId: item._id,
-            qty: item.quantity,
-          })),
-        },
-      });
+      try {
+        const itemsPayload = selectedItems.map((item) => ({
+          productId: item._id,
+          qty: item.quantity,
+          variants: item.selectedVariants?.length
+            ? item.selectedVariants.map((variant) => ({
+                name: variant.name,
+                value: variant.value,
+              }))
+            : [],
+        }));
 
-      // Optionally, you can also POST items to cart if DELETE clears it first
-      await axios.post(
-        "https://ajempire-backend.vercel.app/api/cart/",
-        {
-          items: selectedItems.map((item) => ({
-            productId: item._id,
-            qty: item.quantity,
-          })),
-        },
-        {
+        await axios.delete("https://ajempire-backend.vercel.app/api/cart/", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        },
-      );
+          data: { items: itemsPayload },
+        });
 
-      toast.success("Cart synced to backend for testing!");
-    } catch (error) {
-      console.error("Error syncing cart:", error);
-      toast.error("Failed to sync cart for testing.");
-    }
-  };
+        await axios.post(
+          "https://ajempire-backend.vercel.app/api/cart/",
+          { items: itemsPayload },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        console.log("Cart synced to backend successfully!");
+      } catch (error) {
+        console.error("Error syncing cart:", error);
+        toast.error("Failed to sync cart session.");
+      } finally {
+        if (isMounted) {
+          setIsCartSynced(true);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    syncCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const initiateCheckout = async () => {
     setIsLoading(true);
     const token = getBearerToken();
@@ -108,8 +125,7 @@ export default function OrderSummaryPage() {
       return;
     }
 
-    // For testing: sync cart to backend
-    await syncCartToBackend();
+    // Cart is already synced to backend on page load!
 
     try {
       const response = await axios.post(
@@ -311,7 +327,13 @@ export default function OrderSummaryPage() {
             </div>
           </div>
         </div>
-        <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
+        {isCartSynced ? (
+          <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
+        ) : (
+          <div className="w-full p-20 font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-center gap-4 text-gray-400">
+            <p className="animate-pulse">Syncing checkout session...</p>
+          </div>
+        )}
       </div>
     </div>
   );

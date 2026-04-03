@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import IntroComp from "./IntroComp";
 import SigninComp from "./SigninComp";
 import SignupComp from "./SignupComp";
@@ -11,56 +10,133 @@ import VerifyEmailComp from "./VerifyEmailComp";
 import VerifyPhoneComp from "./VerifyPhoneComp";
 import VerifyPasswordResetCode from "./VerifyPasswordResetCode";
 import NewPassword from "./NewPassword";
+import type { AuthScreen } from "./auth-flow";
+
 interface AuthWrapperProps {
   onClose: () => void;
 }
 
 export default function AuthWrapper({ onClose }: AuthWrapperProps) {
-  // const router = useRouter();
-  const [screen, setScreen] = useState<
-    | "intro"
-    | "signin"
-    | "signup"
-    | "phonenumber"
-    | "forgotpassword"
-    | "verifyemail"
-    | "verifyphone"
-    | "verifypassresetcode"
-    | "deals"
-    | "newpassword"
-  >("intro");
+  const [authFlow, setAuthFlow] = useState<{
+    screen: AuthScreen;
+    history: AuthScreen[];
+  }>({
+    screen: "intro",
+    history: [],
+  });
+
+  const { screen, history } = authFlow;
+
   function handleClose() {
-    // Go back to previous page if available, otherwise go to home
     onClose();
   }
+
+  function handleScreenChange(nextScreen: AuthScreen) {
+    setAuthFlow((current) => {
+      if (current.screen === nextScreen) {
+        return current;
+      }
+
+      return {
+        screen: nextScreen,
+        history: [...current.history, current.screen],
+      };
+    });
+  }
+
+  function handleBack() {
+    if (screen === "intro" && history.length === 0) {
+      onClose();
+      return;
+    }
+
+    setAuthFlow((current) => {
+      const previousScreen = current.history[current.history.length - 1];
+
+      if (!previousScreen) {
+        return {
+          screen: "intro",
+          history: [],
+        };
+      }
+
+      return {
+        screen: previousScreen,
+        history: current.history.slice(0, -1),
+      };
+    });
+  }
+
+  const canGoBack = screen !== "intro";
+
   return (
     <div>
       {screen === "intro" && (
-        <IntroComp setScreen={setScreen} onClose={handleClose} />
+        <IntroComp setScreen={handleScreenChange} onClose={handleClose} />
       )}
       {screen === "signin" && (
-        <SigninComp setScreen={setScreen} onClose={handleClose} />
+        <SigninComp
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "signup" && (
-        <SignupComp setScreen={setScreen} onClose={handleClose} />
+        <SignupComp
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "phonenumber" && (
-        <PhoneNumberComp setScreen={setScreen} onClose={handleClose} />
+        <PhoneNumberComp
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "forgotpassword" && (
-        <ForgotPassword setScreen={setScreen} onClose={handleClose} />
+        <ForgotPassword
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "verifyemail" && (
-        <VerifyEmailComp setScreen={setScreen} onClose={handleClose} />
+        <VerifyEmailComp
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "verifyphone" && (
-        <VerifyPhoneComp setScreen={setScreen} onClose={handleClose} />
+        <VerifyPhoneComp
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "verifypassresetcode" && (
-        <VerifyPasswordResetCode setScreen={setScreen} onClose={handleClose} />
+        <VerifyPasswordResetCode
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
       {screen === "newpassword" && (
-        <NewPassword setScreen={setScreen} onClose={handleClose} />
+        <NewPassword
+          setScreen={handleScreenChange}
+          onClose={handleClose}
+          onBack={handleBack}
+          canGoBack={canGoBack}
+        />
       )}
     </div>
   );

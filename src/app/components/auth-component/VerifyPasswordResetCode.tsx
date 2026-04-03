@@ -2,32 +2,21 @@
 import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
 import { verifyPasswordResetCode } from "@/lib/api";
 import { X } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
+import AuthBackButton from "./AuthBackButton";
+import type { AuthStepProps } from "./auth-flow";
 
-interface Props {
-  onClose: () => void;
-  setScreen: (
-    screen:
-      | "intro"
-      | "signin"
-      | "signup"
-      | "phonenumber"
-      | "forgotpassword"
-      | "verifyemail"
-      | "verifyphone"
-      | "newpassword"
-  ) => void;
-}
-
-export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
+export default function VerifyPasswordResetCode({
+  onClose,
+  onBack,
+  canGoBack,
+  setScreen,
+}: AuthStepProps) {
   const [otp, setOtp] = useState("");
   const maxLength = 6;
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   function handleOTPChange(value: string) {
     // Only allow numeric input and up to maxLength
@@ -35,7 +24,7 @@ export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
     setOtp(sanitized);
   }
 
-  async function handleOTPSubmit(code: string) {
+  const handleOTPSubmit = useCallback(async (code: string) => {
     setIsLoading(true);
     try {
       const email = localStorage.getItem("ajempire_signup_email");
@@ -46,23 +35,24 @@ export default function VerifyPasswordResetCode({ onClose, setScreen }: Props) {
       setIsLoading(false);
       setScreen("newpassword");
       toast("Token verified successfully!");
-    } catch (error) {
+    } catch {
       setIsLoading(false);
       toast("Couldn't verify token!");
     }
     // router.push("/auth/new-password");
-  }
+  }, [setScreen]);
 
   useEffect(() => {
     if (otp.length === maxLength) {
       handleOTPSubmit(otp);
     }
-  }, [otp]);
+  }, [handleOTPSubmit, maxLength, otp]);
 
   return (
     <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       {isLoading && <Spinner />}
-      <div className="bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
+      <div className="relative bg-white flex flex-col rounded-3xl size-full lg:h-[30rem] lg:w-[27rem]">
+        {canGoBack && <AuthBackButton onBack={onBack} />}
         <div className="flex justify-between border-b px-4 border-b-black/10 pt-10 pb-3">
           <div></div>
           <h1>Enter the password to reset code</h1>
