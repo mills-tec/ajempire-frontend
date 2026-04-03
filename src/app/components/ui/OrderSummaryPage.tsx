@@ -1,22 +1,19 @@
 "use client";
 import CheckoutSummeryCard from "@/app/components/CheckoutSummeryCard";
 import GetshippingAddress from "@/app/components/ui/GetshippingAddress";
-import SelectedpaymentMethod from "./SelectedpaymentMethod";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
-import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCartSynced, setIsCartSynced] = useState(false);
-  const { items, getSelectedItems, selectedLogistic, requestToken } =
-    useCartStore();
+  const { getSelectedItems, selectedLogistic, requestToken } = useCartStore();
 
   useEffect(() => {
     let isMounted = true;
