@@ -1,5 +1,6 @@
 "use client";
 
+import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!getBearerToken()) return;
     const initWishlist = useWishlistStore.getState().initWishlist;
 
     initWishlist();

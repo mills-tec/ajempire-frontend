@@ -39,11 +39,15 @@ export const generateToken = async () => {
   const permission = await Notification.requestPermission();
 
   if (permission === "granted") {
-    const token = await getToken(messaging, {
-      vapidKey:
-        "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
-    });
-    // useAuthStore.getState().setPushToken(token);
-    return token;
+    try {
+      const token = await getToken(messaging, {
+        vapidKey:
+          "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
+      });
+      // useAuthStore.getState().setPushToken(token);
+      return token;
+    } catch (err) {
+      console.log(err);
+    }
   }
 };

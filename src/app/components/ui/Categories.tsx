@@ -20,9 +20,7 @@ const Categories = ({ cat, categories }: CategoriesProps) => {
   const { data, isLoading } = useQuery<{ message: Category[] }>({
     queryKey: ["categories"],
     queryFn: getCategories,
-    onSuccess: (data) => {
-      console.log("categories data:", data);
-    },
+    onSuccess: (data) => {},
   });
 
   const finalCategories = categories ?? data?.message;
@@ -92,12 +90,15 @@ const Categories = ({ cat, categories }: CategoriesProps) => {
                   {category.name}
                 </p>
               </Link>
-            )
+            );
           })}
         </div>
 
         {/* Right Arrow */}
-        <button onClick={() => scroll("right")} className="p-2 mt-3 hidden lg:block">
+        <button
+          onClick={() => scroll("right")}
+          className="p-2 mt-3 hidden lg:block"
+        >
           <ArrowRightIcon className="w-4 h-4 text-black" />
         </button>
       </div>

@@ -1,4 +1,4 @@
-import { getData, postData } from "@/api/api";
+import { postData } from "@/api/api";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
@@ -31,6 +31,7 @@ export async function loginBackend(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
+  console.log(res);
   if (!res.ok) throw new Error("Login failed");
   return res.json();
 }
@@ -138,7 +139,6 @@ export async function getProducts(
   const res = await fetch(API_URL + "/product?" + query);
   if (!res.ok) return null;
   const resp = await res.json();
-  console.log(resp.message);
   return resp;
 }
 
@@ -278,7 +278,6 @@ export async function addToCart(products: CartItem[]) {
       ? products.flatMap((product) => product.selectedVariants)
       : undefined,
   }));
-  // return;
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);

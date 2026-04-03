@@ -12,17 +12,19 @@ import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
 
-
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
-  console.log("selected logistic in order summary:", selectedLogistic?.delivery_eta);
+  const { items, getSelectedItems, selectedLogistic, requestToken } =
+    useCartStore();
+  console.log(
+    "selected logistic in order summary:",
+    selectedLogistic?.delivery_eta,
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
-
 
   const syncCartToBackend = async () => {
     const token = getBearerToken();
@@ -35,30 +37,26 @@ export default function OrderSummaryPage() {
       return;
     }
 
-
     try {
-      await axios.delete(
-        "https://ajempire-backend.vercel.app/api/cart/",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          data: {
-            // Map to backend format
-            items: selectedItems.map(item => ({
-              productId: item._id,
-              qty: item.quantity,
-            })),
-          },
-        }
-      );
+      await axios.delete("https://ajempire-backend.vercel.app/api/cart/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        data: {
+          // Map to backend format
+          items: selectedItems.map((item) => ({
+            productId: item._id,
+            qty: item.quantity,
+          })),
+        },
+      });
 
       // Optionally, you can also POST items to cart if DELETE clears it first
       await axios.post(
         "https://ajempire-backend.vercel.app/api/cart/",
         {
-          items: selectedItems.map(item => ({
+          items: selectedItems.map((item) => ({
             productId: item._id,
             qty: item.quantity,
           })),
@@ -68,7 +66,7 @@ export default function OrderSummaryPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       toast.success("Cart synced to backend for testing!");
@@ -81,8 +79,7 @@ export default function OrderSummaryPage() {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
-    console.log("selected payment method", paymentMethod)
-
+    console.log("selected payment method", paymentMethod);
 
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
@@ -95,13 +92,12 @@ export default function OrderSummaryPage() {
       return;
     }
 
-
     const selectedItems = getSelectedItems();
     console.log("Selected items for checkout:", selectedItems);
 
     if (!selectedItems || selectedItems.length === 0) {
       toast.error("Select an item to continue", { position: "top-right" });
-      setIsLoading(false)
+      setIsLoading(false);
       return;
     }
     if (!selectedLogistic) {
@@ -131,7 +127,7 @@ export default function OrderSummaryPage() {
             Authorization: `Bearer ${getBearerToken()}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response?.data?.message?.url) {
@@ -149,9 +145,8 @@ export default function OrderSummaryPage() {
     } catch (error) {
       toast.error("An error occurred during checkout. Please try again.", {
         position: "top-right",
-
       });
-      console.log("order summary error", error)
+      console.log("order summary error", error);
     } finally {
       setTimeout(() => setIsLoading(false), 800);
     }
@@ -161,7 +156,6 @@ export default function OrderSummaryPage() {
     <div className="w-full flex flex-col lg:flex-row items-start justify-between lg:px-[30px] lg:py-[30px] pt-6 px-4 font-poppins">
       {isLoading && <Spinner />}
       <div className="lg:hidden w-full flex items-center text-center mb-8 lg:mb-0">
-
         <Link href={"/pages/cart"}>
           <svg
             width="24"
@@ -238,8 +232,17 @@ export default function OrderSummaryPage() {
           </svg>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z" fill="#FFCC00" />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z"
+              fill="#FFCC00"
+            />
           </svg>
           <p className="text-[#A3A3A3]">Logistics</p>
         </div>
@@ -260,7 +263,8 @@ export default function OrderSummaryPage() {
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            xmlns="http://www.w3.org/2000/svg">
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <rect width="24" height="24" rx="12" fill="#FF008C" />
             <path
               d="M11 7V13.6667L14 17"
@@ -283,18 +287,25 @@ export default function OrderSummaryPage() {
           <div className="mt-4 lg:block hidden">
             <p className="text-lg font-semibold">Delivery details</p>
             <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
-              <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
-              <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
+              <p>
+                <span className="font-medium text-black">
+                  Delivery Arrives:
+                </span>{" "}
+                {selectedLogistic?.delivery_eta}
+              </p>
+              <p>
+                <span className="font-medium text-black">
+                  Delivery Arrives on:
+                </span>{" "}
                 <span className="text-brand_solid_gradient">
                   {selectedLogistic?.delivery_eta_time &&
-                    new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
-                      "en-US",
-                      {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      }
-                    )}
+                    new Date(
+                      selectedLogistic.delivery_eta_time,
+                    ).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
                 </span>
               </p>
             </div>
