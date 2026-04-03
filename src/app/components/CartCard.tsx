@@ -45,7 +45,7 @@ function CartCard({
   const { selectedOptions, selectOption, isValidOption, selectedCombination } =
     useProductVariants(item);
 
-  const [remove, setRemove] = useState(false);
+  // const [remove, setRemove] = useState(false);
 
   useEffect(() => {
     const total = Number(
@@ -246,7 +246,7 @@ function CartCard({
           onClick={(e) => {
             e.stopPropagation();
             removeItem(item._id);
-            setRemove(true);
+            // setRemove(true);
           }}
           xmlns="http://www.w3.org/2000/svg"
         >

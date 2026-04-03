@@ -51,7 +51,6 @@ export default function ShippingAdressForm({
     return phone;
   };
 
-
   useEffect(() => {
     axios
       .get("https://nga-states-lga.onrender.com/fetch")
@@ -149,12 +148,12 @@ export default function ShippingAdressForm({
         postalCode,
       },
     };
-    console.log("shipping adress data:", data)
+    console.log("shipping adress data:", data);
     try {
       const res = await axios.patch(
         "https://ajempire-backend.vercel.app/api/shipping-address",
         { shippingAddress: data.shippingAdress },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.data) {
         toast.success("Shipping address updated successfully", {
@@ -162,7 +161,7 @@ export default function ShippingAdressForm({
         });
         if (onContinue) onContinue();
         if (onAddressUpdated) onAddressUpdated();
-        console.log("responds data", res.data)
+        console.log("responds data", res.data);
       }
     } catch (error: any) {
       console.error("❌ Error updating address:", error);
@@ -217,11 +216,7 @@ export default function ShippingAdressForm({
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M0.5 0.5H21.5"
-                stroke="#CFCFCF"
-                strokeLinecap="square"
-              />
+              <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
             </svg>
           </div>
 
@@ -255,11 +250,7 @@ export default function ShippingAdressForm({
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M0.5 0.5H21.5"
-                stroke="#CFCFCF"
-                strokeLinecap="square"
-              />
+              <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
             </svg>
           </div>
           <div className="flex items-center gap-1">
@@ -292,11 +283,7 @@ export default function ShippingAdressForm({
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M0.5 0.5H21.5"
-                stroke="#CFCFCF"
-                strokeLinecap="square"
-              />
+              <path d="M0.5 0.5H21.5" stroke="#CFCFCF" strokeLinecap="square" />
             </svg>
           </div>
           <div className="flex items-center gap-1">
@@ -444,16 +431,17 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
+              !fullName ||
               !phone ||
               !street ||
               !city ||
               !selectedState ||
               !selectedCountry ||
               !postalCode
-              ? "opacity-50 cursor-not-allowed"
-              : ""
-              }`}
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             disabled={
               !fullName ||
               !phone ||
@@ -470,7 +458,8 @@ export default function ShippingAdressForm({
 
         <div
           className="absolute top-9 right-6 cursor-pointer "
-          onClick={onClose}>
+          onClick={onClose}
+        >
           <svg
             width="15"
             height="15"

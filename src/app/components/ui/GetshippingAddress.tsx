@@ -28,7 +28,7 @@ const GetshippingAddress = () => {
         "https://ajempire-backend.vercel.app/api/shipping-address",
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       setAddress(res.data.message);
       console.log("Fetched address:", res.data.message);
