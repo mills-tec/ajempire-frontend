@@ -8,6 +8,7 @@ import CartPopup from "./components/CartPopup";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProducts, getProductsByCategory } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { useCategoryStore } from "@/lib/stores/category-store";
 import { useSearchStore } from "@/lib/search-store";
 import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
 
@@ -25,50 +26,55 @@ import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 const EMPTY_PRODUCTS: Product[] = [];
 
 export default function Home() {
-  const { data, isLoading, refetch } = useQuery<ProductsResponse | null>({
+  const { data, isLoading } = useQuery<ProductsResponse | null>({
     queryKey: ["products"],
     queryFn: () => getProducts(""),
   });
   const queryClient = useQueryClient();
+  const { selectedCategory } = useCategoryStore();
 
-  const handleRefresh = async (): Promise<void> => {
-    // pull current products from cache
-    const currentData = queryClient.getQueryData<any>(["products"]);
-    const products: any[] = currentData?.message?.products ?? [];
+  const handleRefresh = async () => {
+    try {
+      if (selectedCategory) {
+        // For categories, shuffle existing data instead of refetching
+        const currentCategoryData = queryClient.getQueryData<Product[]>([
+          "home-category-products",
+          selectedCategory.name,
+        ]);
+        if (currentCategoryData && currentCategoryData.length > 0) {
+          const shuffled = shuffleArray([...currentCategoryData]);
+          queryClient.setQueryData(
+            ["home-category-products", selectedCategory.name],
+            shuffled,
+          );
+        }
+        return;
+      }
 
-    if (products.length > 0) {
-      // rotate the list by a random offset so the mid index moves
-      const offset = Math.floor(Math.random() * products.length);
-      const rotated = products.slice(offset).concat(products.slice(0, offset));
+      const freshData = await getProducts(
+        `limit=${ITEMS_TO_APPEND}&t=${Date.now()}`,
+      );
 
-      // optionally shuffle a little inside the rotated list to add variation
-      const rearranged = rotated.sort(() => Math.random() - 0.5);
+      const newProducts = freshData?.message?.products ?? [];
+      if (newProducts.length === 0) return;
 
-      // apply the new order back into the cache
+      const shuffled = shuffleArray(newProducts);
       queryClient.setQueryData(["products"], {
-        ...currentData,
+        ...freshData,
         message: {
-          ...currentData.message,
-          products: rearranged,
+          ...freshData?.message,
+          products: shuffled,
+          nextCursor: freshData?.message?.nextCursor,
+          hasMore: freshData?.message?.hasMore,
         },
       });
+    } catch (error) {
+      console.error("Pull-to-refresh error:", error);
     }
-
-    // ensure we show loading animation for at least 1s
-    await new Promise((r) => setTimeout(r, 1000));
   };
 
   return (
-    <PullToRefreshProvider
-      onRefresh={async (): Promise<void> => {
-        await Promise.all([
-          refetch(),
-          queryClient.invalidateQueries({
-            queryKey: ["home-category-products"],
-          }),
-        ]);
-      }}
-    >
+    <PullToRefreshProvider onRefresh={handleRefresh}>
       <HomeContent data={data} isLoading={isLoading} />
     </PullToRefreshProvider>
   );
@@ -81,32 +87,64 @@ function HomeContent({
   data: ProductsResponse | null | undefined;
   isLoading: boolean;
 }) {
-  const { pull } = usePullToRefresh();
+  const { pull, refreshing } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
+  const { selectedCategory, setSelectedCategory, _hasHydrated } =
+    useCategoryStore();
   const { searchedQuery, resetToken, minPrice, maxPrice } = useSearchStore();
   const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
   const [searchLoading, setSearchLoading] = React.useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null,
-  );
   const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<
     Product[]
   >([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState("");
+
+  // Ensure component only uses store data after hydration
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const products = data?.message?.products ?? [];
+  const categoryFilterActive = Boolean(selectedCategory);
+
+  // Reflect pull-to-refresh loading and reset scroll state after refresh
+  useEffect(() => {
+    if (refreshing) {
+      setUiLoading(true);
+      return;
+    }
+
+    // Refresh complete, reset state for clean new view (but keep category selection)
+    setUiLoading(false);
+    if (!categoryFilterActive) {
+      setCursor("");
+      setHasNextPage(true);
+      setCategoryVisibleProducts([]);
+    }
+  }, [refreshing, categoryFilterActive]);
   const [lastItemInview, setLastItemInView] = useState(false);
   const [triggerManualLoad, setManualLoad] = useState(true);
   const categoryQuery = useQuery<Product[]>({
     queryKey: ["home-category-products", selectedCategory?.name],
     queryFn: () => getProductsByCategory(selectedCategory!.name),
     enabled: !!selectedCategory,
+    retry: false, // Don't retry on error to show "no products found" immediately
+    onError: (error) => {
+      console.error("Category query error:", error);
+      // Set empty array on error so "no products found" message shows
+      setCategoryVisibleProducts([]);
+    },
   });
   const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
   const isCategoryLoading = categoryQuery.isLoading;
+  const categoryError = categoryQuery.error as Error | null;
+  const hasCategoryError = Boolean(categoryError);
 
   React.useEffect(() => {
     if (resetToken === 0) return;
@@ -114,17 +152,24 @@ function HomeContent({
     setUiLoading(true);
     const timer = setTimeout(() => setUiLoading(false), 500);
     return () => clearTimeout(timer);
-  }, [resetToken]);
+  }, [resetToken, setSelectedCategory]);
 
-  const products = data?.message?.products ?? [];
-  const categoryFilterActive = Boolean(selectedCategory);
+  // Force category products to refetch after hydration
+  React.useEffect(() => {
+    if (_hasHydrated && selectedCategory && isMounted) {
+      queryClient.invalidateQueries({
+        queryKey: ["home-category-products", selectedCategory.name],
+      });
+    }
+  }, [_hasHydrated, isMounted, selectedCategory, queryClient]);
+
   const visibleProducts = categoryFilterActive
     ? categoryVisibleProducts
     : products;
   const isProductGridLoading =
     uiLoading ||
     searchLoading ||
-    (categoryFilterActive ? isCategoryLoading : isLoading);
+    (categoryFilterActive ? isCategoryLoading && !categoryError : isLoading);
 
   const [infiniteRef] = useInfiniteScroll({
     loading: false,
@@ -362,23 +407,26 @@ function HomeContent({
                 </button>
               </div>
             )}
-            {!isProductGridLoading && visibleProducts.length === 0 && (
-              <div className="col-span-full">
-                <Image
-                  src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
-                  alt="No results"
-                  width={150}
-                  height={150}
-                  className="mx-auto mt-10"
-                />
+            {!isProductGridLoading &&
+              (visibleProducts.length === 0 || hasCategoryError) && (
+                <div className="col-span-full">
+                  <Image
+                    src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
+                    alt="No results"
+                    width={150}
+                    height={150}
+                    className="mx-auto mt-10"
+                  />
 
-                <p className="text-center text-sm text-gray-500 mt-10">
-                  {categoryFilterActive
-                    ? `No products found in ${selectedCategory?.name}.`
-                    : "No products are available right now."}
-                </p>
-              </div>
-            )}
+                  <p className="text-center text-sm text-gray-500 mt-10">
+                    {categoryFilterActive
+                      ? hasCategoryError
+                        ? `Unable to load products for ${selectedCategory?.name}. Please try again.`
+                        : `No products found in ${selectedCategory?.name}.`
+                      : "No products are available right now."}
+                  </p>
+                </div>
+              )}
 
             {/* Products */}
             <div className="mt-8">
