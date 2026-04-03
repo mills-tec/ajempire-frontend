@@ -52,7 +52,7 @@ export const useOrders = () => {
       productId: string;
       qty: number;
       variant?: string;
-    }[]
+    }[],
   ) => {
     setPostLoading(true);
     try {
@@ -174,7 +174,6 @@ export const useIssueReturn = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const postIssueReturn = async (data: unknown) => {
-
     if (!loading) {
       setLoading(true);
       try {
@@ -238,8 +237,7 @@ export const useIssueReturn = () => {
     }
   };
   return { postIssueReturn, loading, getReturnRequests, getReturnRequest };
-}
-
+};
 
 export const useUpdates = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -248,7 +246,11 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await getData(`/updates/${type}?cursor=${cursor}&limit=${ITEMS_TO_APPEND}`, config);
+        const req = await getData(
+          `/updates/${type}?cursor=${cursor}&limit=${ITEMS_TO_APPEND}`,
+          config,
+        );
+
         return req.data.message;
       } catch (err: unknown) {
         let message;
@@ -264,12 +266,26 @@ export const useUpdates = () => {
     }
   };
 
-  const addComments = async (data: { feedId: string; type: string; comment: string; parentId?: string }) => {
+  const addComments = async (data: {
+    feedId: string;
+    type: string;
+    comment: string;
+    parentId?: string;
+  }) => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await postData(`/updates/comment`, { id: data.feedId, comment: data.comment, parentId: data.parentId, type: data.type }, config);
-        return req.data.message;
+        const req = await postData(
+          `/updates/comment`,
+          {
+            id: data.feedId,
+            comment: data.comment,
+            parentId: data.parentId,
+            type: data.type,
+          },
+          config,
+        );
+        return req.data.data;
       } catch (err: unknown) {
         let message;
         if (err instanceof AxiosError) {
@@ -282,13 +298,17 @@ export const useUpdates = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
   const likeUpdate = async (data: { feedId: string; type: string }) => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await postData(`/updates/like`, { id: data.feedId, type: data.type }, config);
+        const req = await postData(
+          `/updates/like`,
+          { id: data.feedId, type: data.type },
+          config,
+        );
 
         return true;
       } catch (err: unknown) {
@@ -303,14 +323,22 @@ export const useUpdates = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
-  const likeUpdateComment = async (data: { feedId: string; commentId: string; type: string }) => {
+  const likeUpdateComment = async (data: {
+    feedId: string;
+    commentId: string;
+    type: string;
+  }) => {
     if (!loading) {
       setLoading(true);
       try {
-        let req = await postData(`/updates/likeComment`, { id: data.feedId, commentId: data.commentId, type: data.type }, config);
-        console.log(req.data.message)
+        let req = await postData(
+          `/updates/likeComment`,
+          { id: data.feedId, commentId: data.commentId, type: data.type },
+          config,
+        );
+        console.log(req.data.message);
         return true;
       } catch (err: unknown) {
         let message;
@@ -324,15 +352,22 @@ export const useUpdates = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
-  const deleteUpdateComment = async (data: { feedId: string; commentId: string; type: string }) => {
-
+  const deleteUpdateComment = async (data: {
+    feedId: string;
+    commentId: string;
+    type: string;
+  }) => {
     if (!loading) {
       setLoading(true);
+
       try {
-        let req = await deleteData(`/updates/comment/${data.type}/${data.feedId}/${data.commentId}`, config);
-        console.log(req.data.message)
+        let req = await deleteData(
+          `/updates/comment/${data.type}/${data.feedId}/${data.commentId}`,
+          config,
+        );
+
         return true;
       } catch (err: unknown) {
         let message;
@@ -346,9 +381,16 @@ export const useUpdates = () => {
         setLoading(false);
       }
     }
-  }
-  return { getFeeds, loading, addComments, likeUpdate, likeUpdateComment, deleteUpdateComment };
-}
+  };
+  return {
+    getFeeds,
+    loading,
+    addComments,
+    likeUpdate,
+    likeUpdateComment,
+    deleteUpdateComment,
+  };
+};
 
 export const useNotification = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -369,7 +411,7 @@ export const useNotification = () => {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const deleteNotificationFromDb = async (id: string) => {
     if (!loading) {
@@ -389,7 +431,7 @@ export const useNotification = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
   const markAsReadFromDb = async () => {
     if (!loading) {
@@ -410,13 +452,17 @@ export const useNotification = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
   const updatePushToken = async (pushToken: string) => {
     if (!loading) {
       setLoading(true);
       try {
-        await postData(`/notification/savePushToken`, { token: pushToken }, config);
+        await postData(
+          `/notification/savePushToken`,
+          { token: pushToken },
+          config,
+        );
         return true;
       } catch (err) {
         let message;
@@ -430,9 +476,15 @@ export const useNotification = () => {
         setLoading(false);
       }
     }
-  }
-  return { loading, getNotifications, deleteNotificationFromDb, markAsReadFromDb, updatePushToken }
-}
+  };
+  return {
+    loading,
+    getNotifications,
+    deleteNotificationFromDb,
+    markAsReadFromDb,
+    updatePushToken,
+  };
+};
 
 export const useExploreInterest = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -455,7 +507,7 @@ export const useExploreInterest = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
   const addProductToBrowsingHistory = async (productId: string) => {
     try {
@@ -469,10 +521,10 @@ export const useExploreInterest = () => {
       }
       toast.error(message);
     }
-  }
+  };
 
-  return { loading, getExploreInterest, addProductToBrowsingHistory }
-}
+  return { loading, getExploreInterest, addProductToBrowsingHistory };
+};
 
 export const useBrowsingHistory = () => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -482,7 +534,10 @@ export const useBrowsingHistory = () => {
     if (!loading) {
       setUILoading(true);
       try {
-        const req = await getData(`/browsing-history?limit=${limit}&cursor=${cursor}`, config);
+        const req = await getData(
+          `/browsing-history?limit=${limit}&cursor=${cursor}`,
+          config,
+        );
         return req.data.message;
       } catch (err) {
         let message;
@@ -496,10 +551,9 @@ export const useBrowsingHistory = () => {
         setUILoading(false);
       }
     }
-  }
+  };
 
   const deleteBrowsingHistory = async (ids: string[]) => {
-
     if (!loading) {
       setLoading(true);
       try {
@@ -517,7 +571,7 @@ export const useBrowsingHistory = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
   const clearBrowsingHistory = async () => {
     if (!loading) {
@@ -537,7 +591,13 @@ export const useBrowsingHistory = () => {
         setLoading(false);
       }
     }
-  }
+  };
 
-  return { loading, getBrowsingHistory, uiLoading, deleteBrowsingHistory, clearBrowsingHistory }
-}
+  return {
+    loading,
+    getBrowsingHistory,
+    uiLoading,
+    deleteBrowsingHistory,
+    clearBrowsingHistory,
+  };
+};

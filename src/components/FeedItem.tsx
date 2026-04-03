@@ -13,6 +13,7 @@ import { CommentData, Feed, Product } from "@/lib/types";
 import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import {
   Heart,
+  LoaderCircle,
   Pause,
   Play,
   SendHorizonal,
@@ -28,6 +29,7 @@ import useInfiniteScroll from "react-infinite-scroll-hook";
 import { useUpdates } from "@/api/customHooks";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
+import Loading from "@/app/pages/ordersandaccount/loading";
 
 export function FeedSkeleton() {
   return Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
@@ -162,7 +164,8 @@ export default function FeedItem({ feeds }: FeedsProps) {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
+
+  // const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
 
   const {
     addComments,
@@ -173,6 +176,8 @@ export default function FeedItem({ feeds }: FeedsProps) {
     loading,
   } = useUpdates();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
+
+  const [loadingType, setLoadingType] = useState<"add" | "delete" | "">("");
 
   // ── Scroll helpers ──────────────────────────────────────────────────────
 
@@ -310,41 +315,46 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const sendComment = async (parentId: string | null) => {
-    if (!comment.commentText) return;
+    setLoadingType("add");
+    if (!loading) {
+      if (!comment.commentText) return;
 
-    const newComment: CommentData = {
-      _id: "",
-      text: comment.commentText,
-      user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
-      parentId,
-      likes: [],
-      replies: [],
-      showReplies: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      const newComment: CommentData = {
+        _id: "",
+        text: comment.commentText,
+        user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
+        parentId,
+        likes: [],
+        replies: [],
+        showReplies: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const feedType = feeds.data.find((f) => f._id === id)?.type;
+      let xy = await addComments({
+        feedId: id as string,
+        type: feedType as string,
+        comment: newComment.text,
+        parentId: parentId as string,
+      });
 
-    const feedType = feeds.data.find((f) => f._id === id)?.type;
+      newComment._id = xy._id;
 
-    if (parentId) {
-      updateFeedComments(id!, (comments) =>
-        addReplyRecursive(comments, parentId, newComment),
-      );
-    } else {
-      updateFeedComments(id!, (comments) => [...comments, newComment]);
+      if (parentId) {
+        updateFeedComments(id!, (comments) =>
+          addReplyRecursive(comments, parentId, newComment),
+        );
+      } else {
+        updateFeedComments(id!, (comments) => [...comments, newComment]);
+      }
+
+      setComment((prev) => ({
+        ...prev,
+        commentText: "",
+        parent: { parentId: "", fullname: "", email: "" },
+      }));
+      setLoadingType("");
     }
-
-    setComment((prev) => ({
-      ...prev,
-      commentText: "",
-      parent: { parentId: "", fullname: "", email: "" },
-    }));
-    await addComments({
-      feedId: id as string,
-      type: feedType as string,
-      comment: newComment.text,
-      parentId: parentId as string,
-    });
   };
 
   const likePost = async (_id: string) => {
@@ -361,7 +371,8 @@ export default function FeedItem({ feeds }: FeedsProps) {
         };
       }),
     }));
-    await likeUpdate({ feedId: _id, type: type as string });
+    const feed = data.feeds.find((f) => f._id === id);
+    await likeUpdate({ feedId: _id, type: feed?.type as string });
   };
 
   const likeComment = async (_id: string) => {
@@ -377,15 +388,23 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const deleteComment = async (item: CommentData) => {
+    if (loading) return;
+    setLoadingType("delete");
     const selectedFeed = data.feeds.find((f) => f._id === id);
-    updateFeedComments(id!, (comments) =>
-      recursiveDeleteComment(comments, item._id),
-    );
-    await deleteUpdateComment({
+
+    let deleteComment = await deleteUpdateComment({
       feedId: id as string,
       commentId: item._id,
       type: selectedFeed?.type as string,
     });
+
+    if (deleteComment) {
+      updateFeedComments(id!, (comments) =>
+        recursiveDeleteComment(comments, item._id),
+      );
+
+      setLoadingType("");
+    }
   };
 
   // ── Effects ─────────────────────────────────────────────────────────────
@@ -542,9 +561,9 @@ export default function FeedItem({ feeds }: FeedsProps) {
                         setPlayingMap((prev) => ({ ...prev, [index]: true }));
                       }}
                       onCanPlay={() => {
-                        setLoadedIndex((prev) =>
-                          prev.includes(index) ? prev : [...prev, index],
-                        );
+                        // setLoadedIndex((prev) =>
+                        //   prev.includes(index) ? prev : [...prev, index],
+                        // );
                       }}
                       onPause={() =>
                         setPlayingMap((prev) => ({ ...prev, [index]: false }))
@@ -785,6 +804,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
                       onLike={likeComment}
                       deleteComment={deleteComment}
                       user={user!}
+                      loading={loadingType === "delete" && loading}
                     />
                   ))}
                 </div>
@@ -814,7 +834,11 @@ export default function FeedItem({ feeds }: FeedsProps) {
               className={`w-6 h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${comment.show ? "" : "hidden"}`}
               onClick={() => sendComment(comment.parent.parentId)}
             >
-              <SendHorizonal size={10} color="white" />
+              {loadingType === "add" && loading ? (
+                <LoaderCircle className="animate-spin  text-white" size={14} />
+              ) : (
+                <SendHorizonal size={10} color="white" />
+              )}
             </button>
           </div>
         </div>
