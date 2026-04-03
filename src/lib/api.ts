@@ -454,8 +454,10 @@ export async function getCategories(): Promise<{ message: Category[] }> {
 
 export async function getProductsByCategory(
   category: string,
+  query?: string,
 ): Promise<Product[]> {
-  const res = await fetch(`${API_URL}/category/${category}/product`);
+  const queryString = query ? `?${query}` : '';
+  const res = await fetch(`${API_URL}/category/${category}/product${queryString}`);
   if (!res.ok) return [];
 
   const data = await res.json();

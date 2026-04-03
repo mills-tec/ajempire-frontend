@@ -120,11 +120,11 @@ export default function HomeHeroSlider({
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute top-2 left-2 rounded-full bg-brand_pink px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-md">
+                        <div className="absolute  lg:top-2 lg:left-2 rounded-full bg-brand_pink px-3  py-1 text-[8px] font-semibold uppercase  lg:tracking-[0.18em] text-white shadow-md">
                           Flashsale
                         </div>
                         {product.flashSales?.endDate && (
-                          <div className="absolute inset-x-2 text-[10px] bottom-1 rounded-full border border-brand_pink bg-black/55 px-2 py-1 text-center text-white backdrop-blur-[2px]">
+                          <div className="absolute inset-x-2 text-[8px] bottom-1 rounded-full border border-brand_pink bg-black/55 px-2 py-1 text-center text-white backdrop-blur-[2px]">
                             <CountdownTimer
                               endTime={product.flashSales.endDate}
                             />

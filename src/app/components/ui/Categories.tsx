@@ -81,7 +81,9 @@ const Categories = ({
             <button
               type="button"
               className={`whitespace-nowrap text-xs flex flex-col items-center transition ${
-                !selectedCategoryId ? "opacity-100" : "opacity-80 hover:opacity-100"
+                !selectedCategoryId
+                  ? "opacity-100"
+                  : "opacity-80 hover:opacity-100"
               }`}
               onClick={() => onCategorySelect?.(null)}
               aria-pressed={!selectedCategoryId}
@@ -93,11 +95,15 @@ const Categories = ({
                     : "border-gray-200"
                 }`}
               >
-                <span className="text-[11px] font-semibold text-black">All</span>
+                <span className="text-[11px] font-semibold text-black">
+                  All
+                </span>
               </div>
               <p
                 className={`mt-1 text-[10px] lg:text-base capitalize ${
-                  !selectedCategoryId ? "text-brand_pink font-medium" : "text-black"
+                  !selectedCategoryId
+                    ? "text-brand_pink font-medium"
+                    : "text-black"
                 }`}
               >
                 All
@@ -166,7 +172,10 @@ const Categories = ({
         </div>
 
         {/* Right Arrow */}
-        <button onClick={() => scroll("right")} className="p-2 mt-3 hidden lg:block">
+        <button
+          onClick={() => scroll("right")}
+          className="p-2 mt-3 hidden lg:block"
+        >
           <ArrowRightIcon className="w-4 h-4 text-black" />
         </button>
       </div>
