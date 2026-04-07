@@ -303,6 +303,8 @@ export async function addToCart(products: CartItem[]) {
       : [],
   }));
 
+  console.log(items);
+
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);
   const res = await fetch(API_URL + "/cart", {

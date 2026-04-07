@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";

@@ -340,7 +340,10 @@ export default function CartPopup() {
                               fill="none"
                               xmlns="http://www.w3.org/2000/svg"
                             >
-                              <path d="M5 4.5L11.5 8L5 11.5V4.5Z" fill="white" />
+                              <path
+                                d="M5 4.5L11.5 8L5 11.5V4.5Z"
+                                fill="white"
+                              />
                             </svg>
                           </div>
                         </button>
