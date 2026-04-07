@@ -28,9 +28,7 @@ const Categories = ({
   const { data } = useQuery<{ message: Category[] }>({
     queryKey: ["categories"],
     queryFn: getCategories,
-    onSuccess: (data) => {
-      console.log("categories data:", data);
-    },
+    onSuccess: (data) => {},
   });
 
   const finalCategories = categories ?? data?.message;

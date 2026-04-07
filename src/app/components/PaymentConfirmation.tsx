@@ -121,102 +121,80 @@ export default function PaymentConfirmation() {
   //   };
   //   verifyPayment();
   // }, [reference]);
-  console.log(responseData);
 
   useEffect(() => {
-    const verifyPayment = async () => {
-      setIsLoading(true);
-      // 🔥 If already verified, don't verify again
-      if (sessionStorage.getItem("paymentVerified") === "true") {
-        const savedMessage = sessionStorage.getItem("paymentMessage");
-        if (savedMessage) {
-          setResponseData(savedMessage);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-
-      const token = getBearerToken();
-      const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
-
-      if (!token) {
-        toast.error("User not authenticated");
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const response = await axios.post(
-          `https://ajempire-backend.vercel.app/api/checkout/verify/${reference}`,
-          { paymentMethod },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response?.data?.message) {
-          toast.error("Payment verification failed.");
-          router.push("/checkout");
-          return;
-        }
-        // ✅ Payment successful
-        const message = response.data.message;
-
-        setResponseData(message);
-        toast.success("Payment verified successfully!");
-
-        // 🔥 Persist success so refresh doesn't clear it
-        sessionStorage.setItem("paymentVerified", "true");
-        sessionStorage.setItem("paymentMessage", message);
-
-
-        const store = useCartStore.getState();
-        const selectedItems = store.getSelectedItems();
-
-        if (selectedItems.length > 0) {
-          // 1️⃣ Remove from backend
-          await axios.delete(
-            "https://ajempire-backend.vercel.app/api/cart/",
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              data: {
-                items: selectedItems.map(item => ({
-                  productId: item._id,
-                  qty: item.quantity,
-                })),
-              },
-            }
-          );
-
-          // 2️⃣ Remove ONLY purchased items locally
-          const purchasedIds = selectedItems.map(item => item._id);
-          store.removePurchasedItems(purchasedIds);
-
-          // 3️⃣ Reset checkout state (NOT cart items)
-          store.resetCheckoutFlow();
-        }
-
-      } catch (error) {
-        console.error("Error verifying payment:", error);
-        toast.error("An error occurred during payment verification.");
-        router.push("/checkout");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (reference) {
       verifyPayment();
     }
   }, [reference]);
 
+  const verifyPayment = async () => {
+    setIsLoading(true);
+    // 🔥 If already verified, don't verify again
+    if (sessionStorage.getItem("paymentVerified") === "true") {
+      const savedMessage = sessionStorage.getItem("paymentMessage");
+      if (savedMessage) {
+        setResponseData(savedMessage);
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    const token = getBearerToken();
+    // const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
+
+    if (!token) {
+      toast.error("User not authenticated");
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `https://ajempire-backend.vercel.app/api/checkout/verify`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response?.data?.message) {
+        toast.error("Payment verification failed.");
+        router.push("/checkoutpage");
+        return;
+      }
+      // ✅ Payment successful
+      const message = response.data.message;
+
+      setResponseData(message);
+      toast.success("Payment verified successfully!");
+
+      // 🔥 Persist success so refresh doesn't clear it
+      sessionStorage.setItem("paymentVerified", "true");
+      sessionStorage.setItem("paymentMessage", message);
+
+      const store = useCartStore.getState();
+      const selectedItems = store.getSelectedItems();
+
+      if (selectedItems.length > 0) {
+        // 2️⃣ Remove ONLY purchased items locally
+        const purchasedIds = selectedItems.map((item) => item._id);
+        store.removePurchasedItems(purchasedIds);
+
+        // 3️⃣ Reset checkout state (NOT cart items)
+        store.resetCheckoutFlow();
+      }
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      toast.error("An error occurred during payment verification.");
+      router.push("/checkoutpage");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -238,7 +216,6 @@ export default function PaymentConfirmation() {
                 setShowModal(false);
                 router.push("/");
               }}
-
             >
               <p className="lg:hidden w-full text-[16px]">
                 Payment Confirmation

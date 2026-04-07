@@ -28,6 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!getBearerToken()) return;
     const initWishlist = useWishlistStore.getState().initWishlist;
 
     initWishlist();

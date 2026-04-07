@@ -1,31 +1,29 @@
 "use client";
 import CheckoutSummeryCard from "@/app/components/CheckoutSummeryCard";
 import GetshippingAddress from "@/app/components/ui/GetshippingAddress";
-import SelectedpaymentMethod from "./SelectedpaymentMethod";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
-import ListOfLogistics from "./ListOfLogistics";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
-
+import { globalUrl } from "@/api/api";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCartSynced, setIsCartSynced] = useState(false);
-  const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
-  console.log("selected logistic in order summary:", selectedLogistic?.delivery_eta);
+  const { getSelectedItems, selectedLogistic, requestToken } = useCartStore();
+  const [isLogisticsMode, setIsLogisticsMode] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const syncCart = async () => {
       setIsLoading(true);
       const token = getBearerToken();
-      
+
       if (!token) {
         if (isMounted) {
           setIsCartSynced(true);
@@ -38,34 +36,31 @@ export default function OrderSummaryPage() {
       if (!selectedItems || selectedItems.length === 0) {
         toast.error("No selected items to sync for checkout.");
         if (isMounted) {
-            setIsCartSynced(true);
-            setIsLoading(false);
+          setIsCartSynced(true);
+          setIsLoading(false);
         }
         return;
       }
 
       try {
-        const itemsPayload = selectedItems.map(item => ({
+        const itemsPayload = selectedItems.map((item) => ({
           productId: item._id,
           qty: item.quantity,
           variants: item.selectedVariants?.length
-            ? item.selectedVariants.map(variant => ({
+            ? item.selectedVariants.map((variant) => ({
                 name: variant.name,
                 value: variant.value,
               }))
             : [],
         }));
 
-        await axios.delete(
-          "https://ajempire-backend.vercel.app/api/cart/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            data: { items: itemsPayload },
-          }
-        );
+        await axios.delete("https://ajempire-backend.vercel.app/api/cart/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          data: { items: itemsPayload },
+        });
 
         await axios.post(
           "https://ajempire-backend.vercel.app/api/cart/",
@@ -75,7 +70,7 @@ export default function OrderSummaryPage() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         console.log("Cart synced to backend successfully!");
@@ -100,8 +95,6 @@ export default function OrderSummaryPage() {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
-    console.log("selected payment method", paymentMethod)
-
 
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
@@ -114,21 +107,21 @@ export default function OrderSummaryPage() {
       return;
     }
 
-
     const selectedItems = getSelectedItems();
-    console.log("Selected items for checkout:", selectedItems);
 
     if (!selectedItems || selectedItems.length === 0) {
       toast.error("Select an item to continue", { position: "top-right" });
-      setIsLoading(false)
-      return;
-    }
-    if (!selectedLogistic) {
-      toast.error("Please select a delivery option before checkout", {
-        position: "top-right",
-      });
       setIsLoading(false);
       return;
+    }
+    if (isLogisticsMode) {
+      if (!selectedLogistic) {
+        toast.error("Please select a delivery option before checkout", {
+          position: "top-right",
+        });
+        setIsLoading(false);
+        return;
+      }
     }
 
     // Cart is already synced to backend on page load!
@@ -138,27 +131,29 @@ export default function OrderSummaryPage() {
         "https://ajempire-backend.vercel.app/api/checkout",
         {
           paymentMethod,
-          logistics: {
-            request_token: requestToken,
-            courier_id: selectedLogistic.courier_id,
-            service_code: selectedLogistic.courier_id,
-          },
+          logistics: isLogisticsMode
+            ? {
+                request_token: requestToken,
+                courier_id: selectedLogistic?.courier_id,
+                service_code: selectedLogistic?.courier_id,
+              }
+            : null,
         },
         {
           headers: {
             Authorization: `Bearer ${getBearerToken()}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response?.data?.message?.url) {
         window.location.href = response.data.message.url;
-        console.log("Payment URL set to:", response.data.message.url);
+        // console.log("Payment URL set to:", response.data.message.url);
         const store = useCartStore.getState();
 
         store.resetCheckoutFlow();
-        console.log("Checkout step after reset:", store.checkoutStep);
+        // console.log("Checkout step after reset:", store.checkoutStep);
       } else {
         toast.error("Failed to initiate checkout. Please try again.", {
           position: "top-right",
@@ -167,19 +162,24 @@ export default function OrderSummaryPage() {
     } catch (error) {
       toast.error("An error occurred during checkout. Please try again.", {
         position: "top-right",
-
       });
-      console.log("order summary error", error)
-    } finally {
-      setTimeout(() => setIsLoading(false), 800);
+      console.log("order summary error", error);
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkLogistics = async () => {
+      const req = await axios.get(`${globalUrl}/logisticsStatus`);
+      setIsLogisticsMode(req.data.logisticsMode === "auto");
+    };
+    checkLogistics();
+  }, []);
 
   return (
     <div className="w-full flex flex-col lg:flex-row items-start justify-between lg:px-[30px] lg:py-[30px] pt-6 px-4 font-poppins">
       {isLoading && <Spinner />}
       <div className="lg:hidden w-full flex items-center text-center mb-8 lg:mb-0">
-
         <Link href={"/pages/cart"}>
           <svg
             width="24"
@@ -256,8 +256,17 @@ export default function OrderSummaryPage() {
           </svg>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z" fill="#FFCC00" />
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 0C5.4 0 0 5.4 0 12C0 18.6 5.4 24 12 24C18.6 24 24 18.6 24 12C24 5.4 18.6 0 12 0ZM9.6 18L3.6 12L5.292 10.308L9.6 14.604L18.708 5.496L20.4 7.2L9.6 18Z"
+              fill="#FFCC00"
+            />
           </svg>
           <p className="text-[#A3A3A3]">Logistics</p>
         </div>
@@ -278,7 +287,8 @@ export default function OrderSummaryPage() {
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            xmlns="http://www.w3.org/2000/svg">
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <rect width="24" height="24" rx="12" fill="#FF008C" />
             <path
               d="M11 7V13.6667L14 17"
@@ -298,28 +308,40 @@ export default function OrderSummaryPage() {
       <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <div className="w-full">
           <GetshippingAddress />
-          <div className="mt-4 lg:block hidden">
-            <p className="text-lg font-semibold">Delivery details</p>
-            <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
-              <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
-              <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
-                <span className="text-brand_solid_gradient">
-                  {selectedLogistic?.delivery_eta_time &&
-                    new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
-                      "en-US",
-                      {
+          {isLogisticsMode && (
+            <div className="mt-4 lg:block hidden">
+              <p className="text-lg font-semibold">Delivery details</p>
+              <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
+                <p>
+                  <span className="font-medium text-black">
+                    Delivery Arrives:
+                  </span>{" "}
+                  {selectedLogistic?.delivery_eta}
+                </p>
+                <p>
+                  <span className="font-medium text-black">
+                    Delivery Arrives on:
+                  </span>{" "}
+                  <span className="text-brand_solid_gradient">
+                    {selectedLogistic?.delivery_eta_time &&
+                      new Date(
+                        selectedLogistic.delivery_eta_time,
+                      ).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
-                      }
-                    )}
-                </span>
-              </p>
+                      })}
+                  </span>
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {isCartSynced ? (
-          <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
+          <CheckoutSummeryCard
+            initiateCheckout={initiateCheckout}
+            logisticsStatus={isLogisticsMode}
+          />
         ) : (
           <div className="w-full p-20 font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-center gap-4 text-gray-400">
             <p className="animate-pulse">Syncing checkout session...</p>

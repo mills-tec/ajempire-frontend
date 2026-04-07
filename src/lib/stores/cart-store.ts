@@ -5,7 +5,10 @@ import { calcDiscount } from "../utils";
 import { addToCart, getBearerToken, removeCartItem } from "../api";
 import { toast } from "sonner";
 
-export const areVariantsEqual = (v1?: SelectedVariant[] | null, v2?: SelectedVariant[] | null) => {
+export const areVariantsEqual = (
+  v1?: SelectedVariant[] | null,
+  v2?: SelectedVariant[] | null,
+) => {
   const arr1 = v1 || [];
   const arr2 = v2 || [];
   if (arr1.length !== arr2.length) return false;
@@ -35,6 +38,7 @@ interface SelectedLogistic {
   courier_id: string;
   courier_name: string;
   courier_image: string;
+  delivery_eta_time: string;
   delivery_eta: string;
 delivery_eta_time: string;
   total: number;
@@ -59,6 +63,8 @@ type SyncAction =
   | { type: "update"; item: CartItem };
 
 type CartStore = {
+  isLogisticsMode: boolean;
+  setIsLogisticsMode: (isLogisticsMode: boolean) => void;
   items: CartItem[];
   selectedItem: Product | null; // this stores the product for the product card that has been clicked on for the popup
   syncQueue: SyncAction[]; // item ids pending server sync
@@ -110,6 +116,9 @@ type CartStore = {
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+      isLogisticsMode: true,
+      setIsLogisticsMode: (isLogisticsMode: boolean) =>
+        set({ isLogisticsMode }),
       items: [],
       selectedItem: null,
       syncQueue: [],
@@ -158,13 +167,20 @@ export const useCartStore = create<CartStore>()(
           ? item.variants.length
           : Array.from(
               new Set(
-                (item.variantCombinations ?? [])
-                  .flatMap((combo) => combo.options.map((option) => option.name)),
+                (item.variantCombinations ?? []).flatMap((combo) =>
+                  combo.options.map((option) => option.name),
+                ),
               ),
             ).length;
 
-        if (hasVariants && (!item.selectedVariants || item.selectedVariants.length !== requiredVariantCount)) {
-          toast.error("Please select all required variants before adding to cart");
+        if (
+          hasVariants &&
+          (!item.selectedVariants ||
+            item.selectedVariants.length !== requiredVariantCount)
+        ) {
+          toast.error(
+            "Please select all required variants before adding to cart",
+          );
           return;
         }
 
@@ -177,7 +193,8 @@ export const useCartStore = create<CartStore>()(
 
         if (existing) {
           newItems = get().items.map((i) =>
-            i._id === item._id && areVariantsEqual(i.selectedVariants, item.selectedVariants)
+            i._id === item._id &&
+            areVariantsEqual(i.selectedVariants, item.selectedVariants)
               ? { ...i, quantity: i.quantity + item.quantity, synced: false }
               : i,
           );
@@ -223,7 +240,9 @@ export const useCartStore = create<CartStore>()(
         const currentItem = get().items.find((i) => i._id === id);
 
         // 🚨 PREVENT LOOP: don't update if nothing changed
-        const isSame = currentItem && areVariantsEqual(currentItem.selectedVariants, variants);
+        const isSame =
+          currentItem &&
+          areVariantsEqual(currentItem.selectedVariants, variants);
 
         if (isSame) return;
 

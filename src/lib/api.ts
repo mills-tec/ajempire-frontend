@@ -1,4 +1,4 @@
-import { getData, postData } from "@/api/api";
+import { postData } from "@/api/api";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
@@ -33,6 +33,7 @@ export async function loginBackend(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
+  console.log(res);
   if (!res.ok) throw new Error("Login failed");
   return res.json();
 }
@@ -144,7 +145,6 @@ export async function getProducts(
   const res = await fetch(`${API_URL}/product?${queryString}`);
   if (!res.ok) return null;
   const resp = await res.json();
-  console.log(resp.message);
   return resp;
 }
 
@@ -280,8 +280,15 @@ export async function addToCart(products: CartItem[]) {
 
   // Validate that products with variants have selectedVariants
   for (const product of products) {
-    if (product.variants && product.variants.length > 0 && (!product.selectedVariants || product.selectedVariants.length !== product.variants.length)) {
-      throw new Error(`Product "${product.name}" requires ${product.variants.length} variants but only ${product.selectedVariants?.length || 0} were selected.`);
+    if (
+      product.variants &&
+      product.variants.length > 0 &&
+      (!product.selectedVariants ||
+        product.selectedVariants.length !== product.variants.length)
+    ) {
+      throw new Error(
+        `Product "${product.name}" requires ${product.variants.length} variants but only ${product.selectedVariants?.length || 0} were selected.`,
+      );
     }
   }
 
@@ -295,7 +302,6 @@ export async function addToCart(products: CartItem[]) {
         }))
       : [],
   }));
-  // return;
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);
@@ -456,8 +462,10 @@ export async function getProductsByCategory(
   category: string,
   query?: string,
 ): Promise<Product[]> {
-  const queryString = query ? `?${query}` : '';
-  const res = await fetch(`${API_URL}/category/${category}/product${queryString}`);
+  const queryString = query ? `?${query}` : "";
+  const res = await fetch(
+    `${API_URL}/category/${category}/product${queryString}`,
+  );
   if (!res.ok) return [];
 
   const data = await res.json();
@@ -562,17 +570,16 @@ export async function getShippingRates(packageItems: any[]): Promise<{
   if (!token) throw new Error("User not authenticated");
 
   const res = await fetch(`${API_URL}/shippingRates`, {
-    method: "POST",
+    method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      items: packageItems,
-      package_items: packageItems,
-    }),
   });
-
+  // body: JSON.stringify({
+  //   items: packageItems,
+  //   package_items: packageItems,
+  // }),
   if (!res.ok) {
     const errorText = await res.text();
     console.error("Shipping rates API error:", errorText);

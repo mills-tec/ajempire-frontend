@@ -10,6 +10,7 @@ import { postData } from "@/api/api";
 
 interface CheckoutSummeryCardProps {
   initiateCheckout: (couponCode: string) => void;
+  logisticsStatus: boolean;
 }
 interface SelectedLogistic {
   courier_id: string;
@@ -20,6 +21,7 @@ interface SelectedLogistic {
 }
 export default function CheckoutSummeryCard({
   initiateCheckout,
+  logisticsStatus,
 }: CheckoutSummeryCardProps) {
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
@@ -91,10 +93,14 @@ export default function CheckoutSummeryCard({
   }
   return (
     <div className="w-full  font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-start gap-4  p-4">
-      <p className="font-medium text-[17px]">Your Order</p>
-      <div className="w-full">
-        <ListOfLogistics />
-      </div>
+      {logisticsStatus && (
+        <>
+          <p className="font-medium text-[17px]">Your Order</p>
+          <div className="w-full">
+            <ListOfLogistics />
+          </div>
+        </>
+      )}
 
       <div className="mt-4 lg:hidden w-full">
         <p className="text-lg font-semibold">Delivery details</p>
