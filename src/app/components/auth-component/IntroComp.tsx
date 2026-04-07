@@ -9,10 +9,10 @@ import { CloseIcon } from "@/components/svgs/CloseIcon";
 
 import {
   GoogleLogin,
-  GoogleOAuthProvider,
-  useGoogleOneTapLogin,
+  useGoogleOAuth,
+  type CredentialResponse,
 } from "@react-oauth/google";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import GoogleButton from "./GoogleButton";
 import axios from "axios";
 import { toast } from "sonner";
@@ -30,6 +30,61 @@ type IntroCompProps = {
 export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { setIsLoggedIn, setUser } = useAuthStore();
+  const { scriptLoadedSuccessfully } = useGoogleOAuth();
+
+  const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
+    const credential = credentialResponse.credential;
+
+    if (!credential) {
+      toast.error("Google login failed. Please try again.");
+      return;
+    }
+
+    setIsLoading(true);
+    axios
+      .post("https://ajempire-backend.vercel.app/api/auth/google/", {
+        token: credential,
+      })
+      .then((res) => {
+        if (res.data?.message?.token) {
+          const token = res.data.message.token;
+          const user = res.data.message.user;
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
+
+          setUser({
+            email: user.email,
+            name: user.fullname,
+            id: user._id,
+          });
+          saveAccounts({
+            email: user.email,
+            token,
+            user,
+          });
+          localStorage.setItem(
+            "ajempire_signin_user",
+            JSON.stringify({ token, user }),
+          );
+          setIsLoggedIn(true);
+          toast.success("Logged in successfully!", {
+            duration: 3000,
+          });
+          setTimeout(() => {
+            onClose();
+          }, 800);
+        }
+      })
+      .catch((err) => {
+        const message =
+          err.response?.data?.message ?? err.response?.data ?? err.message;
+        toast.error(message, { duration: 3000 });
+        console.error("Auth error:", message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
 
   return (
     <AnimatePresence>
@@ -71,72 +126,39 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             />
 
             <div className="w-[80%] space-y-4 mx-auto">
-              <GoogleOAuthProvider clientId="97080942381-seubabjh0nq15hdv2nhgj0ij4vjafoh5.apps.googleusercontent.com">
-                <GoogleLogin
-                  theme="outline"
-                  shape="circle"
-                  logo_alignment="center"
-                  size="medium"
-                  ux_mode="popup"
-                  onSuccess={(credentialResponse) => {
-                    const token = credentialResponse.credential;
-                    setIsLoading(true);
-                    axios
-                      .post(
-                        "https://ajempire-backend.vercel.app/api/auth/google/",
-                        {
-                          token: token,
-                        },
-                      )
-                      .then((res) => {
-                        if (res.data?.message?.token) {
-                          const token = res.data.message.token;
-                          const user = res.data.message.user;
-                          localStorage.setItem("token", token);
-                          localStorage.setItem("user", JSON.stringify(user));
-
-                          setUser({
-                            email: user.email,
-                            name: user.fullname,
-                            id: user._id,
-                          });
-                          // storing accounts so its easier to switch account
-                          saveAccounts({
-                            email: user.email,
-                            token,
-                            user: user,
-                          });
-                          localStorage.setItem(
-                            "ajempire_signin_user",
-                            JSON.stringify({ token, user }),
-                          );
-                          setIsLoggedIn(true);
-                          toast.success("Logged in successfully!", {
-                            duration: 3000,
-                          });
-                          setTimeout(() => {
-                            onClose();
-                          }, 800);
-                        }
-                      })
-                      .catch((err) => {
-                        const message = err.response?.data || err.message;
-                        toast.error(message, { duration: 3000 });
-                        console.error("Auth error:", message);
-                      })
-                      .finally(() => {
-                        setIsLoading(false); // stop loading in both success & error
-                      });
-                  }}
-                  onError={() => {
-                    console.log("Login Failed");
-                  }}
-                />
-              </GoogleOAuthProvider>
+              <div className="relative  min-h-5">
+                {!scriptLoadedSuccessfully && (
+                  <GoogleButton disabled isLoading />
+                )}
+                <div
+                  className={
+                    scriptLoadedSuccessfully
+                      ? "opacity-100 transition-opacity duration-150 w-full"
+                      : "pointer-events-none absolute inset-0 opacity-0"
+                    
+                  }
+                  aria-hidden={!scriptLoadedSuccessfully}
+                >
+                  <GoogleLogin
+                    theme="outline"
+                    text="continue_with"
+                    shape="pill"
+                    logo_alignment="left"
+                    size="large"
+                    width="100%"
+                    ux_mode="popup"
+                    containerProps={{ className: "w-full flex justify-center" }}
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      toast.error("Google login failed. Please try again.");
+                    }}
+                  />
+                </div>
+              </div>
               <div>
                 <Button
                   variant={"outline"}
-                  className="relative !rounded-full w-full text-sm  flex items-center justify-center gap-[2px] font-extralight"
+                  className="relative h-10 !rounded-full w-full text-sm flex items-center justify-center gap-[2px] font-extralight"
                   onClick={() => setScreen("signin")}
                 >
                   <span className="relative flex items-center justify-center w-6 h-6">
@@ -171,7 +193,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
               <div>
                 <Button
                   variant={"outline"}
-                  className="relative !rounded-full w-full text-sm flex items-center justify-center gap-[2px] font-extralight"
+                  className="relative h-10 !rounded-full w-full text-sm flex items-center justify-center gap-[2px] font-extralight"
                   onClick={() => setScreen("phonenumber")}
                 >
                   <span className="relative flex items-center justify-center w-6 h-6">
