@@ -40,6 +40,7 @@ interface SelectedLogistic {
   courier_image: string;
   delivery_eta_time: string;
   delivery_eta: string;
+delivery_eta_time: string;
   total: number;
 }
 
@@ -392,20 +393,43 @@ export const useCartStore = create<CartStore>()(
       orderSummary: () => {
         const items = get().items.filter((i) => i.selected);
 
-        const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-        const discount = items.reduce(
-          (sum, i) =>
-            sum +
-            calcDiscount(
-              i.price,
-              i.flashSales?.discountValue ?? 0,
-              i.flashSales?.discountType!,
-            ) *
-              i.quantity,
+        const itemEffectivePrice = (item: CartItem) => {
+          if (!item.variantCombinations || !item.selectedVariants?.length) {
+            return item.price;
+          }
+
+          const matchedCombo = item.variantCombinations.find((combo) =>
+            combo.options.every((option) =>
+              item.selectedVariants.some(
+                (selected) =>
+                  selected.name === option.name && selected.value === option.value,
+              ),
+            ),
+          );
+
+          return item.price + (matchedCombo?.additionalPrice ?? 0);
+        };
+
+        const total = items.reduce(
+          (sum, i) => sum + itemEffectivePrice(i) * i.quantity,
           0,
         );
 
-        // const coupon = 0;
+        const discount = items.reduce(
+          (sum, i) => {
+            const unitPrice = itemEffectivePrice(i);
+            const itemDiscount = i.flashSales
+              ? calcDiscount(
+                  unitPrice,
+                  i.flashSales.discountValue,
+                  i.flashSales.discountType,
+                )
+              : 0;
+            return sum + itemDiscount * i.quantity;
+          },
+          0,
+        );
+
         const appliedCoupon = get().appliedCoupon;
         let coupon = 0;
 

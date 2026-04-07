@@ -27,9 +27,10 @@ import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 
 import { useUpdates } from "@/api/customHooks";
+import { useModalStore } from "@/lib/stores/modal-store";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
-import Loading from "@/app/pages/ordersandaccount/loading";
+import { toast } from "sonner";
 
 export function FeedSkeleton() {
   return Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
@@ -175,6 +176,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
     getFeeds,
     loading,
   } = useUpdates();
+  const openModal = useModalStore((s) => s.openModal);
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
 
   const [loadingType, setLoadingType] = useState<"add" | "delete" | "">("");
@@ -315,28 +317,36 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const sendComment = async (parentId: string | null) => {
-    setLoadingType("add");
-    if (!loading) {
-      if (!comment.commentText) return;
-
-      const newComment: CommentData = {
-        _id: "",
-        text: comment.commentText,
-        user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
-        parentId,
-        likes: [],
-        replies: [],
-        showReplies: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const feedType = feeds.data.find((f) => f._id === id)?.type;
-      let xy = await addComments({
-        feedId: id as string,
-        type: feedType as string,
-        comment: newComment.text,
-        parentId: parentId as string,
+    if (!user?._id) {
+      openModal("authwrapper");
+      toast.error("You must be logged in to comment", {
+        position: "top-right",
       });
+      return;
+    }
+    if (!comment.commentText) return;
+
+    const newComment: CommentData = {
+      _id: "",
+      text: comment.commentText,
+      user: { _id: user._id, fullname: user.fullname, email: user.email },
+      parentId,
+      likes: [],
+      replies: [],
+      showReplies: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const feedType = feeds.data.find((f) => f._id === id)?.type;
+
+    if (parentId) {
+      updateFeedComments(id!, (comments) =>
+        addReplyRecursive(comments, parentId, newComment),
+      );
+    } else {
+      updateFeedComments(id!, (comments) => [...comments, newComment]);
+    }
 
       newComment._id = xy._id;
 
@@ -358,16 +368,24 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const likePost = async (_id: string) => {
+    if (!user?._id) {
+      openModal("authwrapper");
+      toast.error("You must be logged in to like posts", {
+        position: "top-right",
+      });
+      return;
+    }
+
     setData((prev) => ({
       ...prev,
       feeds: prev.feeds.map((feed) => {
         if (feed._id !== _id) return feed;
-        const liked = feed.likes!.some((l) => l === user?._id);
+        const liked = feed.likes!.some((l) => l === user._id);
         return {
           ...feed,
           likes: liked
-            ? feed.likes!.filter((l) => l !== user!._id)
-            : [...feed.likes!, user!._id],
+            ? feed.likes!.filter((l) => l !== user._id)
+            : [...feed.likes!, user._id],
         };
       }),
     }));
@@ -376,9 +394,17 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const likeComment = async (_id: string) => {
+    if (!user?._id) {
+      openModal("authwrapper");
+      toast.error("You must be logged in to like comments", {
+        position: "top-right",
+      });
+      return;
+    }
+
     const feed = data.feeds.find((f) => f._id === id);
     updateFeedComments(id!, (comments) =>
-      addRecursiveLike(comments, _id, user!._id),
+      addRecursiveLike(comments, _id, user._id),
     );
     await likeUpdateComment({
       feedId: id as string,
@@ -404,6 +430,26 @@ export default function FeedItem({ feeds }: FeedsProps) {
       );
 
       setLoadingType("");
+    }
+  };
+
+  const handleWishlistToggle = (product: Product) => {
+    if (!user?._id) {
+      openModal("authwrapper");
+      toast.error("You must be logged in to add to wishlist", {
+        position: "top-right",
+      });
+      return;
+    }
+
+    if (inWishlist) {
+      removeItem(product._id);
+      setInWishlist(false);
+      toast.success("Removed from wishlist", { position: "top-right" });
+    } else {
+      addItem(product);
+      setInWishlist(true);
+      toast.success("Added to wishlist", { position: "top-right" });
     }
   };
 
@@ -724,15 +770,9 @@ export default function FeedItem({ feeds }: FeedsProps) {
                 {item.product && (
                   <div
                     className={`w-10 h-10 ${inWishlist ? "bg-primaryhover" : "bg-white"} rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                    onClick={() => {
-                      if (inWishlist) {
-                        removeItem(item.product._id);
-                        setInWishlist(false);
-                      } else {
-                        addItem(item.product as Product);
-                        setInWishlist(true);
-                      }
-                    }}
+                    onClick={() =>
+                      handleWishlistToggle(item.product as Product)
+                    }
                   >
                     <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
                   </div>

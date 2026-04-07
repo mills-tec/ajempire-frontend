@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { Heart, LoaderCircle, Trash } from "lucide-react";
+import { Heart, Trash } from "lucide-react";
 import { CommentData } from "@/lib/types";
 import { getUser } from "@/lib/api";
 import { FaHeart } from "react-icons/fa";
@@ -27,7 +27,6 @@ interface CommentItemProps {
     fullname: string;
     email: string;
   };
-  loading: boolean;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -39,7 +38,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onLike,
   deleteComment,
   user,
-  loading,
 }) => {
   const [showReplies, setShowReplies] = React.useState(
     !item.showReplies ? false : true,
@@ -65,12 +63,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <div className="flex items-start">
           <div className="pr-3">
             <div className="w-6 h-6 bg-primaryhover rounded-full border text-[10px]  flex items-center justify-center text-white">
-              {item?.user?.fullname?.charAt(0).toUpperCase()}
+              {(item.user?.fullname || "U").charAt(0).toUpperCase()}
             </div>
+            ``{" "}
           </div>
           <div className="flex flex-1 justify-between">
             <div>
-              <p className="text-xs font-medium mb-1">{item.user.fullname}</p>
+              <p className="text-xs font-medium mb-1">
+                {item.user?.fullname || "Unknown"}
+              </p>
               <p className="text-xs font-light">
                 {" "}
                 <span className="text-blue-500 text-[10px]">
@@ -112,17 +113,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
             >
               Reply
             </p>
-            {item.user._id === user?._id &&
-              (loading ? (
-                <LoaderCircle className="animate-spin  text-white" size={14} />
-              ) : (
-                <Trash
-                  size={12}
-                  color="red"
-                  className="cursor-pointer"
-                  onClick={() => deleteComment(item)}
-                />
-              ))}
+            {item.user._id === user?._id && (
+              <Trash
+                size={12}
+                color="red"
+                className="cursor-pointer"
+                onClick={() => deleteComment(item)}
+              />
+            )}
           </div>
         </div>
 
@@ -171,7 +169,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
                         onLike={onLike}
                         deleteComment={deleteComment}
                         user={user}
-                        loading={loading}
                       />
                     );
                   })}
