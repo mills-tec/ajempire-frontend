@@ -3,19 +3,11 @@ import Image from "next/image";
 
 import GoogleLogo from "@/assets/google.png";
 
-import { useGoogleOneTapLogin } from "@react-oauth/google";
+// import { useGoogleOneTapLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 
 export default function GoogleButton() {
-  useGoogleOneTapLogin({
-    onSuccess: (credentialResponse) => {
-      console.log("google auth: ", credentialResponse);
-    },
-    onError: () => {
-      toast.error("Login Failed");
-      console.log("Login Failed");
-    },
-  });
+  // useGoogleOneTapLogin is removed to avoid FedCM issues
   return (
     <div>
       {/* <Link href={""}> */}

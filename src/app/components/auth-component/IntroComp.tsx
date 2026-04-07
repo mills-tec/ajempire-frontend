@@ -7,7 +7,6 @@ import Logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 
-
 import {
   GoogleLogin,
   GoogleOAuthProvider,
@@ -24,7 +23,7 @@ import { saveAccounts } from "@/lib/utils";
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
   setScreen: (
-    screen: "intro" | "signin" | "signup" | "phonenumber" | "forgotpassword"
+    screen: "intro" | "signin" | "signup" | "phonenumber" | "forgotpassword",
   ) => void;
 };
 
@@ -39,7 +38,8 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      >
         {isLoading && <Spinner />}
         <motion.div
           initial={{ y: 40, scale: 0.96, opacity: 0 }}
@@ -49,7 +49,8 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             duration: 0.3,
             ease: [0.22, 1, 0.36, 1], // premium easing
           }}
-          className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl">
+          className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl"
+        >
           <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
             <Image
               src={butterflyImage}
@@ -76,6 +77,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                   shape="circle"
                   logo_alignment="center"
                   size="medium"
+                  ux_mode="popup"
                   onSuccess={(credentialResponse) => {
                     const token = credentialResponse.credential;
                     setIsLoading(true);
@@ -84,24 +86,34 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                         "https://ajempire-backend.vercel.app/api/auth/google/",
                         {
                           token: token,
-                        }
+                        },
                       )
                       .then((res) => {
                         if (res.data?.message?.token) {
                           const token = res.data.message.token;
                           const user = res.data.message.user;
                           localStorage.setItem("token", token);
-                          localStorage.setItem("user", token);
+                          localStorage.setItem("user", JSON.stringify(user));
 
-                          setUser({ email: user.email, name: user.fullname, id: user._id });
+                          setUser({
+                            email: user.email,
+                            name: user.fullname,
+                            id: user._id,
+                          });
                           // storing accounts so its easier to switch account
-                          saveAccounts({ email: user.email, token, user: user })
+                          saveAccounts({
+                            email: user.email,
+                            token,
+                            user: user,
+                          });
                           localStorage.setItem(
                             "ajempire_signin_user",
-                            JSON.stringify({ token, user })
+                            JSON.stringify({ token, user }),
                           );
                           setIsLoggedIn(true);
-                          toast.success("Logged in successfully!", { duration: 3000 });
+                          toast.success("Logged in successfully!", {
+                            duration: 3000,
+                          });
                           setTimeout(() => {
                             onClose();
                           }, 800);
@@ -110,10 +122,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                       .catch((err) => {
                         const message = err.response?.data || err.message;
                         toast.error(message, { duration: 3000 });
-                        console.error(
-                          "Auth error:",
-                          message
-                        );
+                        console.error("Auth error:", message);
                       })
                       .finally(() => {
                         setIsLoading(false); // stop loading in both success & error
@@ -122,7 +131,6 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                   onError={() => {
                     console.log("Login Failed");
                   }}
-                  useOneTap
                 />
               </GoogleOAuthProvider>
               <div>
