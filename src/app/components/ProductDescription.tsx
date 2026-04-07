@@ -4,7 +4,7 @@ import { ProductResponse } from "@/lib/types";
 import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { getBearerToken, getUsersWishlist } from "@/lib/api";
+import { getBearerToken } from "@/lib/api";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import CountdownTimer from "@/components/CountDownTimer";
 import { useModalStore } from "@/lib/stores/modal-store";
@@ -44,15 +44,6 @@ export default function ProductDescription({
     availableVariants,
   } = useProductVariants(product);
   const openModal = useModalStore((s) => s.openModal);
-
-  useEffect(() => {
-    const fetchWishlist = async () => {
-      const wishlist = await getUsersWishlist();
-      // You might want to do something with wishlist here
-      // console.log("wishlist: ", wishlist);
-    };
-    fetchWishlist();
-  }, []);
   const checkoutHandler = () => {
     if (!ensureVariantSelection()) {
       return;

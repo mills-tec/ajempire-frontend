@@ -1,7 +1,7 @@
 "use client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
-import { calcDiscountPrice } from "@/lib/utils";
+import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
@@ -48,19 +48,20 @@ function CartCard({
   const [remove, setRemove] = useState(false);
 
   useEffect(() => {
-    const total = Number(
+    const unitPrice = Number(
       item.price + (selectedCombination?.additionalPrice ?? 0),
     );
-    const discount = item.flashSales
-      ? calcDiscountPrice(
-          total,
+    const unitDiscount = item.flashSales
+      ? calcDiscount(
+          unitPrice,
           item.flashSales?.discountValue ?? 0,
           item.flashSales?.discountType ?? "percent",
         )
       : 0;
+
     handleUpdateCartTotal({
-      total: total * cartItem!.quantity,
-      discount: discount * cartItem!.quantity,
+      total: unitPrice * cartItem!.quantity,
+      discount: unitDiscount * cartItem!.quantity,
       _id: item._id,
     });
   }, [selectedCombination, selectedItems.length, cartItem?.quantity]);

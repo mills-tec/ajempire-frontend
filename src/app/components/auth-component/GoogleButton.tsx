@@ -1,31 +1,32 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 import GoogleLogo from "@/assets/google.png";
 
-import { useGoogleOneTapLogin } from "@react-oauth/google";
-import { toast } from "sonner";
+type GoogleButtonProps = {
+  disabled?: boolean;
+  isLoading?: boolean;
+  onClick?: () => void;
+};
 
-export default function GoogleButton() {
-  useGoogleOneTapLogin({
-    onSuccess: (credentialResponse) => {
-      console.log("google auth: ", credentialResponse);
-    },
-    onError: () => {
-      toast.error("Login Failed");
-      console.log("Login Failed");
-    },
-  });
+export default function GoogleButton({
+  disabled = false,
+  isLoading = false,
+  onClick,
+}: GoogleButtonProps) {
   return (
     <div>
-      {/* <Link href={""}> */}
-
       <Button
+        type="button"
         variant={"outline"}
-        className="relative !rounded-full w-full text-sm flex items-center justify-center gap-4"
-        onClick={() => {}}
+        className="relative h-10 !rounded-full w-full bg-white text-sm flex items-center justify-center gap-[2px] font-extralight disabled:opacity-100 disabled:cursor-wait"
+        disabled={disabled}
+        aria-busy={isLoading}
+        onClick={onClick}
       >
-        <span className="relative w-6 h-6">
+        <span className="relative flex items-center justify-center w-6 h-6">
           <Image
             src={GoogleLogo}
             alt="Google logo"
@@ -35,9 +36,8 @@ export default function GoogleButton() {
             priority
           />
         </span>
-        Continue with Google
+        {isLoading ? "Preparing Google..." : "Continue with Google"}
       </Button>
-      {/* </Link> */}
     </div>
   );
 }

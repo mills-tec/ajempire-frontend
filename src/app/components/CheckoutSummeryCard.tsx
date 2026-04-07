@@ -17,7 +17,7 @@ interface SelectedLogistic {
   total: number;
   delivery_eta: string;
   delivery_eta_time: string;
-};
+}
 export default function CheckoutSummeryCard({
   initiateCheckout,
 }: CheckoutSummeryCardProps) {
@@ -29,12 +29,11 @@ export default function CheckoutSummeryCard({
     useCartStore();
   const [couponCode, setCouponCode] = useState("");
   const [loadingCoupon, setLoadingCoupon] = useState(false);
-  const { items, getSelectedItems, selectedLogistic, requestToken } = useCartStore();
-
+  const { items, getSelectedItems, selectedLogistic, requestToken } =
+    useCartStore();
 
   useEffect(() => {
     setMounted(true);
-
   }, []);
 
   const handleApplyCoupon = async () => {
@@ -49,11 +48,15 @@ export default function CheckoutSummeryCard({
 
     try {
       const token = getBearerToken();
-      const res = await postData(`/coupon/apply`, { code }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await postData(
+        `/coupon/apply`,
+        { code },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       const coupon = res.data.coupon;
 
@@ -63,19 +66,13 @@ export default function CheckoutSummeryCard({
         value: coupon.discountValue,
       });
 
-
       toast.success("Coupon applied successfully", { position: "top-right" });
 
       // setCouponCode("");
-
-
-    }
-
-    catch (err: any) {
+    } catch (err: any) {
       console.error(err.response.data);
       toast.error(err.response.data.error, { position: "top-right" });
-    }
-    finally {
+    } finally {
       setLoadingCoupon(false);
     }
   };
@@ -86,8 +83,6 @@ export default function CheckoutSummeryCard({
       maximumFractionDigits: 0,
     }).format(Math.round(amount));
   };
-
-
 
   if (!mounted) {
     return (
@@ -104,8 +99,12 @@ export default function CheckoutSummeryCard({
       <div className="mt-4 lg:hidden w-full">
         <p className="text-lg font-semibold">Delivery details</p>
         <div className="mt-2 p-4 border w-full text-[14px] text-gray-600 border-gray-200 rounded-md">
-          <p><span className="font-medium text-black">Delivery Arrives:</span> {selectedLogistic?.delivery_eta}</p>
-          <p><span className="font-medium text-black">Delivery Arrives on:</span> {" "}
+          <p>
+            <span className="font-medium text-black">Delivery Arrives:</span>{" "}
+            {selectedLogistic?.delivery_eta}
+          </p>
+          <p>
+            <span className="font-medium text-black">Delivery Arrives on:</span>{" "}
             <span className="text-brand_solid_gradient">
               {selectedLogistic?.delivery_eta_time &&
                 new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
@@ -114,7 +113,7 @@ export default function CheckoutSummeryCard({
                     weekday: "short",
                     month: "short",
                     day: "numeric",
-                  }
+                  },
                 )}
             </span>
           </p>
@@ -137,7 +136,6 @@ export default function CheckoutSummeryCard({
               onChange={(e) => setCouponCode(e.target.value)}
               className="w-full h-full bg-transparent text-[12px] border-none outline-none"
             />
-
           </div>
           {/* <button className="bg-[#D3D3D3] w-[100px] h-[35px] rounded-full hover:bg-brand_solid_gradient hover:text-white transition-all duration-200">
             <p className="text-[14px]">Apply</p>
@@ -155,15 +153,22 @@ export default function CheckoutSummeryCard({
         <div className="flex flex-col gap-2 text-[14px]">
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Subtotal</p>
-            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().total)}</p>
+            <p className={`${styleadress}`}>
+              ₦{formatPrice(orderSummary().total)}
+            </p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Shipping Charge</p>
-            <p className={`${styleadress}`}> ₦{formatPrice(orderSummary().deliveryFee)}</p>
+            <p className={`${styleadress}`}>
+              {" "}
+              ₦{formatPrice(orderSummary().deliveryFee)}
+            </p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Discount</p>
-            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().discount)}</p>
+            <p className={`${styleadress}`}>
+              ₦{formatPrice(orderSummary().discount)}
+            </p>
           </div>
           {orderSummary().coupon > 0 && (
             <div className="flex items-center justify-between text-[#999999]">
@@ -175,7 +180,9 @@ export default function CheckoutSummeryCard({
           <hr />
           <div className="flex items-center justify-between">
             <p className={`${styleadress}`}>Total</p>
-            <p className={`${styleadress}`}>₦{formatPrice(orderSummary().finalTotal)}</p>
+            <p className={`${styleadress}`}>
+              ₦{formatPrice(orderSummary().finalTotal)}
+            </p>
           </div>
         </div>
       </div>
@@ -183,7 +190,7 @@ export default function CheckoutSummeryCard({
       <button
         className="w-full text-center mt-4 bg-primaryhover text-white h-[35px] rounded-full"
         onClick={() => {
-          initiateCheckout(couponCode)
+          initiateCheckout(couponCode);
         }}
       >
         Checkout

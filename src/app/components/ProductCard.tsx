@@ -1,13 +1,12 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { calcDiscountPrice, getCountdown } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { getUsersWishlist } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
 import { useModalStore } from "@/lib/stores/modal-store";
 
@@ -28,15 +27,6 @@ export default function ProductCard({
   const openModal = useModalStore((s) => s.openModal);
 
   const [imgLoading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchWishlist = async () => {
-      const wishlist = await getUsersWishlist();
-      // You might want to do something with wishlist here
-      // console.log("wishlist: ", wishlist);
-    };
-    fetchWishlist();
-  }, []);
 
   const filledStar = (
     <svg
