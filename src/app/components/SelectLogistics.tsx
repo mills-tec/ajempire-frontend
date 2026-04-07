@@ -17,7 +17,6 @@ export default function SelectLogistics({
   onClose,
 }: SelectLogisticsProps) {
   const { selectedLogistic } = useCartStore();
-  console.log("Selected Logistic from SelectLogistics:", selectedLogistic);
 
   return (
     <div className="fixed inset-0 bg-[#FFFFFF] flex lg:items-center lg:justify-center z-50">

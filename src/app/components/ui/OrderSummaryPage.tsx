@@ -9,11 +9,13 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { getBearerToken } from "@/lib/api";
 import Link from "next/link";
 import { useCheckoutStore } from "@/app/context/CheckoutContext";
+import { globalUrl } from "@/api/api";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCartSynced, setIsCartSynced] = useState(false);
   const { getSelectedItems, selectedLogistic, requestToken } = useCartStore();
+  const [isLogisticsMode, setIsLogisticsMode] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -93,7 +95,6 @@ export default function OrderSummaryPage() {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
-    console.log("selected payment method", paymentMethod);
 
     if (!token) {
       toast.error("Please log in to continue", { position: "top-right" });
@@ -107,19 +108,20 @@ export default function OrderSummaryPage() {
     }
 
     const selectedItems = getSelectedItems();
-    console.log("Selected items for checkout:", selectedItems);
 
     if (!selectedItems || selectedItems.length === 0) {
       toast.error("Select an item to continue", { position: "top-right" });
       setIsLoading(false);
       return;
     }
-    if (!selectedLogistic) {
-      toast.error("Please select a delivery option before checkout", {
-        position: "top-right",
-      });
-      setIsLoading(false);
-      return;
+    if (isLogisticsMode) {
+      if (!selectedLogistic) {
+        toast.error("Please select a delivery option before checkout", {
+          position: "top-right",
+        });
+        setIsLoading(false);
+        return;
+      }
     }
 
     // Cart is already synced to backend on page load!
@@ -129,11 +131,13 @@ export default function OrderSummaryPage() {
         "https://ajempire-backend.vercel.app/api/checkout",
         {
           paymentMethod,
-          logistics: {
-            request_token: requestToken,
-            courier_id: selectedLogistic.courier_id,
-            service_code: selectedLogistic.courier_id,
-          },
+          logistics: isLogisticsMode
+            ? {
+                request_token: requestToken,
+                courier_id: selectedLogistic?.courier_id,
+                service_code: selectedLogistic?.courier_id,
+              }
+            : null,
         },
         {
           headers: {
@@ -145,11 +149,11 @@ export default function OrderSummaryPage() {
 
       if (response?.data?.message?.url) {
         window.location.href = response.data.message.url;
-        console.log("Payment URL set to:", response.data.message.url);
+        // console.log("Payment URL set to:", response.data.message.url);
         const store = useCartStore.getState();
 
         store.resetCheckoutFlow();
-        console.log("Checkout step after reset:", store.checkoutStep);
+        // console.log("Checkout step after reset:", store.checkoutStep);
       } else {
         toast.error("Failed to initiate checkout. Please try again.", {
           position: "top-right",
@@ -160,10 +164,17 @@ export default function OrderSummaryPage() {
         position: "top-right",
       });
       console.log("order summary error", error);
-    } finally {
-      setTimeout(() => setIsLoading(false), 800);
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkLogistics = async () => {
+      const req = await axios.get(`${globalUrl}/logisticsStatus`);
+      setIsLogisticsMode(req.data.logisticsMode === "auto");
+    };
+    checkLogistics();
+  }, []);
 
   return (
     <div className="w-full flex flex-col lg:flex-row items-start justify-between lg:px-[30px] lg:py-[30px] pt-6 px-4 font-poppins">
@@ -297,35 +308,40 @@ export default function OrderSummaryPage() {
       <div className="w-full flex flex-col lg:flex-row  lg:items-start  lg:gap-6 gap-8">
         <div className="w-full">
           <GetshippingAddress />
-          <div className="mt-4 lg:block hidden">
-            <p className="text-lg font-semibold">Delivery details</p>
-            <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
-              <p>
-                <span className="font-medium text-black">
-                  Delivery Arrives:
-                </span>{" "}
-                {selectedLogistic?.delivery_eta}
-              </p>
-              <p>
-                <span className="font-medium text-black">
-                  Delivery Arrives on:
-                </span>{" "}
-                <span className="text-brand_solid_gradient">
-                  {selectedLogistic?.delivery_eta_time &&
-                    new Date(
-                      selectedLogistic.delivery_eta_time,
-                    ).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                </span>
-              </p>
+          {isLogisticsMode && (
+            <div className="mt-4 lg:block hidden">
+              <p className="text-lg font-semibold">Delivery details</p>
+              <div className="mt-2 p-4 border text-[14px] text-gray-600 border-gray-200 rounded-md">
+                <p>
+                  <span className="font-medium text-black">
+                    Delivery Arrives:
+                  </span>{" "}
+                  {selectedLogistic?.delivery_eta}
+                </p>
+                <p>
+                  <span className="font-medium text-black">
+                    Delivery Arrives on:
+                  </span>{" "}
+                  <span className="text-brand_solid_gradient">
+                    {selectedLogistic?.delivery_eta_time &&
+                      new Date(
+                        selectedLogistic.delivery_eta_time,
+                      ).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                  </span>
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         {isCartSynced ? (
-          <CheckoutSummeryCard initiateCheckout={initiateCheckout} />
+          <CheckoutSummeryCard
+            initiateCheckout={initiateCheckout}
+            logisticsStatus={isLogisticsMode}
+          />
         ) : (
           <div className="w-full p-20 font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-center gap-4 text-gray-400">
             <p className="animate-pulse">Syncing checkout session...</p>

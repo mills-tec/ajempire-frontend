@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { useCartStore, CheckoutStep } from "@/lib/stores/cart-store";
 import { useEffect, useRef } from "react";
 import { useModalStore } from "@/lib/stores/modal-store";
+import axios from "axios";
+import { globalUrl } from "@/api/api";
 
 // import { useCartStore, CheckoutStep } from "@/store/cartStore";
 
@@ -19,6 +21,8 @@ interface CheckoutWrapperProps {
 
 export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
   const router = useRouter();
+  const isLogisticsMode = useCartStore((s) => s.isLogisticsMode);
+
   // const {} = useCartStore();
   const checkoutStep = useCartStore((s) => s.checkoutStep);
   const setCheckoutStep = useCartStore((s) => s.setCheckoutStep);
@@ -39,10 +43,12 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     CheckoutStep.ORDER_SUMMARY,
   ];
 
-  const goToNextStep = () => {
+  const goToNextStep = async () => {
     const i = steps.indexOf(checkoutStep);
     if (i < steps.length - 1) {
-      setCheckoutStep(steps[i + 1]);
+      let nextStep = steps[i + 1];
+
+      setCheckoutStep(nextStep);
     }
   };
 
@@ -53,11 +59,6 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     }
   };
 
-  // useEffect(() => {
-  //     if (checkoutStep === CheckoutStep.ORDER_SUMMARY) {
-  //         router.push("/checkoutpage");
-  //     }
-  // }, [checkoutStep, router]);
   const redirected = useRef(false);
 
   useEffect(() => {
@@ -92,6 +93,9 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
           goToPreviousStep={goToPreviousStep}
           setIsadress={setIsadress}
           onClose={closeModal}
+          skipLogistics={() => {
+            setCheckoutStep(3);
+          }}
         />
       );
 

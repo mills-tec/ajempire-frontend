@@ -62,6 +62,8 @@ type SyncAction =
   | { type: "update"; item: CartItem };
 
 type CartStore = {
+  isLogisticsMode: boolean;
+  setIsLogisticsMode: (isLogisticsMode: boolean) => void;
   items: CartItem[];
   selectedItem: Product | null; // this stores the product for the product card that has been clicked on for the popup
   syncQueue: SyncAction[]; // item ids pending server sync
@@ -113,6 +115,9 @@ type CartStore = {
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+      isLogisticsMode: true,
+      setIsLogisticsMode: (isLogisticsMode: boolean) =>
+        set({ isLogisticsMode }),
       items: [],
       selectedItem: null,
       syncQueue: [],
