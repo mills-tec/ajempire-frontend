@@ -31,8 +31,7 @@ export default function CheckoutSummeryCard({
     useCartStore();
   const [couponCode, setCouponCode] = useState("");
   const [loadingCoupon, setLoadingCoupon] = useState(false);
-  const { items, getSelectedItems, selectedLogistic, requestToken } =
-    useCartStore();
+  const { selectedLogistic } = useCartStore();
 
   useEffect(() => {
     setMounted(true);

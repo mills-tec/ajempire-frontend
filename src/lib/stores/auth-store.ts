@@ -24,7 +24,7 @@ export const useAuthStore = create<AuthStore>()(
       setIsLoggedIn: (logged_in: boolean) => set({ isLoggedIn: logged_in }),
       setUser: (user: User) => set({ user }),
       isPushTokenSet: false,
-      setIsPushTokenSet: (isPushTokenSet: boolean) => set({ isPushTokenSet }),
+      setIsPushTokenSet: (val: boolean) => set({ isPushTokenSet: val }),
     }),
     {
       name: "auth-storage",
@@ -33,6 +33,6 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isPushTokenSet: state.isPushTokenSet,
       }), // only persist items
-    }
-  )
+    },
+  ),
 );
