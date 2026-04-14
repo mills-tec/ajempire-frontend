@@ -533,20 +533,47 @@ export const useBrowsingHistory = () => {
   const getBrowsingHistory = async (cursor: string, limit: number) => {
     if (!loading) {
       setUILoading(true);
+      // try {
+      //   const req = await getData(
+      //     `/browsing-history?limit=${limit}&cursor=${cursor}`,
+      //     config,
+      //   );
+      //   if (req.status === 401) {
+      //     return null; // 👈 VERY IMPORTANT
+      //   }
+      //   return req.data.message;
+      // } catch (err) {
+      //   let message;
+      //   if (err instanceof AxiosError) {
+      //     message = err.response?.data?.error || "Request failed";
+      //   } else {
+      //     message = "Something went wrong.";
+      //   }
+      //   toast.error(message);
+      // } finally {
+      //   setUILoading(false);
+      // }
       try {
         const req = await getData(
           `/browsing-history?limit=${limit}&cursor=${cursor}`,
           config,
         );
+
         return req.data.message;
       } catch (err) {
-        let message;
         if (err instanceof AxiosError) {
-          message = err.response?.data?.error || "Request failed";
+          // ✅ HANDLE 401 HERE
+          if (err.response?.status === 401) {
+            return null; // 👈 THIS is the correct place
+          }
+
+          const message = err.response?.data?.error || "Request failed";
+          toast.error(message);
         } else {
-          message = "Something went wrong.";
+          toast.error("Something went wrong.");
         }
-        toast.error(message);
+
+        return null; // 👈 always return something safe
       } finally {
         setUILoading(false);
       }
