@@ -111,6 +111,7 @@ function HomeContent({
   }, []);
 
   const products = data?.message?.products ?? [];
+  console.log("Products:", products);
   const categoryFilterActive = Boolean(selectedCategory);
 
   // Reflect pull-to-refresh loading and reset scroll state after refresh

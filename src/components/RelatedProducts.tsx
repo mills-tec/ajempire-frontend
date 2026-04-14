@@ -10,7 +10,13 @@ import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 // const ITEMS_TO_APPEND = 10;
 
-export default function RelatedProducts({ category }: { category: string }) {
+export default function RelatedProducts({
+  category,
+  shuffleSeed,
+}: {
+  category: string;
+  shuffleSeed: number;
+}) {
   const queryClient = useQueryClient();
 
   const [cursor, setCursor] = useState("");
@@ -38,9 +44,34 @@ export default function RelatedProducts({ category }: { category: string }) {
     },
   );
 
+  // const products = useMemo(() => {
+  //   return data?.products ?? [];
+  // }, [data]);
+
+  // useEffect(() => {
+  //   if (!shuffleSeed) return;
+
+  //   queryClient.setQueryData(["relatedProducts", category], (oldData: any) => {
+  //     if (!oldData?.products) return oldData;
+
+  //     const shuffled = shuffleArray([...oldData.products]);
+
+  //     return {
+  //       ...oldData,
+  //       products: shuffled,
+  //     };
+  //   });
+  // }, [shuffleSeed, category, queryClient]);
+
   const products = useMemo(() => {
-    return data?.products ?? [];
-  }, [data]);
+    const base = data?.products ?? [];
+
+    if (!base.length) return base;
+
+    return shuffleSeed
+      ? shuffleArray([...base]) // clone before shuffle
+      : base;
+  }, [data, shuffleSeed]);
 
   /*
    * STORE ORIGINAL DATASET ONCE
@@ -132,7 +163,8 @@ export default function RelatedProducts({ category }: { category: string }) {
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
       {products.map((product: any, index: number) => (
         <div
-          key={index}
+          // key={index}
+          key={`${product._id}-${index}`}
           ref={
             !hasNextPage && index === products.length - 1 ? lastItemRef : null
           }

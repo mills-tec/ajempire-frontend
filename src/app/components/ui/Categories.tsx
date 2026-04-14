@@ -57,7 +57,7 @@ const Categories = ({
   }
 
   return (
-    <div className="lg:pt-4">
+    <div id="categories-section" className="lg:pt-4">
       {/* Header */}
       <div className="hidden lg:flex items-center gap-2 px-4">
         <p className="text-[16px] font-poppins font-medium">{cat}</p>

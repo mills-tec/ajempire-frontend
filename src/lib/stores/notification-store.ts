@@ -50,8 +50,12 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       notifications: state.notifications.filter((n) => n._id !== id),
     })),
 
+  // getUnreadNotifications: (userId: string) =>
+  //   get().notifications.filter(
+  //     (n) => !n.readBy.find((r) => r.userId === userId),
+  //   ).length,
   getUnreadNotifications: (userId: string) =>
-    get().notifications.filter(
-      (n) => !n.readBy.find((r) => r.userId === userId),
-    ).length,
+  get().notifications.filter(
+    (n) => !(n.readBy ?? []).find((r) => r.userId === userId)
+  ).length,
 }));
