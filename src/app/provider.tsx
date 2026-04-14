@@ -5,6 +5,7 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { getBearerToken } from "@/lib/api";
 
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ??

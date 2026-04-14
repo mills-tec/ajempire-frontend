@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import LayoutWrapper from "./components/LayoutWrapper";
 import { CartIconProvider } from "./contextanimation/CartIconContext";
 
-
 import NotificationWrapper from "@/components/NotificationWrapper";
 import ModalProvider from "./components/providers/ModalProvider";
 import NetworkStatus from "./components/NetworkStatus";
@@ -28,12 +27,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   return (
-
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
-
         {/* System UI */}
         <Toaster />
         <NotificationWrapper />
@@ -43,19 +39,14 @@ export default function RootLayout({
             <CartIconProvider>
               <NetworkStatus />
               {/* App Layout */}
-              <LayoutWrapper>
-                {children}
-              </LayoutWrapper>
+              <LayoutWrapper>{children}</LayoutWrapper>
 
               {/* ⭐ GLOBAL UI LAYER (IMPORTANT POSITION) */}
               <ModalProvider />
-
             </CartIconProvider>
           </TooltipProvider>
         </Providers>
-
       </body>
     </html>
   );
-
 }

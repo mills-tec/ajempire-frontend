@@ -40,7 +40,6 @@ interface SelectedLogistic {
   courier_image: string;
   delivery_eta_time: string;
   delivery_eta: string;
-delivery_eta_time: string;
   total: number;
 }
 

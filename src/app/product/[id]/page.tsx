@@ -16,10 +16,19 @@ import VideoPlayer from "@/components/VideoPlayer";
 import RelatedProducts from "@/components/RelatedProducts";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useProductVariants } from "@/lib/useProductVariants";
+import RefreshWrapper from "@/app/components/RefreshWrapper";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const reshuffle = async () => {
+    setShuffleSeed(Math.random());
+
+    // optional: slight delay so user feels refresh
+    await new Promise((res) => setTimeout(res, 300));
+  };
 
   // ✅ All hooks must be at the top and unconditional
   const {
@@ -33,6 +42,11 @@ export default function ProductDetailPage() {
     removeItem,
     setQuantity: setCartItemQty,
   } = useCartStore();
+  const {
+    addItem: addWishlistItem,
+    removeItem: removeWishlistItem,
+    isInWishlist,
+  } = useWishlistStore();
 
   const { data, isLoading, isError } = useQuery(
     ["product", id],
@@ -184,19 +198,6 @@ export default function ProductDetailPage() {
     );
   };
 
-  // 🧩 Update quantity safely
-  // useEffect(() => {
-  //   if (!item) return; // don’t run until item exists
-
-  //   if (!cartItem) return;
-
-  //   if (quantity === 0) {
-  //     removeItem(cartItem._id);
-  //   } else {
-  //     setCartItemQty(cartItem._id, quantity);
-  //   }
-
-  // }, [cartItem, quantity, item, removeItem, setCartItemQty]);
   useEffect(() => {
     if (!item || !cartItem) return;
 
@@ -263,355 +264,391 @@ export default function ProductDetailPage() {
   );
   const currentMediaSrc = currentCoverItem.src || "/placeholder.png";
   const isCurrentMediaLoaded = Boolean(loadedMedia[currentMediaSrc]);
-  return (
-    <section className="">
-      <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
-        <Link href={"/"}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15.5307 18.9698C15.6004 19.0395 15.6557 19.1222 15.6934 19.2132C15.7311 19.3043 15.7505 19.4019 15.7505 19.5004C15.7505 19.599 15.7311 19.6965 15.6934 19.7876C15.6557 19.8786 15.6004 19.9614 15.5307 20.031C15.461 20.1007 15.3783 20.156 15.2873 20.1937C15.1962 20.2314 15.0986 20.2508 15.0001 20.2508C14.9016 20.2508 14.804 20.2314 14.7129 20.1937C14.6219 20.156 14.5392 20.1007 14.4695 20.031L6.96948 12.531C6.89974 12.4614 6.84443 12.3787 6.80668 12.2876C6.76894 12.1966 6.74951 12.099 6.74951 12.0004C6.74951 11.9019 6.76894 11.8043 6.80668 11.7132C6.84443 11.6222 6.89974 11.5394 6.96948 11.4698L14.4695 3.96979C14.6102 3.82906 14.8011 3.75 15.0001 3.75C15.1991 3.75 15.39 3.82906 15.5307 3.96979C15.6715 4.11052 15.7505 4.30139 15.7505 4.50042C15.7505 4.69944 15.6715 4.89031 15.5307 5.03104L8.56041 12.0004L15.5307 18.9698Z"
-              fill="black"
-            />
-          </svg>
-        </Link>
 
-        <div className="flex gap-2 items-center"></div>
-      </div>
-      <div className="px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 ">
-        <div className="lg:flex lg:space-x-20">
-          <div className="lg:w-1/2 h-full space-y-8">
-            <div className="space-y-4">
-              <div
-                className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${
-                  !isCurrentMediaLoaded ? "bg-gray-200 animate-fast-pulse" : ""
-                }`}
-              >
-                {currentCoverItem.type === "image" ? (
-                  <Image
-                    src={currentMediaSrc}
-                    alt={item.name}
-                    fill
-                    className={`absolute object-cover transition-opacity duration-200 ${
-                      isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                    }`}
-                    onLoad={() => {
-                      markMediaLoaded(currentMediaSrc);
-                    }}
-                  />
-                ) : (
-                  <div
-                    className={`absolute w-full h-full transition-opacity duration-200 ${
-                      isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                    }`}
-                  >
-                    <VideoPlayer
-                      handleVideoPlay={handleVideoPlay}
-                      item={item}
-                      video={video}
-                      playingMap={playingMap}
-                      videoRefs={videoRefs}
-                      src={currentCoverItem.src}
-                      setPlayingMap={setPlayingMap}
-                      handleSetVideo={(data) =>
-                        setVideo((prev) => ({ ...prev, ...data }))
-                      }
-                      onLoadedData={() => {
-                        markMediaLoaded(currentCoverItem.src);
+  return (
+    <RefreshWrapper onRefreshExtra={reshuffle}>
+      <section className="">
+        <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
+          <Link href={"/"}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15.5307 18.9698C15.6004 19.0395 15.6557 19.1222 15.6934 19.2132C15.7311 19.3043 15.7505 19.4019 15.7505 19.5004C15.7505 19.599 15.7311 19.6965 15.6934 19.7876C15.6557 19.8786 15.6004 19.9614 15.5307 20.031C15.461 20.1007 15.3783 20.156 15.2873 20.1937C15.1962 20.2314 15.0986 20.2508 15.0001 20.2508C14.9016 20.2508 14.804 20.2314 14.7129 20.1937C14.6219 20.156 14.5392 20.1007 14.4695 20.031L6.96948 12.531C6.89974 12.4614 6.84443 12.3787 6.80668 12.2876C6.76894 12.1966 6.74951 12.099 6.74951 12.0004C6.74951 11.9019 6.76894 11.8043 6.80668 11.7132C6.84443 11.6222 6.89974 11.5394 6.96948 11.4698L14.4695 3.96979C14.6102 3.82906 14.8011 3.75 15.0001 3.75C15.1991 3.75 15.39 3.82906 15.5307 3.96979C15.6715 4.11052 15.7505 4.30139 15.7505 4.50042C15.7505 4.69944 15.6715 4.89031 15.5307 5.03104L8.56041 12.0004L15.5307 18.9698Z"
+                fill="black"
+              />
+            </svg>
+          </Link>
+
+          <div className="flex gap-2 items-center"></div>
+        </div>
+        <div className="px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 ">
+          <div className="lg:flex lg:space-x-20">
+            <div className="lg:w-1/2 h-full space-y-8">
+              <div className="space-y-4">
+                <div
+                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${
+                    !isCurrentMediaLoaded
+                      ? "bg-gray-200 animate-fast-pulse"
+                      : ""
+                  }`}
+                >
+                  {currentCoverItem.type === "image" ? (
+                    <Image
+                      src={currentMediaSrc}
+                      alt={item.name}
+                      fill
+                      className={`absolute object-cover transition-opacity duration-200 ${
+                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                      }`}
+                      onLoad={() => {
+                        markMediaLoaded(currentMediaSrc);
                       }}
                     />
-                  </div>
+                  ) : (
+                    <div
+                      className={`absolute w-full h-full transition-opacity duration-200 ${
+                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      <VideoPlayer
+                        handleVideoPlay={handleVideoPlay}
+                        item={item}
+                        video={video}
+                        playingMap={playingMap}
+                        videoRefs={videoRefs}
+                        src={currentCoverItem.src}
+                        setPlayingMap={setPlayingMap}
+                        handleSetVideo={(data) =>
+                          setVideo((prev) => ({ ...prev, ...data }))
+                        }
+                        onLoadedData={() => {
+                          markMediaLoaded(currentCoverItem.src);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 lg:gap-5 flex-wrap">
+                  {thumbnailImages.length > 0 || item.video ? (
+                    <>
+                      {thumbnailImages.map((image, key) => (
+                        <button
+                          type="button"
+                          key={key}
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
+                            currentCoverItem.type === "image" &&
+                            currentCoverItem.src === image
+                              ? "border-brand_pink"
+                              : "border-transparent"
+                          }`}
+                          onClick={() => {
+                            setCurrentCoverItem({
+                              src: image,
+                              type: "image",
+                            });
+                          }}
+                        >
+                          <Image
+                            src={image}
+                            alt={`${item.name} thumbnail ${key + 1}`}
+                            fill
+                            className="absolute object-cover"
+                          />
+                        </button>
+                      ))}
+
+                      {item.video && (
+                        <button
+                          type="button"
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
+                            currentCoverItem.type === "video"
+                              ? "border-brand_pink"
+                              : "border-transparent"
+                          }`}
+                          onClick={() => {
+                            setCurrentCoverItem({
+                              src: item.video!,
+                              type: "video",
+                            });
+                          }}
+                        >
+                          <video
+                            preload="metadata"
+                            ref={setVideoRef}
+                            src={item.video}
+                            className="absolute object-cover h-full w-full"
+                            onLoadedMetadata={(e) => {
+                              e.currentTarget.currentTime = 0;
+                            }}
+                            muted
+                            onMouseEnter={() => {
+                              void videoRef?.play();
+                            }}
+                            onMouseLeave={() => {
+                              videoRef?.pause();
+                            }}
+                            playsInline
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M5 4.5L11.5 8L5 11.5V4.5Z"
+                                fill="white"
+                              />
+                            </svg>
+                          </div>
+                        </button>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              </div>
+              <div className="lg:hidden">
+                {data?.message && (
+                  <ProductDescription
+                    handleSelectCover={(
+                      src: string,
+                      type: "image" | "video",
+                    ) => {
+                      setCurrentCoverItem({
+                        src,
+                        type,
+                      });
+                    }}
+                    product_data={data}
+                  />
                 )}
               </div>
-              <div className="flex gap-2 lg:gap-5 flex-wrap">
-                {thumbnailImages.length > 0 || item.video ? (
-                  <>
-                    {thumbnailImages.map((image, key) => (
-                      <button
-                        type="button"
-                        key={key}
-                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                          currentCoverItem.type === "image" &&
-                          currentCoverItem.src === image
-                            ? "border-brand_pink"
-                            : "border-transparent"
-                        }`}
-                        onClick={() => {
-                          setCurrentCoverItem({
-                            src: image,
-                            type: "image",
-                          });
-                        }}
-                      >
-                        <Image
-                          src={image}
-                          alt={`${item.name} thumbnail ${key + 1}`}
-                          fill
-                          className="absolute object-cover"
-                        />
-                      </button>
-                    ))}
 
-                    {item.video && (
-                      <button
-                        type="button"
-                        className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                          currentCoverItem.type === "video"
-                            ? "border-brand_pink"
-                            : "border-transparent"
-                        }`}
-                        onClick={() => {
-                          setCurrentCoverItem({
-                            src: item.video!,
-                            type: "video",
-                          });
-                        }}
-                      >
-                        <video
-                          preload="metadata"
-                          ref={setVideoRef}
-                          src={item.video}
-                          className="absolute object-cover h-full w-full"
-                          onLoadedMetadata={(e) => {
-                            e.currentTarget.currentTime = 0;
-                          }}
-                          muted
-                          onMouseEnter={() => {
-                            void videoRef?.play();
-                          }}
-                          onMouseLeave={() => {
-                            videoRef?.pause();
-                          }}
-                          playsInline
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path d="M5 4.5L11.5 8L5 11.5V4.5Z" fill="white" />
-                          </svg>
-                        </div>
-                      </button>
-                    )}
-                  </>
-                ) : null}
+              <div className="lg:hidden h-[200px] overflow-y-auto ">
+                {data?.message && (
+                  <ProductReview product={data?.message.product} />
+                )}
+                {data?.message &&
+                  data.message.product.reviews?.map((review) => (
+                    <CommentCard key={review._id} review={review} />
+                  ))}
+              </div>
+              <div>
+                <div className="hidden lg:block">
+                  {data?.message && (
+                    <ProductReview product={data?.message.product} />
+                  )}
+                </div>
+                {data?.message &&
+                  data.message.product.reviews?.map((review) => (
+                    <CommentCard key={review._id} review={review} />
+                  ))}
               </div>
             </div>
-            <div className="lg:hidden">
+            <div className="w-1/2 h-full hidden lg:block">
               {data?.message && (
                 <ProductDescription
+                  product_data={data}
                   handleSelectCover={(src: string, type: "image" | "video") => {
                     setCurrentCoverItem({
                       src,
                       type,
                     });
                   }}
-                  product_data={data}
                 />
               )}
             </div>
 
-            <div className="lg:hidden h-[200px] overflow-y-auto ">
-              {data?.message && (
-                <ProductReview product={data?.message.product} />
-              )}
-              {data?.message &&
-                data.message.product.reviews?.map((review) => (
-                  <CommentCard key={review._id} review={review} />
-                ))}
-            </div>
-            <div>
-              <div className="hidden lg:block">
-                {data?.message && (
-                  <ProductReview product={data?.message.product} />
-                )}
-              </div>
-              {data?.message &&
-                data.message.product.reviews?.map((review) => (
-                  <CommentCard key={review._id} review={review} />
-                ))}
-            </div>
-          </div>
-          <div className="w-1/2 h-full hidden lg:block">
-            {data?.message && (
-              <ProductDescription
-                product_data={data}
-                handleSelectCover={(src: string, type: "image" | "video") => {
-                  setCurrentCoverItem({
-                    src,
-                    type,
-                  });
-                }}
-              />
-            )}
-          </div>
-
-          {items.length > 0 && (
-            <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
-              <div className="sticky top-0 space-y-2">
-                <button
-                  className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full"
-                  onClick={checkoutHandler}
-                >
-                  Check Out
-                </button>
-
-                <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
-                  <Link href="/pages/cart">Go to cart</Link>
-                </button>
-              </div>
-              <div className="space-y-3 w-full">
-                <div className="flex items-center gap-1">
-                  <Checkbox
-                    checked={
-                      items.length > 0 && items.every((item) => item.selected)
-                    }
-                    onClick={() =>
-                      items.length > 0 && items.every((item) => item.selected)
-                        ? deselectAllCartItems()
-                        : selectAllCartItems()
-                    }
-                    className="z-30 bg-white !rounded-full left-2 top-2"
-                  />
-                  <p>Select all ({items.length})</p>
-                </div>
-                {items.map((item, key) => (
-                  <div
-                    className="w-[8rem] mx-auto flex flex-col relative items-center"
-                    key={key}
+            {items.length > 0 && (
+              <div className="w-[14rem] px-4 space-y-6 border-l sticky top-[6.6rem] flex-col items-center h-[calc(100vh-6.6rem)] overflow-y-auto hidden lg:flex">
+                <div className="sticky top-0 space-y-2">
+                  <button
+                    className="h-[2.5rem] bg-brand_pink text-white rounded-full w-full"
+                    onClick={checkoutHandler}
                   >
+                    Check Out
+                  </button>
+
+                  <button className="h-[2.5rem] border border-black text-black rounded-full w-full">
+                    <Link href="/pages/cart">Go to cart</Link>
+                  </button>
+                </div>
+                <div className="space-y-3 w-full">
+                  <div className="flex items-center gap-1">
                     <Checkbox
-                      checked={item?.selected}
-                      onCheckedChange={() => {
-                        toggleItemSelect(item._id);
-                      }}
-                      className="absolute z-30 bg-white border !border-brand_pink !rounded-full left-2 top-2"
+                      checked={
+                        items.length > 0 && items.every((item) => item.selected)
+                      }
+                      onClick={() =>
+                        items.length > 0 && items.every((item) => item.selected)
+                          ? deselectAllCartItems()
+                          : selectAllCartItems()
+                      }
+                      className="z-30 bg-white !rounded-full left-2 top-2"
                     />
-                    <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
-                      <Image
-                        src={item.cover_image ?? ""}
-                        alt="product image"
-                        fill
-                        className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                    <p>Select all ({items.length})</p>
+                  </div>
+                  {items.map((item, key) => (
+                    <div
+                      className="w-[8rem] mx-auto flex flex-col relative items-center"
+                      key={key}
+                    >
+                      <Checkbox
+                        checked={item?.selected}
+                        onCheckedChange={() => {
+                          toggleItemSelect(item._id);
+                        }}
+                        className="absolute z-30 bg-white border !border-brand_pink !rounded-full left-2 top-2"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <h1 className="text-sm text-black font-medium w-[8rem] truncate">
-                        {item.name}
-                      </h1>
-                      <div className="flex gap-2 items-center justify-end">
-                        <div
-                          onClick={() => decreaseQuantity(item._id)}
-                          className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
-                        >
-                          -
-                        </div>
-                        <div>{item?.quantity}</div>
-                        <div
-                          onClick={() => increaseQuantity(item._id)}
-                          className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
-                        >
-                          +
+                      <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
+                        <Image
+                          src={item.cover_image ?? ""}
+                          alt="product image"
+                          fill
+                          className="transition-transform duration-300 ease-in-out group-hover:scale-110"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <h1 className="text-sm text-black font-medium w-[8rem] truncate">
+                          {item.name}
+                        </h1>
+                        <div className="flex gap-2 items-center justify-end">
+                          <div
+                            onClick={() => decreaseQuantity(item._id)}
+                            className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
+                          >
+                            -
+                          </div>
+                          <div>{item?.quantity}</div>
+                          <div
+                            onClick={() => increaseQuantity(item._id)}
+                            className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
+                          >
+                            +
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          <div className="font-poppins py-10 space-y-5">
+            <h1 className="text-2xl">Related Products</h1>
+            {item.category && (
+              <RelatedProducts
+                category={item.category._id}
+                shuffleSeed={shuffleSeed}
+              />
+            )}
+          </div>
         </div>
 
-        <div className="font-poppins py-10 space-y-5">
-          <h1 className="text-2xl">Related Products</h1>
-          {item.category && <RelatedProducts category={item.category._id} />}
-        </div>
-      </div>
+        {/* add to cart div  */}
+        <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
+          <div className="flex gap-2 items-center">
+            {!cartItem ? (
+              <button
+                onClick={() => {
+                  if (!ensureVariantSelection()) {
+                    return;
+                  }
 
-      {/* add to cart div  */}
-      <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
-        <div className="flex gap-2 items-center">
-          {!cartItem ? (
+                  addItem({
+                    ...item,
+                    price: resolvedCartPrice,
+                    stock: currentStock,
+                    quantity,
+                    selected: false,
+                    selectedVariants: selectedVariantsArray,
+                  });
+                }}
+                className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
+              >
+                Add to Cart
+              </button>
+            ) : (
+              <div
+                // onClick={() => addItem({ ...item, quantity })}
+                className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
+              >
+                <button
+                  onClick={() => {
+                    setQuantity((prev) => Math.max(prev - 1, 0));
+                    if (quantity == 0) {
+                      removeItem(item._id);
+                    }
+                  }}
+                  className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+                >
+                  -
+                </button>
+                {quantity}
+                <button
+                  onClick={() =>
+                    setQuantity((prev) => Math.min(prev + 1, currentStock))
+                  }
+                  className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
             <button
+              type="button"
               onClick={() => {
-                if (!ensureVariantSelection()) {
+                if (isInWishlist(item._id)) {
+                  void removeWishlistItem(item._id);
                   return;
                 }
 
-                addItem({
-                  ...item,
-                  price: resolvedCartPrice,
-                  stock: currentStock,
-                  quantity,
-                  selected: false,
-                  selectedVariants: selectedVariantsArray,
-                });
+                void addWishlistItem(item);
               }}
-              className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
             >
-              Add to Cart
+              {isInWishlist(item._id) ? (
+                <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                  <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
+                  <path
+                    d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154Z"
+                    fill="#FF008C"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  width="42"
+                  height="42"
+                  className="size-[2rem] lg:size-[3rem]"
+                  viewBox="0 0 42 42"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle cx="21" cy="21" r="20.5" stroke="#999999" />
+                  <path
+                    d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154ZM28.1169 21.2708C28.9938 20.3846 29.5385 19.1846 29.5385 17.8462C29.5385 16.5609 29.0279 15.3283 28.1191 14.4194C27.2102 13.5106 25.9776 13 24.6923 13C23.0769 13 21.6462 13.7846 20.7692 15.0031C20.3216 14.3814 19.7323 13.8754 19.05 13.527C18.3677 13.1787 17.6122 12.998 16.8462 13C15.5609 13 14.3282 13.5106 13.4194 14.4194C12.5106 15.3283 12 16.5609 12 17.8462C12 19.1846 12.5446 20.3846 13.4215 21.2708L20.7692 28.6185L28.1169 21.2708Z"
+                    fill="black"
+                  />
+                </svg>
+              )}
             </button>
-          ) : (
-            <div
-              // onClick={() => addItem({ ...item, quantity })}
-              className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
-            >
-              <button
-                onClick={() => {
-                  setQuantity((prev) => Math.max(prev - 1, 0));
-                  if (quantity == 0) {
-                    removeItem(item._id);
-                  }
-                }}
-                className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
-              >
-                -
-              </button>
-              {quantity}
-              <button
-                onClick={() =>
-                  setQuantity((prev) => Math.min(prev + 1, currentStock))
-                }
-                className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
-              >
-                +
-              </button>
-            </div>
-          )}
-
-          <button className="">
-            <svg
-              width="42"
-              height="42"
-              className="size-[2rem] lg:size-[3rem]"
-              viewBox="0 0 42 42"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="21" cy="21" r="20.5" stroke="#999999" />
-              <path
-                d="M14.0677 20.6154C13.7027 20.2528 13.4135 19.8213 13.217 19.3458C13.0205 18.8704 12.9206 18.3606 12.9231 17.8462C12.9231 16.8057 13.3364 15.8079 14.0721 15.0721C14.8078 14.3364 15.8057 13.9231 16.8462 13.9231C18.3046 13.9231 19.5785 14.7169 20.2523 15.8985H21.2862C21.6287 15.2976 22.1244 14.7983 22.7227 14.4513C23.3211 14.1043 24.0006 13.922 24.6923 13.9231C25.7328 13.9231 26.7306 14.3364 27.4663 15.0721C28.2021 15.8079 28.6154 16.8057 28.6154 17.8462C28.6154 18.9262 28.1538 19.9231 27.4708 20.6154L20.7692 27.3077L14.0677 20.6154ZM28.1169 21.2708C28.9938 20.3846 29.5385 19.1846 29.5385 17.8462C29.5385 16.5609 29.0279 15.3283 28.1191 14.4194C27.2102 13.5106 25.9776 13 24.6923 13C23.0769 13 21.6462 13.7846 20.7692 15.0031C20.3216 14.3814 19.7323 13.8754 19.05 13.527C18.3677 13.1787 17.6122 12.998 16.8462 13C15.5609 13 14.3282 13.5106 13.4194 14.4194C12.5106 15.3283 12 16.5609 12 17.8462C12 19.1846 12.5446 20.3846 13.4215 21.2708L20.7692 28.6185L28.1169 21.2708Z"
-                fill="black"
-              />
-            </svg>
+          </div>
+          <button
+            className="h-[2rem] lg:h-[3rem]  text-xs bg-brand_pink text-white rounded-full w-full"
+            onClick={checkoutHandler}
+          >
+            Check Out
           </button>
         </div>
-        <button
-          className="h-[2rem] lg:h-[3rem]  text-xs bg-brand_pink text-white rounded-full w-full"
-          onClick={checkoutHandler}
-        >
-          Check Out
-        </button>
-      </div>
-    </section>
+      </section>
+    </RefreshWrapper>
   );
 }

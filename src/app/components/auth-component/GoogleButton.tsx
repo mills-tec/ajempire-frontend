@@ -8,12 +8,14 @@ import GoogleLogo from "@/assets/google.png";
 type GoogleButtonProps = {
   disabled?: boolean;
   isLoading?: boolean;
+  label?: string;
   onClick?: () => void;
 };
 
 export default function GoogleButton({
   disabled = false,
   isLoading = false,
+  label,
   onClick,
 }: GoogleButtonProps) {
   return (
@@ -36,7 +38,7 @@ export default function GoogleButton({
             priority
           />
         </span>
-        {isLoading ? "Preparing Google..." : "Continue with Google"}
+        {label ?? (isLoading ? "Preparing Google..." : "Continue with Google")}
       </Button>
     </div>
   );
