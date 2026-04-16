@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { saveAccounts } from "@/lib/utils";
+import { API_URL } from "@/lib/api";
 
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
@@ -31,6 +32,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { setIsLoggedIn, setUser } = useAuthStore();
   const { scriptLoadedSuccessfully } = useGoogleOAuth();
+  API_URL;
 
   const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
     const credential = credentialResponse.credential;
@@ -42,7 +44,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
 
     setIsLoading(true);
     axios
-      .post("https://ajempire-backend.vercel.app/api/auth/google/", {
+      .post(`${API_URL}/auth/google/`, {
         token: credential,
       })
       .then((res) => {
@@ -135,7 +137,6 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                     scriptLoadedSuccessfully
                       ? "opacity-100 transition-opacity duration-150 w-full"
                       : "pointer-events-none absolute inset-0 opacity-0"
-                    
                   }
                   aria-hidden={!scriptLoadedSuccessfully}
                 >

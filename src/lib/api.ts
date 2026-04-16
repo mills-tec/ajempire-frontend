@@ -22,8 +22,8 @@ export type Coupon = {
 };
 
 // lib/api.ts
-export const API_URL = "https://ajempire-backend.vercel.app/api";
-export const BASE_URL = "https://ajempire-backend.vercel.app";
+export const API_URL = "https://ajempire-backend-production.up.railway.app/api";
+export const BASE_URL = "https://ajempire-backend-production.up.railway.app";
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
@@ -69,7 +69,7 @@ export async function phoneNumberBackend(phone: string) {
 }
 
 export async function googleVerification(token: string) {
-  const res = await fetch(API_URL + "/api/auth/google/", {
+  const res = await fetch(API_URL + "/auth/google", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
