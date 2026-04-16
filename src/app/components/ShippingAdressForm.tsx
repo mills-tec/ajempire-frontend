@@ -3,7 +3,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import Spinner from "./Spinner";
 import { toast } from "sonner";
-import { getBearerToken } from "@/lib/api";
+import { API_URL, getBearerToken } from "@/lib/api";
 import { globalUrl } from "@/api/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 
@@ -20,7 +20,7 @@ interface ShippingAdressProps {
   };
   onContinue?: () => void;
   onAddressUpdated?: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const nigeriaStates = [
@@ -81,6 +81,7 @@ export default function ShippingAdressForm({
   const [loading, setLoading] = useState(false);
   const { setIsLogisticsMode } = useCartStore();
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
+  API_URL;
   const convertToLocalPhone = (phone: string) => {
     if (!phone) return "";
 
@@ -110,7 +111,7 @@ export default function ShippingAdressForm({
       if (!token) return;
 
       axios
-        .get("https://ajempire-backend.vercel.app/api/shipping-address", {
+        .get(`${API_URL}/shipping-address`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {

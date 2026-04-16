@@ -16,41 +16,73 @@ export default function OrdersAndAccountPage() {
   const { getBrowsingHistory } = useBrowsingHistory();
   const [products, setProducts] = useState([]);
 
+  // useEffect(() => {
+  //   const handleRedirect = () => {
+  //     const isDesktop = window.innerWidth >= 1024;
+
+  //     // Always start spinner when we mount
+  //     setIsLoading(true);
+
+  //     if (pathname === "/pages/ordersandaccount" && isDesktop) {
+  //       // Wait 1 second before redirecting
+  //       setTimeout(() => {
+  //         router.replace("/pages/ordersandaccount/orders/all");
+  //       }, 1000);
+  //     } else if (pathname === "/pages/ordersandaccount" && !isDesktop) {
+  //       // For mobile, stop spinner after small delay
+  //       setTimeout(() => {
+  //         setIsLoading(false);
+  //       }, 500);
+  //     } else {
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   handleRedirect();
+  //   window.addEventListener("resize", handleRedirect);
+
+  //   return () => window.removeEventListener("resize", handleRedirect);
+  // }, [pathname, router]);
   useEffect(() => {
-    const handleRedirect = () => {
-      const isDesktop = window.innerWidth >= 1024;
+    const isDesktop = window.innerWidth >= 1024;
 
-      // Always start spinner when we mount
-      setIsLoading(true);
-
-      if (pathname === "/pages/ordersandaccount" && isDesktop) {
-        // Wait 1 second before redirecting
-        setTimeout(() => {
-          router.replace("/pages/ordersandaccount/orders/all");
-        }, 1000);
-      } else if (pathname === "/pages/ordersandaccount" && !isDesktop) {
-        // For mobile, stop spinner after small delay
+    if (pathname === "/pages/ordersandaccount") {
+      if (isDesktop) {
+        router.replace("/pages/ordersandaccount/orders/all");
+        return;
+      } else {
+        // mobile → just stop loading
         setTimeout(() => {
           setIsLoading(false);
-        }, 500);
-      } else {
-        setIsLoading(false);
+        }, 300);
+        return;
       }
-    };
+    }
 
-    handleRedirect();
-    window.addEventListener("resize", handleRedirect);
-
-    return () => window.removeEventListener("resize", handleRedirect);
+    setIsLoading(false);
   }, [pathname, router]);
 
+  // useEffect(() => {
+  //   (async () => {
+  //     const res = await getBrowsingHistory("", 10);
+  //     const browsingHistory = res.browsingHistory.flatMap(
+  //       (item: { products: { product: Product }[] }) =>
+  //         item.products.map((product: { product: Product }) => product.product),
+  //     );
+  //     setProducts(browsingHistory);
+  //   })();
+  // }, [getBrowsingHistory]);
   useEffect(() => {
     (async () => {
       const res = await getBrowsingHistory("", 10);
+
+      if (!res) return; // 👈 VERY IMPORTANT
+
       const browsingHistory = res.browsingHistory.flatMap(
         (item: { products: { product: Product }[] }) =>
           item.products.map((product: { product: Product }) => product.product),
       );
+
       setProducts(browsingHistory);
     })();
   }, [getBrowsingHistory]);
