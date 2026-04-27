@@ -27,7 +27,7 @@ export default function LayoutWrapper({
 
             {/* Main Content */}
             <main
-                className={`pb-[90px] ${hideLayout ? "pt-0" : "lg:pt-[100px]"
+                className={`${hideLayout ? "pt-0 flex gap-x-5 bg-[#F4F5FA]" : "lg:pt-[100px] pb-[90px] "
                     }`}
             >
                 {children}
