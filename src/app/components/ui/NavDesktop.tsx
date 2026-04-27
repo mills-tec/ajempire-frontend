@@ -1,6 +1,6 @@
 "use client";
-import Link from "../../../../node_modules/next/link";
-import Image from "../../../../node_modules/next/image";
+import Link from "next/link";
+import Image from "next/image";
 import { useState, useRef } from "react";
 
 import VideoIcon from "@/components/svgs/VideoIcon";

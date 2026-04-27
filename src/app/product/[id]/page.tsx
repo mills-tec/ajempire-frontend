@@ -1,13 +1,13 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProductReview from "@/app/components/ProductReview";
 import CommentCard from "@/app/components/CommentCard";
 import ProductDescription from "@/app/components/ProductDescription";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getBearerToken, getProduct } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
@@ -65,17 +65,10 @@ export default function ProductDetailPage() {
       items.find(
         (cartItem) =>
           cartItem._id === item._id &&
-          JSON.stringify(cartItem.selectedVariants) ===
-            JSON.stringify(selectedVariantsArray),
+          areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
       ) ?? null
     );
-  }, [
-    availableVariants.length,
-    hasVariants,
-    item,
-    items,
-    selectedVariantsArray,
-  ]);
+  }, [availableVariants.length, hasVariants, item, items, selectedVariantsArray]);
 
   const [quantity, setQuantity] = useState(
     cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1,
@@ -90,20 +83,19 @@ export default function ProductDetailPage() {
   });
 
   const openModal = useModalStore((s) => s.openModal);
-  const ensureVariantSelection = () => {
-    if (!hasVariants || !missingVariantName) return true;
 
+  const ensureVariantSelection = useCallback(() => {
+    if (!hasVariants || !missingVariantName) return true;
     toast.error(`Please select ${missingVariantName}`);
     return false;
-  };
+  }, [hasVariants, missingVariantName]);
+
   const resolvedCartPrice =
     item && selectedCombination
       ? item.price + selectedCombination.additionalPrice
       : (item?.price ?? 0);
-  const checkoutHandler = () => {
-    if (!ensureVariantSelection()) {
-      return;
-    }
+  const checkoutHandler = useCallback(() => {
+    if (!ensureVariantSelection()) return;
 
     const token = getBearerToken();
     if (!token) {
@@ -112,7 +104,6 @@ export default function ProductDetailPage() {
       return;
     }
 
-    // ✅ Read fresh data from React Query
     const currentItem = data?.message?.product;
     if (!currentItem || !currentItem._id) {
       toast.error("Product not loaded yet");
@@ -123,8 +114,7 @@ export default function ProductDetailPage() {
     const existingItem = store.items.find(
       (cartItem) =>
         cartItem._id === currentItem._id &&
-        JSON.stringify(cartItem.selectedVariants) ===
-          JSON.stringify(selectedVariantsArray),
+        areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
     );
 
     if (!existingItem) {
@@ -140,7 +130,7 @@ export default function ProductDetailPage() {
 
     store.selectAllCartItems();
     openModal("checkout");
-  };
+  }, [ensureVariantSelection, data, resolvedCartPrice, currentStock, quantity, selectedVariantsArray, openModal]);
 
   const [video, setVideo] = useState({
     showPlay: true,
@@ -151,52 +141,33 @@ export default function ProductDetailPage() {
 
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
-  const handleVideoPlay = (id: string) => {
-    setPlayingMap((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-
-    setVideo((prev) => ({
-      ...prev,
-      showPlay: true,
-    }));
-
-    const video = videoRefs.current[id];
-    if (video?.paused) {
-      video.play();
+  const handleVideoPlay = useCallback((id: string) => {
+    setPlayingMap((prev) => ({ ...prev, [id]: !prev[id] }));
+    setVideo((prev) => ({ ...prev, showPlay: true }));
+    const videoEl = videoRefs.current[id];
+    if (videoEl?.paused) {
+      videoEl.play();
     } else {
-      video?.pause();
+      videoEl?.pause();
     }
-  };
+  }, []);
 
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-  const markMediaLoaded = (src: string) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const markMediaLoaded = useCallback((src: string) => {
     if (!src) return;
+    setLoadedMedia((prev) => (prev[src] ? prev : { ...prev, [src]: true }));
+  }, []);
 
-    setLoadedMedia((prev) =>
-      prev[src]
-        ? prev
-        : {
-            ...prev,
-            [src]: true,
-          },
-    );
-  };
+  const handleSelectCover = useCallback((src: string, type: "image" | "video") => {
+    setCurrentCoverItem({ src, type });
+  }, []);
 
-  // 🧩 Update quantity safely
-  // useEffect(() => {
-  //   if (!item) return; // don’t run until item exists
-
-  //   if (!cartItem) return;
-
-  //   if (quantity === 0) {
-  //     removeItem(cartItem._id);
-  //   } else {
-  //     setCartItemQty(cartItem._id, quantity);
-  //   }
-
-  // }, [cartItem, quantity, item, removeItem, setCartItemQty]);
+  const handleSetVideo = useCallback(
+    (data: Partial<{ showPlay: boolean; muted: boolean }>) =>
+      setVideo((prev) => ({ ...prev, ...data })),
+    [],
+  );
   useEffect(() => {
     if (!item || !cartItem) return;
 
@@ -251,7 +222,6 @@ export default function ProductDetailPage() {
       </div>
     );
 
-  console.log(item.relatedProducts);
   const galleryImages = Array.from(
     new Set((item.images ?? []).filter(Boolean)),
   );
@@ -318,12 +288,8 @@ export default function ProductDetailPage() {
                       videoRefs={videoRefs}
                       src={currentCoverItem.src}
                       setPlayingMap={setPlayingMap}
-                      handleSetVideo={(data) =>
-                        setVideo((prev) => ({ ...prev, ...data }))
-                      }
-                      onLoadedData={() => {
-                        markMediaLoaded(currentCoverItem.src);
-                      }}
+                      handleSetVideo={handleSetVideo}
+                      onLoadedData={() => markMediaLoaded(currentCoverItem.src)}
                     />
                   </div>
                 )}
@@ -331,26 +297,21 @@ export default function ProductDetailPage() {
               <div className="flex gap-2 lg:gap-5 flex-wrap">
                 {thumbnailImages.length > 0 || item.video ? (
                   <>
-                    {thumbnailImages.map((image, key) => (
+                    {thumbnailImages.map((image, idx) => (
                       <button
                         type="button"
-                        key={key}
+                        key={image}
                         className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
                           currentCoverItem.type === "image" &&
                           currentCoverItem.src === image
                             ? "border-brand_pink"
                             : "border-transparent"
                         }`}
-                        onClick={() => {
-                          setCurrentCoverItem({
-                            src: image,
-                            type: "image",
-                          });
-                        }}
+                        onClick={() => handleSelectCover(image, "image")}
                       >
                         <Image
                           src={image}
-                          alt={`${item.name} thumbnail ${key + 1}`}
+                          alt={`${item.name} thumbnail ${idx + 1}`}
                           fill
                           className="absolute object-cover"
                         />
@@ -365,16 +326,11 @@ export default function ProductDetailPage() {
                             ? "border-brand_pink"
                             : "border-transparent"
                         }`}
-                        onClick={() => {
-                          setCurrentCoverItem({
-                            src: item.video!,
-                            type: "video",
-                          });
-                        }}
+                        onClick={() => handleSelectCover(item.video!, "video")}
                       >
                         <video
                           preload="metadata"
-                          ref={setVideoRef}
+                          ref={videoRef}
                           src={item.video}
                           className="absolute object-cover h-full w-full"
                           onLoadedMetadata={(e) => {
@@ -382,10 +338,10 @@ export default function ProductDetailPage() {
                           }}
                           muted
                           onMouseEnter={() => {
-                            void videoRef?.play();
+                            void videoRef.current?.play();
                           }}
                           onMouseLeave={() => {
-                            videoRef?.pause();
+                            videoRef.current?.pause();
                           }}
                           playsInline
                         />
@@ -409,12 +365,7 @@ export default function ProductDetailPage() {
             <div className="lg:hidden">
               {data?.message && (
                 <ProductDescription
-                  handleSelectCover={(src: string, type: "image" | "video") => {
-                    setCurrentCoverItem({
-                      src,
-                      type,
-                    });
-                  }}
+                  handleSelectCover={handleSelectCover}
                   product_data={data}
                 />
               )}
@@ -445,12 +396,7 @@ export default function ProductDetailPage() {
             {data?.message && (
               <ProductDescription
                 product_data={data}
-                handleSelectCover={(src: string, type: "image" | "video") => {
-                  setCurrentCoverItem({
-                    src,
-                    type,
-                  });
-                }}
+                handleSelectCover={handleSelectCover}
               />
             )}
           </div>
@@ -484,10 +430,10 @@ export default function ProductDetailPage() {
                   />
                   <p>Select all ({items.length})</p>
                 </div>
-                {items.map((item, key) => (
+                {items.map((item) => (
                   <div
                     className="w-[8rem] mx-auto flex flex-col relative items-center"
-                    key={key}
+                    key={item._id}
                   >
                     <Checkbox
                       checked={item?.selected}
@@ -562,7 +508,6 @@ export default function ProductDetailPage() {
             </button>
           ) : (
             <div
-              // onClick={() => addItem({ ...item, quantity })}
               className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
             >
               <button
