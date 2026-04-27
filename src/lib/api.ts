@@ -33,8 +33,7 @@ export async function loginBackend(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
-  console.log(res);
-  return;
+ 
   if (!res.ok) throw new Error("Login failed");
   return res.json();
 }
