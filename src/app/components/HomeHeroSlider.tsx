@@ -135,7 +135,7 @@ export default function HomeHeroSlider({
 
                     {/* Price */}
                     <p className="mt-2 text-sm lg:text-base font-semibold text-white">
-                      {product.price.toLocaleString()}
+                      ₦ {product.price.toLocaleString()}
                     </p>
                   </div>
                 ))}

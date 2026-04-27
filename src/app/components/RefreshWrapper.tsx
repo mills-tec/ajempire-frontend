@@ -54,6 +54,10 @@ export default function RefreshWrapper({
   //     }
   //   };
   const handleRefresh = async () => {
+    // Simulate refresh delay for loading UI only
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Run extra logic (e.g. reshuffle) - but don't invalidate queries
     if (onRefreshExtra) {
       await onRefreshExtra();
     }

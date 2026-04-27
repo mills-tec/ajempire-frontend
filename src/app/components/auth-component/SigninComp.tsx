@@ -60,6 +60,7 @@ export default function SigninComp({
       const { email, password } = form;
       const res = await loginBackend(email, password);
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
+      console.log("login response data :",res)
       if (res?.message) {
         setIsLoggedIn(Boolean(res.message.token));
         setUser({ email: res.message.user.email, name: res.message.user.fullname, id: res.message.user._id });
@@ -70,12 +71,17 @@ export default function SigninComp({
       }
       console.log("res: ", res);
       setErrors({});
-      toast("Login successful!");
+      // Use backend success message or fallback
+      const successMessage = res?.message?.message || "Login successful!";
+      toast(successMessage);
       setIsLoading(false);
       onClose();
-      // router.push("/dashboard");
-    } catch {
-      toast("Login failed");
+     
+    } catch (error) {
+      console.error("❌ Login error:", error);
+      const errorMess = error
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
+      toast(errorMessage);
       setIsLoading(false);
     }
   }
