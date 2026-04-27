@@ -13,7 +13,7 @@ interface RecentPurchaseItem {
   qty: number;
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
-  const url = "https://ajempire-backend.vercel.app/api/reorder/";
+  const url = "https://ajempire-backend-production.up.railway.app/api/reorder/";
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {

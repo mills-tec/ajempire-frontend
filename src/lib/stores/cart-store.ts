@@ -40,7 +40,6 @@ interface SelectedLogistic {
   courier_image: string;
   delivery_eta_time: string;
   delivery_eta: string;
-delivery_eta_time: string;
   total: number;
 }
 
@@ -402,7 +401,8 @@ export const useCartStore = create<CartStore>()(
             combo.options.every((option) =>
               item.selectedVariants.some(
                 (selected) =>
-                  selected.name === option.name && selected.value === option.value,
+                  selected.name === option.name &&
+                  selected.value === option.value,
               ),
             ),
           );
@@ -415,20 +415,17 @@ export const useCartStore = create<CartStore>()(
           0,
         );
 
-        const discount = items.reduce(
-          (sum, i) => {
-            const unitPrice = itemEffectivePrice(i);
-            const itemDiscount = i.flashSales
-              ? calcDiscount(
-                  unitPrice,
-                  i.flashSales.discountValue,
-                  i.flashSales.discountType,
-                )
-              : 0;
-            return sum + itemDiscount * i.quantity;
-          },
-          0,
-        );
+        const discount = items.reduce((sum, i) => {
+          const unitPrice = itemEffectivePrice(i);
+          const itemDiscount = i.flashSales
+            ? calcDiscount(
+                unitPrice,
+                i.flashSales.discountValue,
+                i.flashSales.discountType,
+              )
+            : 0;
+          return sum + itemDiscount * i.quantity;
+        }, 0);
 
         const appliedCoupon = get().appliedCoupon;
         let coupon = 0;

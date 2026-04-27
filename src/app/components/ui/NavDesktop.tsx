@@ -17,10 +17,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchStore } from "@/lib/search-store";
 import { useCartIcon } from "@/app/contextanimation/CartIconContext";
 
-
-
-
-
 type NavDesktopProps = {
   isLoggedIn: boolean;
   isActive: (path: string) => string;
@@ -58,6 +54,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   };
 
   const { clearSearch } = useSearchStore();
+
   return (
     <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
       {/* Logo */}
@@ -80,7 +77,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
           <Link
             href="/"
             className={`opacity-80 ${isActive(
-              "/"
+              "/",
             )} hover:text-[#FF008C] transition-all duration-300`}
             onClick={clearSearch}
           >
@@ -92,7 +89,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
           <Link
             href="/pages/update/all/"
             className={`flex items-center gap-1 opacity-80 ${isActive(
-              "/pages/update"
+              "/pages/update",
             )} hover:text-[#FF008C] transition-all duration-300`}
           >
             <VideoIcon className="mt-[0.5px] w-[17px] font-bold" />
@@ -110,7 +107,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
               <Link
                 href="/pages/ordersandaccount"
                 className={`flex items-center gap-1 opacity-80 ${isActive(
-                  "/pages/ordersandaccount"
+                  "/pages/ordersandaccount",
                 )} hover:text-[#FF008C] transition-all duration-300`}
                 onMouseEnter={() => {
                   cancelCloseTimer();
@@ -159,7 +156,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
           <Link
             href="/pages/support"
             className={`flex items-center gap-1 opacity-80 ${isActive(
-              "/pages/support"
+              "/pages/support",
             )} hover:text-[#FF008C] transition-all duration-300`}
           >
             <SupportIcon className="w-8" />
@@ -171,7 +168,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
           <Link
             href="/pages/cart"
             className={`flex items-center gap-1 relative opacity-80 ${isActive(
-              "/pages/cart"
+              "/pages/cart",
             )} hover:text-[#FF008C] transition-all duration-300`}
             ref={cartRef}
           >

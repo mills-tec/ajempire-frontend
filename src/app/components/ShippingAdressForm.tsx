@@ -110,9 +110,12 @@ export default function ShippingAdressForm({
       if (!token) return;
 
       axios
-        .get("https://ajempire-backend.vercel.app/api/shipping-address", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        .get(
+          "https://ajempire-backend-production.up.railway.app/api/shipping-address",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        )
         .then((res) => {
           const data = res.data.message;
           if (data && Object.keys(data).length > 0) {

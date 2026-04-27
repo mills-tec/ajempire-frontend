@@ -8,10 +8,7 @@ import Spinner from "../Spinner";
 import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
 
-export default function VerifyPhoneComp({
-  onBack,
-  canGoBack,
-}: AuthStepProps) {
+export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const phone = searchParams.get("phone");

@@ -42,9 +42,12 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
 
     setIsLoading(true);
     axios
-      .post("https://ajempire-backend.vercel.app/api/auth/google/", {
-        token: credential,
-      })
+      .post(
+        "https://ajempire-backend-production.up.railway.app/api/auth/google/",
+        {
+          token: credential,
+        },
+      )
       .then((res) => {
         if (res.data?.message?.token) {
           const token = res.data.message.token;
@@ -135,7 +138,6 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                     scriptLoadedSuccessfully
                       ? "opacity-100 transition-opacity duration-150 w-full"
                       : "pointer-events-none absolute inset-0 opacity-0"
-                    
                   }
                   aria-hidden={!scriptLoadedSuccessfully}
                 >
