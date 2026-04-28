@@ -7,8 +7,10 @@ import CartPopup from "./CartPopup";
 
 export default function LayoutWrapper({
   children,
+  hideNavbar = false,
 }: {
   children: React.ReactNode;
+  hideNavbar?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -20,7 +22,7 @@ export default function LayoutWrapper({
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
       {/* Navbar */}
-      {!hideLayout && (
+      {!hideLayout && !hideNavbar && (
         <header className="hidden lg:flex fixed top-0 left-0 w-full bg-white z-50 shadow-sm">
           <Navbar />
         </header>

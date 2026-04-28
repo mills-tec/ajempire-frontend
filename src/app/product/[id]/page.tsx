@@ -266,7 +266,10 @@ export default function ProductDetailPage() {
   const isCurrentMediaLoaded = Boolean(loadedMedia[currentMediaSrc]);
 
   return (
-    <RefreshWrapper onRefreshExtra={reshuffle}>
+    <RefreshWrapper 
+      queryKeys={[["relatedProducts", item.category?._id]]}
+      onRefreshExtra={reshuffle}
+    >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
           <Link href={"/"}>

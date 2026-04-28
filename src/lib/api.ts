@@ -27,15 +27,27 @@ export const BASE_URL = "https://ajempire-backend-production.up.railway.app";
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
+  console.log("🔑 Login request:", { email, password: "***" });
+  
   const res = await fetch(API_URL + "/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
-  console.log(res);
-  if (!res.ok) throw new Error("Login failed");
-  return res.json();
+  
+  console.log("📊 Login response status:", res.status);
+  console.log("📊 Login response headers:", [...res.headers.entries()]);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error("❌ Login error response:", errorData);
+    throw new Error(errorData.error || errorData.message || "Login failed");
+  }
+  
+  const data = await res.json();
+  console.log("✅ Login success response:", data);
+  return data;
 }
 
 export async function emailVerification(email: string, token: string) {
@@ -44,6 +56,7 @@ export async function emailVerification(email: string, token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
   });
+  console.log("verification res: ",res)
   if (!res.ok) throw new Error("Email verification failed");
   return res.json();
 }
@@ -109,14 +122,31 @@ export async function fogortPassword(email: string) {
 }
 
 export async function signupBackend(email: string, password: string) {
+  console.log("📡 Making signup request:", { email, password: "***" });
+  
   const res = await fetch(API_URL + "/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
-  if (!res.ok) throw new Error("Login failed");
-  return res.json();
+  
+  console.log("📊 Response status:", res.status);
+  console.log("📊 Response headers:", [...res.headers.entries()]);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error("❌ API Error Response:", errorData);
+    console.error("📊 Error structure:", JSON.stringify(errorData, null, 2));
+    throw new Error(errorData.error || errorData.message || "Signup failed");
+  }
+  
+  const data = await res.json();
+  console.log("✅ API Success Response:", data);
+  console.log("📊 Response structure:", JSON.stringify(data, null, 2));
+  console.log("📊 Response type:", typeof data);
+  console.log("📊 Response keys:", Object.keys(data));
+  return data;
 }
 
 export async function logoutBackend() {
