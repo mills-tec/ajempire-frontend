@@ -74,6 +74,8 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
     exit: { opacity: 0, transition: { duration: 0.3 } },
   };
 
+  console.log(checkoutStep);
+
   switch (checkoutStep) {
     case CheckoutStep.ADDRESS_FORM:
       return (

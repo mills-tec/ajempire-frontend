@@ -6,37 +6,36 @@ import Spinner from "@/app/components/Spinner";
 import { adminLogin, LoginCredentials } from "@/lib/adminapi";
 
 export default function AdminLogin() {
-    const [emailinput, setEmailinput] = useState("");
-    const [passwordinput, setPasswordinput] = useState("");
-    const [isValidEmail, setIsValidEmail] = useState(false);
-    const [isValidPassword, setIsValidPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    // Regex for email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const route = useRouter()
+  const [emailinput, setEmailinput] = useState("");
+  const [passwordinput, setPasswordinput] = useState("");
+  const [isValidEmail, setIsValidEmail] = useState(false);
+  const [isValidPassword, setIsValidPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  // Regex for email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const route = useRouter();
 
-    // Regex for password validation:
-    // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
-    const passwordRegex = /^.{6,}$/;
+  // Regex for password validation:
+  // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
+  const passwordRegex = /^.{6,}$/;
 
-    useEffect(() => {
-        setIsValidPassword(passwordRegex.test(passwordinput));
-    }, [passwordinput]);
+  useEffect(() => {
+    setIsValidPassword(passwordRegex.test(passwordinput));
+  }, [passwordinput]);
 
+  // Validate email whenever it changes
+  useEffect(() => {
+    setIsValidEmail(emailRegex.test(emailinput));
+  }, [emailinput]);
 
-    // Validate email whenever it changes
-    useEffect(() => {
-        setIsValidEmail(emailRegex.test(emailinput));
-    }, [emailinput]);
+  // Validate password whenever it changes
+  useEffect(() => {
+    setIsValidPassword(passwordRegex.test(passwordinput));
+  }, [passwordinput]);
 
-    // Validate password whenever it changes
-    useEffect(() => {
-        setIsValidPassword(passwordRegex.test(passwordinput));
-    }, [passwordinput]);
-
-    // Only enable login if both are valid
-    const isFormValid = isValidEmail && isValidPassword;
+  // Only enable login if both are valid
+  const isFormValid = isValidEmail && isValidPassword;
 
     const handleLogin = async () => {
         if (!isFormValid) return; // extra safety

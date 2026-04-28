@@ -5,7 +5,6 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState } from "react";
-
 export default function SignOutConfirm() {
   const closeModal = useModalStore((s) => s.closeModal);
   const router = useRouter();
@@ -19,6 +18,11 @@ export default function SignOutConfirm() {
       // ✅ Remove auth tokens only
       if (typeof window !== "undefined") {
         localStorage.clear();
+        sessionStorage.clear();
+        useAuthStore.setState({
+          user: null,
+          isLoggedIn: false,
+        });
       }
 
       // ✅ Update auth store

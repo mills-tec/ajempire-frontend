@@ -58,6 +58,7 @@ export default function SigninComp({
 
     try {
       const { email, password } = form;
+  
       const res = await loginBackend(email, password);
       // Store JWT token in localStorage (accessible to JS, but not httpOnly)
       console.log("login response data :",res)

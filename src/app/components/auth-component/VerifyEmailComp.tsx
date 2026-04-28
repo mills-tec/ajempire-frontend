@@ -32,7 +32,7 @@ export default function VerifyEmailComp({
   }, [resendTimer]);
 
   const handleVerification = async () => {
-    email = localStorage.getItem("ajempire_signup_email");
+    email = JSON.parse(localStorage.getItem("ajempire_signup_email")!);
     if (!email) {
       toast.error("Email not found. Please try signing up again.");
       return;
@@ -44,11 +44,10 @@ export default function VerifyEmailComp({
     }
 
     setIsVerifying(true);
+    console.log(email, otp, "email and token");
     try {
       await emailVerification(email, otp);
       toast.success("Email verified successfully!");
-      //   router.push("/auth/signin");
-      setScreen("signin");
       setScreen("deals");
     } catch (error) {
       console.log("error: ", error);

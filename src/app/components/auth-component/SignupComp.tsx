@@ -29,7 +29,7 @@ export default function SignupComp({
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
+    {},
   );
   const [isLoading, setIsLoading] = useState(false);
 

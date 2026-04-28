@@ -54,16 +54,19 @@ export default function OrderSummaryPage() {
             : [],
         }));
 
-        await axios.delete("https://ajempire-backend.vercel.app/api/cart/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+        await axios.delete(
+          "https://ajempire-backend-production.up.railway.app/api/cart/",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            data: { items: itemsPayload },
           },
-          data: { items: itemsPayload },
-        });
+        );
 
         await axios.post(
-          "https://ajempire-backend.vercel.app/api/cart/",
+          "https://ajempire-backend-production.up.railway.app/api/cart/",
           { items: itemsPayload },
           {
             headers: {
@@ -128,7 +131,7 @@ export default function OrderSummaryPage() {
 
     try {
       const response = await axios.post(
-        "https://ajempire-backend.vercel.app/api/checkout",
+        "https://ajempire-backend-production.up.railway.app/api/checkout",
         {
           paymentMethod,
           logistics: isLogisticsMode

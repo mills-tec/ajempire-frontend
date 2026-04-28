@@ -35,19 +35,9 @@ export async function loginBackend(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
-  
-  console.log("📊 Login response status:", res.status);
-  console.log("📊 Login response headers:", [...res.headers.entries()]);
-  
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    console.error("❌ Login error response:", errorData);
-    throw new Error(errorData.error || errorData.message || "Login failed");
-  }
-  
-  const data = await res.json();
-  console.log("✅ Login success response:", data);
-  return data;
+ 
+  if (!res.ok) throw new Error("Login failed");
+  return res.json();
 }
 
 export async function emailVerification(email: string, token: string) {
@@ -332,6 +322,8 @@ export async function addToCart(products: CartItem[]) {
         }))
       : [],
   }));
+
+  console.log(items);
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);

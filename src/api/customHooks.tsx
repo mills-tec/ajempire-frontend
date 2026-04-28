@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { getBearerToken } from "@/lib/api";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
+import { useSearchStore } from "@/lib/search-store";
 
 let config = {};
 const token = getBearerToken();
@@ -627,4 +628,32 @@ export const useBrowsingHistory = () => {
     deleteBrowsingHistory,
     clearBrowsingHistory,
   };
+};
+
+export const useProduct = () => {
+  const { searchByImageLoading, setSearchByImageLoading } = useSearchStore();
+
+  const searchByImage = async (image: File) => {
+    if (!searchByImageLoading) {
+      setSearchByImageLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append("image", image);
+        const req = await postData(`/product/searchbyImage`, formData, config);
+        return req.data.message;
+      } catch (err) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setSearchByImageLoading(false);
+      }
+    }
+  };
+
+  return { searchByImageLoading, searchByImage };
 };

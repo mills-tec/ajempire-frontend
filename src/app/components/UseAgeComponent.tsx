@@ -4,9 +4,8 @@ import UserUsageChart from "./UserUsageChart";
 import ProfileName from "./ui/ProfileName";
 import RecentPurchases from "./ui/RecentPurchases";
 import UsageSkeleton from "./UsageSkeleton";
-import { API_URL, getBearerToken } from "@/lib/api";
+import { getBearerToken } from "@/lib/api";
 import axios from "axios";
-
 interface UsageStats {
   ordersThisMonth: number;
   totalSpentThisMonth: number;

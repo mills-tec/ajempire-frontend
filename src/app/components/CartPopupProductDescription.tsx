@@ -1,6 +1,10 @@
 "use client";
 import { getBearerToken } from "@/lib/api";
-import { CartItem, useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
+import {
+  CartItem,
+  useCartStore,
+  areVariantsEqual,
+} from "@/lib/stores/cart-store";
 import { calcDiscountPrice } from "@/lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -28,8 +32,6 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     setSelectedVariants: setCartSelectedVariants,
     setQuantity: setCartItemQty,
   } = useCartStore();
-
-  console.log("item: ", item);
 
   const {
     selectedOptions,
@@ -393,6 +395,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                       stock: currentStock,
                       quantity: quantity || 1,
                       selectedVariants: selectedVariantsArray,
+                      selected: true,
                     }),
                 });
               }}

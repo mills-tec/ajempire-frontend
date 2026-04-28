@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import ProductItem from "./ProductItem";
 import Skeleton from "./Skeleton";
 import EndlessScrollLoading from "./EndlessScrollLoading";
@@ -25,6 +25,7 @@ export default function RelatedProducts({
   const lastItemRef = useRef<HTMLDivElement>(null);
 
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isPending, startDuplicateTransition] = useTransition();
 
   // 👇 SAME PATTERN AS GALLERY
   const originalProductsRef = useRef<any[]>([]);
@@ -135,7 +136,8 @@ export default function RelatedProducts({
       },
       {
         root: null,
-        threshold: 0.1,
+        rootMargin: "300px",
+        threshold: 0,
       },
     );
 
@@ -151,19 +153,16 @@ export default function RelatedProducts({
     if (!isDuplicating) return;
     if (!originalProductsRef.current.length) return;
 
-    const timer = setTimeout(() => {
+    startDuplicateTransition(() => {
       appendProducts(shuffleArray(originalProductsRef.current));
-      setIsDuplicating(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    });
+    setIsDuplicating(false);
   }, [isDuplicating]);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
       {products.map((product: any, index: number) => (
         <div
-          // key={index}
           key={`${product._id}-${index}`}
           ref={
             !hasNextPage && index === products.length - 1 ? lastItemRef : null
@@ -174,7 +173,7 @@ export default function RelatedProducts({
       ))}
 
       {/* Skeleton while duplicating */}
-      {isDuplicating &&
+      {isPending &&
         [...Array(ITEMS_TO_APPEND)].map((_, i) => (
           <Skeleton key={`dup-skeleton-${i}`} />
         ))}

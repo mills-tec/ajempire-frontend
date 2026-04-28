@@ -42,9 +42,8 @@ function EmailVerificationContent() {
       toast.success("Email verified successfully!");
       router.push("/auth/signin");
     } catch (error) {
-      console.log("error: ", error);
+      console.error("email verification error: ", error);
       toast.error("Invalid verification code. Please try again.");
-      console.error("Verification error:", error);
     } finally {
       setIsVerifying(false);
     }

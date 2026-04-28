@@ -32,7 +32,7 @@ export default function PaymentConfirmation() {
   //     console.log("Verifying payment with reference:", reference);
   //     try {
   //       const response = await axios.post(
-  //         `https://ajempire-backend.vercel.app/api/checkout/verify/${reference}`,
+  //         `https://ajempire-backend-production.up.railway.app/api/checkout/verify/${reference}`,
   //         {
   //           paymentMethod: paymentMethod,
   //         },
@@ -52,7 +52,7 @@ export default function PaymentConfirmation() {
   //         const selectedItems = useCartStore.getState().getSelectedItems();
   //         if (selectedItems.length > 0) {
   //           await axios.delete(
-  //             "https://ajempire-backend.vercel.app/api/cart/",
+  //             "https://ajempire-backend-production.up.railway.app/api/cart/",
   //             {
   //               headers: {
   //                 Authorization: `Bearer ${token}`,
@@ -87,7 +87,7 @@ export default function PaymentConfirmation() {
   //         const selectedItems = useCartStore.getState().getSelectedItems();
   //         if (selectedItems.length > 0) {
   //           await axios.delete(
-  //             "https://ajempire-backend.vercel.app/api/cart/",
+  //             "https://ajempire-backend-production.up.railway.app/api/cart/",
   //             {
   //               headers: {
   //                 Authorization: `Bearer ${token}`,
@@ -151,7 +151,7 @@ export default function PaymentConfirmation() {
 
     try {
       const response = await axios.post(
-        `https://ajempire-backend.vercel.app/api/checkout/verify`,
+        `https://ajempire-backend-production.up.railway.app/api/checkout/verify`,
         {},
         {
           headers: {

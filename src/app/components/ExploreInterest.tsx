@@ -5,7 +5,7 @@ import Skeleton from "@/components/Skeleton";
 import { getExploreInterest } from "@/lib/api";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 
 // const ITEMS_TO_APPEND = 10;
@@ -20,6 +20,7 @@ export default function ExploreInterest() {
     const lastItemRef = useRef<HTMLDivElement>(null);
     const originalProductsRef = useRef<any[]>([]);
     const [isDuplicating, setIsDuplicating] = useState(false);
+    const [isPending, startDuplicateTransition] = useTransition();
 
     /*
      * INITIAL FETCH
@@ -107,7 +108,8 @@ export default function ExploreInterest() {
             },
             {
                 root: null,
-                threshold: 0.1,
+                rootMargin: "300px",
+                threshold: 0,
             }
         );
 
@@ -125,17 +127,10 @@ export default function ExploreInterest() {
         if (!isDuplicating) return;
         if (!originalProductsRef.current.length) return;
 
-        const timer = setTimeout(() => {
-
-            appendProducts(
-                shuffleArray(originalProductsRef.current)
-            );
-
-            setIsDuplicating(false);
-
-        }, 500);
-
-        return () => clearTimeout(timer);
+        startDuplicateTransition(() => {
+            appendProducts(shuffleArray(originalProductsRef.current));
+        });
+        setIsDuplicating(false);
 
     }, [isDuplicating]);
 
@@ -152,7 +147,7 @@ export default function ExploreInterest() {
 
                 {products.map((product: any, index: number) => (
                     <div
-                        key={index}
+                        key={`${product._id}-${index}`}
                         ref={!hasNextPage && index === products.length - 1 ? lastItemRef : null}
                     >
                         <ProductItem product={product} index={index} />
@@ -160,7 +155,7 @@ export default function ExploreInterest() {
                 ))}
 
                 {/* Skeleton while duplicating */}
-                {isDuplicating &&
+                {isPending &&
                     [...Array(ITEMS_TO_APPEND)].map((_, i) => (
                         <Skeleton key={`dup-skeleton-${i}`} />
                     ))}

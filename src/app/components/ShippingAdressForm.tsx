@@ -201,6 +201,9 @@ export default function ShippingAdressForm({
           position: "top-right",
         });
       }
+
+      if (onContinue) onContinue();
+      if (onAddressUpdated) onAddressUpdated();
     } catch (error: any) {
       console.error("❌ Error updating address:", error);
 
