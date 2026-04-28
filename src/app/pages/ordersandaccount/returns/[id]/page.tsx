@@ -236,7 +236,7 @@ export default function Status() {
                         </div>
 
                         <div className="md:col-span-2 h-[200px] relative flex justify-end md:order-2 order-1">
-                            <Image src={data.imageEvidence} alt="" fill className="object-cover bg-primaryhover/10" />
+                            <Image src={data.imageEvidence} alt="" fill className="object-cover bg-primaryhover/10" sizes="(max-width: 768px) 100vw, 50vw" loading="eager" />
                         </div>
                     </section>
                 </>

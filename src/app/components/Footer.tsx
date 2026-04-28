@@ -24,7 +24,7 @@ const Footer = () => {
   return (
     <div className="w-full px-5 ">
       <div>
-        <Image src={whiteLogo} alt="logo" width={150} height={50} />
+        <Image src={whiteLogo} alt="logo" width={150} height={50} style={{ width: 'auto', height: 'auto' }} />
       </div>
 
       <div className="w-full flex items-center justify-between ">

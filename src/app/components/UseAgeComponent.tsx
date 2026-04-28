@@ -13,28 +13,29 @@ interface UsageStats {
   spendingTrendData: any[];
   recentPurchases: any[];
 }
+
+const useAgeData = async (setUsageData: React.Dispatch<React.SetStateAction<UsageStats | null>>, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => {
+  const token = getBearerToken();
+  try {
+    const res = await axios.get(`${API_URL}/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.data.message.stats) {
+      setUsageData(res.data.message.stats);
+    }
+  } catch (err) {
+    console.error("Error fetching usage data:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 export const UseAgeComponent = () => {
   const [usageData, setUsageData] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
-  API_URL;
 
   useEffect(() => {
-    const useAgeData = async () => {
-      const token = getBearerToken();
-      try {
-        const res = await axios.get(`${API_URL}/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.data.message.stats) {
-          setUsageData(res.data.message.stats);
-        }
-      } catch (err) {
-        console.error("Error fetching usage data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    useAgeData();
+    useAgeData(setUsageData, setLoading);
   }, []);
 
   if (loading) return <UsageSkeleton />;

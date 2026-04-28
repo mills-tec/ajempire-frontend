@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { useEffect, useState } from 'react'
 
-export default function page() {
+export default function UpdatePage() {
     const router = useRouter();
     const params = useParams();
     const { type } = params;
@@ -22,7 +22,7 @@ export default function page() {
             router.push(`${type}/${res.data[0]._id}`);
         })();
 
-    }, [])
+    }, [getFeeds, router, type])
 
 
     if (loading) return <UpdatesSkeleton type={type as string} />

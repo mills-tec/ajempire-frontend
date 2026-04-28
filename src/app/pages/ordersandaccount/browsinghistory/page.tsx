@@ -17,7 +17,7 @@ type BrowsingHistory = {
   }[];
   _id: string;
 };
-export default function page() {
+export default function BrowsingHistoryPage() {
   const {
     getBrowsingHistory,
     uiLoading,

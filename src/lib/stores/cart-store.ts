@@ -254,14 +254,14 @@ export const useCartStore = create<CartStore>()(
         const updatedItem = updatedItems.find((i) => i._id === id);
 
         // Update local state first
-        set({ items: updatedItems as any });
+        set({ items: updatedItems });
         const token = getBearerToken();
 
         if (!token) return; // 🚨 skip backend sync for guest users
         // Sync ONLY changed item
         if (updatedItem) {
           setTimeout(() => {
-            addToCart([updatedItem as any])
+            addToCart([updatedItem])
               .then(() => {
                 set({
                   items: get().items.map((i) =>
@@ -273,7 +273,7 @@ export const useCartStore = create<CartStore>()(
                 set({
                   syncQueue: [
                     ...get().syncQueue,
-                    { type: "update", item: updatedItem as any },
+                    { type: "update", item: updatedItem },
                   ],
                 });
 
