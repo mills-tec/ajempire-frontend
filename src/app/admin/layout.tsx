@@ -10,8 +10,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <html lang="en" className="bg-[#F4F5FA]">
-            <body className="w-full">
+       
+            <div className="w-full lg:flex lg:gap-3  lg:justify-between">
                 <AuthProvider>
                     <ProtectedRoute>
                         {/* Mobile sidebar overlay */}
@@ -32,13 +32,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                         
                         {/* Main content */}
-                        <div className="flex flex-col w-full lg:ml-0">
+                        <div className="flex flex-col lg:pt-4 w-full lg:w-[80%] lg:ml-0">
                             <Header onMenuClick={() => setSidebarOpen(true)} />
-                            <main className="min-h-screen pt-6">{children}</main>
+                            <main className=" pt-6">{children}</main>
                         </div>
                     </ProtectedRoute>
                 </AuthProvider>
-            </body>
-        </html>
+            </div>
+        
     );
 }

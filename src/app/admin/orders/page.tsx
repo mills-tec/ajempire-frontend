@@ -132,9 +132,9 @@ const OrdersPage = () => {
   };
 
   return (
-    <main className="w-full min-h-screen bg-gray-50/30 font-poppins pr-5">
+    <main className="w-full bg-gray-50/30 font-poppins pr-5 ">
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 ">
         <div className="bg-gradient-to-t from-brand_solid_gradient/10 border border-brand_light_pink/30 rounded-2xl p-6 flex items-start justify-between shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand_pink opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="flex flex-col gap-6 w-full">
