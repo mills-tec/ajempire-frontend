@@ -1,6 +1,12 @@
 "use client";
 import Image from "next/image";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ProductReview from "@/app/components/ProductReview";
 import CommentCard from "@/app/components/CommentCard";
 import ProductDescription from "@/app/components/ProductDescription";
@@ -82,7 +88,13 @@ export default function ProductDetailPage() {
           areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
       ) ?? null
     );
-  }, [availableVariants.length, hasVariants, item, items, selectedVariantsArray]);
+  }, [
+    availableVariants.length,
+    hasVariants,
+    item,
+    items,
+    selectedVariantsArray,
+  ]);
 
   const [quantity, setQuantity] = useState(
     cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1,
@@ -144,7 +156,15 @@ export default function ProductDetailPage() {
 
     store.selectAllCartItems();
     openModal("checkout");
-  }, [ensureVariantSelection, data, resolvedCartPrice, currentStock, quantity, selectedVariantsArray, openModal]);
+  }, [
+    ensureVariantSelection,
+    data,
+    resolvedCartPrice,
+    currentStock,
+    quantity,
+    selectedVariantsArray,
+    openModal,
+  ]);
 
   const [video, setVideo] = useState({
     showPlay: true,
@@ -179,7 +199,7 @@ export default function ProductDetailPage() {
             [src]: true,
           },
     );
-    }, []);
+  }, []);
 
   useEffect(() => {
     if (!item || !cartItem) return;
@@ -248,9 +268,10 @@ export default function ProductDetailPage() {
   const isCurrentMediaLoaded = Boolean(loadedMedia[currentMediaSrc]);
 
   return (
-    <RefreshWrapper 
-      queryKeys={[["relatedProducts", item.category?._id]]}
-      onRefreshExtra={reshuffle}
+    <RefreshWrapper
+      category={item.category?._id ?? ""}
+      // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
+      // onRefreshExtra={reshuffle}
     >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -532,7 +553,7 @@ export default function ProductDetailPage() {
             {item.category && (
               <RelatedProducts
                 category={item.category._id}
-                shuffleSeed={shuffleSeed}
+                // shuffleSeed={shuffleSeed}
               />
             )}
           </div>

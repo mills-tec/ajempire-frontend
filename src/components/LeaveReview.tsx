@@ -45,7 +45,8 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
 
   useEffect(() => {
     const reviews: [] = (selectedProduct.product as any).reviews;
-    const userReview: any = reviews.find((review: any) => review.user == getUser()._id);
+    const user = getUser();
+const userReview: any = reviews.find((review: any) => review.user == user?._id);
     setInputs({
       selectedRating: userReview?.rating || 0,
       comment: userReview?.comment || "",

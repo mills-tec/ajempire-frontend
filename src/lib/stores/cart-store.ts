@@ -37,7 +37,7 @@ interface SelectedLogistic {
   courier_id: string;
   courier_name: string;
   courier_image: string;
-  delivery_eta_time: string;
+  delivery_eta_time?: string;
   delivery_eta: string;
   total: number;
 }

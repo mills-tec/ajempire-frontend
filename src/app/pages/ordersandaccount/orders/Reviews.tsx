@@ -152,7 +152,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
 
       </div>
     ) : (
-      <EmptyList message="No reviews found" />
+     <EmptyList message="No reviews found" writeup="You haven't reviewed any products yet." />
     )
   );
 }

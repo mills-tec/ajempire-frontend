@@ -41,10 +41,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   } = useSearchStore();
   const router = useRouter();
 
-  // Mount effect
   useEffect(() => setMounted(true), []);
 
-  // Placeholder cycling — stable since PLACEHOLDERS is module-level
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
@@ -52,7 +50,6 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Placeholder animation class reset
   useEffect(() => {
     setPlaceholderClass("");
     const timeout = setTimeout(
@@ -62,7 +59,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     return () => clearTimeout(timeout);
   }, [placeholderIndex]);
 
-  // Update dropdown position — only recalculate if values actually changed
+  // Update dropdown position
   useEffect(() => {
     if (!open || !wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
@@ -75,7 +72,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
       prev.top === newPos.top &&
       prev.left === newPos.left &&
       prev.width === newPos.width
-        ? prev // same reference = no rerender
+        ? prev
         : newPos,
     );
   }, [open]);
@@ -147,15 +144,20 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
           className={`w-full outline-none bg-transparent text-base ${placeholderClass}`}
         />
 
+        {/* Camera — visible on BOTH mobile and desktop */}
         {showCam && (
-          <div className="hidden lg:block">
+          <div className="flex items-center">
             {searchByImageLoading ? (
               <LoaderCircle className="animate-spin text-primaryhover" />
             ) : (
               <>
-                <CameraSnap className="w-6 lg:hidden" />
+                {/* Mobile: CameraSnap, Desktop: CameraIcon */}
+                <CameraSnap
+                  className="w-6 lg:hidden cursor-pointer"
+                  onClick={() => fileRef.current?.click()}
+                />
                 <CameraIcon
-                  className="w-6 cursor-pointer"
+                  className="w-6 cursor-pointer hidden lg:block"
                   onClick={() => fileRef.current?.click()}
                 />
               </>

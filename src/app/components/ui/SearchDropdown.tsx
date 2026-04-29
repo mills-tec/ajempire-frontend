@@ -3,7 +3,7 @@
 import { useProduct } from "@/api/customHooks";
 import { useSearchStore } from "@/lib/search-store";
 import { Product } from "@/lib/types";
-import { X, Trash2 } from "lucide-react"; // ✅ Trash2 icon
+import { X, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
@@ -29,57 +29,25 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
     const [visible, setVisible] = useState(false);
     const { searchByImage } = useProduct();
 
-    // animate in
     useEffect(() => {
       const timer = setTimeout(() => setVisible(true), 10);
       return () => clearTimeout(timer);
     }, []);
-
-    // compute spacing below search bar
-    const topPos = (position?.top ?? 0) + 5; // ✅ 8px gap below input
-
-    const dropdownClasses = `
-      search-dropdown 
-      bg-white rounded-2xl shadow-xl border p-4 py-5 z-[9999] fixed
-      transition-all duration-200 ease-out
-      transform
-      ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}
-    `;
 
     const base64ToFile = (
       base64: string,
       fileName: string,
       lastModified: number,
     ) => {
-      // Split "data:image/png;base64,iVBORw0..." into mime type and raw data
       const [meta, data] = base64.split(",");
-      const mimeType = meta?.match(/:(.*?);/)?.[1] || "image/jpeg"; // "image/png"
-
-      // Decode base64 string into bytes
+      const mimeType = meta?.match(/:(.*?);/)?.[1] || "image/jpeg";
       const bytes = atob(data || "");
       const byteArray = new Uint8Array(bytes.length);
       for (let i = 0; i < bytes.length; i++) {
         byteArray[i] = bytes.charCodeAt(i);
       }
-
       return new File([byteArray], fileName, { type: mimeType, lastModified });
     };
-
-    if (recent.length === 0 && recentImageSearches.length === 0) {
-      return (
-        <div
-          ref={ref}
-          className={dropdownClasses}
-          style={{
-            top: topPos,
-            left: position?.left ?? 0,
-            width: position?.width ?? 200,
-          }}
-        >
-          <p className="text-sm text-gray-400">No recent searches</p>
-        </div>
-      );
-    }
 
     const handleImageSearchClick = async (image: {
       base64: string;
@@ -90,7 +58,7 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
       const file = base64ToFile(base64, name, lastModified);
       if (!file) return;
       try {
-        let data: Product[] = await searchByImage(file);
+        const data: Product[] = await searchByImage(file);
         setSearchByImageProducts(data);
         addRecentImageSearch(file);
         router.push(`/search?type=image`);
@@ -99,17 +67,41 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
       }
     };
 
+    // Responsive positioning:
+    // Mobile (width < 640) — full width with margin, anchored below search bar
+    // Desktop — anchored to search bar width and position
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
+    const style: React.CSSProperties = isMobile
+      ? {
+          top: (position?.top ?? 80) + 4,
+          left: 12,
+          right: 12,
+          width: "auto",
+        }
+      : {
+          top: (position?.top ?? 80) + 4,
+          left: position?.left ?? 0,
+          width: position?.width ?? 320,
+        };
+
+    const dropdownClasses = `
+      search-dropdown
+      bg-white rounded-2xl shadow-xl border p-4 py-5 z-[9999] fixed
+      transition-all duration-200 ease-out
+      ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"}
+    `;
+
+    if (recent.length === 0 && recentImageSearches.length === 0) {
+      return (
+        <div ref={ref} className={dropdownClasses} style={style}>
+          <p className="text-sm text-gray-400">No recent searches</p>
+        </div>
+      );
+    }
+
     return (
-      <div
-        ref={ref}
-        className={dropdownClasses}
-        style={{
-          top: "80px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "40%",
-        }}
-      >
+      <div ref={ref} className={dropdownClasses} style={style}>
         {/* Header */}
         <div className="flex justify-between mb-3">
           <p className="text-sm font-medium text-gray-700">Recently searched</p>
@@ -122,8 +114,7 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
           </button>
         </div>
 
-        {/* Recent text items */}
-
+        {/* Recent text searches */}
         {recent.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {recent.map((item) => (
@@ -152,17 +143,15 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
           </div>
         )}
 
+        {/* Recent image searches */}
         {recentImageSearches.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {recentImageSearches.map((item, idx) => (
               <div key={idx} className="relative">
                 <img
-                  onClick={() => {
-                    handleImageSearchClick(item);
-                  }}
+                  onClick={() => handleImageSearchClick(item)}
                   src={item.base64}
-                  alt=""
-                  key={idx}
+                  alt="recent search"
                   className="w-10 h-10 object-cover rounded cursor-pointer"
                 />
                 <span
@@ -170,7 +159,7 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
                     e.stopPropagation();
                     removeRecentImageSearch(item.hash);
                   }}
-                  className="text-white  cursor-pointer absolute top-0 right-0 bg-black/40 hover:bg-black rounded-full flex items-center justify-center  h-4 w-4"
+                  className="text-white cursor-pointer absolute top-0 right-0 bg-black/40 hover:bg-black rounded-full flex items-center justify-center h-4 w-4"
                 >
                   <X size={10} />
                 </span>

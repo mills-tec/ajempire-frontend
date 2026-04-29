@@ -82,9 +82,9 @@ function SearchContent() {
   // Clear image results when switching to text search
   useEffect(() => {
     if (rawQuery) setSearchByImageProducts([]);
-  }, [rawQuery]);
+  }, [rawQuery, setSearchByImageProducts]);
 
-  // Skeleton delay — only for query changes, no circular dependency
+  // Skeleton delay — only for query changes
   useEffect(() => {
     if (!hasQuery) {
       setSkeletonLoading(false);
@@ -93,7 +93,7 @@ function SearchContent() {
     setSkeletonLoading(true);
     const timer = setTimeout(() => setSkeletonLoading(false), 500);
     return () => clearTimeout(timer);
-  }, [query]); // ✅ only query, not skeletonLoading
+  }, [query]);
 
   const matchedCategoryNames = useMemo(() => {
     if (!hasQuery || !allCategories?.message) return [];
@@ -157,15 +157,20 @@ function SearchContent() {
     });
   }, [allProducts, localMinPrice, localMaxPrice]);
 
-  // ✅ Derived — no state, no useEffect, no circular deps
-  const hasDirectMatches = (data?.length ?? 0) > 0;
+  // FIX: text search must be done loading before we wait for category loading
+  // If text search is still loading — show skeletons
+  // If text search is done (even with 0 results) — only wait for categories
+  // if they are actually relevant (matchedCategoryNames.length > 0)
+  const textSearchDone = !isLoading && data !== undefined;
   const showLoadingState =
     hasAnySearch &&
-    (isLoading ||
-      skeletonLoading ||
+    (skeletonLoading ||
       searchByImageLoading ||
-      (hasQuery && !hasDirectMatches && isCategoriesLoading) ||
-      (hasQuery && !hasDirectMatches && isCategoryProductsLoading));
+      !textSearchDone ||
+      (textSearchDone &&
+        matchedCategoryNames.length > 0 &&
+        isCategoryProductsLoading) ||
+      (!textSearchDone && isCategoriesLoading));
 
   if (isError)
     return <p className="text-center mt-20">Error loading products.</p>;

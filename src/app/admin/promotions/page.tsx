@@ -1,22 +1,51 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, SquarePen, Megaphone, Plus, X, Check } from 'lucide-react';
+import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, SquarePen, Megaphone, Plus, X } from 'lucide-react';
 import { getPromotions, createPromotion, updatePromotion, deletePromotion, getAllCategories, getProducts } from '@/lib/adminapi';
+
+interface Promotion {
+  _id?: string;
+  id?: string;
+  title?: string;
+  description?: string;
+  promotionType?: string;
+  discountType?: string;
+  discountValue?: number;
+  applyTo?: string;
+  applyToId?: string[];
+  banner?: string;
+  startDate?: string;
+  endDate?: string;
+  couponCode?: string;
+  status?: string;
+}
+
+interface Category {
+  _id?: string;
+  id?: string;
+  name?: string;
+}
+
+interface Product {
+  _id?: string;
+  id?: string;
+  name?: string;
+  title?: string;
+}
 
 const PromotionsPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('This Week');
   const [searchTerm, setSearchTerm] = useState('');
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPromotion, setSelectedPromotion] = useState<any>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -79,7 +108,7 @@ const PromotionsPage = () => {
     try {
       const response = await getProducts();
       console.log('Products response:', response);
-      const productsData = response.message as any;
+      const productsData = response.message as { products?: Product[] };
       if (productsData && productsData.products && Array.isArray(productsData.products)) {
         setProducts(productsData.products);
       } else if (response.message && Array.isArray(response.message)) {
@@ -102,6 +131,7 @@ const PromotionsPage = () => {
     fetchPromotions();
     fetchCategories();
     fetchProducts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusStyle = (status: string) => {
@@ -118,7 +148,6 @@ const PromotionsPage = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    // Reset applyToId when applyTo changes to 'all'
     if (name === 'applyTo' && value === 'all') {
       setFormData(prev => ({
         ...prev,
@@ -153,7 +182,7 @@ const PromotionsPage = () => {
   };
 
   // Handle edit promotion
-  const handleEditClick = (promotion: any) => {
+  const handleEditClick = (promotion: Promotion) => {
     setSelectedPromotion(promotion);
     setFormData({
       title: promotion.title || '',
@@ -173,7 +202,7 @@ const PromotionsPage = () => {
   };
 
   // Handle delete promotion
-  const handleDeleteClick = (promotion: any) => {
+  const handleDeleteClick = (promotion: Promotion) => {
     setSelectedPromotion(promotion);
     setShowDeleteModal(true);
   };
@@ -185,7 +214,6 @@ const PromotionsPage = () => {
     setError(null);
 
     try {
-      // Convert date strings to Date objects for API
       const payload = {
         ...formData,
         startDate: formData.startDate ? new Date(formData.startDate) : null,
@@ -212,9 +240,9 @@ const PromotionsPage = () => {
       } else {
         setError(response.error || 'Failed to create promotion');
       }
-    } catch (error: any) {
-      console.error('Error creating promotion:', error);
-      setError(error.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      console.error('Error creating promotion:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -229,7 +257,6 @@ const PromotionsPage = () => {
     setError(null);
 
     try {
-      // Convert date strings to Date objects for API
       const payload = {
         ...formData,
         startDate: formData.startDate ? new Date(formData.startDate) : null,
@@ -244,9 +271,9 @@ const PromotionsPage = () => {
       } else {
         setError(response.error || 'Failed to update promotion');
       }
-    } catch (error: any) {
-      console.error('Error updating promotion:', error);
-      setError(error.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      console.error('Error updating promotion:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -267,9 +294,9 @@ const PromotionsPage = () => {
       } else {
         setError(response.error || 'Failed to delete promotion');
       }
-    } catch (error: any) {
-      console.error('Error deleting promotion:', error);
-      setError(error.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      console.error('Error deleting promotion:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -292,12 +319,10 @@ const PromotionsPage = () => {
       const endDate = promotion.endDate ? new Date(promotion.endDate) : null;
       const status = promotion.status?.toLowerCase();
 
-      // Determine promotion status based on dates or explicit status
       if (status === 'expired' || (endDate && endDate < now)) {
         stats.expired++;
       } else if (status === 'active' || (startDate && startDate <= now && endDate && endDate >= now)) {
         stats.active++;
-        // Track discount types and add discount value for active promotions
         if (promotion.discountValue) {
           if (promotion.discountType === 'percent') {
             stats.hasPercentageDiscount = true;
@@ -310,9 +335,8 @@ const PromotionsPage = () => {
       } else if (status === 'scheduled' || (startDate && startDate > now)) {
         stats.upcoming++;
       } else {
-        // Default logic if no explicit status
         if (!startDate && !endDate) {
-          stats.active++; // Assume active if no dates
+          stats.active++;
           if (promotion.discountValue) {
             if (promotion.discountType === 'percent') {
               stats.hasPercentageDiscount = true;
@@ -371,19 +395,11 @@ const PromotionsPage = () => {
               <div>
                 <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Active Promotions</p>
                 <h3 className="text-2xl font-bold text-brand_gray_dark">{stats.active}</h3>
-                {/* <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold">{stats.active}</p>
-                  <p className="text-green-500 text-xs">+0.00%</p>
-                </div> */}
               </div>
 
               <div className="text-left">
                 <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Upcoming Promotions</p>
                 <h3 className="text-2xl font-bold text-brand_gray_dark">{stats.upcoming}</h3>
-                {/* <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold">{stats.upcoming}</p>
-                  <p className="text-green-500 text-xs">+0.00%</p>
-                </div> */}
               </div>
             </div>
           </div>
@@ -406,7 +422,6 @@ const PromotionsPage = () => {
                 <option>This Month</option>
                 <option>This Year</option>
               </select>
-
             </div>
             <div className="flex justify-between items-end">
               <div>
@@ -425,10 +440,6 @@ const PromotionsPage = () => {
                     </>
                   ) : '0'}
                 </h3>
-                {/* <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold text-brand_gray_dark">{stats.totalDiscountValue}</p>
-                  <p className="text-green-500 text-xs">+0.00%</p>
-                </div> */}
               </div>
 
               <div className="text-left">
@@ -495,7 +506,7 @@ const PromotionsPage = () => {
               ) : promotions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-gray-500">
-                    No promotions found. Click "Add Promotion" to create your first promotion.
+                    No promotions found. Click &quot;Add Promotion&quot; to create your first promotion.
                   </td>
                 </tr>
               ) : (
@@ -514,7 +525,7 @@ const PromotionsPage = () => {
                       {promotion.endDate ? new Date(promotion.endDate).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(promotion.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(promotion.status || '')}`}>
                         {promotion.status || 'inactive'}
                       </span>
                     </td>
@@ -598,7 +609,6 @@ const PromotionsPage = () => {
               </button>
             </div>
             
-            {/* Error Message */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -828,7 +838,6 @@ const PromotionsPage = () => {
               </button>
             </div>
             
-            {/* Error Message */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -1063,7 +1072,7 @@ const PromotionsPage = () => {
                 Are you sure you want to delete this promotion?
               </p>
               <p className="font-medium text-gray-900">
-                "{selectedPromotion.title || 'Untitled promotion'}"
+                &quot;{selectedPromotion.title || 'Untitled promotion'}&quot;
               </p>
             </div>
             

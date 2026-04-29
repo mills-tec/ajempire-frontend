@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ChartPie, CornerDownLeft, FolderMinus, Megaphone, ShoppingBagIcon, UsersRound } from "lucide-react";
+import { ChartPie, CornerDownLeft, FolderMinus, ShoppingBagIcon, UsersRound } from "lucide-react";
 import LineChart from "../components/admin/LineChart";
 import DoughnutChart from "../components/admin/DoughnutChart";
 import WebsiteTrafficChart from "../components/admin/WebsiteTrafficChart";
@@ -10,17 +10,47 @@ import TopSellingProducts from "../components/admin/TopSellingProducts";
 import TopSellingCategory from "../components/admin/TopSellingCategory";
 import InventoryAlert from "../components/admin/InventoryAlert";
 import { getUserOrders, getProducts, getAllCategories, getReturns } from '@/lib/adminapi';
+import Image from 'next/image';
+
+interface Order {
+  totalPrice?: number;
+  shippingAddress?: { fullName?: string };
+  orderStatus?: string;
+  createdAt: string;
+  items?: { category?: string; productId?: string; _id?: string; quantity?: number; name?: string; image?: string }[];
+}
+
+interface Product {
+  stock?: number;
+  isFeatured?: boolean;
+}
+
+interface ReturnItem {
+  status?: string;
+}
+
+interface ChartDataPoint {
+  date: string;
+  sales: number;
+}
+
+interface OrderStatusDataPoint {
+  name: string;
+  value: number;
+  color: string;
+}
 
 export default function AdminPage() {
-    const [orders, setOrders] = useState<any[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [returns, setReturns] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<unknown[]>([]);
+    const [returns, setReturns] = useState<ReturnItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState('This week');
 
     useEffect(() => {
         fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchDashboardData = async () => {
@@ -33,25 +63,21 @@ export default function AdminPage() {
                 getReturns()
             ]);
 
-            // Transform orders data
             if (ordersResponse.message && Array.isArray(ordersResponse.message)) {
                 setOrders(ordersResponse.message);
             }
 
-            // Transform products data
-            const productsData = productsResponse.message as any;
+            const productsData = productsResponse.message as { products?: Product[] };
             if (productsData && productsData.products && Array.isArray(productsData.products)) {
                 setProducts(productsData.products);
             } else if (productsResponse.message && Array.isArray(productsResponse.message)) {
                 setProducts(productsResponse.message);
             }
 
-            // Transform categories data
             if (categoriesResponse.message && Array.isArray(categoriesResponse.message)) {
                 setCategories(categoriesResponse.message);
             }
 
-            // Transform returns data
             if (returnsResponse.message && Array.isArray(returnsResponse.message)) {
                 setReturns(returnsResponse.message);
             } else if (returnsResponse.data && Array.isArray(returnsResponse.data)) {
@@ -64,63 +90,43 @@ export default function AdminPage() {
         }
     };
 
-    // Calculate dynamic statistics
     const totalSales = orders?.reduce((sum, order) => sum + (order.totalPrice || 0), 0) || 0;
     const totalCustomers = new Set(orders?.map(order => order.shippingAddress?.fullName).filter(Boolean)).size || 0;
     const totalOrders = orders?.length || 0;
     const totalProducts = products?.length || 0;
     const totalCategories = categories?.length || 0;
     const totalReturns = returns?.length || 0;
-    
-    // Calculate order status breakdown
+
     const processingOrders = orders?.filter(o => o.orderStatus === 'processing').length || 0;
     const shippingOrders = orders?.filter(o => o.orderStatus === 'shipping').length || 0;
     const deliveredOrders = orders?.filter(o => o.orderStatus === 'delivered').length || 0;
     const canceledOrders = orders?.filter(o => o.orderStatus === 'canceled').length || 0;
-    
-    // Calculate returns statistics
+
     const pendingReturns = returns?.filter(r => r.status === 'pending').length || 0;
-    const approvedReturns = returns?.filter(r => r.status === 'approved').length || 0;
-    const rejectedReturns = returns?.filter(r => r.status === 'rejected').length || 0;
-    const completedReturns = returns?.filter(r => r.status === 'completed').length || 0;
-    
-    // Calculate product statistics
-    const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0;
+
+    const lowStockProducts = products?.filter(p => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 10).length || 0;
     const outOfStockProducts = products?.filter(p => p.stock === 0).length || 0;
-    const featuredProducts = products?.filter(p => p.isFeatured).length || 0;
-    
-    // Calculate sales by category
+
     const salesByCategory = orders?.reduce((acc, order) => {
         const category = order.items?.[0]?.category || 'Unknown';
         acc[category] = (acc[category] || 0) + (order.totalPrice || 0);
         return acc;
     }, {} as Record<string, number>);
-    
-    // Top selling products
-    const topSellingProducts = orders?.reduce((acc, order) => {
-        order.items?.forEach((item: any) => {
-            const productId = item.productId || item._id;
-            if (productId) {
-                acc[productId] = (acc[productId] || 0) + (item.quantity || 1);
-            }
-        });
-        return acc;
-    }, {} as Record<string, number>);
-    
-    // Chart data
-    const orderStatusData = [
+
+    const orderStatusData: OrderStatusDataPoint[] = [
         { name: 'Processing', value: processingOrders, color: '#FFA500' },
         { name: 'Shipping', value: shippingOrders, color: '#3B82F6' },
         { name: 'Delivered', value: deliveredOrders, color: '#10B981' },
         { name: 'Canceled', value: canceledOrders, color: '#EF4444' }
     ];
-    
-    const salesData = orders?.map(order => ({
+
+    const salesData: ChartDataPoint[] = orders?.map(order => ({
         date: new Date(order.createdAt).toLocaleDateString(),
         sales: order.totalPrice || 0
     })) || [];
-    
-    const categoryData = Object.entries(salesByCategory).map(([name, value]) => ({
+
+    // kept for potential future use
+    void Object.entries(salesByCategory).map(([name, value]) => ({
         name,
         value: Number(value) || 0
     }));
@@ -133,7 +139,7 @@ export default function AdminPage() {
                         <div className='bg-brand_pink/10 p-2 rounded-xl border'>
                             <ChartPie size={18} color="#ff008c" />
                         </div>
-                        <select 
+                        <select
                             value={selectedPeriod}
                             onChange={(e) => setSelectedPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -156,7 +162,7 @@ export default function AdminPage() {
                         <div className='bg-yellow-500/10 p-2 rounded-xl border'>
                             <UsersRound size={18} />
                         </div>
-                        <select 
+                        <select
                             value={selectedPeriod}
                             onChange={(e) => setSelectedPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -191,7 +197,7 @@ export default function AdminPage() {
                         <div className='bg-blue-500/10 p-2 rounded-xl border'>
                             <ShoppingBagIcon size={18} />
                         </div>
-                        <select 
+                        <select
                             value={selectedPeriod}
                             onChange={(e) => setSelectedPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -245,7 +251,7 @@ export default function AdminPage() {
                                 <div className='bg-yellow-500/10 p-2 rounded-xl'>
                                     <CornerDownLeft size={18} />
                                 </div>
-                                <select 
+                                <select
                                     value={selectedPeriod}
                                     onChange={(e) => setSelectedPeriod(e.target.value)}
                                     className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -278,7 +284,7 @@ export default function AdminPage() {
                                     <p className="text-brand_pink font-bold text-sm">N{totalSales.toLocaleString()}</p>
                                 </div>
                             </div>
-                            <select 
+                            <select
                                 value={selectedPeriod}
                                 onChange={(e) => setSelectedPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -299,7 +305,7 @@ export default function AdminPage() {
                     <div className="bg-white p-4 rounded-xl border h-full">
                         <div className="flex items-center justify-between">
                             <h4 className="font-medium text-brand_gray_dark text-sm">Inventory Values</h4>
-                            <select 
+                            <select
                                 value={selectedPeriod}
                                 onChange={(e) => setSelectedPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -315,7 +321,7 @@ export default function AdminPage() {
                                     <div className="w-2 h-2 rounded-full bg-brand_pink" />
                                     <p className="text-brand_gray text-sm">In Stock</p>
                                 </div>
-                                <p className="text-brand_gray text-sm font-medium">{products?.filter(p => p.stock > 0).length || 0}</p>
+                                <p className="text-brand_gray text-sm font-medium">{products?.filter(p => (p.stock ?? 0) > 0).length || 0}</p>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -335,7 +341,6 @@ export default function AdminPage() {
                             </div>
                         </div>
 
-                        {/* chart placeholder fix */}
                         <div className="flex justify-center items-center mt-10">
                             <div className="relative w-32 h-32">
                                 <DoughnutChart data={orderStatusData} />
@@ -355,7 +360,13 @@ export default function AdminPage() {
                                     <div className="flex w-full gap-x-3">
                                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden">
                                             {order.items?.[0]?.image ? (
-                                                <img src={order.items[0].image} alt="Product" className="w-full h-full object-cover" />
+                                                <Image
+                                                    src={order.items[0].image}
+                                                    alt="Product"
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="32px"
+                                                />
                                             ) : (
                                                 <div className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-400 font-bold">IMG</div>
                                             )}
@@ -368,12 +379,12 @@ export default function AdminPage() {
                                     <div className="text-right flex-shrink-0 ml-2">
                                         <p className="text-[8px] text-brand_gray mb-1">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                                         <span className={`text-[8px] px-2 py-0.5 rounded-full ${
-                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' : 
-                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' : 
+                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' :
+                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' :
                                             'bg-gray-100 text-gray-600'
                                         }`}>
-                                            {order.orderStatus === 'delivered' ? 'Done' : 
-                                             order.orderStatus === 'processing' ? 'Pending' : 
+                                            {order.orderStatus === 'delivered' ? 'Done' :
+                                             order.orderStatus === 'processing' ? 'Pending' :
                                              order.orderStatus}
                                         </span>
                                     </div>

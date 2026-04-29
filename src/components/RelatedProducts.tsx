@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import ProductItem from "./ProductItem";
 import Skeleton from "./Skeleton";
 import EndlessScrollLoading from "./EndlessScrollLoading";
@@ -7,28 +7,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import { getRelatedProducts } from "@/lib/api";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import type { Product } from "@/lib/types";
 
-// const ITEMS_TO_APPEND = 10;
-
-export default function RelatedProducts({
-  category,
-  shuffleSeed,
-}: {
-  category: string;
-  shuffleSeed: number;
-}) {
+export default function RelatedProducts({ category }: { category: string }) {
   const queryClient = useQueryClient();
 
   const [cursor, setCursor] = useState("");
   const [hasNextPage, setHasNextPage] = useState(true);
-
   const lastItemRef = useRef<HTMLDivElement>(null);
+  const originalProductsRef = useRef<Product[]>([]);
+  const prevProductCountRef = useRef<number>(0);
 
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isPending, startDuplicateTransition] = useTransition();
-
-  // 👇 SAME PATTERN AS GALLERY
-  const originalProductsRef = useRef<any[]>([]);
 
   /*
    * INITIAL FETCH
@@ -41,60 +32,48 @@ export default function RelatedProducts({
       onSuccess: (res) => {
         setCursor(res?.nextCursor || "");
         setHasNextPage(res?.hasMore ?? false);
+        originalProductsRef.current = res?.products ?? [];
+        prevProductCountRef.current = res?.products?.length ?? 0;
       },
     },
   );
 
-  // const products = useMemo(() => {
-  //   return data?.products ?? [];
-  // }, [data]);
-
-  // useEffect(() => {
-  //   if (!shuffleSeed) return;
-
-  //   queryClient.setQueryData(["relatedProducts", category], (oldData: any) => {
-  //     if (!oldData?.products) return oldData;
-
-  //     const shuffled = shuffleArray([...oldData.products]);
-
-  //     return {
-  //       ...oldData,
-  //       products: shuffled,
-  //     };
-  //   });
-  // }, [shuffleSeed, category, queryClient]);
-
-  const products = useMemo(() => {
-    const base = data?.products ?? [];
-
-    if (!base.length) return base;
-
-    return shuffleSeed
-      ? shuffleArray([...base]) // clone before shuffle
-      : base;
-  }, [data, shuffleSeed]);
-
-  /*
-   * STORE ORIGINAL DATASET ONCE
-   */
+  // Detect when cache gets REPLACED by refresh (product count drops back to first page size)
+  // This is the key fix — when RefreshWrapper sets fresh data, reset scroll state
   useEffect(() => {
-    if (data?.products && originalProductsRef.current.length === 0) {
+    if (!data?.products) return;
+
+    const currentCount = data.products.length;
+    const prevCount = prevProductCountRef.current;
+
+    // If count dropped or stayed same as first page — cache was replaced by refresh
+    if (prevCount > ITEMS_TO_APPEND && currentCount <= ITEMS_TO_APPEND) {
+      setCursor(data.nextCursor ?? "");
+      setHasNextPage(data.hasMore ?? true);
       originalProductsRef.current = data.products;
     }
-  }, [data]);
+
+    prevProductCountRef.current = currentCount;
+  }, [data?.products?.length]);
 
   /*
    * APPEND HELPER
    */
-  const appendProducts = (newProducts: any[]) => {
-    queryClient.setQueryData(["relatedProducts", category], (oldData: any) => {
-      if (!oldData) return oldData;
-
-      return {
-        ...oldData,
-        products: [...(oldData.products ?? []), ...newProducts],
-      };
-    });
+  const appendProducts = (newProducts: Product[]) => {
+    queryClient.setQueryData(
+      ["relatedProducts", category],
+      (
+        oldData:
+          | { products?: Product[]; nextCursor?: string; hasMore?: boolean }
+          | undefined,
+      ) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          products: [...(oldData.products ?? []), ...newProducts],
+        };
+      },
+    );
   };
 
   /*
@@ -112,7 +91,6 @@ export default function RelatedProducts({
         );
 
         appendProducts(newData?.products || []);
-
         setCursor(newData?.nextCursor || "");
         setHasNextPage(newData?.hasMore ?? false);
       } catch (err) {
@@ -122,10 +100,10 @@ export default function RelatedProducts({
   });
 
   /*
-   * OBSERVE LAST ITEM
+   * OBSERVE LAST ITEM — trigger duplication when API is exhausted
    */
   useEffect(() => {
-    if (hasNextPage) return; // only duplicate when API finished
+    if (hasNextPage) return;
     if (!lastItemRef.current) return;
 
     const observer = new IntersectionObserver(
@@ -134,34 +112,31 @@ export default function RelatedProducts({
           setIsDuplicating(true);
         }
       },
-      {
-        root: null,
-        rootMargin: "300px",
-        threshold: 0,
-      },
+      { root: null, rootMargin: "300px", threshold: 0 },
     );
 
     observer.observe(lastItemRef.current);
-
     return () => observer.disconnect();
   }, [hasNextPage, isDuplicating]);
 
   /*
-   * DUPLICATION LOGIC (same as gallery)
+   * DUPLICATION — shuffles original set and appends
    */
   useEffect(() => {
     if (!isDuplicating) return;
     if (!originalProductsRef.current.length) return;
 
     startDuplicateTransition(() => {
-      appendProducts(shuffleArray(originalProductsRef.current));
+      appendProducts(shuffleArray([...originalProductsRef.current]));
     });
     setIsDuplicating(false);
   }, [isDuplicating]);
 
+  const products: Product[] = data?.products ?? [];
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-      {products.map((product: any, index: number) => (
+      {products.map((product, index) => (
         <div
           key={`${product._id}-${index}`}
           ref={
@@ -172,13 +147,11 @@ export default function RelatedProducts({
         </div>
       ))}
 
-      {/* Skeleton while duplicating */}
       {isPending &&
         [...Array(ITEMS_TO_APPEND)].map((_, i) => (
           <Skeleton key={`dup-skeleton-${i}`} />
         ))}
 
-      {/* API loading */}
       <EndlessScrollLoading
         infiniteRef={infiniteRef}
         hasNextPage={hasNextPage}
