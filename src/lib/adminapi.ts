@@ -28,6 +28,16 @@ import {
   CreateFlashSaleData,
   Education,
   CreateEducationData,
+  Promotion,
+  CreatePromotionData,
+  Admin,
+  CreateAdminData,
+  AdminProfile,
+  AdminSecuritySettings,
+  AdminNotificationSettings,
+  LogisticsSettings,
+  Customer,
+  UpdateCustomerData,
   Coupon,
   CreateCouponData,
   SystemNotification,
@@ -231,16 +241,16 @@ export const createFlashSale = (data: CreateFlashSaleData): Promise<ApiResponse<
   });
 
 // Promotion endpoints
-export const getPromotions = (): Promise<ApiResponse<any[]>> =>
+export const getPromotions = (): Promise<ApiResponse<Promotion[]>> =>
   apiCall('/admin/promotions');
 
-export const createPromotion = (data: any): Promise<ApiResponse<any>> =>
+export const createPromotion = (data: CreatePromotionData): Promise<ApiResponse<Promotion>> =>
   apiCall('/admin/promotions', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 
-export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> =>
+export const updatePromotion = (id: string, data: CreatePromotionData): Promise<ApiResponse<Promotion>> =>
   apiCall(`/admin/promotions/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
@@ -293,22 +303,22 @@ export const sendUserNotification = (notification: SystemNotification): Promise<
   });
 
 // Settings endpoints
-export const addAdmin = (data: any): Promise<ApiResponse<any>> =>
+export const addAdmin = (data: CreateAdminData): Promise<ApiResponse<Admin>> =>
   apiCall('/admin/settings/roleandaccess', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 
-export const updateAdminPermission = (id: string, data: any): Promise<ApiResponse<any>> =>
+export const updateAdminPermission = (id: string, data: CreateAdminData): Promise<ApiResponse<Admin>> =>
   apiCall(`/admin/settings/roleandaccess/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
-export const getAllAdmins = (): Promise<ApiResponse<any[]>> =>
+export const getAllAdmins = (): Promise<ApiResponse<Admin[]>> =>
   apiCall('/admin/settings/roleandaccess');
 
-export const fetchPermissions = (): Promise<ApiResponse<any[]>> =>
+export const fetchPermissions = (): Promise<ApiResponse<{ id: string; name: string; description: string }[]>> =>
   apiCall('/admin/settings/permissions');
 
 export const deleteAdmin = (id: string): Promise<ApiResponse<void>> =>
@@ -316,62 +326,62 @@ export const deleteAdmin = (id: string): Promise<ApiResponse<void>> =>
     method: 'DELETE',
   });
 
-export const fetchAdminProfile = (): Promise<ApiResponse<any>> =>
+export const fetchAdminProfile = (): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile');
 
-export const getReturns = (): Promise<ApiResponse<any[]>> =>
+export const getReturns = (): Promise<ApiResponse<ReturnRequest[]>> =>
   apiCall('/admin/returns');
 
-export const updateAdminProfile = (data: any): Promise<ApiResponse<any>> =>
+export const updateAdminProfile = (data: AdminProfile): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
-export const updateAdminSecuritySettings = (data: any): Promise<ApiResponse<any>> =>
+export const updateAdminSecuritySettings = (data: AdminSecuritySettings): Promise<ApiResponse<AdminSecuritySettings>> =>
   apiCall('/admin/settings/security', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
-export const updateAdminNotificationSettings = (data: any): Promise<ApiResponse<any>> =>
+export const updateAdminNotificationSettings = (data: AdminNotificationSettings): Promise<ApiResponse<AdminNotificationSettings>> =>
   apiCall('/admin/settings/notifications', {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
 // Logistics endpoints
-export const getLogisticsSettings = (): Promise<ApiResponse<any>> =>
+export const getLogisticsSettings = (): Promise<ApiResponse<LogisticsSettings>> =>
   apiCall('/admin/logistics');
 
-export const updateLogisticsSettings = (data: any): Promise<ApiResponse<any>> =>
+export const updateLogisticsSettings = (data: LogisticsSettings): Promise<ApiResponse<LogisticsSettings>> =>
   apiCall('/admin/logistics', {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 
 // Customer Management APIs
-export const getCustomers = (): Promise<ApiResponse<any[]>> =>
+export const getCustomers = (): Promise<ApiResponse<Customer[]>> =>
   apiCall('/admin/customers');
 
-export const getCustomerById = (id: string): Promise<ApiResponse<any>> =>
+export const getCustomerById = (id: string): Promise<ApiResponse<Customer>> =>
   apiCall(`/admin/customers/${id}`);
 
-export const updateCustomer = (id: string, data: any): Promise<ApiResponse<any>> =>
+export const updateCustomer = (id: string, data: UpdateCustomerData): Promise<ApiResponse<Customer>> =>
   apiCall(`/admin/customers/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
-export const deleteCustomer = (id: string): Promise<ApiResponse<any>> =>
+export const deleteCustomer = (id: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/customers/${id}`, {
     method: 'DELETE',
   });
 
-export const getCustomerOrders = (id: string): Promise<ApiResponse<any[]>> =>
+export const getCustomerOrders = (id: string): Promise<ApiResponse<Order[]>> =>
   apiCall(`/admin/customers/${id}/orders`);
 
-export const updateCustomerStatus = (id: string, status: string): Promise<ApiResponse<any>> =>
+export const updateCustomerStatus = (id: string, status: string): Promise<ApiResponse<Customer>> =>
   apiCall(`/admin/customers/${id}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),

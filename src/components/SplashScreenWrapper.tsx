@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import SplashScreen from "./SplashScreen";
 
-export default function SplashScreenWrapper({ children }: any) {
+export default function SplashScreenWrapper({ children }: { children: React.ReactNode }) {
   const [showSplash, setShowSplash] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 

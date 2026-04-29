@@ -186,7 +186,8 @@ export async function getUpdates(
   );
   if (!res.ok) return null;
 
-  return ((await res.json()) as any).message;
+  const response = await res.json();
+  return response.message as { data: Feed[]; nextCursor: string; hasMore: boolean };
 }
 
 export async function getRelatedProducts(
@@ -576,7 +577,7 @@ export async function applyCouponCode(code: string): Promise<{
 }
 
 // SHIPPING API
-export async function getShippingRates(packageItems: any[]): Promise<{
+export async function getShippingRates(packageItems: Array<{ weight: number; dimensions: { length: number; width: number; height: number } }>): Promise<{
   message: {
     couriers: Array<{
       courier_id: string;

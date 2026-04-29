@@ -66,7 +66,7 @@ export interface Product {
 }
 
 export interface Review {
-  user?: any;
+  user?: { id: string; name: string; email: string };
   comment?: string;
   rating?: number;
   image?: string;
@@ -170,7 +170,7 @@ export interface IReturnRequest {
     discountedPrice: number;
     image: string;
     variants: {
-      options: any[];
+      options: Array<{ name: string; value: string; price: number }>;
     };
   }>;
 

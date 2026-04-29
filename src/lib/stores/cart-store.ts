@@ -218,7 +218,7 @@ export const useCartStore = create<CartStore>()(
         // Update local state first
         set({ items: updatedItems });
         const token = getBearerToken();
-        set({ items: updatedItems as any });
+        set({ items: updatedItems });
 
         if (!getBearerToken() || !updatedItem) return;
 
@@ -228,7 +228,7 @@ export const useCartStore = create<CartStore>()(
           setTimeout(() => {
             addToCart([updatedItem])
             pendingSyncTimeouts.delete(`variant:${id}`);
-            addToCart([updatedItem as any])
+            addToCart([updatedItem])
               .then(() => {
                 set({
                   items: get().items.map((i) =>

@@ -39,7 +39,7 @@ export default function NotificationWrapper() {
     const publicChannel = pusher.subscribe("public-channel");
     const privateChannel = pusher.subscribe(`private-${user.id}`);
 
-    const handler = (data: any) => {
+    const handler = (data: { message: string }) => {
       updateNotifications(data.message);
     };
 

@@ -226,13 +226,13 @@ export interface Education {
   // Additional fields for content management table
   category?: string;
   linkedProduct?: string;
-  likes?: any[];  // Array of likes from API
-  comments?: any[]; // Array of comments from API
+  likes?: Array<{ id: string; userId: string; createdAt: string }>;  // Array of likes from API
+  comments?: Array<{ id: string; userId: string; content: string; createdAt: string }>; // Array of comments from API
   status?: 'Published' | 'Draft' | 'Archived' | 'Scheduled';
   shares?: number;
   views?: number;
   // Fields from actual API response
-  user?: any;
+  user?: { id: string; email: string; name: string; role: string };
   parentId?: string;
 }
 
@@ -244,6 +244,110 @@ export interface CreateEducationData {
   type?: 'video' | 'article' | 'tutorial';
   url?: string;
   thumbnail?: string;
+  isActive?: boolean;
+}
+
+// Promotion interfaces
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  discount: number;
+  discountType: 'percentage' | 'fixed';
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  applicableProducts?: string[];
+  image?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePromotionData {
+  title: string;
+  description: string;
+  discount: number;
+  discountType: 'percentage' | 'fixed';
+  startDate: string;
+  endDate: string;
+  applicableProducts?: string[];
+  image?: string;
+}
+
+// Admin management interfaces
+export interface Admin {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAdminData {
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
+}
+
+export interface AdminProfile {
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+}
+
+export interface AdminSecuritySettings {
+  currentPassword?: string;
+  newPassword?: string;
+  twoFactorEnabled?: boolean;
+  sessionTimeout?: number;
+}
+
+export interface AdminNotificationSettings {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  orderNotifications: boolean;
+  customerNotifications: boolean;
+  marketingNotifications: boolean;
+}
+
+// Logistics settings interface
+export interface LogisticsSettings {
+  shippingZones: Array<{
+    id: string;
+    name: string;
+    countries: string[];
+    rates: Array<{
+      weightMin: number;
+      weightMax: number;
+      price: number;
+    }>;
+  }>;
+  defaultShippingFee: number;
+  freeShippingThreshold: number;
+}
+
+// Customer interface
+export interface Customer {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  addresses: Address[];
+  totalOrders: number;
+  totalSpent: number;
+  registeredAt: string;
+  lastLoginAt?: string;
+  isActive: boolean;
+}
+
+export interface UpdateCustomerData {
+  name?: string;
+  phone?: string;
   isActive?: boolean;
 }
 
