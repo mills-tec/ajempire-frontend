@@ -8,6 +8,7 @@ interface Courier {
   courier_image: string;
   courier_name: string;
   delivery_eta: string;
+  delivery_eta_time: string; // add this
   total: number;
 }
 
@@ -59,7 +60,7 @@ export default function ListOfLogistics() {
 
       if (response?.message) {
         console.log("Logistics fetched inside message:", response?.message);
-        setLogistics(response?.message?.couriers);
+        setLogistics(response?.message?.couriers as Courier[]);
         useCartStore
           .getState()
           .setRequestToken(response?.message?.request_token);

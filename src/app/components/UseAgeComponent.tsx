@@ -4,7 +4,7 @@ import UserUsageChart from "./UserUsageChart";
 import ProfileName from "./ui/ProfileName";
 import RecentPurchases from "./ui/RecentPurchases";
 import UsageSkeleton from "./UsageSkeleton";
-import { API_URL, getBearerToken } from "@/lib/api";
+import { getBearerToken } from "@/lib/api";
 import axios from "axios";
 interface UsageStats {
   ordersThisMonth: number;
@@ -16,15 +16,17 @@ interface UsageStats {
 export const UseAgeComponent = () => {
   const [usageData, setUsageData] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
-  API_URL;
 
   useEffect(() => {
     const useAgeData = async () => {
       const token = getBearerToken();
       try {
-        const res = await axios.get(`${API_URL}/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "https://ajempire-backend-production.up.railway.app/api/stats",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (res.data.message.stats) {
           setUsageData(res.data.message.stats);
         }

@@ -7,6 +7,7 @@ import {
   getToken,
   isSupported,
   onMessage,
+  Messaging,
 } from "firebase/messaging";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -25,7 +26,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export let messaging: any = null;
+export let messaging: Messaging | null = null;
 
 if (typeof window !== "undefined") {
   isSupported().then((supported) => {
@@ -40,7 +41,7 @@ export const generateToken = async () => {
 
   if (permission === "granted") {
     try {
-      const token = await getToken(messaging, {
+      const token = await getToken(messaging!, {
         vapidKey:
           "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
       });

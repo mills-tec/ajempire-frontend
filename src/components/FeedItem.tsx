@@ -20,16 +20,17 @@ import {
   VolumeX,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useParams } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 
 import { useUpdates } from "@/api/customHooks";
-import { useModalStore } from "@/lib/stores/modal-store";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
+import Image from "next/image";
 import { toast } from "sonner";
+import { useModalStore } from "@/lib/stores/modal-store";
 
 export function FeedSkeleton() {
   return Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
@@ -121,6 +122,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
   const { id: idParam, type } = params;
   const originalFeedsRef = useRef<Feed[]>([]);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [, startDuplicateTransition] = useTransition();
 
   useEffect(() => {
     if (feeds.data && originalFeedsRef.current.length === 0) {
@@ -313,19 +315,12 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const sendComment = async (parentId: string | null) => {
-    if (!user?._id) {
-      openModal("authwrapper");
-      toast.error("You must be logged in to comment", {
-        position: "top-right",
-      });
-      return;
-    }
     if (!comment.commentText) return;
 
     const newComment: CommentData = {
       _id: "",
       text: comment.commentText,
-      user: { _id: user._id, fullname: user.fullname, email: user.email },
+      user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
       parentId,
       likes: [],
       replies: [],
@@ -383,17 +378,9 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const likeComment = async (_id: string) => {
-    if (!user?._id) {
-      openModal("authwrapper");
-      toast.error("You must be logged in to like comments", {
-        position: "top-right",
-      });
-      return;
-    }
-
     const feed = data.feeds.find((f) => f._id === id);
     updateFeedComments(id!, (comments) =>
-      addRecursiveLike(comments, _id, user._id),
+      addRecursiveLike(comments, _id, user!._id),
     );
     await likeUpdateComment({
       feedId: id as string,
@@ -494,16 +481,13 @@ export default function FeedItem({ feeds }: FeedsProps) {
     if (!isDuplicating) return;
     if (!originalFeedsRef.current.length) return;
 
-    const timer = setTimeout(() => {
+    startDuplicateTransition(() => {
       setData((prev) => ({
         ...prev,
         feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
       }));
-
-      setIsDuplicating(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    });
+    setIsDuplicating(false);
   }, [isDuplicating]);
 
   // ── Infinite scroll ─────────────────────────────────────────────────────
@@ -547,16 +531,16 @@ export default function FeedItem({ feeds }: FeedsProps) {
         {data.feeds.map((item, index) => {
           return (
             <div
-              key={index}
+              key={`${item._id}-${index}`}
               id={`feed-${index}`}
               ref={(el) => {
                 itemRefs.current[index] = el;
               }}
-              className={`flex gap-4 relative items-center duration-300 h-[75vh]  md:h-[88vh] ${comment.show ? "md:pl-[10%]" : "md:pl-[20%]"} section`}
+              className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show ? "md:justify-start md:pl-[10%]" : "md:justify-center"} section`}
               style={{ scrollSnapAlign: "start" }}
             >
               {/* Media panel */}
-              <div className="md:w-[45%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent ">
+              <div className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent">
                 {item.type === "flashsale" && (
                   <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
                     Flashsale
@@ -710,7 +694,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
               </div>
 
               {/* Action buttons */}
-              <div className="flex flex-col gap-7 absolute md:relative md:right-0 right-6 md:text-black text-white">
+              <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
                 {item.likes && (
                   <div className="flex flex-col items-center gap-2">
                     <div
@@ -751,9 +735,15 @@ export default function FeedItem({ feeds }: FeedsProps) {
                 {item.product && (
                   <div
                     className={`w-10 h-10 ${inWishlist ? "bg-primaryhover" : "bg-white"} rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                    onClick={() =>
-                      handleWishlistToggle(item.product as Product)
-                    }
+                    onClick={() => {
+                      if (inWishlist) {
+                        removeItem(item.product._id);
+                        setInWishlist(false);
+                      } else {
+                        addItem(item.product as Product);
+                        setInWishlist(true);
+                      }
+                    }}
                   >
                     <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
                   </div>

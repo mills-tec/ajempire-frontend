@@ -73,7 +73,7 @@ export const useWishlistStore = create<WishlistStore>()(
 
         if (get().isInWishlist(item._id)) {
           toast.info("Already in wishlist");
-          
+
           return;
         }
 
@@ -140,6 +140,6 @@ export const useWishlistStore = create<WishlistStore>()(
     {
       name: "wishlist-storage",
       partialize: (state) => ({ items: state.items }),
-    }
-  )
+    },
+  ),
 );

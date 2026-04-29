@@ -1,6 +1,6 @@
 "use client";
 import Pusher from "pusher-js";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useNotification } from "@/api/customHooks";
 import { generateToken, messaging } from "@/lib/firebase";
@@ -8,20 +8,14 @@ import { useNotificationStore } from "@/lib/stores/notification-store";
 import { onMessage } from "firebase/messaging";
 
 export default function NotificationWrapper() {
-  const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
+  const { user, isPushTokenSet, setIsPushTokenSet, isLoggedIn } =
+    useAuthStore();
   const { updatePushToken } = useNotification();
   const { updateNotifications } = useNotificationStore();
   const pusherRef = useRef<Pusher | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Save push token once
   useEffect(() => {
-    (async () => {
-      const token = await generateToken();
-      if (!user || !isPushTokenSet) return;
-      const req = await updatePushToken(token!);
-      if (req) setIsPushTokenSet(true);
-    })();
-
     const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
     const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER;
 
@@ -45,7 +39,7 @@ export default function NotificationWrapper() {
     const publicChannel = pusher.subscribe("public-channel");
     const privateChannel = pusher.subscribe(`private-${user.id}`);
 
-    const handler = (data: any) => {
+    const handler = (data: { message: string }) => {
       updateNotifications(data.message);
     };
 
@@ -59,6 +53,7 @@ export default function NotificationWrapper() {
   }, [user]);
 
   useEffect(() => {
+    setIsMounted(true);
     if (!messaging) return; // ✅ prevent crash
 
     const unsubscribe = onMessage(messaging, (payload) => {
@@ -72,6 +67,21 @@ export default function NotificationWrapper() {
 
     return () => unsubscribe();
   }, []);
+
+  // updating user firebase push token if not set
+  // Save push token once
+  useEffect(() => {
+    if (!isMounted) return;
+    if (!isPushTokenSet) {
+      if (!user) return;
+      (async () => {
+        const token = await generateToken();
+
+        const req = await updatePushToken(token!);
+        if (req) setIsPushTokenSet(true);
+      })();
+    }
+  }, [isMounted]);
 
   return null;
 }

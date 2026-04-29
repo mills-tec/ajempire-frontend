@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react'
 
-export default function OptimizedMedia({ src, alt, mediaType, attributes, onLoadData }: { src: string, alt: string, mediaType: "image" | "video", attributes?: any, onLoadData?: () => void }) {
+export default function OptimizedMedia({ src, alt, mediaType, attributes, onLoadData }: { src: string, alt: string, mediaType: "image" | "video", attributes?: Record<string, unknown>, onLoadData?: () => void }) {
     const [isLoading, setIsLoading] = useState(true);
     console.log(isLoading)
     return (
@@ -17,7 +17,7 @@ export default function OptimizedMedia({ src, alt, mediaType, attributes, onLoad
                     alt={alt}
                     onLoad={() => setIsLoading(false)}
                     onError={() => setIsLoading(false)}
-                    {...attributes}
+                    {...(attributes as React.ImgHTMLAttributes<HTMLImageElement>)}
                 />
             ) : (
                 <video
@@ -29,7 +29,7 @@ export default function OptimizedMedia({ src, alt, mediaType, attributes, onLoad
                         console.log("loaded")
                     }}
                     onError={() => setIsLoading(false)}
-                    {...attributes}
+                    {...(attributes as React.VideoHTMLAttributes<HTMLVideoElement>)}
                 />
             )}
 

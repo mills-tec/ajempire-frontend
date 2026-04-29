@@ -13,7 +13,7 @@ interface RecentPurchaseItem {
   qty: number;
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
-  const url = "https://ajempire-backend.vercel.app/api/reorder/";
+  const url = "https://ajempire-backend-production.up.railway.app/api/reorder/";
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {
@@ -73,7 +73,7 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
                   purchase.product.variants.map((variant) => (
                     <div className="flex items-center gap-2 opacity-70 text-[13px]">
                       <p>{variant.name}:</p>
-                      <p>{variant.value}</p>
+                      <p>{variant.values}</p>
                     </div>
                   ))}
 

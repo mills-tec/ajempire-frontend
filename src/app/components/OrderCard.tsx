@@ -20,7 +20,7 @@ export default function OrderCard({
     <div className="flex gap-5 border-b pb-3 md:border-b-0 ">
       <div>
         <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
-          <Image src={image} alt={title} fill className="object-cover" />
+          <Image src={image} alt={title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 8.5rem" loading="eager" />
         </div>
       </div>
       <div className="space-y-1 mt-2 col-span-2 ">

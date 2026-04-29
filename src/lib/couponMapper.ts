@@ -9,7 +9,19 @@ export type Deal = {
   status: "unused" | "used" | "expired";
 };
 
-export function mapCouponToDeal(coupon: any): Deal {
+export function mapCouponToDeal(coupon: { 
+  _id: string | number; 
+  title: string; 
+  description?: string; 
+  discountPercent: number; 
+  validUntil?: string; 
+  code: string; 
+  ctaText?: string; 
+  isExpired: boolean; 
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  expiry?: string;
+}): Deal {
   const status: Deal["status"] = coupon.isExpired ? "expired" : "unused";
 
   return {
@@ -21,7 +33,7 @@ export function mapCouponToDeal(coupon: any): Deal {
         : `₦${coupon.discountValue.toLocaleString()} off`,
     discountPercent:
       coupon.discountType === "percent" ? coupon.discountValue : 0,
-    validUntil: new Date(coupon.expiry).toLocaleDateString(),
+    validUntil: coupon.expiry ? new Date(coupon.expiry).toLocaleDateString() : undefined,
     code: coupon.code,
     ctaText: "Get Code",
     status, // ✅ now strictly typed

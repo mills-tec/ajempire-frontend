@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
@@ -92,7 +92,7 @@ function HomeContent({
   const selectedItem = useCartStore((state) => state.selectedItem);
   const { selectedCategory, setSelectedCategory, _hasHydrated } =
     useCategoryStore();
-  const { searchedQuery, resetToken, minPrice, maxPrice } = useSearchStore();
+  const { searchedQuery, resetToken } = useSearchStore();
   const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
@@ -131,6 +131,7 @@ function HomeContent({
   }, [refreshing, categoryFilterActive]);
   const [lastItemInview, setLastItemInView] = useState(false);
   const [triggerManualLoad, setManualLoad] = useState(true);
+  const [isAppending, startAppendTransition] = useTransition();
   const categoryQuery = useQuery<Product[]>({
     queryKey: ["home-category-products", selectedCategory?.name],
     queryFn: () => getProductsByCategory(selectedCategory!.name),
@@ -241,13 +242,13 @@ function HomeContent({
           ([entry]) => {
             if (entry.isIntersecting) {
               setLastItemInView(true);
-              observer.unobserve(entry.target); // optional: stop observing once visible
+              observer.unobserve(entry.target);
             }
           },
           {
-            root: null, // viewport
-            rootMargin: "0px",
-            threshold: 0.5, // 50% of the item is visible
+            root: null,
+            rootMargin: "300px",
+            threshold: 0,
           },
         );
 
@@ -268,13 +269,13 @@ function HomeContent({
         ([entry]) => {
           if (entry.isIntersecting) {
             setLastItemInView(true);
-            observer.unobserve(entry.target); // optional: stop observing once visible
+            observer.unobserve(entry.target);
           }
         },
         {
-          root: null, // viewport
-          rootMargin: "0px",
-          threshold: 0.5, // 50% of the item is visible
+          root: null,
+          rootMargin: "300px",
+          threshold: 0,
         },
       );
 
@@ -296,31 +297,24 @@ function HomeContent({
   useEffect(() => {
     if (!lastItemInview) return;
 
-    const loadMoreProducts = () => {
-      if (categoryFilterActive) {
-        if (categoryProducts.length === 0) return;
-
-        const nextItems = shuffleArray(categoryProducts);
-        if (nextItems.length === 0) return;
-
+    if (categoryFilterActive) {
+      if (categoryProducts.length === 0) return;
+      const nextItems = shuffleArray(categoryProducts);
+      if (nextItems.length === 0) return;
+      startAppendTransition(() => {
         setCategoryVisibleProducts((prev) => [...prev, ...nextItems]);
-        setLastItemInView(false);
-        return;
-      }
-
-      const total = products.length;
-      if (total === 0) return;
-
-      const nextItems = shuffleArray(products);
-
-      appendProducts(nextItems);
+      });
       setLastItemInView(false);
-      setManualLoad(false);
-    };
+      return;
+    }
 
-    const timer = setTimeout(loadMoreProducts, 500); // optional delay for UX
-
-    return () => clearTimeout(timer); // cleanup if component unmounts
+    if (products.length === 0) return;
+    const nextItems = shuffleArray(products);
+    startAppendTransition(() => {
+      appendProducts(nextItems);
+    });
+    setLastItemInView(false);
+    setManualLoad(false);
   }, [categoryFilterActive, categoryProducts, lastItemInview, products]);
 
   useEffect(() => {
@@ -451,7 +445,7 @@ function HomeContent({
                             ? lastItemRef
                             : null
                         }
-                        key={index}
+                        key={`${product._id}-${index}`}
                       >
                         <ProductItem
                           key={product._id}
@@ -461,8 +455,7 @@ function HomeContent({
                       </div>
                     ))}
 
-                    {((categoryFilterActive && visibleProducts.length > 0) ||
-                      (!categoryFilterActive && !hasNextPage)) &&
+                    {isAppending &&
                       [...Array(ITEMS_TO_APPEND)].map((_, i) => (
                         <div key={i}>
                           <Skeleton />

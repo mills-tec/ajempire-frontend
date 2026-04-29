@@ -47,7 +47,7 @@ export default function Returns() {
                   <div className="flex gap-5 border-b pb-3 md:border-b-0 ">
                     <div>
                       <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
-                        <Image src={ret.imageEvidence} alt={ret.reason} fill className="object-cover" />
+                        <Image src={ret.imageEvidence} alt={ret.reason} fill className="object-cover" sizes="(max-width: 768px) 100vw, 8.5rem" loading="eager" />
                       </div>
                     </div>
                     <div className="space-y-1 mt-2 md:col-span-2 ">

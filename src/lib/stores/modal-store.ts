@@ -8,9 +8,9 @@ export type ModalType =
   | null;
 type ModalStore = {
   activeModal: ModalType;
-  modalData?: any;
+  modalData?: unknown;
 
-  openModal: (modal: ModalType, data?: any) => void;
+  openModal: (modal: ModalType, data?: unknown) => void;
   closeModal: () => void;
 };
 

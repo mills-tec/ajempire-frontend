@@ -29,7 +29,7 @@ export default function SignupComp({
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
+    {},
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,30 +40,84 @@ export default function SignupComp({
   async function handleSubmit(e: React.FormEvent) {
     setIsLoading(true);
     e.preventDefault();
+    
+    console.log("🚀 Starting signup process");
+    console.log("📧 Form data:", { email: form.email, password: "***" });
+    
     const result = schema.safeParse(form);
 
     if (!result.success) {
+      console.log("❌ Validation failed:", result.error);
       const fieldErrors: { email?: string; password?: string } = {};
       result.error.issues.forEach((err) => {
         if (err.path[0])
           fieldErrors[err.path[0] as "email" | "password"] = err.message;
       });
       setErrors(fieldErrors);
+      setIsLoading(false);
       return; // stop here if validation failed
     }
 
+    console.log("✅ Form validation passed");
+
     try {
       const { email, password } = form;
+      console.log("📡 Calling signup API...");
+      
       const res = await signupBackend(email, password);
-      localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
-      console.log("res: ", res);
-      setErrors({});
-      toast("Form submitted successfully!");
-      setIsLoading(false);
-      setScreen("verifyemail");
-      // router.push("/dashboard");
-    } catch {
-      toast("Signup failed");
+      
+      console.log("✅ API Response received:");
+      console.log("📊 Response data from api:", res);
+      console.log("📊 Response structure:", JSON.stringify(res, null, 2));
+      
+      // Check response structure - handle multiple possible success formats
+      console.log("📧 Full response:", res);
+      
+      // Check for success in different possible structures
+      const isSuccess = res.message?.emailSent || 
+                       res.message?.success || 
+                       res.success || 
+                       res.emailSent ||
+                       res.message?.message?.includes("email sent") ||
+                       res.message?.message?.includes("verification");
+      
+      const hasError = res.message?.error || res.error;
+      
+      if (isSuccess) {
+        console.log("✅ Signup successful - email sent");
+        localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
+        setErrors({});
+        const successMsg = res.message?.message || "Verification email sent!";
+        toast(successMsg);
+        setIsLoading(false);
+        setScreen("verifyemail");
+      } else if (hasError) {
+        console.log("❌ API returned error:", hasError);
+        throw new Error(hasError);
+      } else {
+        console.log("⚠️ Unknown response format - treating as success");
+        console.log("📊 Response keys:", Object.keys(res));
+        // If signup didn't error, assume it was successful
+        localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
+        setErrors({});
+        toast("Verification email sent!");
+        setIsLoading(false);
+        setScreen("verifyemail");
+      }
+      
+    } catch (error) {
+      console.error("❌ Signup Error Details:");
+      console.error("Error object:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      console.error("Error message:", errorMessage);
+      console.error("Error stack:", errorStack);
+      
+      toast.error(errorMessage || "Signup failed", {
+        position: "top-right",
+      });
       setIsLoading(false);
     }
   }

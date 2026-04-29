@@ -1,13 +1,19 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ProductReview from "@/app/components/ProductReview";
 import CommentCard from "@/app/components/CommentCard";
 import ProductDescription from "@/app/components/ProductDescription";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getBearerToken, getProduct } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
@@ -79,8 +85,7 @@ export default function ProductDetailPage() {
       items.find(
         (cartItem) =>
           cartItem._id === item._id &&
-          JSON.stringify(cartItem.selectedVariants) ===
-            JSON.stringify(selectedVariantsArray),
+          areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
       ) ?? null
     );
   }, [
@@ -104,20 +109,19 @@ export default function ProductDetailPage() {
   });
 
   const openModal = useModalStore((s) => s.openModal);
-  const ensureVariantSelection = () => {
-    if (!hasVariants || !missingVariantName) return true;
 
+  const ensureVariantSelection = useCallback(() => {
+    if (!hasVariants || !missingVariantName) return true;
     toast.error(`Please select ${missingVariantName}`);
     return false;
-  };
+  }, [hasVariants, missingVariantName]);
+
   const resolvedCartPrice =
     item && selectedCombination
       ? item.price + selectedCombination.additionalPrice
       : (item?.price ?? 0);
-  const checkoutHandler = () => {
-    if (!ensureVariantSelection()) {
-      return;
-    }
+  const checkoutHandler = useCallback(() => {
+    if (!ensureVariantSelection()) return;
 
     const token = getBearerToken();
     if (!token) {
@@ -126,7 +130,6 @@ export default function ProductDetailPage() {
       return;
     }
 
-    // ✅ Read fresh data from React Query
     const currentItem = data?.message?.product;
     if (!currentItem || !currentItem._id) {
       toast.error("Product not loaded yet");
@@ -137,8 +140,7 @@ export default function ProductDetailPage() {
     const existingItem = store.items.find(
       (cartItem) =>
         cartItem._id === currentItem._id &&
-        JSON.stringify(cartItem.selectedVariants) ===
-          JSON.stringify(selectedVariantsArray),
+        areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
     );
 
     if (!existingItem) {
@@ -154,7 +156,15 @@ export default function ProductDetailPage() {
 
     store.selectAllCartItems();
     openModal("checkout");
-  };
+  }, [
+    ensureVariantSelection,
+    data,
+    resolvedCartPrice,
+    currentStock,
+    quantity,
+    selectedVariantsArray,
+    openModal,
+  ]);
 
   const [video, setVideo] = useState({
     showPlay: true,
@@ -165,27 +175,20 @@ export default function ProductDetailPage() {
 
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
-  const handleVideoPlay = (id: string) => {
-    setPlayingMap((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-
-    setVideo((prev) => ({
-      ...prev,
-      showPlay: true,
-    }));
-
-    const video = videoRefs.current[id];
-    if (video?.paused) {
-      video.play();
+  const handleVideoPlay = useCallback((id: string) => {
+    setPlayingMap((prev) => ({ ...prev, [id]: !prev[id] }));
+    setVideo((prev) => ({ ...prev, showPlay: true }));
+    const videoEl = videoRefs.current[id];
+    if (videoEl?.paused) {
+      videoEl.play();
     } else {
-      video?.pause();
+      videoEl?.pause();
     }
-  };
+  }, []);
 
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-  const markMediaLoaded = (src: string) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const markMediaLoaded = useCallback((src: string) => {
     if (!src) return;
 
     setLoadedMedia((prev) =>
@@ -196,7 +199,7 @@ export default function ProductDetailPage() {
             [src]: true,
           },
     );
-  };
+  }, []);
 
   useEffect(() => {
     if (!item || !cartItem) return;
@@ -252,7 +255,6 @@ export default function ProductDetailPage() {
       </div>
     );
 
-  console.log(item.relatedProducts);
   const galleryImages = Array.from(
     new Set((item.images ?? []).filter(Boolean)),
   );
@@ -266,7 +268,11 @@ export default function ProductDetailPage() {
   const isCurrentMediaLoaded = Boolean(loadedMedia[currentMediaSrc]);
 
   return (
-    <RefreshWrapper onRefreshExtra={reshuffle}>
+    <RefreshWrapper
+      category={item.category?._id ?? ""}
+      // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
+      // onRefreshExtra={reshuffle}
+    >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
           <Link href={"/"}>
@@ -379,7 +385,7 @@ export default function ProductDetailPage() {
                         >
                           <video
                             preload="metadata"
-                            ref={setVideoRef}
+                            ref={videoRef}
                             src={item.video}
                             className="absolute object-cover h-full w-full"
                             onLoadedMetadata={(e) => {
@@ -387,10 +393,10 @@ export default function ProductDetailPage() {
                             }}
                             muted
                             onMouseEnter={() => {
-                              void videoRef?.play();
+                              void videoRef.current?.play();
                             }}
                             onMouseLeave={() => {
-                              videoRef?.pause();
+                              videoRef.current?.pause();
                             }}
                             playsInline
                           />
@@ -547,7 +553,7 @@ export default function ProductDetailPage() {
             {item.category && (
               <RelatedProducts
                 category={item.category._id}
-                shuffleSeed={shuffleSeed}
+                // shuffleSeed={shuffleSeed}
               />
             )}
           </div>

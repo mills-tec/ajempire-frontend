@@ -1,6 +1,6 @@
 import { Review } from "./types";
 
-export function cn(...inputs: any[]) {
+export function cn(...inputs: (string | undefined | null | false)[]) {
   return inputs.filter(Boolean).join(" ");
 }
 
@@ -51,11 +51,11 @@ export function getRatingStats(arr: Review[]) {
 
 export const saveAccounts = (account: {
   token: string;
-  user: any;
+  user: { id: string; name: string; email: string };
   email: string;
 }) => {
   if (localStorage.getItem("savedAccounts")) {
-    const savedAccounts: { token: string; user: any; email: string }[] =
+    const savedAccounts: { token: string; user: { id: string; name: string; email: string }; email: string }[] =
       JSON.parse(localStorage.getItem("savedAccounts")!);
     if (
       !savedAccounts.some((savedAccount) => savedAccount.email == account.email)
@@ -158,7 +158,7 @@ export function getCountdown(targetDate: string | Date) {
   return { days, hours, minutes, seconds };
 }
 export const ITEMS_TO_APPEND = 10;
-export function shuffleArray(array: any[]) {
+export function shuffleArray<T>(array: T[]) {
   const arr = [...array]; // copy so original isn't mutated
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1)); // pick a random index

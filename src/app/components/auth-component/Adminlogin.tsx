@@ -1,62 +1,93 @@
-import axios from "axios";
 import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import Spinner from "../Spinner";
+import Spinner from "@/app/components/Spinner";
+import { adminLogin, LoginCredentials } from "@/lib/adminapi";
 
 export default function AdminLogin() {
-    const [emailinput, setEmailinput] = useState("");
-    const [passwordinput, setPasswordinput] = useState("");
-    const [isValidEmail, setIsValidEmail] = useState(false);
-    const [isValidPassword, setIsValidPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    // Regex for email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const route = useRouter()
+  const [emailinput, setEmailinput] = useState("");
+  const [passwordinput, setPasswordinput] = useState("");
+  const [isValidEmail, setIsValidEmail] = useState(false);
+  const [isValidPassword, setIsValidPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  // Regex for email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const route = useRouter();
 
-    // Regex for password validation:
-    // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
-    const passwordRegex = /^.{6,}$/;
+  // Regex for password validation:
+  // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
+  const passwordRegex = /^.{6,}$/;
 
-    useEffect(() => {
-        setIsValidPassword(passwordRegex.test(passwordinput));
-    }, [passwordinput]);
+  useEffect(() => {
+    setIsValidPassword(passwordRegex.test(passwordinput));
+  }, [passwordinput]);
 
+  // Validate email whenever it changes
+  useEffect(() => {
+    setIsValidEmail(emailRegex.test(emailinput));
+  }, [emailinput]);
 
-    // Validate email whenever it changes
-    useEffect(() => {
-        setIsValidEmail(emailRegex.test(emailinput));
-    }, [emailinput]);
+  // Validate password whenever it changes
+  useEffect(() => {
+    setIsValidPassword(passwordRegex.test(passwordinput));
+  }, [passwordinput]);
 
-    // Validate password whenever it changes
-    useEffect(() => {
-        setIsValidPassword(passwordRegex.test(passwordinput));
-    }, [passwordinput]);
-
-    // Only enable login if both are valid
-    const isFormValid = isValidEmail && isValidPassword;
+  // Only enable login if both are valid
+  const isFormValid = isValidEmail && isValidPassword;
 
     const handleLogin = async () => {
         if (!isFormValid) return; // extra safety
         setLoading(true);
         try {
-            const response = await axios.post("https://ajempire-backend.vercel.app/api/admin/login", {
+            const credentials: LoginCredentials = {
                 email: emailinput,
                 password: passwordinput,
-            });
+            };
 
-            // Handle success
-            if (response.data) {
-                localStorage.setItem("adminToken", response.data);
+            const response = await adminLogin(credentials);
+
+            console.log('Login response:', response);
+            console.log('Response message:', response.message);
+            console.log('Response data:', response.data);
+            console.log('Response success:', response.success);
+
+            // Handle success - API returns { "message": token }
+            if (response.message) {
+                const token = response.message;
+                console.log('Token extracted:', token);
+                const user = { 
+                    email: emailinput, 
+                    name: 'Admin User', 
+                    role: 'Administrator' 
+                };
+
+                localStorage.setItem("adminToken", token);
+                localStorage.setItem("adminUser", JSON.stringify(user));
+                toast.success("Login successful!");
                 route.push("/admin");
+            } else if (response.data && response.data.token) {
+                // Alternative: check if token is in response.data.token
+                const token = response.data.token;
+                console.log('Token extracted from data:', token);
+                const user = { 
+                    email: emailinput, 
+                    name: 'Admin User', 
+                    role: 'Administrator' 
+                };
+
+                localStorage.setItem("adminToken", token);
+                localStorage.setItem("adminUser", JSON.stringify(user));
+                toast.success("Login successful!");
+                route.push("/admin");
+            } else {
+                console.log('No token found in response');
+                toast.error(response.error || "Login failed");
             }
-            toast.success("Login successful!");
-            // maybe redirect to /admin/dashboard here
         } catch (error: any) {
-            console.error("Login error:", error.response?.data || error.message);
-            toast.error("Login failed: " + (error.response?.data?.message || error.message));
+            console.error("Login error:", error);
+            toast.error("Login failed: " + (error.message || "Unknown error"));
         } finally {
             setLoading(false);
         }

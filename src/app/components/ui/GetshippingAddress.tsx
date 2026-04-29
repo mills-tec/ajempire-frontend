@@ -25,7 +25,7 @@ const GetshippingAddress = () => {
     const token = getBearerToken();
     try {
       const res = await axios.get(
-        "https://ajempire-backend.vercel.app/api/shipping-address",
+        "https://ajempire-backend-production.up.railway.app/api/shipping-address",
         {
           headers: { Authorization: `Bearer ${token}` },
         },

@@ -1,31 +1,22 @@
-"use client"
-import { useUpdates } from '@/api/customHooks';
-import Spinner from '@/app/components/Spinner';
-import UpdatesSkeleton from '@/components/UpdatesSkeleton';
-import { useParams, useRouter } from "next/navigation";
+import { getUpdates } from "@/lib/api";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
-import { useEffect, useState } from 'react'
+export default async function Page({
+    params,
+}: {
+    params: Promise<{ type: string }>;
+}) {
+    const { type } = await params;
+    const req = await getUpdates(type, "", ITEMS_TO_APPEND);
 
-export default function page() {
-    const router = useRouter();
-    const params = useParams();
-    const { type } = params;
-    const { getFeeds, loading } = useUpdates();
-    const [data, setData] = useState([])
-    useEffect(() => {
+    if (!req?.data?.length) {
+        return (
+            <div className="h-[85vh] flex items-center justify-center">
+                No data found
+            </div>
+        );
+    }
 
-        (async () => {
-            const res = await getFeeds(type as string, "");
-            if (!res.data || res.data.length === 0) return;
-
-            setData(res.data);
-            router.push(`${type}/${res.data[0]._id}`);
-        })();
-
-    }, [])
-
-
-    if (loading) return <UpdatesSkeleton type={type as string} />
-    return data.length === 0 ? <div className='h-[85vh] flex items-center justify-center'>No data found</div> : <UpdatesSkeleton type={type as string} />
-
+    redirect(`/pages/update/${type}/${req.data[0]._id}`);
 }

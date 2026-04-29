@@ -65,7 +65,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <div className="w-6 h-6 bg-primaryhover rounded-full border text-[10px]  flex items-center justify-center text-white">
               {(item.user?.fullname || "U").charAt(0).toUpperCase()}
             </div>
-            ``{" "}
           </div>
           <div className="flex flex-1 justify-between">
             <div>
