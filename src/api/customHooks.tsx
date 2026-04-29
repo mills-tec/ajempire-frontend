@@ -179,7 +179,6 @@ export const useIssueReturn = () => {
       setLoading(true);
       try {
         // const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
-        const req = await postData(`/return/`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;
@@ -305,11 +304,11 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await postData(
-          `/updates/like`,
-          { id: data.feedId, type: data.type },
-          config,
-        );
+        // const req = await postData(
+        //   `/updates/like`,
+        //   { id: data.feedId, type: data.type },
+        //   config,
+        // );
 
         return true;
       } catch (err: unknown) {
