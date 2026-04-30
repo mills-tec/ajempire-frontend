@@ -109,6 +109,7 @@ type CommentState = {
   show: boolean;
   commentText: string;
   parent: { parentId: string; fullname: string; email: string };
+  focus: boolean
 };
 
 type FeedsProps = {
@@ -117,26 +118,50 @@ type FeedsProps = {
 
 // ─── FeedItem ─────────────────────────────────────────────────────────────────
 
-export default function FeedItem({ feeds }: FeedsProps) {
+export default function FeedItem() {
   const params = useParams();
   const { id: idParam, type } = params;
   const originalFeedsRef = useRef<Feed[]>([]);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [, startDuplicateTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
 
+  // ─── Replace the originalFeedsRef effect with a fetch-on-mount effect ─────────
+
+
+  // AFTER:
   useEffect(() => {
-    if (feeds.data && originalFeedsRef.current.length === 0) {
-      originalFeedsRef.current = feeds.data;
-    }
-  }, [feeds.data]);
+    const fetchInitialFeeds = async () => {
+      try {
+        const result = await getFeeds(type as string, "");
+        setData({
+          feeds: result.data,
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+        });
+        originalFeedsRef.current = result.data;
+      } catch (err) {
+        console.error("Error fetching initial feeds:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialFeeds();
+  }, [type]);
 
   const [id, setId] = useState(idParam);
   const [href, setHref] = useState("");
-  const [data, setData] = useState({
-    feeds: feeds.data,
-    nextCursor: feeds.nextCursor,
-    hasMore: feeds.hasMore,
+  const [data, setData] = useState<{
+    feeds: Feed[];
+    nextCursor: string;
+    hasMore: boolean;
+  }>({
+    feeds: [],
+    nextCursor: "",
+    hasMore: false,
   });
+
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [inWishlist, setInWishlist] = useState(false);
@@ -151,6 +176,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
     show: false,
     commentText: "",
     parent: { parentId: "", fullname: "", email: "" },
+    focus: false,
   });
   const [user, setUser] = useState<{
     _id: string;
@@ -166,7 +192,6 @@ export default function FeedItem({ feeds }: FeedsProps) {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
-  const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
 
   const {
     addComments,
@@ -329,7 +354,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
       updatedAt: new Date().toISOString(),
     };
 
-    const feedType = feeds.data.find((f) => f._id === id)?.type;
+    const feedType = data.feeds.find((f) => f._id === id)?.type;
 
     if (parentId) {
       updateFeedComments(id!, (comments) =>
@@ -378,6 +403,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
   };
 
   const likeComment = async (_id: string) => {
+    checkIfUserLoggedIn();
     const feed = data.feeds.find((f) => f._id === id);
     updateFeedComments(id!, (comments) =>
       addRecursiveLike(comments, _id, user!._id),
@@ -420,6 +446,16 @@ export default function FeedItem({ feeds }: FeedsProps) {
       toast.success("Added to wishlist", { position: "top-right" });
     }
   };
+
+  function checkIfUserLoggedIn() {
+    if (!user?._id) {
+      openModal("authwrapper");
+      toast.error("You must be logged in to add to wishlist", {
+        position: "top-right",
+      });
+      return;
+    }
+  }
 
   // ── Effects ─────────────────────────────────────────────────────────────
 
@@ -509,10 +545,19 @@ export default function FeedItem({ feeds }: FeedsProps) {
           console.error("Error loading more feeds:", err);
         }
       } else {
-        setData((prev) => ({ ...prev, feeds: [...prev.feeds, ...feeds.data] }));
+        setData((prev) => ({ ...prev, feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)] }));
+
       }
     },
   });
+
+  useEffect(() => {
+    if (comment.show) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+  }, [comment.show])
 
   // ── Derived values ──────────────────────────────────────────────────────
 
@@ -520,252 +565,295 @@ export default function FeedItem({ feeds }: FeedsProps) {
   const activeComments = activeFeed?.comments ?? [];
 
   // ── Render ──────────────────────────────────────────────────────────────
+
   return (
     <section className="md:flex w-full pb-10">
       {/* Feed scroll container */}
+
       <div
         ref={containerRef}
         className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {data.feeds.map((item, index) => {
-          return (
-            <div
-              key={`${item._id}-${index}`}
-              id={`feed-${index}`}
-              ref={(el) => {
-                itemRefs.current[index] = el;
-              }}
-              className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show ? "md:justify-start md:pl-[10%]" : "md:justify-center"} section`}
-              style={{ scrollSnapAlign: "start" }}
-            >
-              {/* Media panel */}
-              <div className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent">
-                {item.type === "flashsale" && (
-                  <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
-                    Flashsale
-                  </span>
-                )}
+        {loading && data.feeds.length == 0 ? <div className="w-full h-screen flex items-center justify-center">
+          <svg
+            width={60}
+            height={60}
+            viewBox="0 0 67 67"
+            className="animate-spin"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g clipPath="url(#paint0_angular_1335_12193_clip_path)">
+              <g transform="matrix(0 0.0335 -0.0335 0 33.5 33.5)">
+                <foreignObject
+                  x="-1023.73"
+                  y="-1023.73"
+                  width="2047.46"
+                  height="2047.46"
+                >
+                  <div
+                    // xmlns="http://www.w3.org/1999/xhtml"
+                    style={{
+                      background:
+                        "conic-gradient(from 90deg,rgba(255, 0, 140, 1) 0deg,rgba(255, 0, 140, 1) 63.243deg,rgba(255, 255, 255, 0) 360deg)",
+                      height: "100%",
+                      width: "100%",
+                      opacity: 1,
+                    }}
+                  ></div>
+                </foreignObject>
+              </g>
+            </g>
+            <path
+              d="M67 33.5C67 52.0015 52.0015 67 33.5 67C14.9985 67 0 52.0015 0 33.5C0 14.9985 14.9985 0 33.5 0C52.0015 0 67 14.9985 67 33.5ZM10.0174 33.5C10.0174 46.4691 20.5309 56.9826 33.5 56.9826C46.4691 56.9826 56.9826 46.4691 56.9826 33.5C56.9826 20.5309 46.4691 10.0174 33.5 10.0174C20.5309 10.0174 10.0174 20.5309 10.0174 33.5Z"
+              data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.0},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.17567500472068787},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:1.0,&#34;b&#34;:1.0,&#34;a&#34;:0.0},&#34;position&#34;:1.0}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.0},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.17567500472068787},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:1.0,&#34;b&#34;:1.0,&#34;a&#34;:0.0},&#34;position&#34;:1.0}],&#34;transform&#34;:{&#34;m00&#34;:4.1025668105765245e-15,&#34;m01&#34;:-67.0,&#34;m02&#34;:67.0,&#34;m10&#34;:67.0,&#34;m11&#34;:4.1025668105765245e-15,&#34;m12&#34;:-4.1025668105765245e-15},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"
+            />
+            <circle cx="33.8351" cy="61.9742" r="5.025" fill="#FF008C" />
+            <defs>
+              <clipPath id="paint0_angular_1335_12193_clip_path">
+                <path d="M67 33.5C67 52.0015 52.0015 67 33.5 67C14.9985 67 0 52.0015 0 33.5C0 14.9985 14.9985 0 33.5 0C52.0015 0 67 14.9985 67 33.5ZM10.0174 33.5C10.0174 46.4691 20.5309 56.9826 33.5 56.9826C46.4691 56.9826 56.9826 46.4691 56.9826 33.5C56.9826 20.5309 46.4691 10.0174 33.5 10.0174C20.5309 10.0174 10.0174 20.5309 10.0174 33.5Z" />
+              </clipPath>
+            </defs>
+          </svg>
+        </div> : <>
+          {data.feeds.map((item, index) => {
+            return (
+              <div
+                key={`${item._id}-${index}`}
+                id={`feed-${index}`}
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
+                className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show ? "md:justify-start md:pl-[10%]" : "md:justify-center"} section`}
+                style={{ scrollSnapAlign: "start" }}
+              >
+                {/* Media panel */}
+                <div className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent">
+                  {item.type === "flashsale" && (
+                    <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
+                      Flashsale
+                    </span>
+                  )}
 
-                {item.mediaType === "image" ? (
-                  <img
-                    src={item.mediaUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <>
-                    {/* {!loadedIndex.includes(index) && (
+                  {item.mediaType === "image" ? (
+                    <Image
+                      src={item.mediaUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      {/* {!loadedIndex.includes(index) && (
                                         <div className='absolute inset-0 bg-gray-200 animate-pulse' />
                                     )} */}
-                    <video
-                      preload="none"
-                      ref={(el) => {
-                        videoRefs.current[index] = el;
-                      }}
-                      autoPlay
-                      loop
-                      muted={videoState.muted}
-                      src={item.mediaUrl}
-                      className="w-full h-full object-cover cursor-pointer"
-                      onPlay={() => {
-                        setPlayingMap((prev) => ({ ...prev, [index]: true }));
-                      }}
-                      onCanPlay={() => {
-                        setLoadedIndex((prev) =>
-                          prev.includes(index) ? prev : [...prev, index],
-                        );
-                      }}
-                      onPause={() =>
-                        setPlayingMap((prev) => ({ ...prev, [index]: false }))
-                      }
-                      onLoadedData={() => {
-                        setPlayingMap((prev) => ({ ...prev, [index]: true }));
-                      }}
-                      onClick={showPlayTemporarily}
-                      onMouseMove={showPlayTemporarily}
-                      playsInline
-                    />
-
-                    <div
-                      onClick={() => handleVideoPlay(index)}
-                      className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${videoState.showPlay ? "opacity-100" : "hidden opacity-0"}`}
-                    >
-                      <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
-                        {playingMap[index] ? (
-                          <Pause size={40} color="white" />
-                        ) : (
-                          <Play size={40} color="white" />
-                        )}
-                      </div>
-                      <span
-                        className="absolute top-12 right-4 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setVideoState((prev) => ({
-                            ...prev,
-                            muted: !prev.muted,
-                          }));
+                      <video
+                        preload="none"
+                        ref={(el) => {
+                          videoRefs.current[index] = el;
                         }}
+                        autoPlay
+                        loop
+                        muted={videoState.muted}
+                        src={item.mediaUrl}
+                        className="w-full h-full object-cover cursor-pointer"
+                        onPlay={() => {
+                          setPlayingMap((prev) => ({ ...prev, [index]: true }));
+                        }}
+
+                        onPause={() =>
+                          setPlayingMap((prev) => ({ ...prev, [index]: false }))
+                        }
+                        onLoadedData={() => {
+                          setPlayingMap((prev) => ({ ...prev, [index]: true }));
+                        }}
+                        onClick={showPlayTemporarily}
+                        onMouseMove={showPlayTemporarily}
+                        playsInline
+                      />
+
+                      <div
+                        onClick={() => handleVideoPlay(index)}
+                        className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${videoState.showPlay ? "opacity-100" : "hidden opacity-0"}`}
                       >
-                        {videoState.muted ? (
-                          <VolumeX color="white" size={16} />
-                        ) : (
-                          <Volume2 color="white" size={16} />
-                        )}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {/* Overlay info */}
-                <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
-                  <div
-                    onClick={() => setShowDesc((prev) => !prev)}
-                    className="w-[80%]"
-                  >
-                    <p className="text-xl md:text-sm font-medium mb-2">
-                      {item.title}
-                    </p>
-                    <p className="text-sm md:text-xs">
-                      {showDesc
-                        ? item.description
-                        : item.description.slice(0, 80)}
-                      <span className="text-[#aaa] cursor-pointer">
-                        {showDesc ? " less..." : " more..."}
-                      </span>
-                    </p>
-                  </div>
-
-                  {item.product && (
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 14 14"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
+                        <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
+                          {playingMap[index] ? (
+                            <Pause size={40} color="white" />
+                          ) : (
+                            <Play size={40} color="white" />
+                          )}
+                        </div>
+                        <span
+                          className="absolute top-12 right-4 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVideoState((prev) => ({
+                              ...prev,
+                              muted: !prev.muted,
+                            }));
+                          }}
                         >
-                          <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
-                            fill="white"
-                          />
-                        </svg>
-                        {item.flashPrice ? (
-                          <div className="flex items-center text-xs gap-2">
-                            <span>
-                              {Number(item.flashPrice).toLocaleString("en-NG", {
-                                style: "currency",
-                                currency: "NGN",
-                              })}
-                            </span>
-                            <small className="line-through">
+                          {videoState.muted ? (
+                            <VolumeX color="white" size={16} />
+                          ) : (
+                            <Volume2 color="white" size={16} />
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Overlay info */}
+                  <div className=" absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+                    <div
+                      onClick={() => setShowDesc((prev) => !prev)}
+                      className="w-[80%]"
+                    >
+                      <p className="text-xl md:text-sm font-medium mb-2">
+                        {item.title}
+                      </p>
+                      <p className="text-sm md:text-xs">
+                        {showDesc
+                          ? item.description
+                          : item.description.slice(0, 80)}
+                        <span className="text-[#aaa] cursor-pointer">
+                          {showDesc ? " less..." : " more..."}
+                        </span>
+                      </p>
+                    </div>
+
+                    {item.product && (
+                      <div className="flex items-center gap-4 ">
+                        <span className="flex items-center gap-1">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 14 14"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              clipRule="evenodd"
+                              d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
+                              fill="white"
+                            />
+                          </svg>
+                          {item.flashPrice ? (
+                            <div className="flex items-center text-xs gap-2">
+                              <span>
+                                {Number(item.flashPrice).toLocaleString("en-NG", {
+                                  style: "currency",
+                                  currency: "NGN",
+                                })}
+                              </span>
+                              <small className="line-through">
+                                {Number(item.product.price).toLocaleString(
+                                  "en-NG",
+                                  { style: "currency", currency: "NGN" },
+                                )}
+                              </small>
+                            </div>
+                          ) : (
+                            <p className="text-xs">
                               {Number(item.product.price).toLocaleString(
                                 "en-NG",
                                 { style: "currency", currency: "NGN" },
                               )}
-                            </small>
-                          </div>
-                        ) : (
-                          <p className="text-xs">
-                            {Number(item.product.price).toLocaleString(
-                              "en-NG",
-                              { style: "currency", currency: "NGN" },
-                            )}
-                          </p>
-                        )}
-                      </span>
-                      <Link
-                        href={`/product/${item.product._id}`}
-                        className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
+                            </p>
+                          )}
+                        </span>
+                        <Link
+                          href={`/product/${item.product._id}`}
+                          className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
+                        >
+                          View Product
+                        </Link>
+                      </div>
+                    )}
+
+                    {item.type === "flashsale" && item.endDate && (
+                      <Countdown targetDate={item.endDate} />
+                    )}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
+                  {item.likes && (
+                    <div className="flex flex-col items-center gap-2">
+                      <div
+                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
+                        onClick={() => likePost(item._id)}
                       >
-                        View Product
-                      </Link>
+                        {item.likes.some((l) => l === user?._id) ? (
+                          <HeartFill />
+                        ) : (
+                          <Heart size={26} />
+                        )}
+                      </div>
+                      <p className="text-xs">{item.likes.length}</p>
                     </div>
                   )}
 
-                  {item.type === "flashsale" && item.endDate && (
-                    <Countdown targetDate={item.endDate} />
-                  )}
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
-                {item.likes && (
-                  <div className="flex flex-col items-center gap-2">
+                  {item.comments && (
                     <div
-                      className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
-                      onClick={() => likePost(item._id)}
-                    >
-                      {item.likes.some((l) => l === user?._id) ? (
-                        <HeartFill />
-                      ) : (
-                        <Heart size={26} />
-                      )}
-                    </div>
-                    <p className="text-xs">{item.likes.length}</p>
-                  </div>
-                )}
-
-                {item.comments && (
-                  <div
-                    className="flex flex-col items-center gap-2"
-                    onClick={() =>
-                      setComment((prev) => ({ ...prev, show: !prev.show }))
-                    }
-                  >
-                    <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
-                      <CommentIcon />
-                    </div>
-                    <p className="text-xs">{item.comments.length}</p>
-                  </div>
-                )}
-
-                <div
-                  className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-                  onClick={() => setShare(true)}
-                >
-                  <ShareIcon />
-                </div>
-
-                {item.product && (
-                  <div
-                    className={`w-10 h-10 ${inWishlist ? "bg-primaryhover" : "bg-white"} rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                    onClick={() => {
-                      if (inWishlist) {
-                        removeItem(item.product._id);
-                        setInWishlist(false);
-                      } else {
-                        addItem(item.product as Product);
-                        setInWishlist(true);
+                      className="flex flex-col items-center gap-2"
+                      onClick={() =>
+                        setComment((prev) => ({ ...prev, show: !prev.show }))
                       }
-                    }}
+                    >
+                      <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
+                        <CommentIcon />
+                      </div>
+                      <p className="text-xs">{item.comments.length}</p>
+                    </div>
+                  )}
+
+                  <div
+                    className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
+                    onClick={() => setShare(true)}
                   >
-                    <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
+                    <ShareIcon />
                   </div>
-                )}
+
+                  {item.product && (
+                    <div
+                      className={`w-10 h-10 ${inWishlist ? "bg-primaryhover" : "bg-white"} rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+                      onClick={() => {
+                        if (inWishlist) {
+                          removeItem(item.product._id);
+                          setInWishlist(false);
+                        } else {
+                          addItem(item.product as Product);
+                          setInWishlist(true);
+                        }
+                      }}
+                    >
+                      <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        <EndlessScrollLoading
-          infiniteRef={infiniteRef}
-          hasNextPage={data.hasMore}
-          gridNumber="grid-cols-1"
-        />
+          <EndlessScrollLoading
+            infiniteRef={infiniteRef}
+            hasNextPage={data.hasMore}
+            gridNumber="grid-cols-1"
+          />
 
-        <div className="h-[30vh] md:h-[10vh]" />
+          <div className="h-[30vh] md:h-[10vh]" />
+        </>}
+
       </div>
 
       {/* Comments panel */}
       <div
         onClick={() => setComment((prev) => ({ ...prev, show: false }))}
         className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${comment.show ? "" : "translate-y-full md:translate-y-0"}`}
+        style={{ zIndex: 1000 }}
       >
         {/* Prev / Next navigation */}
         <div
@@ -791,7 +879,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
           className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${comment.show ? "translate-y-0 md:translate-y-0" : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-5 h-[60vh] md:h-[70vh]">
+          <div className="p-5  flex-1 md:h-[70vh]">
             <div className="flex items-center mb-6">
               <span
                 className="cursor-pointer"
@@ -802,7 +890,7 @@ export default function FeedItem({ feeds }: FeedsProps) {
               <p className="text-sm px-[30%]">Comments</p>
             </div>
 
-            <div className="overflow-y-auto h-[40vh] scrollbar-hide">
+            <div className="overflow-y-auto h-[20vh] scrollbar-hide">
               {activeComments.length > 0 ? (
                 <div className="grid gap-5">
                   {activeComments.map((item, key) => (
@@ -824,28 +912,38 @@ export default function FeedItem({ feeds }: FeedsProps) {
             </div>
           </div>
 
-          <div className="absolute bottom-20 md:bottom-0 w-full px-2">
-            <textarea
-              className="w-full h-32 md:h-20 text-xs outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent focus:border-primaryhover transition duration-300"
-              placeholder={
-                comment.parent.parentId
-                  ? `Replying to @${comment.parent.fullname.replaceAll(" ", "").toLowerCase()}`
-                  : "Write a comment"
-              }
-              value={comment.commentText}
-              onChange={(e) =>
-                setComment((prev) => ({ ...prev, commentText: e.target.value }))
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter") sendComment(comment.parent.parentId);
-              }}
-            />
-            <button
-              className={`w-6 h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${comment.show ? "" : "hidden"}`}
-              onClick={() => sendComment(comment.parent.parentId)}
-            >
-              <SendHorizonal size={10} color="white" />
-            </button>
+          <div className=" w-full px-5 md:px-2 pb-10">
+            <div className={`bg-white relative rounded-2xl ${comment.focus ? " border-primaryhover" : "border-transparent"} border`}>
+              <textarea
+                className="w-full h-32 text-base md:h-20  outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
+                placeholder={
+                  comment.parent.parentId
+                    ? `Replying to @${comment.parent.fullname.replaceAll(" ", "").toLowerCase()}`
+                    : "Write a comment"
+                }
+                value={comment.commentText}
+                onChange={(e) =>
+                  setComment((prev) => ({ ...prev, commentText: e.target.value }))
+                }
+                onFocus={() => {
+                  setComment(prev => ({ ...prev, focus: true }))
+                }}
+
+                onBlur={() => {
+                  setComment(prev => ({ ...prev, focus: false }))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendComment(comment.parent.parentId);
+                }}
+              />
+              <button
+                className={`w-10 h-10  md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${comment.show ? "" : "hidden"}`}
+                onClick={() => sendComment(comment.parent.parentId)}
+              >
+                <SendHorizonal color="white" />
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

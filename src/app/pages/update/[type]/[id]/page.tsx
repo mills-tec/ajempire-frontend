@@ -66,13 +66,12 @@ export default async function Page({
     params: Promise<{ type: string; id: string }>;
 }) {
     const { type } = await params;
-    const req = await getUpdates(type, "", ITEMS_TO_APPEND);
 
-    if (!req) return null;
+   
 
     return (
         <div>
-            {type !== "gallery" ? <FeedItem feeds={req} /> : <Gallery />}
+            {type !== "gallery" ? <FeedItem  /> : <Gallery />}
         </div>
     );
 }
