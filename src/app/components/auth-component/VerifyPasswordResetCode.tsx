@@ -29,6 +29,7 @@ export default function VerifyPasswordResetCode({
     try {
       const email = localStorage.getItem("ajempire_signup_email");
       if (!email) return toast("Couldn't verify token!");
+      
       const res = await verifyPasswordResetCode(email, code);
       console.log("response: ", res);
       if (res.error) return toast(res.error);

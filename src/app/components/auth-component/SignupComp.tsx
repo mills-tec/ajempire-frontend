@@ -27,8 +27,8 @@ export default function SignupComp({
   setScreen,
 }: AuthStepProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+  const [form, setForm] = useState({ email: "", password: "", fullname: "" });
+  const [errors, setErrors] = useState<{ email?: string; password?: string, fullname?: string }>(
     {},
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -40,10 +40,10 @@ export default function SignupComp({
   async function handleSubmit(e: React.FormEvent) {
     setIsLoading(true);
     e.preventDefault();
-    
+
     console.log("🚀 Starting signup process");
     console.log("📧 Form data:", { email: form.email, password: "***" });
-    
+
     const result = schema.safeParse(form);
 
     if (!result.success) {
@@ -61,28 +61,28 @@ export default function SignupComp({
     console.log("✅ Form validation passed");
 
     try {
-      const { email, password } = form;
+      const { email, password, fullname } = form;
       console.log("📡 Calling signup API...");
-      
-      const res = await signupBackend(email, password);
-      
+
+      const res = await signupBackend(email, password, fullname);
+
       console.log("✅ API Response received:");
       console.log("📊 Response data from api:", res);
       console.log("📊 Response structure:", JSON.stringify(res, null, 2));
-      
+
       // Check response structure - handle multiple possible success formats
       console.log("📧 Full response:", res);
-      
+
       // Check for success in different possible structures
-      const isSuccess = res.message?.emailSent || 
-                       res.message?.success || 
-                       res.success || 
-                       res.emailSent ||
-                       res.message?.message?.includes("email sent") ||
-                       res.message?.message?.includes("verification");
-      
+      const isSuccess = res.message?.emailSent ||
+        res.message?.success ||
+        res.success ||
+        res.emailSent ||
+        res.message?.message?.includes("email sent") ||
+        res.message?.message?.includes("verification");
+
       const hasError = res.message?.error || res.error;
-      
+
       if (isSuccess) {
         console.log("✅ Signup successful - email sent");
         localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
@@ -104,17 +104,17 @@ export default function SignupComp({
         setIsLoading(false);
         setScreen("verifyemail");
       }
-      
+
     } catch (error) {
       console.error("❌ Signup Error Details:");
       console.error("Error object:", error);
-      
+
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       const errorStack = error instanceof Error ? error.stack : undefined;
-      
+
       console.error("Error message:", errorMessage);
       console.error("Error stack:", errorStack);
-      
+
       toast.error(errorMessage || "Signup failed", {
         position: "top-right",
       });
@@ -146,6 +146,22 @@ export default function SignupComp({
           </div>
           <div className="space-y-2">
             <div>
+              <Label htmlFor="fullname">
+                Fullname<span className="text-red-600">*</span>{" "}
+              </Label>
+              <Input
+                name="fullname"
+                type="text"
+                placeholder="Please enter your fullname address"
+                value={form.fullname}
+                onChange={handleChange}
+                className="text-base"
+              />
+              {errors.fullname && (
+                <div className="text-xs text-red-600 mt-1">{errors.fullname}</div>
+              )}
+            </div>
+            <div>
               <Label htmlFor="email">
                 Email<span className="text-red-600">*</span>{" "}
               </Label>
@@ -155,7 +171,7 @@ export default function SignupComp({
                 placeholder="Please enter your email address"
                 value={form.email}
                 onChange={handleChange}
-                className="!text-sm lg:text-base"
+                className="text-base"
               />
               {errors.email && (
                 <div className="text-xs text-red-600 mt-1">{errors.email}</div>
@@ -171,7 +187,7 @@ export default function SignupComp({
                 placeholder="Input your password"
                 value={form.password}
                 onChange={handleChange}
-                className="pr-10 !text-sm lg:text-base"
+                className="pr-10  text-base"
               />
               <button
                 type="button"
@@ -206,15 +222,14 @@ export default function SignupComp({
               </Label>
             </div>
             <button
-              className={`w-full py-2 text-base !rounded-full text-white hover:!text-white ${
-                isLoading ||
-                errors.email ||
-                errors.password ||
-                form.email.trim().length == 0 ||
-                form.password.trim().length == 0
+              className={`w-full py-2 text-base !rounded-full text-white hover:!text-white ${isLoading ||
+                  errors.email ||
+                  errors.password ||
+                  form.email.trim().length == 0 ||
+                  form.password.trim().length == 0
                   ? "!bg-brand_gradient_light"
                   : "!bg-brand_pink"
-              }`}
+                }`}
               type="submit"
               disabled={
                 isLoading ||

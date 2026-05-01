@@ -20,11 +20,17 @@ import {
   VolumeX,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useParams } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import useInfiniteScroll from "react-infinite-scroll-hook";
-
 import { useUpdates } from "@/api/customHooks";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
@@ -32,22 +38,21 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { useModalStore } from "@/lib/stores/modal-store";
 
+// ─── FeedSkeleton ─────────────────────────────────────────────────────────────
+
 export function FeedSkeleton() {
   return Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
     <div
-      className="space-y-1 h-screen bg-gray-200  flex flex-col relative md:rounded-2xl"
+      className="space-y-1 h-screen bg-gray-200 flex flex-col relative md:rounded-2xl"
       key={i}
     >
-      <span className="absolute top-10 left-4 shadow-2xl bg-gray-300 animate-pulse h-10 w-32  py-2 px-5 rounded-full text-sm font-poppins  text-white z-10 "></span>
+      <span className="absolute top-10 left-4 shadow-2xl bg-gray-300 animate-pulse h-10 w-32 py-2 px-5 rounded-full text-sm font-poppins text-white z-10" />
       <div className="flex flex-col gap-4 translate-y-[55%] h-full pl-4">
-        <h2 className="text-sm truncate  h-10 bg-gray-300 animate-pulse rounded-sm w-[60%] "></h2>
+        <h2 className="text-sm truncate h-10 bg-gray-300 animate-pulse rounded-sm w-[60%]" />
         <div>
-          <p className=" lg:text-xs text-black/60 h-12 bg-gray-300 animate-pulse w-[40%]">
-            {" "}
-          </p>
+          <p className="lg:text-xs text-black/60 h-12 bg-gray-300 animate-pulse w-[40%]" />
         </div>
-
-        <div className="flex items-center gap-2  pr-2 text-[7px] lg:text-[10px] rounded-sm h-12 bg-gray-300 animate-pulse w-[80%] "></div>
+        <div className="flex items-center gap-2 pr-2 text-[7px] lg:text-[10px] rounded-sm h-12 bg-gray-300 animate-pulse w-[80%]" />
       </div>
     </div>
   ));
@@ -83,7 +88,7 @@ function Countdown({ targetDate }: { targetDate: string }) {
   );
 }
 
-// ─── Chevron SVG (shared by prev/next nav buttons) ───────────────────────────
+// ─── Chevron SVG ─────────────────────────────────────────────────────────────
 
 const ChevronDown = () => (
   <svg
@@ -109,11 +114,7 @@ type CommentState = {
   show: boolean;
   commentText: string;
   parent: { parentId: string; fullname: string; email: string };
-  focus: boolean
-};
-
-type FeedsProps = {
-  feeds: { data: Feed[]; nextCursor: string; hasMore: boolean };
+  focus: boolean;
 };
 
 // ─── FeedItem ─────────────────────────────────────────────────────────────────
@@ -121,15 +122,68 @@ type FeedsProps = {
 export default function FeedItem() {
   const params = useParams();
   const { id: idParam, type } = params;
+
+  // ── Refs ────────────────────────────────────────────────────────────────
   const originalFeedsRef = useRef<Feed[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
+  // Keeps feeds accessible inside the observer without re-subscribing
+  const feedsRef = useRef<Feed[]>([]);
+  // Prevents focus-scroll from running more than once
+  const hasFocusedRef = useRef(false);
+
+  // ── Custom hooks — declared BEFORE any useEffect that references them ───
+  const {
+    addComments,
+    likeUpdate,
+    likeUpdateComment,
+    deleteUpdateComment,
+    getFeeds,
+    loading,
+  } = useUpdates();
+  const openModal = useModalStore((s) => s.openModal);
+  const { addItem, isInWishlist, removeItem } = useWishlistStore();
+
+  // ── State ───────────────────────────────────────────────────────────────
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [, startDuplicateTransition] = useTransition();
+  // isLoading drives the initial skeleton — separate from `loading` (infinite scroll)
   const [isLoading, setIsLoading] = useState(true);
+  const [id, setId] = useState(idParam);
+  const [href, setHref] = useState("");
+  const [data, setData] = useState<{
+    feeds: Feed[];
+    nextCursor: string;
+    hasMore: boolean;
+  }>({ feeds: [], nextCursor: "", hasMore: false });
+  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [inWishlist, setInWishlist] = useState(false);
+  const [showDesc, setShowDesc] = useState(false);
+  const [isLastItem, setLastItem] = useState(false);
+  const [share, setShare] = useState(false);
+  const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
+  const [videoState, setVideoState] = useState({ muted: true, showPlay: false });
+  const [comment, setComment] = useState<CommentState>({
+    show: false,
+    commentText: "",
+    parent: { parentId: "", fullname: "", email: "" },
+    focus: false,
+  });
+  const [user, setUser] = useState<{
+    _id: string;
+    email: string;
+    fullname: string;
+  } | null>({ _id: "", email: "", fullname: "" });
 
-  // ─── Replace the originalFeedsRef effect with a fetch-on-mount effect ─────────
+  // Keep feedsRef in sync without triggering observer re-subscription
+  useEffect(() => {
+    feedsRef.current = data.feeds;
+  }, [data.feeds]);
 
-
-  // AFTER:
+  // ── Initial fetch ───────────────────────────────────────────────────────
   useEffect(() => {
     const fetchInitialFeeds = async () => {
       try {
@@ -148,65 +202,12 @@ export default function FeedItem() {
     };
 
     fetchInitialFeeds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
-
-  const [id, setId] = useState(idParam);
-  const [href, setHref] = useState("");
-  const [data, setData] = useState<{
-    feeds: Feed[];
-    nextCursor: string;
-    hasMore: boolean;
-  }>({
-    feeds: [],
-    nextCursor: "",
-    hasMore: false,
-  });
-
-  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [inWishlist, setInWishlist] = useState(false);
-  const [showDesc, setShowDesc] = useState(false);
-  const [isLastItem, setLastItem] = useState(false);
-  const [share, setShare] = useState(false);
-  const [videoState, setVideoState] = useState({
-    muted: true,
-    showPlay: false,
-  });
-  const [comment, setComment] = useState<CommentState>({
-    show: false,
-    commentText: "",
-    parent: { parentId: "", fullname: "", email: "" },
-    focus: false,
-  });
-  const [user, setUser] = useState<{
-    _id: string;
-    email: string;
-    fullname: string;
-  } | null>({
-    _id: "",
-    email: "",
-    fullname: "",
-  });
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const {
-    addComments,
-    likeUpdate,
-    likeUpdateComment,
-    deleteUpdateComment,
-    getFeeds,
-    loading,
-  } = useUpdates();
-  const openModal = useModalStore((s) => s.openModal);
-  const { addItem, isInWishlist, removeItem } = useWishlistStore();
 
   // ── Scroll helpers ──────────────────────────────────────────────────────
 
-  const scrollToWithOffset = (el: HTMLElement, offset = 80) => {
+  const scrollToWithOffset = useCallback((el: HTMLElement, offset = 80) => {
     const container = containerRef.current;
     if (!container) return;
     const containerRect = container.getBoundingClientRect();
@@ -218,281 +219,323 @@ export default function FeedItem() {
       el.clientHeight / 2 +
       offset;
     container.scrollTo({ top: scrollTop, behavior: "smooth" });
-  };
+  }, []);
 
-  const smoothScrollTo = (direction: "next" | "prev") => {
-    if (data.feeds.length === 0) return;
-    const nextIndex =
-      direction === "next" ? currentIndex + 1 : currentIndex - 1;
-    const el = itemRefs.current[nextIndex];
-    if (!el) return;
-    scrollToWithOffset(el, 60);
-    setCurrentIndex(nextIndex);
-    const feed = data.feeds[nextIndex];
-    if (feed?.product) setInWishlist(isInWishlist(feed.product._id));
-  };
+  const smoothScrollTo = useCallback(
+    (direction: "next" | "prev") => {
+      if (feedsRef.current.length === 0) return;
+      const nextIndex =
+        direction === "next" ? currentIndex + 1 : currentIndex - 1;
+      const el = itemRefs.current[nextIndex];
+      if (!el) return;
+      scrollToWithOffset(el, 60);
+      setCurrentIndex(nextIndex);
+      const feed = feedsRef.current[nextIndex];
+      if (feed?.product) setInWishlist(isInWishlist(feed.product._id));
+    },
+    [currentIndex, isInWishlist, scrollToWithOffset],
+  );
 
   // ── Video helpers ───────────────────────────────────────────────────────
 
-  const handleVideoPlay = (index: number) => {
+  const handleVideoPlay = useCallback((index: number) => {
     const video = videoRefs.current[index];
     if (video?.paused) video.play();
     else video?.pause();
-  };
+  }, []);
 
-  const showPlayTemporarily = () => {
+  const showPlayTemporarily = useCallback(() => {
     setVideoState((prev) => ({ ...prev, showPlay: true }));
     if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
     hidePlayTimeout.current = setTimeout(() => {
       setVideoState((prev) => ({ ...prev, showPlay: false }));
     }, 5000);
-  };
+  }, []);
+
+  // ── Auth helper ─────────────────────────────────────────────────────────
+
+  const checkIfUserLoggedIn = useCallback(
+    (action = "perform this action"): boolean => {
+      if (!user?._id) {
+        openModal("authwrapper");
+        toast.error(`You must be logged in to ${action}`, {
+          position: "top-right",
+        });
+        return false;
+      }
+      return true;
+    },
+    [user?._id, openModal],
+  );
 
   // ── Comment helpers ─────────────────────────────────────────────────────
 
-  const updateFeedComments = (
-    feedId: string | string[],
-    updater: (comments: CommentData[]) => CommentData[],
-  ) => {
-    setData((prev) => ({
-      ...prev,
-      feeds: prev.feeds.map((feed) =>
-        feed._id === feedId
-          ? { ...feed, comments: updater(feed.comments!) }
-          : feed,
-      ),
-    }));
-  };
-
-  const addReplyRecursive = (
-    list: CommentData[],
-    targetId: string,
-    reply: CommentData,
-  ): CommentData[] =>
-    list.map((node) => {
-      if (node._id === targetId)
-        return {
-          ...node,
-          replies: [...node.replies, { ...reply, showReplies: true }],
-        };
-      if (node.replies?.length)
-        return {
-          ...node,
-          replies: addReplyRecursive(node.replies, targetId, {
-            ...reply,
-            showReplies: true,
-          }),
-        };
-      return node;
-    });
-
-  const addRecursiveLike = (
-    list: CommentData[],
-    targetId: string,
-    userId: string,
-  ): CommentData[] =>
-    list.map((node) => {
-      if (node._id === targetId) {
-        const liked = node.likes.some((l) => l === userId);
-        return {
-          ...node,
-          likes: liked
-            ? node.likes.filter((l) => l !== userId)
-            : [...node.likes, userId],
-        };
-      }
-      if (node.replies?.length)
-        return {
-          ...node,
-          replies: addRecursiveLike(node.replies, targetId, userId),
-        };
-      return node;
-    });
-
-  const recursiveDeleteComment = (
-    list: CommentData[],
-    targetId: string,
-  ): CommentData[] =>
-    list
-      .filter((node) => node._id !== targetId)
-      .map((node) => ({
-        ...node,
-        replies: node.replies?.length
-          ? recursiveDeleteComment(node.replies, targetId)
-          : node.replies,
+  const updateFeedComments = useCallback(
+    (
+      feedId: string | string[],
+      updater: (comments: CommentData[]) => CommentData[],
+    ) => {
+      setData((prev) => ({
+        ...prev,
+        feeds: prev.feeds.map((feed) =>
+          feed._id === feedId
+            ? { ...feed, comments: updater(feed.comments!) }
+            : feed,
+        ),
       }));
+    },
+    [],
+  );
 
-  const handleToggle = (targetId: string) => {
-    const toggle = (list: CommentData[]): CommentData[] =>
+  const addReplyRecursive = useCallback(
+    (
+      list: CommentData[],
+      targetId: string,
+      reply: CommentData,
+    ): CommentData[] =>
       list.map((node) => {
         if (node._id === targetId)
-          return { ...node, showReplies: !node.showReplies };
-        if (node.replies.length)
-          return { ...node, replies: toggle(node.replies) };
+          return {
+            ...node,
+            replies: [...node.replies, { ...reply, showReplies: true }],
+          };
+        if (node.replies?.length)
+          return {
+            ...node,
+            replies: addReplyRecursive(node.replies, targetId, {
+              ...reply,
+              showReplies: true,
+            }),
+          };
         return node;
-      });
-    const feed = data.feeds.find((f) => f._id === id);
-    if (feed?.comments) updateFeedComments(id!, toggle);
-  };
-
-  const replyComment = (parent: CommentState["parent"]) => {
-    setComment((prev) => ({ ...prev, parent }));
-  };
-
-  const sendComment = async (parentId: string | null) => {
-    if (!comment.commentText) return;
-
-    const newComment: CommentData = {
-      _id: "",
-      text: comment.commentText,
-      user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
-      parentId,
-      likes: [],
-      replies: [],
-      showReplies: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const feedType = data.feeds.find((f) => f._id === id)?.type;
-
-    if (parentId) {
-      updateFeedComments(id!, (comments) =>
-        addReplyRecursive(comments, parentId, newComment),
-      );
-    } else {
-      updateFeedComments(id!, (comments) => [...comments, newComment]);
-    }
-
-    setComment((prev) => ({
-      ...prev,
-      commentText: "",
-      parent: { parentId: "", fullname: "", email: "" },
-    }));
-    await addComments({
-      feedId: id as string,
-      type: feedType as string,
-      comment: newComment.text,
-      parentId: parentId as string,
-    });
-  };
-
-  const likePost = async (_id: string) => {
-    if (!user?._id) {
-      openModal("authwrapper");
-      toast.error("You must be logged in to like posts", {
-        position: "top-right",
-      });
-      return;
-    }
-
-    setData((prev) => ({
-      ...prev,
-      feeds: prev.feeds.map((feed) => {
-        if (feed._id !== _id) return feed;
-        const liked = feed.likes!.some((l) => l === user._id);
-        return {
-          ...feed,
-          likes: liked
-            ? feed.likes!.filter((l) => l !== user._id)
-            : [...feed.likes!, user._id],
-        };
       }),
-    }));
-    await likeUpdate({ feedId: _id, type: type as string });
-  };
+    [],
+  );
 
-  const likeComment = async (_id: string) => {
-    checkIfUserLoggedIn();
-    const feed = data.feeds.find((f) => f._id === id);
-    updateFeedComments(id!, (comments) =>
-      addRecursiveLike(comments, _id, user!._id),
-    );
-    await likeUpdateComment({
-      feedId: id as string,
-      type: feed?.type as string,
-      commentId: _id,
-    });
-  };
+  const addRecursiveLike = useCallback(
+    (list: CommentData[], targetId: string, userId: string): CommentData[] =>
+      list.map((node) => {
+        if (node._id === targetId) {
+          const liked = node.likes.some((l) => l === userId);
+          return {
+            ...node,
+            likes: liked
+              ? node.likes.filter((l) => l !== userId)
+              : [...node.likes, userId],
+          };
+        }
+        if (node.replies?.length)
+          return {
+            ...node,
+            replies: addRecursiveLike(node.replies, targetId, userId),
+          };
+        return node;
+      }),
+    [],
+  );
 
-  const deleteComment = async (item: CommentData) => {
-    const selectedFeed = data.feeds.find((f) => f._id === id);
-    updateFeedComments(id!, (comments) =>
-      recursiveDeleteComment(comments, item._id),
-    );
-    await deleteUpdateComment({
-      feedId: id as string,
-      commentId: item._id,
-      type: selectedFeed?.type as string,
-    });
-  };
+  const recursiveDeleteComment = useCallback(
+    (list: CommentData[], targetId: string): CommentData[] =>
+      list
+        .filter((node) => node._id !== targetId)
+        .map((node) => ({
+          ...node,
+          replies: node.replies?.length
+            ? recursiveDeleteComment(node.replies, targetId)
+            : node.replies,
+        })),
+    [],
+  );
 
-  const handleWishlistToggle = (product: Product) => {
-    if (!user?._id) {
-      openModal("authwrapper");
-      toast.error("You must be logged in to add to wishlist", {
-        position: "top-right",
+  const handleToggle = useCallback(
+    (targetId: string) => {
+      const toggle = (list: CommentData[]): CommentData[] =>
+        list.map((node) => {
+          if (node._id === targetId)
+            return { ...node, showReplies: !node.showReplies };
+          if (node.replies.length)
+            return { ...node, replies: toggle(node.replies) };
+          return node;
+        });
+      const feed = feedsRef.current.find((f) => f._id === id);
+      if (feed?.comments) updateFeedComments(id!, toggle);
+    },
+    [id, updateFeedComments],
+  );
+
+  const replyComment = useCallback((parent: CommentState["parent"]) => {
+    setComment((prev) => ({ ...prev, parent }));
+  }, []);
+
+  const sendComment = useCallback(
+    async (parentId: string | null) => {
+      if (!checkIfUserLoggedIn("sends comment")) return;
+      if (!comment.commentText) return;
+
+      const newComment: CommentData = {
+        _id: "",
+        text: comment.commentText,
+        user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
+        parentId,
+        likes: [],
+        replies: [],
+        showReplies: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const feedType = feedsRef.current.find((f) => f._id === id)?.type;
+
+      if (parentId) {
+        updateFeedComments(id!, (comments) =>
+          addReplyRecursive(comments, parentId, newComment),
+        );
+      } else {
+        updateFeedComments(id!, (comments) => [...comments, newComment]);
+      }
+
+      setComment((prev) => ({
+        ...prev,
+        commentText: "",
+        parent: { parentId: "", fullname: "", email: "" },
+      }));
+
+      await addComments({
+        feedId: id as string,
+        type: feedType as string,
+        comment: newComment.text,
+        parentId: parentId as string,
       });
-      return;
-    }
+    },
+    [
+      comment.commentText,
+      user,
+      id,
+      updateFeedComments,
+      addReplyRecursive,
+      addComments,
+    ],
+  );
 
-    if (inWishlist) {
-      removeItem(product._id);
-      setInWishlist(false);
-      toast.success("Removed from wishlist", { position: "top-right" });
-    } else {
-      addItem(product);
-      setInWishlist(true);
-      toast.success("Added to wishlist", { position: "top-right" });
-    }
-  };
+  const likePost = useCallback(
+    async (_id: string) => {
+      if (!checkIfUserLoggedIn("like posts")) return;
 
-  function checkIfUserLoggedIn() {
-    if (!user?._id) {
-      openModal("authwrapper");
-      toast.error("You must be logged in to add to wishlist", {
-        position: "top-right",
+      setData((prev) => ({
+        ...prev,
+        feeds: prev.feeds.map((feed) => {
+          if (feed._id !== _id) return feed;
+          const liked = feed.likes!.some((l) => l === user!._id);
+          return {
+            ...feed,
+            likes: liked
+              ? feed.likes!.filter((l) => l !== user!._id)
+              : [...feed.likes!, user!._id],
+          };
+        }),
+      }));
+
+      await likeUpdate({ feedId: _id, type: type as string });
+    },
+    [checkIfUserLoggedIn, user, likeUpdate, type],
+  );
+
+  const likeComment = useCallback(
+    async (_id: string) => {
+      if (!checkIfUserLoggedIn("like comments")) return;
+      const feed = feedsRef.current.find((f) => f._id === id);
+      updateFeedComments(id!, (comments) =>
+        addRecursiveLike(comments, _id, user!._id),
+      );
+      await likeUpdateComment({
+        feedId: id as string,
+        type: feed?.type as string,
+        commentId: _id,
       });
-      return;
-    }
-  }
+    },
+    [
+      checkIfUserLoggedIn,
+      id,
+      user,
+      updateFeedComments,
+      addRecursiveLike,
+      likeUpdateComment,
+    ],
+  );
+
+  const deleteComment = useCallback(
+    async (item: CommentData) => {
+      const selectedFeed = feedsRef.current.find((f) => f._id === id);
+      updateFeedComments(id!, (comments) =>
+        recursiveDeleteComment(comments, item._id),
+      );
+      await deleteUpdateComment({
+        feedId: id as string,
+        commentId: item._id,
+        type: selectedFeed?.type as string,
+      });
+    },
+    [id, updateFeedComments, recursiveDeleteComment, deleteUpdateComment],
+  );
+
+  const handleWishlistToggle = useCallback(
+    (product: Product) => {
+      if (!checkIfUserLoggedIn("manage your wishlist")) return;
+
+      if (inWishlist) {
+        removeItem(product._id);
+        setInWishlist(false);
+        toast.success("Removed from wishlist", { position: "top-right" });
+      } else {
+        addItem(product);
+        setInWishlist(true);
+        toast.success("Added to wishlist", { position: "top-right" });
+      }
+    },
+    [checkIfUserLoggedIn, inWishlist, removeItem, addItem],
+  );
 
   // ── Effects ─────────────────────────────────────────────────────────────
 
+  // Initialise browser-only values
   useEffect(() => {
     setUser(getUser());
     setHref(window.location.href);
   }, []);
 
+  // Focus-scroll to the deep-linked item once data is ready — runs once
   useEffect(() => {
-    const focusedIndex = data.feeds.findIndex((f) => f._id === id);
+    if (isLoading || hasFocusedRef.current) return;
+    const focusedIndex = data.feeds.findIndex((f) => f._id === idParam);
     if (focusedIndex === -1) return;
     const el = itemRefs.current[focusedIndex];
     if (!el) return;
+    hasFocusedRef.current = true;
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
     if (data.feeds[focusedIndex].product) {
       setInWishlist(isInWishlist(data.feeds[focusedIndex].product._id));
     }
-  }, []);
+  }, [isLoading, data.feeds, idParam, isInWishlist, scrollToWithOffset]);
 
+  // Single persistent IntersectionObserver — reads feeds via ref, not closure
   useEffect(() => {
-    const sections = document.querySelectorAll(".section");
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           const index = Number(entry.target.id.replace("feed-", ""));
-          if (data.feeds[index]) {
+          const feed = feedsRef.current[index];
+          if (feed) {
             setShowDesc(false);
-            setId(data.feeds[index]._id);
+            setId(feed._id);
             window.history.replaceState(
               null,
               "",
-              `/pages/update/${type}/${data.feeds[index]._id}`,
+              `/pages/update/${type}/${feed._id}`,
             );
           }
-          if (index === data.feeds.length - 1) {
+          if (index === feedsRef.current.length - 1) {
             setLastItem(true);
             observer.unobserve(entry.target);
           }
@@ -500,23 +543,25 @@ export default function FeedItem() {
       },
       { threshold: 0.6 },
     );
-    sections.forEach((s) => observer.observe(s));
-    return () => sections.forEach((s) => observer.unobserve(s));
-  }, [data.feeds.length, type]);
 
+    document.querySelectorAll(".section").forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+    // Only re-run if type changes or new items are appended (to observe new .section nodes)
+  }, [type, data.feeds.length]);
+
+  // Duplication trigger
   useEffect(() => {
     if (!isLastItem) return;
     if (data.hasMore) return;
     if (isDuplicating) return;
-
     setIsDuplicating(true);
     setLastItem(false);
   }, [isLastItem, data.hasMore, isDuplicating]);
 
+  // Perform duplication via transition to avoid blocking the main thread
   useEffect(() => {
     if (!isDuplicating) return;
     if (!originalFeedsRef.current.length) return;
-
     startDuplicateTransition(() => {
       setData((prev) => ({
         ...prev,
@@ -525,6 +570,21 @@ export default function FeedItem() {
     });
     setIsDuplicating(false);
   }, [isDuplicating]);
+
+  // Lock body scroll when comment drawer is open; always restore on unmount
+  useEffect(() => {
+    document.body.style.overflow = comment.show ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [comment.show]);
+
+  // Clear video play timeout on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
+    };
+  }, []);
 
   // ── Infinite scroll ─────────────────────────────────────────────────────
 
@@ -545,23 +605,20 @@ export default function FeedItem() {
           console.error("Error loading more feeds:", err);
         }
       } else {
-        setData((prev) => ({ ...prev, feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)] }));
-
+        setData((prev) => ({
+          ...prev,
+          feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
+        }));
       }
     },
   });
 
-  useEffect(() => {
-    if (comment.show) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-  }, [comment.show])
-
   // ── Derived values ──────────────────────────────────────────────────────
 
-  const activeFeed = data.feeds.find((f) => f._id === id);
+  const activeFeed = useMemo(
+    () => data.feeds.find((f) => f._id === id),
+    [data.feeds, id],
+  );
   const activeComments = activeFeed?.comments ?? [];
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -569,63 +626,34 @@ export default function FeedItem() {
   return (
     <section className="md:flex w-full pb-10">
       {/* Feed scroll container */}
-
       <div
         ref={containerRef}
         className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {loading && data.feeds.length == 0 ? <div className="w-full h-screen flex items-center justify-center">
-          <svg
-            width={60}
-            height={60}
-            viewBox="0 0 67 67"
-            className="animate-spin"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <g clipPath="url(#paint0_angular_1335_12193_clip_path)">
-              <g transform="matrix(0 0.0335 -0.0335 0 33.5 33.5)">
-                <foreignObject
-                  x="-1023.73"
-                  y="-1023.73"
-                  width="2047.46"
-                  height="2047.46"
-                >
-                  <div
-                    // xmlns="http://www.w3.org/1999/xhtml"
-                    style={{
-                      background:
-                        "conic-gradient(from 90deg,rgba(255, 0, 140, 1) 0deg,rgba(255, 0, 140, 1) 63.243deg,rgba(255, 255, 255, 0) 360deg)",
-                      height: "100%",
-                      width: "100%",
-                      opacity: 1,
-                    }}
-                  ></div>
-                </foreignObject>
-              </g>
-            </g>
-            <path
-              d="M67 33.5C67 52.0015 52.0015 67 33.5 67C14.9985 67 0 52.0015 0 33.5C0 14.9985 14.9985 0 33.5 0C52.0015 0 67 14.9985 67 33.5ZM10.0174 33.5C10.0174 46.4691 20.5309 56.9826 33.5 56.9826C46.4691 56.9826 56.9826 46.4691 56.9826 33.5C56.9826 20.5309 46.4691 10.0174 33.5 10.0174C20.5309 10.0174 10.0174 20.5309 10.0174 33.5Z"
-              data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.0},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.17567500472068787},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:1.0,&#34;b&#34;:1.0,&#34;a&#34;:0.0},&#34;position&#34;:1.0}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.0},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:0.0,&#34;b&#34;:0.54901963472366333,&#34;a&#34;:1.0},&#34;position&#34;:0.17567500472068787},{&#34;color&#34;:{&#34;r&#34;:1.0,&#34;g&#34;:1.0,&#34;b&#34;:1.0,&#34;a&#34;:0.0},&#34;position&#34;:1.0}],&#34;transform&#34;:{&#34;m00&#34;:4.1025668105765245e-15,&#34;m01&#34;:-67.0,&#34;m02&#34;:67.0,&#34;m10&#34;:67.0,&#34;m11&#34;:4.1025668105765245e-15,&#34;m12&#34;:-4.1025668105765245e-15},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"
-            />
-            <circle cx="33.8351" cy="61.9742" r="5.025" fill="#FF008C" />
-            <defs>
-              <clipPath id="paint0_angular_1335_12193_clip_path">
-                <path d="M67 33.5C67 52.0015 52.0015 67 33.5 67C14.9985 67 0 52.0015 0 33.5C0 14.9985 14.9985 0 33.5 0C52.0015 0 67 14.9985 67 33.5ZM10.0174 33.5C10.0174 46.4691 20.5309 56.9826 33.5 56.9826C46.4691 56.9826 56.9826 46.4691 56.9826 33.5C56.9826 20.5309 46.4691 10.0174 33.5 10.0174C20.5309 10.0174 10.0174 20.5309 10.0174 33.5Z" />
-              </clipPath>
-            </defs>
-          </svg>
-        </div> : <>
-          {data.feeds.map((item, index) => {
-            return (
+        {/* FIX #3: use isLoading (initial fetch) not loading (infinite scroll) */}
+        {isLoading ? (
+          <div className="w-full h-screen grid gap-3 overflow-y-hidden no-scrollbar">
+            <FeedSkeleton />
+          </div>
+        ) : data.feeds.length === 0 ? (
+          <div className="h-screen flex items-center justify-center text-sm text-gray-500">
+            No feeds available
+          </div>
+        ) : (
+          <>
+            {data.feeds.map((item, index) => (
               <div
                 key={`${item._id}-${index}`}
                 id={`feed-${index}`}
                 ref={(el) => {
                   itemRefs.current[index] = el;
                 }}
-                className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show ? "md:justify-start md:pl-[10%]" : "md:justify-center"} section`}
+                className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${
+                  comment.show
+                    ? "md:justify-start md:pl-[10%]"
+                    : "md:justify-center"
+                } section`}
                 style={{ scrollSnapAlign: "start" }}
               >
                 {/* Media panel */}
@@ -637,16 +665,29 @@ export default function FeedItem() {
                   )}
 
                   {item.mediaType === "image" ? (
-                    <Image
-                      src={item.mediaUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      {!loadedIndex.includes(index) && (
+                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                      )}
+                      {/* FIX #11: added sizes prop to prevent oversized image downloads */}
+                      <Image
+                        src={item.mediaUrl}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 40vw"
+                        className="object-cover"
+                        onLoad={() =>
+                          setLoadedIndex((prev) =>
+                            prev.includes(index) ? prev : [...prev, index],
+                          )
+                        }
+                      />
+                    </>
                   ) : (
                     <>
-                      {/* {!loadedIndex.includes(index) && (
-                                        <div className='absolute inset-0 bg-gray-200 animate-pulse' />
-                                    )} */}
+                      {!loadedIndex.includes(index) && (
+                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                      )}
                       <video
                         preload="none"
                         ref={(el) => {
@@ -657,16 +698,20 @@ export default function FeedItem() {
                         muted={videoState.muted}
                         src={item.mediaUrl}
                         className="w-full h-full object-cover cursor-pointer"
-                        onPlay={() => {
-                          setPlayingMap((prev) => ({ ...prev, [index]: true }));
-                        }}
-
+                        onPlay={() =>
+                          setPlayingMap((prev) => ({ ...prev, [index]: true }))
+                        }
                         onPause={() =>
                           setPlayingMap((prev) => ({ ...prev, [index]: false }))
                         }
-                        onLoadedData={() => {
-                          setPlayingMap((prev) => ({ ...prev, [index]: true }));
-                        }}
+                        onLoadedData={() =>
+                          setPlayingMap((prev) => ({ ...prev, [index]: true }))
+                        }
+                        onCanPlay={() =>
+                          setLoadedIndex((prev) =>
+                            prev.includes(index) ? prev : [...prev, index],
+                          )
+                        }
                         onClick={showPlayTemporarily}
                         onMouseMove={showPlayTemporarily}
                         playsInline
@@ -674,7 +719,11 @@ export default function FeedItem() {
 
                       <div
                         onClick={() => handleVideoPlay(index)}
-                        className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${videoState.showPlay ? "opacity-100" : "hidden opacity-0"}`}
+                        className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${
+                          videoState.showPlay
+                            ? "opacity-100"
+                            : "hidden opacity-0"
+                        }`}
                       >
                         <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
                           {playingMap[index] ? (
@@ -704,15 +753,15 @@ export default function FeedItem() {
                   )}
 
                   {/* Overlay info */}
-                  <div className=" absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+                  <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
                     <div
                       onClick={() => setShowDesc((prev) => !prev)}
                       className="w-[80%]"
                     >
-                      <p className="text-xl md:text-sm font-medium mb-2">
+                      <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
                         {item.title}
                       </p>
-                      <p className="text-sm md:text-xs">
+                      <p className="text-sm md:text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
                         {showDesc
                           ? item.description
                           : item.description.slice(0, 80)}
@@ -723,7 +772,7 @@ export default function FeedItem() {
                     </div>
 
                     {item.product && (
-                      <div className="flex items-center gap-4 ">
+                      <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1">
                           <svg
                             width="14"
@@ -742,10 +791,10 @@ export default function FeedItem() {
                           {item.flashPrice ? (
                             <div className="flex items-center text-xs gap-2">
                               <span>
-                                {Number(item.flashPrice).toLocaleString("en-NG", {
-                                  style: "currency",
-                                  currency: "NGN",
-                                })}
+                                {Number(item.flashPrice).toLocaleString(
+                                  "en-NG",
+                                  { style: "currency", currency: "NGN" },
+                                )}
                               </span>
                               <small className="line-through">
                                 {Number(item.product.price).toLocaleString(
@@ -783,16 +832,16 @@ export default function FeedItem() {
                   {item.likes && (
                     <div className="flex flex-col items-center gap-2">
                       <div
-                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
+                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6] "
                         onClick={() => likePost(item._id)}
                       >
                         {item.likes.some((l) => l === user?._id) ? (
                           <HeartFill />
                         ) : (
-                          <Heart size={26} />
+                          <Heart size={26} className=""/>
                         )}
                       </div>
-                      <p className="text-xs">{item.likes.length}</p>
+                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">{item.likes.length}</p>
                     </div>
                   )}
 
@@ -806,7 +855,7 @@ export default function FeedItem() {
                       <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
                         <CommentIcon />
                       </div>
-                      <p className="text-xs">{item.comments.length}</p>
+                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">{item.comments.length}</p>
                     </div>
                   )}
 
@@ -817,43 +866,41 @@ export default function FeedItem() {
                     <ShareIcon />
                   </div>
 
+                  {/* FIX #9: always route through handleWishlistToggle for auth guard */}
                   {item.product && (
                     <div
-                      className={`w-10 h-10 ${inWishlist ? "bg-primaryhover" : "bg-white"} rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                      onClick={() => {
-                        if (inWishlist) {
-                          removeItem(item.product._id);
-                          setInWishlist(false);
-                        } else {
-                          addItem(item.product as Product);
-                          setInWishlist(true);
-                        }
-                      }}
+                      className={`w-10 h-10 ${
+                        inWishlist ? "bg-primaryhover" : "bg-white"
+                      } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+                      onClick={() =>
+                        handleWishlistToggle(item.product as Product)
+                      }
                     >
                       <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
                     </div>
                   )}
                 </div>
               </div>
-            );
-          })}
+            ))}
 
-          <EndlessScrollLoading
-            infiniteRef={infiniteRef}
-            hasNextPage={data.hasMore}
-            gridNumber="grid-cols-1"
-          />
+            <EndlessScrollLoading
+              infiniteRef={infiniteRef}
+              hasNextPage={data.hasMore}
+              gridNumber="grid-cols-1"
+            />
 
-          <div className="h-[30vh] md:h-[10vh]" />
-        </>}
-
+            <div className="h-[30vh] md:h-[10vh]" />
+          </>
+        )}
       </div>
 
       {/* Comments panel */}
       <div
         onClick={() => setComment((prev) => ({ ...prev, show: false }))}
-        className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${comment.show ? "" : "translate-y-full md:translate-y-0"}`}
-        style={{ zIndex: 1000 }}
+        className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${
+          comment.show ? "" : "translate-y-full md:translate-y-0"
+        }`}
+        style={{ zIndex: 100 }}
       >
         {/* Prev / Next navigation */}
         <div
@@ -876,14 +923,20 @@ export default function FeedItem() {
 
         {/* Comment drawer */}
         <div
-          className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${comment.show ? "translate-y-0 md:translate-y-0" : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"}`}
+          className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
+            comment.show
+              ? "translate-y-0 md:translate-y-0"
+              : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-5  flex-1 md:h-[70vh]">
+          <div className="p-5 flex-1 md:h-[70vh]">
             <div className="flex items-center mb-6">
               <span
                 className="cursor-pointer"
-                onClick={() => setComment((prev) => ({ ...prev, show: false }))}
+                onClick={() =>
+                  setComment((prev) => ({ ...prev, show: false }))
+                }
               >
                 <GoBack />
               </span>
@@ -895,7 +948,7 @@ export default function FeedItem() {
                 <div className="grid gap-5">
                   {activeComments.map((item, key) => (
                     <CommentItem
-                      key={key}
+                      key={item._id || key}
                       comments={activeComments}
                       item={item}
                       onToggle={handleToggle}
@@ -912,38 +965,47 @@ export default function FeedItem() {
             </div>
           </div>
 
-          <div className=" w-full px-5 md:px-2 pb-10">
-            <div className={`bg-white relative rounded-2xl ${comment.focus ? " border-primaryhover" : "border-transparent"} border`}>
+          <div className="w-full px-5 md:px-2 pb-10">
+            <div
+              className={`bg-white relative rounded-2xl border ${
+                comment.focus ? "border-primaryhover" : "border-transparent"
+              }`}
+            >
               <textarea
-                className="w-full h-32 text-base md:h-20  outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
+                className="w-full h-32 text-base md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
                 placeholder={
                   comment.parent.parentId
-                    ? `Replying to @${comment.parent.fullname.replaceAll(" ", "").toLowerCase()}`
+                    ? `Replying to @${comment.parent.fullname
+                        .replaceAll(" ", "")
+                        .toLowerCase()}`
                     : "Write a comment"
                 }
                 value={comment.commentText}
                 onChange={(e) =>
-                  setComment((prev) => ({ ...prev, commentText: e.target.value }))
+                  setComment((prev) => ({
+                    ...prev,
+                    commentText: e.target.value,
+                  }))
                 }
-                onFocus={() => {
-                  setComment(prev => ({ ...prev, focus: true }))
-                }}
-
-                onBlur={() => {
-                  setComment(prev => ({ ...prev, focus: false }))
-                }}
+                onFocus={() =>
+                  setComment((prev) => ({ ...prev, focus: true }))
+                }
+                onBlur={() =>
+                  setComment((prev) => ({ ...prev, focus: false }))
+                }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") sendComment(comment.parent.parentId);
                 }}
               />
               <button
-                className={`w-10 h-10  md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${comment.show ? "" : "hidden"}`}
+                className={`w-10 h-10 md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${
+                  comment.show ? "" : "hidden"
+                }`}
                 onClick={() => sendComment(comment.parent.parentId)}
               >
                 <SendHorizonal color="white" />
               </button>
             </div>
-
           </div>
         </div>
       </div>

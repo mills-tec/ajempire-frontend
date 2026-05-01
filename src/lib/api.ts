@@ -28,14 +28,14 @@ const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
   console.log("🔑 Login request:", { email, password: "***" });
-  
+
   const res = await fetch(API_URL + "/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
     // credentials: "include", // so cookies (session) are set
   });
- 
+
   if (!res.ok) throw new Error("Login failed");
   return res.json();
 }
@@ -46,7 +46,7 @@ export async function emailVerification(email: string, token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
   });
-  console.log("verification res: ",res)
+  console.log("verification res: ", res)
   if (!res.ok) throw new Error("Email verification failed");
   return res.json();
 }
@@ -71,13 +71,26 @@ export async function phoneNumberBackend(phone: string) {
   return res.json();
 }
 
+export async function phoneNumberVerification(phone: string, token: string) {
+  console.log(phone, token);
+  return;
+  const res = await fetch(API_URL + "/auth/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, token }),
+  });
+  console.log("verification res: ", res)
+  if (!res.ok) throw new Error("Phone verification failed");
+  return res.json();
+}
+
 export async function googleVerification(token: string) {
   const res = await fetch(API_URL + "/auth/google", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  if (!res.ok) throw new Error("Email verification failed");
+  if (!res.ok) throw new Error("Google verification failed");
   return res.json();
 }
 
@@ -95,9 +108,19 @@ export async function verifyPasswordResetCode(email: string, token: string) {
   const res = await fetch(API_URL + "/auth/verify-reset-code", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, token }),
+    body: JSON.stringify({ email: JSON.parse(email), token }),
   });
   if (!res.ok) throw new Error("Failed to resend verification code");
+  return res.json();
+}
+
+export async function changePassword(email: string, password: string) {
+  const res = await fetch(API_URL + "/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: JSON.parse(email), password }),
+  });
+  if (!res.ok) throw new Error("Failed to change password");
   return res.json();
 }
 
@@ -111,26 +134,26 @@ export async function fogortPassword(email: string) {
   return res.json();
 }
 
-export async function signupBackend(email: string, password: string) {
+export async function signupBackend(email: string, password: string, fullname: string) {
   console.log("📡 Making signup request:", { email, password: "***" });
-  
+
   const res = await fetch(API_URL + "/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, fullname }),
     // credentials: "include", // so cookies (session) are set
   });
-  
+
   console.log("📊 Response status:", res.status);
   console.log("📊 Response headers:", [...res.headers.entries()]);
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     console.error("❌ API Error Response:", errorData);
     console.error("📊 Error structure:", JSON.stringify(errorData, null, 2));
     throw new Error(errorData.error || errorData.message || "Signup failed");
   }
-  
+
   const data = await res.json();
   console.log("✅ API Success Response:", data);
   console.log("📊 Response structure:", JSON.stringify(data, null, 2));
@@ -318,9 +341,9 @@ export async function addToCart(products: CartItem[]) {
     qty: product.quantity,
     variants: product.selectedVariants?.length
       ? product.selectedVariants.map((variant) => ({
-          name: variant.name,
-          value: variant.value,
-        }))
+        name: variant.name,
+        value: variant.value,
+      }))
       : [],
   }));
 

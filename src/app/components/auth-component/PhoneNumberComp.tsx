@@ -70,6 +70,7 @@ export default function PhoneNumberComp({
     try {
       const { phone, countryCode } = form;
       const res = await phoneNumberBackend(countryCode.trim() + phone.trim());
+      sessionStorage.setItem("phone", countryCode.trim() + phone.trim());
       console.log("res: ", res);
       setErrors({});
       // Handle successful form submission here

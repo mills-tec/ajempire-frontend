@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export default function intro() {
   return (
-    <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center">
+    <section className="bg-brand_gray/20 h-[100vh] w-[100vw] flex items-center justify-center" >
       <div className="bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl">
         <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
           <Image
@@ -28,7 +28,7 @@ export default function intro() {
             height={48}
           />
 
-          <div className="w-[80%] space-y-4 mx-auto">
+          <div className=" space-y-4 mx-auto">
             <div>
               <Link href={""}>
                 <Button

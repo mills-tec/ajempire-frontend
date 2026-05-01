@@ -42,7 +42,7 @@ export default function ProfileName({ email }: ProfileNameProps) {
       </div>
     );
 
-  const fullName = profile.fullname || profile?.shippingAddress?.fullName;
+  const fullName = profile?.fullname || profile?.shippingAddress?.fullName;
   const initials = getInitials(fullName);
 
   return (

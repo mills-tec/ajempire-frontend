@@ -346,7 +346,7 @@ function HomeContent({
             <SearchBar />
           </div>
 
-          <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
+          <div className="mt-[0re] lg:mt-0 px-[20px] lg:px-10">
             {/* Banner */}
             {!searchActive && (
               <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">

@@ -7,17 +7,18 @@ import { getBearerToken } from "@/lib/api";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useSearchStore } from "@/lib/search-store";
 
-let config = {};
-const token = getBearerToken();
-if (token) {
-  config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-}
+
 
 export const useOrders = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
 
@@ -71,6 +72,15 @@ export const useOrders = () => {
 };
 
 export const useReviews = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const postReview = async ({
@@ -172,6 +182,16 @@ export const useReviews = () => {
 };
 
 export const useIssueReturn = () => {
+
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const postIssueReturn = async (data: unknown) => {
@@ -240,6 +260,15 @@ export const useIssueReturn = () => {
 };
 
 export const useUpdates = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const getFeeds = async (type: string, cursor?: string) => {
@@ -393,6 +422,15 @@ export const useUpdates = () => {
 };
 
 export const useNotification = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
   const getNotifications = async () => {
     try {
@@ -487,6 +525,15 @@ export const useNotification = () => {
 };
 
 export const useExploreInterest = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const getExploreInterest = async () => {
@@ -527,6 +574,15 @@ export const useExploreInterest = () => {
 };
 
 export const useBrowsingHistory = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
   const [uiLoading, setUILoading] = useState<boolean>(true);
 
@@ -630,6 +686,15 @@ export const useBrowsingHistory = () => {
 };
 
 export const useProduct = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const { searchByImageLoading, setSearchByImageLoading } = useSearchStore();
 
   const searchByImage = async (image: File) => {

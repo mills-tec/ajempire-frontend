@@ -98,23 +98,20 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
 
     setCartSelectedVariants(item._id, selectedVariantsArray);
   }, [selectedVariantsArray, cartItem, item._id, setCartSelectedVariants]);
+
+  // Sync local quantity FROM cart only on initial mount or when a new cartItem appears
   useEffect(() => {
     if (cartItem) {
-      setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
+      setQuantity((prev) =>
+        prev !== cartItem.quantity ? (cartItem.quantity > 0 ? cartItem.quantity : 1) : prev
+      );
     } else {
-      setQuantity(1); // reset if item removed
+      setQuantity(1);
     }
-  }, [cartItem]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItem?._id, cartItem?.selectedVariants]); // only re-run when the identity of cartItem changes, NOT its quantity
 
-  // useEffect(() => {
-  //   if (!cartItem) return;
-
-  //   if (quantity <= 0) {
-  //     removeItem(cartItem._id);
-  //   } else {
-  //     setCartItemQty(cartItem._id, quantity);
-  //   }
-  // }, [cartItem, quantity, removeItem, setCartItemQty]);
+  // Sync local quantity TO cart
   useEffect(() => {
     if (!cartItem) return;
 
@@ -123,7 +120,26 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
-  }, [cartItem, quantity]);
+  }, [quantity]); // intentionally omit cartItem — we only want this to fire when the user changes quantity
+
+  // useEffect(() => {
+  //   if (cartItem) {
+  //     setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
+  //   } else {
+  //     setQuantity(1); // reset if item removed
+  //   }
+  // }, [cartItem]);
+
+
+  // useEffect(() => {
+  //   if (!cartItem) return;
+
+  //   if (quantity <= 0) {
+  //     removeItem(cartItem._id);
+  //   } else if (cartItem.quantity !== quantity) {
+  //     setCartItemQty(cartItem._id, quantity);
+  //   }
+  // }, [cartItem, quantity]);
 
   const filledStar = (
     <svg
@@ -163,10 +179,10 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
 
   const finalPrice = item.flashSales
     ? calcDiscountPrice(
-        basePrice,
-        item.flashSales.discountValue!,
-        item.flashSales.discountType!,
-      )
+      basePrice,
+      item.flashSales.discountValue!,
+      item.flashSales.discountType!,
+    )
     : basePrice;
   const variantRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -341,11 +357,10 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                             selectOption(variant.name, value);
                           }}
                           className={`relative size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
-                  ${
-                    isSelected
-                      ? "after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
-                      : ""
-                  }
+                  ${isSelected
+                              ? "after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[3px] after:bg-purple-600"
+                              : ""
+                            }
                   ${!isValid ? "opacity-30 cursor-not-allowed" : ""}
                 `}
                           style={{
