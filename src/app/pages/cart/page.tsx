@@ -14,7 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-export const formatPrice = (amount: number) => {
+ const formatPrice = (amount: number) => {
   return Number(amount).toLocaleString("en-ng", {
     style: "currency",
     currency: "NGN",

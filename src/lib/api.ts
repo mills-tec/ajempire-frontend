@@ -600,7 +600,18 @@ export async function applyCouponCode(code: string): Promise<{
 }
 
 // SHIPPING API
-export async function getShippingRates(packageItems: Array<{ weight: number; dimensions: { length: number; width: number; height: number } }>): Promise<{
+export async function getShippingRates(packageItems: Array<{
+  name?: string;
+  description?: string;
+  amount?: number;
+  quantity?: number;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+}>): Promise<{
   message: {
     couriers: Array<{
       courier_id: string;

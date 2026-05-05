@@ -65,7 +65,7 @@ export interface Product {
   categoryId: string;
   images: string[];
   stock: number;
-  weight: number; // Weight in kg (required)
+  weight: number;
   status: 'active' | 'inactive' | 'draft';
   createdAt: string;
   updatedAt: string;
@@ -78,7 +78,7 @@ export interface CreateProductData {
   categoryId: string;
   images: string[];
   stock: number;
-  weight: number; // Weight in kg (required)
+  weight: number;
   status?: 'active' | 'inactive' | 'draft';
 }
 
@@ -89,7 +89,7 @@ export interface UpdateProductData {
   categoryId?: string;
   images?: string[];
   stock?: number;
-  weight?: number; // Weight in kg (optional for updates)
+  weight?: number;
   status?: 'active' | 'inactive' | 'draft';
 }
 
@@ -223,15 +223,13 @@ export interface Education {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  // Additional fields for content management table
   category?: string;
   linkedProduct?: string;
-  likes?: Array<{ id: string; userId: string; createdAt: string }>;  // Array of likes from API
-  comments?: Array<{ id: string; userId: string; content: string; createdAt: string }>; // Array of comments from API
+  likes?: Array<{ id: string; userId: string; createdAt: string }>;
+  comments?: Array<{ id: string; userId: string; content: string; createdAt: string }>;
   status?: 'Published' | 'Draft' | 'Archived' | 'Scheduled';
   shares?: number;
   views?: number;
-  // Fields from actual API response
   user?: { id: string; email: string; name: string; role: string };
   parentId?: string;
 }
@@ -247,34 +245,44 @@ export interface CreateEducationData {
   isActive?: boolean;
 }
 
-// Promotion interfaces
+// ─── Promotion interfaces ────────────────────────────────────────────────────
+// FIX: aligned with what promotions/page.tsx actually sends:
+// discountType: 'percent' | 'fixed', discountValue, applyTo, applyToId, couponCode
 export interface Promotion {
-  id: string;
+  _id?: string;
+  id?: string;
   title: string;
   description: string;
-  discount: number;
-  discountType: 'percentage' | 'fixed';
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  applicableProducts?: string[];
-  image?: string;
-  createdAt: string;
-  updatedAt: string;
+  promotionType?: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  applyTo?: string;
+  applyToId?: string[];
+  banner?: string;
+  couponCode?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreatePromotionData {
   title: string;
   description: string;
-  discount: number;
-  discountType: 'percentage' | 'fixed';
-  startDate: string;
-  endDate: string;
-  applicableProducts?: string[];
-  image?: string;
+  promotionType?: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  applyTo?: string;
+  applyToId?: string[];
+  banner?: string;
+  couponCode?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
-// Admin management interfaces
+// ─── Admin management interfaces ─────────────────────────────────────────────
 export interface Admin {
   id: string;
   email: string;
@@ -286,38 +294,66 @@ export interface Admin {
   updatedAt: string;
 }
 
+// FIX: permissions is now optional so the form { name, email, role } is valid
 export interface CreateAdminData {
   email: string;
   name: string;
   role: string;
-  permissions: string[];
+  permissions?: string[];
 }
 
+// ─── AdminProfile ─────────────────────────────────────────────────────────────
+// FIX: added firstName, phoneNumber, profilePicture as optional alongside
+// the original name/email/phone/avatar so both the API response shape and
+// the local form shape are accepted
 export interface AdminProfile {
-  name: string;
+  name?: string;
+  firstName?: string;
   email: string;
   phone?: string;
+  phoneNumber?: string;
   avatar?: string;
+  profilePicture?: string | null;
 }
 
+// ─── AdminSecuritySettings ────────────────────────────────────────────────────
+// FIX: sessionTimeout changed from number to string to match the form state
+// ('30', '60', etc.), and added loginAlerts & passwordExpiry used by the page
 export interface AdminSecuritySettings {
   currentPassword?: string;
   newPassword?: string;
+  twoFactorAuth?: boolean;
   twoFactorEnabled?: boolean;
-  sessionTimeout?: number;
+  sessionTimeout?: string;
+  passwordExpiry?: string;
+  loginAlerts?: boolean;
 }
 
+// ─── AdminNotificationSettings ────────────────────────────────────────────────
+// FIX: added all six fields the settings page actually uses
 export interface AdminNotificationSettings {
   emailNotifications: boolean;
   pushNotifications: boolean;
-  orderNotifications: boolean;
-  customerNotifications: boolean;
-  marketingNotifications: boolean;
+  orderUpdates?: boolean;
+  customerMessages?: boolean;
+  systemAlerts?: boolean;
+  marketingEmails?: boolean;
+  orderNotifications?: boolean;
+  customerNotifications?: boolean;
+  marketingNotifications?: boolean;
 }
 
-// Logistics settings interface
+// ─── Logistics settings ───────────────────────────────────────────────────────
+// FIX: removed duplicate declaration and made all heavy fields optional so
+// { logisticsMode: 'auto' | 'manual' } is a valid LogisticsSettings value
 export interface LogisticsSettings {
-  shippingZones: Array<{
+  id?: string;
+  logisticsMode?: 'auto' | 'manual';
+  mode?: 'automatic' | 'manual';
+  automaticProvider?: string;
+  manualInstructions?: string;
+  isActive?: boolean;
+  shippingZones?: Array<{
     id: string;
     name: string;
     countries: string[];
@@ -327,8 +363,18 @@ export interface LogisticsSettings {
       price: number;
     }>;
   }>;
-  defaultShippingFee: number;
-  freeShippingThreshold: number;
+  defaultShippingFee?: number;
+  freeShippingThreshold?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateLogisticsData {
+  mode?: 'automatic' | 'manual';
+  logisticsMode?: 'auto' | 'manual';
+  automaticProvider?: string;
+  manualInstructions?: string;
+  isActive?: boolean;
 }
 
 // Customer interface
@@ -385,25 +431,7 @@ export interface SystemNotification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';
-  targetUsers?: string[]; // Array of user IDs, if empty sends to all users
+  targetUsers?: string[];
   sendEmail?: boolean;
   sendPush?: boolean;
-}
-
-// Logistics interface
-export interface LogisticsSettings {
-  id: string;
-  mode: 'automatic' | 'manual';
-  automaticProvider?: string; // e.g., 'dhl', 'fedex', 'ups'
-  manualInstructions?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UpdateLogisticsData {
-  mode: 'automatic' | 'manual';
-  automaticProvider?: string;
-  manualInstructions?: string;
-  isActive?: boolean;
 }

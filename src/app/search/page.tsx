@@ -161,16 +161,15 @@ function SearchContent() {
   // If text search is still loading — show skeletons
   // If text search is done (even with 0 results) — only wait for categories
   // if they are actually relevant (matchedCategoryNames.length > 0)
-  const textSearchDone = !isLoading && data !== undefined;
-  const showLoadingState =
-    hasAnySearch &&
-    (skeletonLoading ||
-      searchByImageLoading ||
-      !textSearchDone ||
-      (textSearchDone &&
-        matchedCategoryNames.length > 0 &&
-        isCategoryProductsLoading) ||
-      (!textSearchDone && isCategoriesLoading));
+const textSearchDone = !hasQuery || (!isLoading && data !== undefined);
+const showLoadingState =
+  hasAnySearch &&
+  (skeletonLoading ||
+    searchByImageLoading ||
+    !textSearchDone ||
+    (textSearchDone &&
+      matchedCategoryNames.length > 0 &&
+      isCategoryProductsLoading));
 
   if (isError)
     return <p className="text-center mt-20">Error loading products.</p>;

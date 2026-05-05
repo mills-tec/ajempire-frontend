@@ -6,6 +6,7 @@ import { useNotification } from "@/api/customHooks";
 import { generateToken, messaging } from "@/lib/firebase";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { onMessage } from "firebase/messaging";
+import type { Notification } from "@/lib/types"; 
 
 export default function NotificationWrapper() {
   const { user, isPushTokenSet, setIsPushTokenSet, isLoggedIn } =
@@ -39,9 +40,9 @@ export default function NotificationWrapper() {
     const publicChannel = pusher.subscribe("public-channel");
     const privateChannel = pusher.subscribe(`private-${user.id}`);
 
-    const handler = (data: { message: string }) => {
-      updateNotifications(data.message);
-    };
+    const handler = (data: Notification) => {
+  updateNotifications(data);
+};
 
     publicChannel.bind("new-notification", handler);
     privateChannel.bind("new-notification", handler);

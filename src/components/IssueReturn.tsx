@@ -229,7 +229,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     ref={fileInputRef}
                     className="hidden"
                     onChange={(e) => {
-                        setInputs({ ...inputs, imageEvidence: e.target.files?.[0]! });
+                        setInputs({ ...inputs, imageEvidence: e.target.files?.[0] ?? null });
 
                     }}
                 />

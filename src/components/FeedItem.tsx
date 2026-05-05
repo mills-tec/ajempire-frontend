@@ -129,12 +129,10 @@ export default function FeedItem() {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
-  // Keeps feeds accessible inside the observer without re-subscribing
   const feedsRef = useRef<Feed[]>([]);
-  // Prevents focus-scroll from running more than once
   const hasFocusedRef = useRef(false);
 
-  // ── Custom hooks — declared BEFORE any useEffect that references them ───
+  // ── Custom hooks ────────────────────────────────────────────────────────
   const {
     addComments,
     likeUpdate,
@@ -149,7 +147,6 @@ export default function FeedItem() {
   // ── State ───────────────────────────────────────────────────────────────
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [, startDuplicateTransition] = useTransition();
-  // isLoading drives the initial skeleton — separate from `loading` (infinite scroll)
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState(idParam);
   const [href, setHref] = useState("");
@@ -160,7 +157,10 @@ export default function FeedItem() {
   }>({ feeds: [], nextCursor: "", hasMore: false });
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [inWishlist, setInWishlist] = useState(false);
+
+  // ✅ FIX 1: Replace single inWishlist boolean with a per-item map
+  const [wishlistMap, setWishlistMap] = useState<Record<string, boolean>>({});
+
   const [showDesc, setShowDesc] = useState(false);
   const [isLastItem, setLastItem] = useState(false);
   const [share, setShare] = useState(false);
@@ -178,7 +178,7 @@ export default function FeedItem() {
     fullname: string;
   } | null>({ _id: "", email: "", fullname: "" });
 
-  // Keep feedsRef in sync without triggering observer re-subscription
+  // Keep feedsRef in sync
   useEffect(() => {
     feedsRef.current = data.feeds;
   }, [data.feeds]);
@@ -230,10 +230,8 @@ export default function FeedItem() {
       if (!el) return;
       scrollToWithOffset(el, 60);
       setCurrentIndex(nextIndex);
-      const feed = feedsRef.current[nextIndex];
-      if (feed?.product) setInWishlist(isInWishlist(feed.product._id));
     },
-    [currentIndex, isInWishlist, scrollToWithOffset],
+    [currentIndex, scrollToWithOffset],
   );
 
   // ── Video helpers ───────────────────────────────────────────────────────
@@ -364,7 +362,13 @@ export default function FeedItem() {
   );
 
   const replyComment = useCallback((parent: CommentState["parent"]) => {
-    setComment((prev) => ({ ...prev, parent }));
+    setComment((prev) => ({
+      ...prev,
+      parent: {
+        ...parent,
+        fullname: parent.fullname ?? "", // ✅ FIX: guard against undefined fullname
+      },
+    }));
   }, []);
 
   const sendComment = useCallback(
@@ -421,6 +425,7 @@ export default function FeedItem() {
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like posts")) return;
 
+      // ✅ FIX 2: Optimistic update scoped to the specific feed by _id
       setData((prev) => ({
         ...prev,
         feeds: prev.feeds.map((feed) => {
@@ -435,7 +440,11 @@ export default function FeedItem() {
         }),
       }));
 
-      await likeUpdate({ feedId: _id, type: type as string });
+      try {
+        await likeUpdate({ feedId: _id, type: type as string });
+      } catch (err) {
+        console.error("Like failed:", err);
+      }
     },
     [checkIfUserLoggedIn, user, likeUpdate, type],
   );
@@ -478,26 +487,29 @@ export default function FeedItem() {
     [id, updateFeedComments, recursiveDeleteComment, deleteUpdateComment],
   );
 
+  // ✅ FIX 3: handleWishlistToggle now uses wishlistMap keyed by product._id
   const handleWishlistToggle = useCallback(
     (product: Product) => {
       if (!checkIfUserLoggedIn("manage your wishlist")) return;
 
-      if (inWishlist) {
+      const currentlyIn =
+        wishlistMap[product._id] ?? isInWishlist(product._id);
+
+      if (currentlyIn) {
         removeItem(product._id);
-        setInWishlist(false);
+        setWishlistMap((prev) => ({ ...prev, [product._id]: false }));
         toast.success("Removed from wishlist", { position: "top-right" });
       } else {
         addItem(product);
-        setInWishlist(true);
+        setWishlistMap((prev) => ({ ...prev, [product._id]: true }));
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
-    [checkIfUserLoggedIn, inWishlist, removeItem, addItem],
+    [checkIfUserLoggedIn, wishlistMap, isInWishlist, removeItem, addItem],
   );
 
   // ── Effects ─────────────────────────────────────────────────────────────
 
-  // Initialise browser-only values
   useEffect(() => {
     setUser(getUser());
     setHref(window.location.href);
@@ -513,12 +525,9 @@ export default function FeedItem() {
     hasFocusedRef.current = true;
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
-    if (data.feeds[focusedIndex].product) {
-      setInWishlist(isInWishlist(data.feeds[focusedIndex].product._id));
-    }
-  }, [isLoading, data.feeds, idParam, isInWishlist, scrollToWithOffset]);
+  }, [isLoading, data.feeds, idParam, scrollToWithOffset]);
 
-  // Single persistent IntersectionObserver — reads feeds via ref, not closure
+  // Single persistent IntersectionObserver
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -546,7 +555,6 @@ export default function FeedItem() {
 
     document.querySelectorAll(".section").forEach((s) => observer.observe(s));
     return () => observer.disconnect();
-    // Only re-run if type changes or new items are appended (to observe new .section nodes)
   }, [type, data.feeds.length]);
 
   // Duplication trigger
@@ -558,7 +566,6 @@ export default function FeedItem() {
     setLastItem(false);
   }, [isLastItem, data.hasMore, isDuplicating]);
 
-  // Perform duplication via transition to avoid blocking the main thread
   useEffect(() => {
     if (!isDuplicating) return;
     if (!originalFeedsRef.current.length) return;
@@ -571,7 +578,6 @@ export default function FeedItem() {
     setIsDuplicating(false);
   }, [isDuplicating]);
 
-  // Lock body scroll when comment drawer is open; always restore on unmount
   useEffect(() => {
     document.body.style.overflow = comment.show ? "hidden" : "";
     return () => {
@@ -579,7 +585,6 @@ export default function FeedItem() {
     };
   }, [comment.show]);
 
-  // Clear video play timeout on unmount to prevent state updates on unmounted component
   useEffect(() => {
     return () => {
       if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
@@ -615,6 +620,7 @@ export default function FeedItem() {
 
   // ── Derived values ──────────────────────────────────────────────────────
 
+  // ✅ FIX 4: activeComments always reads from the currently active feed by id
   const activeFeed = useMemo(
     () => data.feeds.find((f) => f._id === id),
     [data.feeds, id],
@@ -625,13 +631,11 @@ export default function FeedItem() {
 
   return (
     <section className="md:flex w-full pb-10">
-      {/* Feed scroll container */}
       <div
         ref={containerRef}
         className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
         style={{ scrollSnapType: "y mandatory" }}
       >
-        {/* FIX #3: use isLoading (initial fetch) not loading (infinite scroll) */}
         {isLoading ? (
           <div className="w-full h-screen grid gap-3 overflow-y-hidden no-scrollbar">
             <FeedSkeleton />
@@ -657,7 +661,7 @@ export default function FeedItem() {
                 style={{ scrollSnapAlign: "start" }}
               >
                 {/* Media panel */}
-                <div className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent">
+                <div className="w-full md:w-[40%] h-full lg:h-[80vh] relative overflow-hidden md:rounded-2xl selection:bg-transparent">
                   {item.type === "flashsale" && (
                     <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
                       Flashsale
@@ -669,7 +673,6 @@ export default function FeedItem() {
                       {!loadedIndex.includes(index) && (
                         <div className="absolute inset-0 bg-gray-200 animate-pulse" />
                       )}
-                      {/* FIX #11: added sizes prop to prevent oversized image downloads */}
                       <Image
                         src={item.mediaUrl}
                         alt={item.title}
@@ -829,33 +832,40 @@ export default function FeedItem() {
 
                 {/* Action buttons */}
                 <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
+                  {/* ✅ FIX 5: likes read directly from item.likes — each feed has its own */}
                   {item.likes && (
                     <div className="flex flex-col items-center gap-2">
                       <div
-                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6] "
+                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
                         onClick={() => likePost(item._id)}
                       >
                         {item.likes.some((l) => l === user?._id) ? (
                           <HeartFill />
                         ) : (
-                          <Heart size={26} className=""/>
+                          <Heart size={26} className="" />
                         )}
                       </div>
-                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">{item.likes.length}</p>
+                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                        {item.likes.length}
+                      </p>
                     </div>
                   )}
 
+                  {/* ✅ FIX 6: setId(item._id) ensures comments panel shows THIS item's comments */}
                   {item.comments && (
                     <div
                       className="flex flex-col items-center gap-2"
-                      onClick={() =>
-                        setComment((prev) => ({ ...prev, show: !prev.show }))
-                      }
+                      onClick={() => {
+                        setId(item._id);
+                        setComment((prev) => ({ ...prev, show: !prev.show }));
+                      }}
                     >
                       <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
                         <CommentIcon />
                       </div>
-                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">{item.comments.length}</p>
+                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                        {item.comments.length}
+                      </p>
                     </div>
                   )}
 
@@ -866,17 +876,27 @@ export default function FeedItem() {
                     <ShareIcon />
                   </div>
 
-                  {/* FIX #9: always route through handleWishlistToggle for auth guard */}
+                  {/* ✅ FIX 7: wishlistMap[item.product._id] gives per-item wishlist state */}
                   {item.product && (
                     <div
                       className={`w-10 h-10 ${
-                        inWishlist ? "bg-primaryhover" : "bg-white"
+                        (wishlistMap[item.product._id] ??
+                          isInWishlist(item.product._id))
+                          ? "bg-primaryhover"
+                          : "bg-white"
                       } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
                       onClick={() =>
                         handleWishlistToggle(item.product as Product)
                       }
                     >
-                      <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
+                      <Favorite
+                        fill={
+                          (wishlistMap[item.product._id] ??
+                            isInWishlist(item.product._id))
+                            ? "#FFF"
+                            : "#FF81C6"
+                        }
+                      />
                     </div>
                   )}
                 </div>
@@ -930,7 +950,7 @@ export default function FeedItem() {
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-5 flex-1 md:h-[70vh]">
+          <div className="p-5 flex-1">
             <div className="flex items-center mb-6">
               <span
                 className="cursor-pointer"
@@ -945,20 +965,23 @@ export default function FeedItem() {
 
             <div className="overflow-y-auto h-[20vh] scrollbar-hide">
               {activeComments.length > 0 ? (
-                <div className="grid gap-5">
-                  {activeComments.map((item, key) => (
-                    <CommentItem
-                      key={item._id || key}
-                      comments={activeComments}
-                      item={item}
-                      onToggle={handleToggle}
-                      onReply={replyComment}
-                      onLike={likeComment}
-                      deleteComment={deleteComment}
-                      user={user!}
-                    />
-                  ))}
-                </div>
+               <div className="grid gap-5">
+  {activeComments.map((item, key) => {
+console.log(`📝 Comment on feed [${activeFeed?.title ?? activeFeed?._id}]:`, item);
+    return (
+      <CommentItem
+        key={item._id || key}
+        comments={activeComments}
+        item={item}
+        onToggle={handleToggle}
+        onReply={replyComment}
+        onLike={likeComment}
+        deleteComment={deleteComment}
+        user={user!}
+      />
+    );
+  })}
+</div>
               ) : (
                 <p className="text-xs text-center">This post has no comments</p>
               )}
@@ -975,7 +998,7 @@ export default function FeedItem() {
                 className="w-full h-32 text-base md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
                 placeholder={
                   comment.parent.parentId
-                    ? `Replying to @${comment.parent.fullname
+                    ? `Replying to @${(comment.parent.fullname ?? "")
                         .replaceAll(" ", "")
                         .toLowerCase()}`
                     : "Write a comment"

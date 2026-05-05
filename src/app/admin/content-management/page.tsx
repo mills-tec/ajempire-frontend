@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Search, Filter, Eye, Trash2, Edit2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, SquarePen, Megaphone, Plus, X } from 'lucide-react';
+import { Search, Filter, Eye, Trash2, Edit2, ChevronLeft, ChevronRight,  Megaphone, Plus, X } from 'lucide-react';
 import { createEducationWithFiles, getEducation, deleteEducation, updateEducation } from '@/lib/adminapi';
-import { CreateEducationData, Education } from '@/lib/admin-types';
+import { Education } from '@/lib/admin-types';
 import { useToast, ToastContainer } from '@/app/components/ui/Toast';
+import Image from 'next/image';
 
 const ContentManagementPage = () => {
   const toast = useToast();
@@ -418,7 +419,7 @@ const ContentManagementPage = () => {
               ) : content.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-8 text-center text-gray-500">
-                    No content found. Click "Add Content" to create your first content item.
+                    No content found. Click &quot;Add Content; to create your first content item.
                   </td>
                 </tr>
               ) : (
@@ -835,7 +836,7 @@ const ContentManagementPage = () => {
               {selectedContent.image && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Image</h3>
-                  <img 
+                  <Image 
                     src={selectedContent.image} 
                     alt="Content preview" 
                     className="w-full h-48 object-cover rounded-lg"
@@ -886,7 +887,7 @@ const ContentManagementPage = () => {
                 Are you sure you want to delete this content?
               </p>
               <p className="font-medium text-gray-900">
-                "{selectedContent.title || 'Untitled content'}"
+                &quot;{selectedContent.title || 'Untitled content'}&quot;
               </p>
             </div>
             

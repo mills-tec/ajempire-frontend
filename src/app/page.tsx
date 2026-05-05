@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useEffect, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
@@ -29,6 +29,7 @@ export default function Home() {
   const { data, isLoading } = useQuery<ProductsResponse | null>({
     queryKey: ["products"],
     queryFn: () => getProducts(""),
+    staleTime: Infinity, // never background-refetch — accumulated pages would be overwritten by page-1 refetch
   });
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
@@ -102,7 +103,10 @@ function HomeContent({
   >([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
-  const [cursor, setCursor] = useState("");
+  const cursorRef = useRef("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollRestored = useRef(false);
 
   // Ensure component only uses store data after hydration
   const [isMounted, setIsMounted] = React.useState(false);
@@ -110,21 +114,46 @@ function HomeContent({
     setIsMounted(true);
   }, []);
 
-  const products = data?.message?.products ?? [];
-  console.log("Products:", products);
+  // Save scroll position when navigating away
+  useEffect(() => {
+    return () => {
+      sessionStorage.setItem("home-scroll-y", String(window.scrollY));
+    };
+  }, []);
+
+  // Restore scroll position once data is ready and DOM is painted
+  useEffect(() => {
+    if (!isInitialized || scrollRestored.current) return;
+    const savedY = sessionStorage.getItem("home-scroll-y");
+    if (!savedY) return;
+    scrollRestored.current = true;
+    sessionStorage.removeItem("home-scroll-y");
+    // Double rAF: first frame commits the render, second ensures layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, parseInt(savedY, 10));
+      });
+    });
+  }, [isInitialized]);
+
+  const products = useMemo(
+    () => data?.message?.products ?? EMPTY_PRODUCTS,
+    [data?.message?.products],
+  );
   const categoryFilterActive = Boolean(selectedCategory);
 
   // Reflect pull-to-refresh loading and reset scroll state after refresh
   useEffect(() => {
     if (refreshing) {
       setUiLoading(true);
+      if (!categoryFilterActive) setIsInitialized(false);
       return;
     }
 
     // Refresh complete, reset state for clean new view (but keep category selection)
     setUiLoading(false);
     if (!categoryFilterActive) {
-      setCursor("");
+      cursorRef.current = "";
       setHasNextPage(true);
       setCategoryVisibleProducts([]);
     }
@@ -173,66 +202,71 @@ function HomeContent({
     searchLoading ||
     (categoryFilterActive ? isCategoryLoading && !categoryError : isLoading);
 
+  const appendProducts = useCallback(
+    (
+      newProducts: Product[],
+      pagination?: { nextCursor?: string; hasMore?: boolean },
+    ) => {
+      queryClient.setQueryData<ProductsResponse | null>(
+        ["products"],
+        (oldData) => {
+          if (!oldData) {
+            return {
+              message: {
+                products: [...newProducts],
+                shippingFees: [],
+                nextCursor: pagination?.nextCursor,
+                hasMore: pagination?.hasMore,
+              },
+            };
+          }
+
+          return {
+            ...oldData,
+            message: {
+              ...oldData.message,
+              products: [...(oldData.message?.products ?? []), ...newProducts],
+              nextCursor: pagination?.nextCursor ?? oldData.message.nextCursor,
+              hasMore: pagination?.hasMore ?? oldData.message.hasMore,
+            },
+          };
+        },
+      );
+    },
+    [queryClient],
+  );
+
   const [infiniteRef] = useInfiniteScroll({
-    loading: false,
-    hasNextPage: !categoryFilterActive && hasNextPage,
+    loading: isLoadingMore,
+    hasNextPage: isInitialized && !categoryFilterActive && hasNextPage,
     onLoadMore: async () => {
+      if (isLoadingMore) return;
+      setIsLoadingMore(true);
       try {
         const newData = await getProducts(
-          `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`,
-        ); // fetch next page
-        // Update the cached query to append new products
+          `limit=${ITEMS_TO_APPEND}&cursor=${cursorRef.current}`,
+        );
         appendProducts(newData?.message?.products || [], {
           nextCursor: newData?.message?.nextCursor,
           hasMore: newData?.message?.hasMore,
         });
-        setCursor(newData?.message?.nextCursor ?? "");
-
-        // Update hasNextPage based on backend response
+        cursorRef.current = newData?.message?.nextCursor ?? "";
         setHasNextPage(newData?.message?.hasMore ?? false);
       } catch (err) {
         console.error("Error loading more products:", err);
+      } finally {
+        setIsLoadingMore(false);
       }
     },
-    disabled: categoryFilterActive,
+    disabled: !isInitialized || categoryFilterActive,
   });
-
-  const appendProducts = (
-    newProducts: Product[],
-    pagination?: { nextCursor?: string; hasMore?: boolean },
-  ) => {
-    queryClient.setQueryData<ProductsResponse | null>(
-      ["products"],
-      (oldData) => {
-        if (!oldData) {
-          return {
-            message: {
-              products: [...newProducts],
-              shippingFees: [],
-              nextCursor: pagination?.nextCursor,
-              hasMore: pagination?.hasMore,
-            },
-          };
-        }
-
-        return {
-          ...oldData,
-          message: {
-            ...oldData.message,
-            products: [...(oldData.message?.products ?? []), ...newProducts],
-            nextCursor: pagination?.nextCursor ?? oldData.message.nextCursor,
-            hasMore: pagination?.hasMore ?? oldData.message.hasMore,
-          },
-        };
-      },
-    );
-  };
 
   useEffect(() => {
     if (!data?.message) return;
 
-    setCursor(data.message.nextCursor ?? "");
+    cursorRef.current = data.message.nextCursor ?? "";
     setHasNextPage(data.message.hasMore ?? false);
+    setIsInitialized(true);
   }, [data?.message?.hasMore, data?.message?.nextCursor]);
 
   useEffect(() => {
@@ -315,7 +349,7 @@ function HomeContent({
     });
     setLastItemInView(false);
     setManualLoad(false);
-  }, [categoryFilterActive, categoryProducts, lastItemInview, products]);
+  }, [appendProducts, categoryFilterActive, categoryProducts, lastItemInview, products]);
 
   useEffect(() => {
     if (!categoryFilterActive) {
@@ -361,24 +395,13 @@ function HomeContent({
               </div>
             )}
 
-            {/* Categories */}
+            {/* Categories — always mounted; handles its own skeleton internally */}
             <div className={`mt-${searchActive ? "[1rem]" : "8"}`}>
-              {uiLoading || searchLoading || isLoading ? (
-                <div className="flex gap-4 overflow-x-auto pb-2 pt-3 lg:pt-0">
-                  {[...Array(11)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="lg:w-20 lg:h-20 rounded-full bg-gray-200 animate-pulse shrink-0 w-14 h-14"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <Categories
-                  cat={"categories"}
-                  onCategorySelect={setSelectedCategory}
-                  selectedCategoryId={selectedCategory?._id ?? null}
-                />
-              )}
+              <Categories
+                cat={"categories"}
+                onCategorySelect={setSelectedCategory}
+                selectedCategoryId={selectedCategory?._id ?? null}
+              />
             </div>
             {categoryFilterActive && (
               <div className="mt-6 px-4 lg:px-[30px] flex flex-wrap items-center gap-3 font-poppins">
