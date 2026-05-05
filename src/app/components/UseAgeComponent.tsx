@@ -18,7 +18,7 @@ export const UseAgeComponent = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const useAgeData = async () => {
+    const fetchAgeData = async () => {
       const token = getBearerToken();
       try {
         const res = await axios.get(
@@ -36,7 +36,7 @@ export const UseAgeComponent = () => {
         setLoading(false);
       }
     };
-    useAgeData();
+    fetchAgeData();
   }, []);
 
   if (loading) return <UsageSkeleton />;

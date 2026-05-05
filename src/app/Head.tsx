@@ -7,7 +7,7 @@ export default function Head() {
       <link rel="icon" type="image/png" href="/icon-512.png" sizes="512x512" />
       <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
       <link rel="apple-touch-icon" href="/icon-512.png" sizes="512x512" />
-      <link rel="apple-touch-icon" href="/icon-192.png" />{" "}
+      <link rel="apple-touch-icon" href="/icon-192.png" />
       {/* Default for iOS */}
       <meta name="theme-color" content="#A600FF" />
       <meta name="apple-mobile-web-app-capable" content="yes" />

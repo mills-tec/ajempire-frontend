@@ -30,7 +30,7 @@ export default function Orders({
 
   const setUpdatedReviews = (review: any) => {
     const { product, ...rest } = review;
-    let updated = data.original.map((order) => ({
+    const updated = data.original.map((order) => ({
       ...order,
       items: order.items.map((item) =>
         (item.product as any)._id === product

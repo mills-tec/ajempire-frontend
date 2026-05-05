@@ -325,8 +325,8 @@ export default function UpdateVideoContainer() {
                         post_id={posts[activeVideoLink]._id}
                       />
                       {comment.viewReply &&
-                        comment.replies.map((reply) => (
-                          <div className="!w-[17rem] relative float-right">
+                        comment.replies.map((reply, idx) => (
+                          <div key={idx} className="!w-[17rem] relative float-right">
                             <UpdateVideoComment
                               reply_count={comment.replies.length}
                               comment={reply}

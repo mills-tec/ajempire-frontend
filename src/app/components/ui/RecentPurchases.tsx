@@ -70,8 +70,8 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
               <div className="w-[70%] flex flex-col ">
                 <p>{purchase.product.name}</p>
                 {purchase.product.variants &&
-                  purchase.product.variants.map((variant) => (
-                    <div className="flex items-center gap-2 opacity-70 text-[13px]">
+                  purchase.product.variants.map((variant, idx) => (
+                    <div key={idx} className="flex items-center gap-2 opacity-70 text-[13px]">
                       <p>{variant.name}:</p>
                       <p>{variant.values}</p>
                     </div>

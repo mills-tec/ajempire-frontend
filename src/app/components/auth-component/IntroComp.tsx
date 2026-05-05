@@ -79,7 +79,8 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
       })
       .catch((err) => {
         const message =
-          err.response?.data?.message ?? err.response?.data ?? err.message;
+          err.response?.data?.error ?? err.response?.data ?? err.message;
+          console.log(message);
         toast.error(message, { duration: 3000 });
         console.error("Auth error:", message);
       })
@@ -96,6 +97,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        style={{zIndex: 200}}
       >
         {isLoading && <Spinner />}
         <motion.div
@@ -107,6 +109,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             ease: [0.22, 1, 0.36, 1], // premium easing
           }}
           className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl"
+          
         >
           <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
             <Image
@@ -146,7 +149,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                     shape="pill"
                     logo_alignment="left"
                     size="large"
-                    width="100%"
+                    width="350px"
                     ux_mode="popup"
                     containerProps={{ className: "w-full flex justify-center" }}
                     onSuccess={handleGoogleSuccess}
@@ -191,7 +194,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                   Continue with Email
                 </Button>
               </div>
-              <div>
+              {/* <div>
                 <Button
                   variant={"outline"}
                   className="relative h-10 !rounded-full w-full text-sm flex items-center justify-center gap-[2px] font-extralight"
@@ -213,7 +216,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
                   </span>
                   Continue with Phone
                 </Button>
-              </div>
+              </div> */}
               <div className="flex mx-auto w-max text-xs gap-2 divide-x divide-black">
                 <button onClick={() => setScreen("signup")}>Register</button>
                 <button

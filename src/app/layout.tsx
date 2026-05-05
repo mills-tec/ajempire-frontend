@@ -63,7 +63,7 @@ export default function RootLayout({
             <CartIconProvider>
               <NetworkStatus />
               {/* Splash Screen - Shows on app load */}
-              <SplashScreenWrapper hideNavbar={true}>
+              <SplashScreenWrapper >
                 {/* App Layout */}
                 <LayoutWrapper>
                   {children}

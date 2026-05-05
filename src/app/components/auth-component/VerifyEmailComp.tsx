@@ -48,7 +48,7 @@ export default function VerifyEmailComp({
     try {
       await emailVerification(email, otp);
       toast.success("Email verified successfully!");
-      setScreen("deals");
+      setScreen("signin");
     } catch (error) {
       console.log("error: ", error);
       toast.error("Invalid verification code. Please try again.");

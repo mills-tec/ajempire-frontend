@@ -333,7 +333,7 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        let req = await postData(
+        const req = await postData(
           `/updates/likeComment`,
           { id: data.feedId, commentId: data.commentId, type: data.type },
           config,
@@ -363,7 +363,7 @@ export const useUpdates = () => {
       setLoading(true);
 
       try {
-        let req = await deleteData(
+        const req = await deleteData(
           `/updates/comment/${data.type}/${data.feedId}/${data.commentId}`,
           config,
         );

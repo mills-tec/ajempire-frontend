@@ -42,10 +42,10 @@ export default function CommentCard({ review }: { review: Review }) {
     <div className="space-y-2 font-poppins">
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 bg-primaryhover rounded-full text-white flex items-center justify-center text-xs">
-          <p>{getInitials(review.user.fullname)}</p>
+          <p>{getInitials(review.user?.fullname)}</p>
         </div>
 
-        <h3 className="text-sm">{review.user.fullname}</h3>
+        <h3 className="text-sm">{review.user?.fullname}</h3>
       </div>
 
       <div className="space-y-2">

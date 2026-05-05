@@ -14,7 +14,7 @@ export default function AboutUsComp({ topRef }: AboutUsComProp) {
                 <div className="lg:w-[600px] p-4 flex flex-col gap-2">
                     <p className=" font-normal">Who We Are:</p>
                     <div className="opacity-80 font-light text-[15px]">
-                        <p>AJ Empire is Nigeria's go-to beauty brand, committed to delivering vibrant,</p>
+                        <p>AJ Empire is Nigeria&apos;s go-to beauty brand, committed to delivering vibrant,</p>
                         <p>premium-quality nail and cosmetic products designed to empower </p>
                         <p>confidence and self-expression.</p>
 
@@ -30,7 +30,7 @@ export default function AboutUsComp({ topRef }: AboutUsComProp) {
                 <div className="lg:w-[600px] p-4 flex flex-col gap-2">
                     <p className="font-normal">Vision:</p>
                     <div className="opacity-80 font-light text-[15px]">
-                        <p>To become Africa's leading beauty brand known for innovation, quality, </p>
+                        <p>To become Africa&apos;s leading beauty brand known for innovation, quality, </p>
                         <p>and inclusivity.</p>
                     </div>
                 </div>

@@ -134,6 +134,8 @@ export default function RelatedProducts({ category }: { category: string }) {
 
   const products: Product[] = data?.products ?? [];
 
+  console.log("HI");
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
       {products.map((product, index) => (

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, X } from 'lucide-react';
+import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp,  X } from 'lucide-react';
 import { getCustomers, deleteCustomer, updateCustomerStatus } from '@/lib/adminapi';
 import { useToast, ToastContainer } from '@/app/components/ui/Toast';
 
@@ -420,7 +420,7 @@ const CustomersPage = () => {
                 Are you sure you want to delete this customer? This action cannot be undone.
               </p>
               <p className="font-medium text-gray-900">
-                "{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}"
+                &quot;{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}&quot;
               </p>
             </div>
             

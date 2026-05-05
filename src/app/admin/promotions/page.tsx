@@ -50,7 +50,8 @@ const PromotionsPage = () => {
     title: '',
     description: '',
     promotionType: 'flashsale',
-    discountType: 'percent',
+    // AFTER
+discountType: 'percent' as 'percent' | 'fixed',
     discountValue: 0,
     applyTo: 'product',
     applyToId: [] as string[],
@@ -188,7 +189,7 @@ const PromotionsPage = () => {
       title: promotion.title || '',
       description: promotion.description || '',
       promotionType: promotion.promotionType || 'flashsale',
-      discountType: promotion.discountType || 'percent',
+     discountType: (promotion.discountType || 'percent') as 'percent' | 'fixed',
       discountValue: promotion.discountValue || 0,
       applyTo: promotion.applyTo || 'product',
       applyToId: promotion.applyToId || [],

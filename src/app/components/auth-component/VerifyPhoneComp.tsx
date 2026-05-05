@@ -1,6 +1,6 @@
 "use client";
 import { InputOTP, InputOTPSlot } from "@/components/ui/input-otp";
-import { emailVerification, resendVerificationCode } from "@/lib/api";
+import { phoneNumberVerification, resendVerificationCode } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -11,7 +11,7 @@ import type { AuthStepProps } from "./auth-flow";
 export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const phone = searchParams.get("phone");
+  const phone = sessionStorage.getItem("phone");
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
@@ -28,6 +28,7 @@ export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
   }, [resendTimer]);
 
   const handleVerification = async () => {
+    console.log(phone);
     if (!phone) {
       toast.error("Phone number not found. Please try signing up again.");
       return;
@@ -39,10 +40,13 @@ export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
     }
 
     setIsVerifying(true);
+
     try {
-      await emailVerification(phone, otp);
+      await phoneNumberVerification(phone, otp);
       toast.success("Phone number verified successfully!");
-      router.push("/auth/signin");
+      sessionStorage.removeItem("phone");
+      // router.push()
+
     } catch (error) {
       console.log("error: ", error);
       toast.error("Invalid verification code. Please try again.");
@@ -140,11 +144,10 @@ export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
                 <button
                   onClick={handleVerification}
                   disabled={isVerifying || otp.length !== 6}
-                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                    isVerifying || otp.length !== 6
-                      ? "bg-brand_gradient_light text-gray-500 cursor-not-allowed"
-                      : "bg-brand_pink text-white hover:bg-gray-800"
-                  }`}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors ${isVerifying || otp.length !== 6
+                    ? "bg-brand_gradient_light text-gray-500 cursor-not-allowed"
+                    : "bg-brand_pink text-white hover:bg-gray-800"
+                    }`}
                 >
                   {isVerifying ? "Verifying..." : "Verify Email"}
                 </button>

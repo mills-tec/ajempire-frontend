@@ -142,6 +142,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
           onKeyDown={handleKeyDown}
           placeholder={PLACEHOLDERS[placeholderIndex]}
           className={`w-full outline-none bg-transparent text-base ${placeholderClass}`}
+          suppressHydrationWarning
         />
 
         {/* Camera — visible on BOTH mobile and desktop */}
