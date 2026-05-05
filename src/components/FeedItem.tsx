@@ -165,7 +165,10 @@ export default function FeedItem() {
   const [isLastItem, setLastItem] = useState(false);
   const [share, setShare] = useState(false);
   const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
-  const [videoState, setVideoState] = useState({ muted: true, showPlay: false });
+  const [videoState, setVideoState] = useState({
+    muted: true,
+    showPlay: false,
+  });
   const [comment, setComment] = useState<CommentState>({
     show: false,
     commentText: "",
@@ -492,8 +495,7 @@ export default function FeedItem() {
     (product: Product) => {
       if (!checkIfUserLoggedIn("manage your wishlist")) return;
 
-      const currentlyIn =
-        wishlistMap[product._id] ?? isInWishlist(product._id);
+      const currentlyIn = wishlistMap[product._id] ?? isInWishlist(product._id);
 
       if (currentlyIn) {
         removeItem(product._id);
@@ -653,7 +655,7 @@ export default function FeedItem() {
                 ref={(el) => {
                   itemRefs.current[index] = el;
                 }}
-                className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${
+                className={`flex gap-4 relative items-center duration-300 h-[70vh] md:h-[88vh] w-full ${
                   comment.show
                     ? "md:justify-start md:pl-[10%]"
                     : "md:justify-center"
@@ -881,7 +883,7 @@ export default function FeedItem() {
                     <div
                       className={`w-10 h-10 ${
                         (wishlistMap[item.product._id] ??
-                          isInWishlist(item.product._id))
+                        isInWishlist(item.product._id))
                           ? "bg-primaryhover"
                           : "bg-white"
                       } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
@@ -892,7 +894,7 @@ export default function FeedItem() {
                       <Favorite
                         fill={
                           (wishlistMap[item.product._id] ??
-                            isInWishlist(item.product._id))
+                          isInWishlist(item.product._id))
                             ? "#FFF"
                             : "#FF81C6"
                         }
@@ -943,7 +945,7 @@ export default function FeedItem() {
 
         {/* Comment drawer */}
         <div
-          className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
+          className={`w-screen h-[65vh] md:h-[52vh] md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
             comment.show
               ? "translate-y-0 md:translate-y-0"
               : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
@@ -954,9 +956,7 @@ export default function FeedItem() {
             <div className="flex items-center mb-6">
               <span
                 className="cursor-pointer"
-                onClick={() =>
-                  setComment((prev) => ({ ...prev, show: false }))
-                }
+                onClick={() => setComment((prev) => ({ ...prev, show: false }))}
               >
                 <GoBack />
               </span>
@@ -965,30 +965,33 @@ export default function FeedItem() {
 
             <div className="overflow-y-auto h-[20vh] scrollbar-hide">
               {activeComments.length > 0 ? (
-               <div className="grid gap-5">
-  {activeComments.map((item, key) => {
-console.log(`📝 Comment on feed [${activeFeed?.title ?? activeFeed?._id}]:`, item);
-    return (
-      <CommentItem
-        key={item._id || key}
-        comments={activeComments}
-        item={item}
-        onToggle={handleToggle}
-        onReply={replyComment}
-        onLike={likeComment}
-        deleteComment={deleteComment}
-        user={user!}
-      />
-    );
-  })}
-</div>
+                <div className="grid gap-5">
+                  {activeComments.map((item, key) => {
+                    console.log(
+                      `📝 Comment on feed [${activeFeed?.title ?? activeFeed?._id}]:`,
+                      item,
+                    );
+                    return (
+                      <CommentItem
+                        key={item._id || key}
+                        comments={activeComments}
+                        item={item}
+                        onToggle={handleToggle}
+                        onReply={replyComment}
+                        onLike={likeComment}
+                        deleteComment={deleteComment}
+                        user={user!}
+                      />
+                    );
+                  })}
+                </div>
               ) : (
                 <p className="text-xs text-center">This post has no comments</p>
               )}
             </div>
           </div>
 
-          <div className="w-full px-5 md:px-2 pb-10">
+          <div className="w-full px-5 md:px-2 md:pb-10 absolute bottom-32 md:bottom-0">
             <div
               className={`bg-white relative rounded-2xl border ${
                 comment.focus ? "border-primaryhover" : "border-transparent"
@@ -1010,12 +1013,8 @@ console.log(`📝 Comment on feed [${activeFeed?.title ?? activeFeed?._id}]:`, i
                     commentText: e.target.value,
                   }))
                 }
-                onFocus={() =>
-                  setComment((prev) => ({ ...prev, focus: true }))
-                }
-                onBlur={() =>
-                  setComment((prev) => ({ ...prev, focus: false }))
-                }
+                onFocus={() => setComment((prev) => ({ ...prev, focus: true }))}
+                onBlur={() => setComment((prev) => ({ ...prev, focus: false }))}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") sendComment(comment.parent.parentId);
                 }}
