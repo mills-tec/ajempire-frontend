@@ -307,10 +307,9 @@ interface PWAInstallPromptProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FIRST_PROMPT_DELAY    = 15_000;   // ms before first prompt appears
+const FIRST_PROMPT_DELAY    = 5_000;    // ms before first prompt appears
 const REPROMPT_DELAY        = 45_000;   // ms user must wait before seeing prompt again
-const MIN_INTERACTIONS      = 3;        // interactions before first prompt
-const REPROMPT_INTERACTIONS = 5;        // interactions before subsequent prompts
+const REPROMPT_INTERACTIONS = 3;        // interactions required before re-prompting after dismiss
 const SUCCESS_DURATION      = 3_500;    // ms success banner is visible
 const OPEN_APP_SNOOZE       = 24 * 60 * 60_000; // 24h before "Open in App" re-shows
 
@@ -334,29 +333,7 @@ const MESSAGES = [
 
 type PromptState = "idle" | "prompt" | "success" | "open-app";
 
-// ─── iOS Share Icon SVG ───────────────────────────────────────────────────────
-// Matches Safari's actual Share button shape so users instantly recognise it.
-const IOSShareIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}
-  >
-    <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 1 1 0-2.684m0 2.684 6.632 3.316m-6.632-6 6.632-3.316m0 0a3 3 0 1 1 .883 1.46" />
-    {/* Simpler: use the standard iOS share glyph */}
-    <line x1="12" y1="3" x2="12" y2="15" />
-    <polyline points="17 8 12 3 7 8" />
-    <path d="M5 17H3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-2" />
-  </svg>
-);
-
-// Cleaner iOS share arrow — minimal, accurate
+// iOS share arrow
 const ShareArrow = () => (
   <svg
     width="15"
@@ -398,16 +375,20 @@ export default function PWAInstallPrompt({
   appStartUrl,
   accentColor  = "#FF008C",
 }: PWAInstallPromptProps) {
-  const [state,            setState]            = useState<PromptState>("idle");
-  const [deferredPrompt,   setDeferredPrompt]   = useState<BeforeInstallPromptEvent | null>(null);
-  const [interactions,     setInteractions]     = useState(0);
-  const [isInstalled,      setIsInstalled]      = useState(false);
-  const [platform,         setPlatform]         = useState<"android" | "ios" | "desktop">("desktop");
-  const [messageIndex,     setMessageIndex]     = useState(0);
+  const [state,          setState]          = useState<PromptState>("idle");
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled,    setIsInstalled]    = useState(false);
+  const [platform,       setPlatform]       = useState<"android" | "ios" | "desktop">("desktop");
+  const [messageIndex,   setMessageIndex]   = useState(0);
+  // repromptGate flips true once the user hits REPROMPT_INTERACTIONS after a dismiss.
+  // Using a gate state (instead of raw interaction count) means the countdown effect
+  // only re-runs once when the threshold is crossed, not on every scroll/click.
+  const [repromptGate,   setRepromptGate]   = useState(false);
 
-  const hasTriggeredRef   = useRef(false);
-  const dismissedAtRef    = useRef<number | null>(null);
-  const startUrl          = appStartUrl ?? (typeof window !== "undefined" ? `${window.location.origin}/` : "/");
+  const hasTriggeredRef  = useRef(false);
+  const dismissedAtRef   = useRef<number | null>(null);
+  const interactionsRef  = useRef(0);  // raw count — ref avoids re-renders on every event
+  const startUrl         = appStartUrl ?? (typeof window !== "undefined" ? `${window.location.origin}/` : "/");
 
   // ── Platform detection ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -456,16 +437,25 @@ export default function PWAInstallPrompt({
     if (count !== null) setMessageIndex(count % MESSAGES.length);
   }, []);
 
-  // ── Interaction tracking ────────────────────────────────────────────────────
+  // ── Interaction tracking (ref only — no re-renders per event) ─────────────
   useEffect(() => {
-    const inc = () => setInteractions((p) => p + 1);
+    const inc = () => {
+      interactionsRef.current++;
+      if (
+        !repromptGate &&
+        dismissedAtRef.current &&
+        interactionsRef.current >= REPROMPT_INTERACTIONS
+      ) {
+        setRepromptGate(true);
+      }
+    };
     window.addEventListener("click",  inc);
     window.addEventListener("scroll", inc);
     return () => {
       window.removeEventListener("click",  inc);
       window.removeEventListener("scroll", inc);
     };
-  }, []);
+  }, [repromptGate]);
 
   // ── Capture Android install event ───────────────────────────────────────────
   useEffect(() => {
@@ -489,37 +479,27 @@ export default function PWAInstallPrompt({
     return () => window.removeEventListener("appinstalled", handler);
   }, []);
 
-  // ── Prompt trigger logic ────────────────────────────────────────────────────
+  // ── 5-second countdown ──────────────────────────────────────────────────────
   useEffect(() => {
-    // Never prompt on desktop, when already installed, or when non-idle
-    if (platform === "desktop") return;
-    if (isInstalled)            return;
-    if (state !== "idle")       return;
-
-    // On Android, don't bother prompting if the browser hasn't fired
-    // beforeinstallprompt — the Install button would do nothing
+    if (platform === "desktop")           return;
+    if (isInstalled)                      return;
+    if (state !== "idle")                 return;
+    if (hasTriggeredRef.current)          return;
     if (platform === "android" && !deferredPrompt) return;
 
-    const now          = Date.now();
-    const dismissedAt  = dismissedAtRef.current;
-    const isFirstTime  = !dismissedAt;
-
-    const enoughTime   = dismissedAt ? now - dismissedAt >= REPROMPT_DELAY : true;
-    const needed       = isFirstTime ? MIN_INTERACTIONS : REPROMPT_INTERACTIONS;
-
-    if (interactions < needed)        return;
-    if (!isFirstTime && !enoughTime)  return;
-    if (hasTriggeredRef.current)      return;
+    const dismissedAt = dismissedAtRef.current;
+    if (dismissedAt) {
+      const enoughTime = Date.now() - dismissedAt >= REPROMPT_DELAY;
+      if (!enoughTime || !repromptGate) return;
+    }
 
     const timer = setTimeout(() => {
       hasTriggeredRef.current = true;
       setState("prompt");
-      // Reset counter so it doesn't re-trigger immediately on next dismiss
-      setInteractions(0);
     }, FIRST_PROMPT_DELAY);
 
     return () => clearTimeout(timer);
-  }, [interactions, isInstalled, platform, state, deferredPrompt]);
+  }, [platform, isInstalled, state, repromptGate, deferredPrompt]);
 
   // ── Dismiss install prompt ──────────────────────────────────────────────────
   const handleDismiss = useCallback(() => {
@@ -532,6 +512,8 @@ export default function PWAInstallPrompt({
     setMessageIndex(next);
 
     hasTriggeredRef.current = false;
+    interactionsRef.current = 0;
+    setRepromptGate(false);
     setState("idle");
   }, [messageIndex]);
 
@@ -550,9 +532,8 @@ export default function PWAInstallPrompt({
   // ── Android install tap ─────────────────────────────────────────────────────
   const handleInstall = useCallback(async () => {
     if (platform === "ios") {
-      // iOS can't auto-install — user must follow the manual steps shown.
-      // We just dismiss; the standalone detection will show success on next launch.
-      handleDismiss();
+      hasTriggeredRef.current = false;
+      setState("idle");
       return;
     }
 
