@@ -71,6 +71,7 @@ export default async function Page({
 
     return (
         <div>
+            
             {type !== "gallery" ? <FeedItem  /> : <Gallery />}
         </div>
     );

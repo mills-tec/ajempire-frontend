@@ -59,6 +59,7 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     (async () => {
       let req = await getNotifications();
+      console.log(req);
       setNotifications(req)
     })();
   }, [])

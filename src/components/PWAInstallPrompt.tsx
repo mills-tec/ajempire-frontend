@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2 } from "lucide-react";
 
@@ -12,7 +12,8 @@ const FIRST_PROMPT_DELAY = 15 * 1000;
 const REPROMPT_DELAY = 45 * 1000;
 const MIN_INTERACTIONS = 3;
 const REPROMPT_INTERACTIONS = 5;
-const SUCCESS_DISPLAY_DURATION = 3500; // auto-hide success after 3.5s
+const SUCCESS_DISPLAY_DURATION = 3500;
+const CHECK_INTERVAL = 2000; // poll every 2s instead of reacting to every event
 
 const STORAGE_KEYS = {
   DISMISSED_AT: "pwa_prompt_dismissed_at",
@@ -27,53 +28,47 @@ const MESSAGES = [
   },
   {
     title: "Never Miss a Deal Again ✨",
-    subtitle:
-      "Get lightning-fast access to AJ Empire right from your home screen",
+    subtitle: "Get lightning-fast access to AJ Empire right from your home screen",
   },
 ];
 
 type PromptState = "idle" | "prompt" | "success";
 
-export default function PWAInstallPrompt({
-  className = "",
-}: PWAInstallPromptProps) {
+export default function PWAInstallPrompt({ className = "" }: PWAInstallPromptProps) {
   const [state, setState] = useState<PromptState>("idle");
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [userInteractions, setUserInteractions] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [platform, setPlatform] = useState<"android" | "ios" | "desktop">(
-    "desktop",
-  );
+  const [platform, setPlatform] = useState<"android" | "ios" | "desktop">("desktop");
   const [messageIndex, setMessageIndex] = useState(0);
+
+  // Refs — changes here don't trigger re-renders
   const hasTriggeredRef = useRef(false);
   const dismissedAtRef = useRef<number | null>(null);
+  const interactionsRef = useRef(0);         // ← was useState, now a ref
+  const firstInteractionTimeRef = useRef<number | null>(null);
+  const stateRef = useRef<PromptState>("idle");
+
+  // Keep stateRef in sync so the interval closure always sees fresh state
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   // Detect platform
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua);
-    const isAndroid = /android/.test(ua);
-    if (isIOS) setPlatform("ios");
-    else if (isAndroid) setPlatform("android");
+    if (/iphone|ipad|ipod/.test(ua)) setPlatform("ios");
+    else if (/android/.test(ua)) setPlatform("android");
     else setPlatform("desktop");
   }, []);
 
   // Detect if already installed
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
-    const iosStandalone =
-      (window.navigator as { standalone?: boolean }).standalone === true;
-    const alreadyInstalled =
-      localStorage.getItem(STORAGE_KEYS.INSTALLED) === "true";
+    const iosStandalone = (window.navigator as { standalone?: boolean }).standalone === true;
+    const alreadyInstalled = localStorage.getItem(STORAGE_KEYS.INSTALLED) === "true";
 
     if (standalone || iosStandalone) {
       setIsInstalled(true);
-
-      // iOS: if this is first launch in standalone mode — show success briefly
       if (!alreadyInstalled) {
         localStorage.setItem(STORAGE_KEYS.INSTALLED, "true");
-        // Small delay so app finishes rendering first
         setTimeout(() => setState("success"), 800);
         setTimeout(() => setState("idle"), 800 + SUCCESS_DISPLAY_DURATION);
       }
@@ -88,16 +83,21 @@ export default function PWAInstallPrompt({
     if (count) setMessageIndex(parseInt(count) % MESSAGES.length);
   }, []);
 
-  // Track user interactions
+  // Track interactions — write to ref only, no setState
   useEffect(() => {
-    const handler = () => setUserInteractions((p) => p + 1);
-    window.addEventListener("click", handler);
-    window.addEventListener("scroll", handler);
+    const handler = () => {
+      interactionsRef.current += 1;
+      if (!firstInteractionTimeRef.current) {
+        firstInteractionTimeRef.current = Date.now();
+      }
+    };
+    window.addEventListener("click", handler, { passive: true });
+    window.addEventListener("scroll", handler, { passive: true });
     return () => {
       window.removeEventListener("click", handler);
       window.removeEventListener("scroll", handler);
     };
-  }, []);
+  }, []); // ← empty deps: registers once, never re-registers
 
   // Capture Android/Chrome install event
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function PWAInstallPrompt({
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // Listen for appinstalled event (Android — fires after successful install)
+  // appinstalled event
   useEffect(() => {
     const handler = () => {
       localStorage.setItem(STORAGE_KEYS.INSTALLED, "true");
@@ -121,74 +121,77 @@ export default function PWAInstallPrompt({
     return () => window.removeEventListener("appinstalled", handler);
   }, []);
 
-  // Trigger prompt logic
+  // Polling interval — checks trigger conditions without reacting to every interaction
   useEffect(() => {
     if (platform === "desktop") return;
-    if (isInstalled) return;
-    if (state !== "idle") return;
 
-    const now = Date.now();
-    const dismissedAt = dismissedAtRef.current;
-    const isFirstTime = !dismissedAt;
-    const enoughTimePassed = dismissedAt
-      ? now - dismissedAt >= REPROMPT_DELAY
-      : false;
-    const enoughInteractions = isFirstTime
-      ? userInteractions >= MIN_INTERACTIONS
-      : userInteractions >= REPROMPT_INTERACTIONS;
+    const interval = setInterval(() => {
+      if (isInstalled) return;
+      if (stateRef.current !== "idle") return;
+      if (hasTriggeredRef.current) return;
 
-    if (!enoughInteractions) return;
-    if (!isFirstTime && !enoughTimePassed) return;
-    if (hasTriggeredRef.current) return;
+      const now = Date.now();
+      const interactions = interactionsRef.current;
+      const dismissedAt = dismissedAtRef.current;
+      const isFirstTime = !dismissedAt;
 
-    const timer = setTimeout(() => {
+      const enoughInteractions = isFirstTime
+        ? interactions >= MIN_INTERACTIONS
+        : interactions >= REPROMPT_INTERACTIONS;
+
+      if (!enoughInteractions) return;
+
+      const enoughTimePassed = isFirstTime
+        ? (firstInteractionTimeRef.current !== null &&
+           now - firstInteractionTimeRef.current >= FIRST_PROMPT_DELAY)
+        : now - dismissedAt! >= REPROMPT_DELAY;
+
+      if (!enoughTimePassed) return;
+
       hasTriggeredRef.current = true;
       setState("prompt");
-    }, FIRST_PROMPT_DELAY);
+    }, CHECK_INTERVAL);
 
-    return () => clearTimeout(timer);
-  }, [userInteractions, isInstalled, platform, state]);
+    return () => clearInterval(interval);
+  }, [platform, isInstalled]); // ← only depends on stable values
 
   const handleDismiss = useCallback(() => {
     const now = Date.now();
     dismissedAtRef.current = now;
     localStorage.setItem(STORAGE_KEYS.DISMISSED_AT, now.toString());
 
-    const nextCount = (messageIndex + 1) % MESSAGES.length;
-    localStorage.setItem(STORAGE_KEYS.PROMPT_COUNT, nextCount.toString());
-    setMessageIndex(nextCount);
+    setMessageIndex((prev) => {
+      const next = (prev + 1) % MESSAGES.length;
+      localStorage.setItem(STORAGE_KEYS.PROMPT_COUNT, next.toString());
+      return next;
+    });
 
+    // Reset interaction count for reprompt threshold
+    interactionsRef.current = 0;
     hasTriggeredRef.current = false;
     setState("idle");
-  }, [messageIndex]);
+  }, []);
 
   const handleInstall = useCallback(async () => {
     if (platform === "ios") {
-      // iOS can't auto-install — just dismiss, standalone detection handles success
       handleDismiss();
       return;
     }
-
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const result = await deferredPrompt.userChoice;
       setDeferredPrompt(null);
-
       if (result.outcome === "accepted") {
-        // appinstalled event will fire and show success
-        // but set as fallback too
         localStorage.setItem(STORAGE_KEYS.INSTALLED, "true");
         setIsInstalled(true);
         setState("success");
         setTimeout(() => setState("idle"), SUCCESS_DISPLAY_DURATION);
       } else {
-        // User declined — treat as dismiss
         handleDismiss();
       }
     }
   }, [deferredPrompt, platform, handleDismiss]);
 
-  // Don't render on desktop or if fully idle after install
   if (platform === "desktop") return null;
   if (isInstalled && state === "idle") return null;
   if (!isInstalled && state === "idle") return null;
@@ -201,7 +204,7 @@ export default function PWAInstallPrompt({
     <AnimatePresence>
       {(state === "prompt" || state === "success") && (
         <motion.div
-          key={state} // re-animate when switching prompt → success
+          key={state}
           initial={{ opacity: 0, y: -80 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -80 }}
@@ -209,43 +212,28 @@ export default function PWAInstallPrompt({
           className={`fixed top-4 left-2 right-2 z-50 ${className}`}
         >
           {isSuccess ? (
-            /* ── SUCCESS BANNER ── */
             <div className="backdrop-blur-md bg-white/95 shadow-xl rounded-2xl px-4 py-3 flex items-center gap-3 border border-green-100">
               <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
                 <CheckCircle2 size={22} className="text-green-500" />
               </div>
               <div className="flex flex-col leading-tight min-w-0">
-                <span className="font-semibold text-gray-900 text-sm">
-                  Successfully Added! 🎉
-                </span>
-                <span className="text-gray-500 text-xs">
-                  AJ Empire is now on your home screen
-                </span>
+                <span className="font-semibold text-gray-900 text-sm">Successfully Added! 🎉</span>
+                <span className="text-gray-500 text-xs">AJ Empire is now on your home screen</span>
               </div>
             </div>
           ) : (
-            /* ── INSTALL PROMPT ── */
             <div className="backdrop-blur-md bg-white/90 shadow-xl rounded-2xl px-4 py-3 flex items-center justify-between gap-4 border border-white/40">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
-                  <img
-                    src="/promptlogo.png"
-                    alt="AJ Empire"
-                    className="w-full h-full object-contain"
-                  />
+                  <img src="/promptlogo.png" alt="AJ Empire" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex flex-col leading-tight min-w-0">
-                  <span className="font-semibold text-gray-900 text-sm truncate">
-                    {content.title}
-                  </span>
+                  <span className="font-semibold text-gray-900 text-sm truncate">{content.title}</span>
                   <span className="text-gray-500 text-xs leading-snug line-clamp-2">
-                    {isIOS
-                      ? 'Tap Share → "Add to Home Screen" for instant access'
-                      : content.subtitle}
+                    {isIOS ? 'Tap Share → "Add to Home Screen" for instant access' : content.subtitle}
                   </span>
                 </div>
               </div>
-
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={handleInstall}

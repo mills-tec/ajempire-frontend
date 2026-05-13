@@ -2,12 +2,10 @@
 import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
-import { AxiosError } from "axios";
-import { getBearerToken } from "@/lib/api";
+import axios, { AxiosError } from "axios";
+import { API_URL, getBearerToken } from "@/lib/api";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useSearchStore } from "@/lib/search-store";
-
-
 
 export const useOrders = () => {
   let config = {};
@@ -182,7 +180,6 @@ export const useReviews = () => {
 };
 
 export const useIssueReturn = () => {
-
   let config = {};
   const token = getBearerToken();
   if (token) {
@@ -198,7 +195,7 @@ export const useIssueReturn = () => {
     if (!loading) {
       setLoading(true);
       try {
-        // const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
+        const req = await axios.post(`${API_URL}/return`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;
@@ -322,6 +319,7 @@ export const useUpdates = () => {
         } else {
           message = "Something went wrong.";
         }
+        console.log(message);
         toast.error(message);
       } finally {
         setLoading(false);
@@ -333,11 +331,12 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        // const req = await postData(
-        //   `/updates/like`,
-        //   { id: data.feedId, type: data.type },
-        //   config,
-        // );
+        console.log(data.feedId, data.type);
+        const req = await postData(
+          `/updates/like`,
+          { id: data.feedId, type: data.type },
+          config,
+        );
 
         return true;
       } catch (err: unknown) {

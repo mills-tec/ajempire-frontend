@@ -5,9 +5,10 @@ import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getBearerToken } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { fetchFromCart, getBearerToken } from "@/lib/api";
+import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { Product } from "@/lib/types";
 import clsx from "clsx";
 
 import Image from "next/image";
@@ -25,8 +26,8 @@ export default function CartPage() {
     items,
     deselectAllCartItems,
     selectAllCartItems,
-    orderSummary,
     selectedItem,
+    setCartItems,
   } = useCartStore();
   const selectedCartItems = items.filter((item) => item.selected);
 
@@ -78,12 +79,56 @@ export default function CartPage() {
 
   // Show skeleton while loading
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800); // you can adjust based on actual fetch time
-    return () => clearTimeout(timer);
-  }, [items]);
+ useEffect(() => {
+  let timer: ReturnType<typeof setTimeout>;
+
+  (async () => {
+    try {
+      const res = await fetchFromCart();
+      if (res) {
+        const rawItems = res.message.items;
+        if (rawItems !== undefined) {
+          const items: CartItem[] = rawItems.map(
+            (item: {
+              product: Product;
+              price: number;
+              discount: number;
+              finalPrice: number;
+              qty: number;
+              variants?: {
+                options: {
+                  name: string;
+                  value: string;
+                }[];
+              };
+            }) => ({
+              ...item.product,
+              quantity: item.qty,
+              selected: true,
+              name: item.product.name,
+              basePrice: item.price,
+              discount: item.discount,
+              finalPrice: item.finalPrice,
+              selectedVariants: item.variants?.options ?? [],
+            }),
+          );
+          setCartItems(items);
+        } else {
+          setCartItems([]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch cart:", err);
+      setCartItems([]);
+    } finally {
+      timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 800);
+    }
+  })();
+
+  return () => clearTimeout(timer);
+}, []);
 
   useEffect(() => {
     if (cartAmount.length > 0) {
@@ -144,7 +189,6 @@ export default function CartPage() {
         </section>
       </RefreshWrapper>
     );
-
   return (
     <RefreshWrapper>
       <div className="relative w-screen h-screen lg:flex lg:px-10 lg:gap-8 lg:mt-9 ">

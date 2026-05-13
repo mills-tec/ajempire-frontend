@@ -105,7 +105,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
           <div className=" ">
             {isLoggedIn ? (
               <Link
-                href="/pages/ordersandaccount"
+                href="/pages/ordersandaccount/orders/all"
                 className={`flex items-center gap-1 opacity-80 ${isActive(
                   "/pages/ordersandaccount",
                 )} hover:text-[#FF008C] transition-all duration-300`}

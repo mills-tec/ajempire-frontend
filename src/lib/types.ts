@@ -72,6 +72,7 @@ export interface Review {
   image?: string;
   _id?: string;
   createdAt?: string;
+  updatedAt?: string;
   product?: string;
 }
 
@@ -95,9 +96,9 @@ export interface Order {
 }
 
 export interface IItem {
-  product: string;
+  product: Product;
   name: string;
-  variant: { name: string; value: string; _id: string };
+  variants: { options: { name: string; value: string }[] };
   price: number;
   qty: number;
   image: string;
@@ -111,6 +112,9 @@ export interface IOrder {
   orderStatus: string;
   order_id: string;
   createdAt: string;
+  discountedPrice: number;
+  price: number;
+  qty: number;
 }
 
 export interface Comment {
@@ -225,7 +229,8 @@ export interface Notification {
   data?: {
     product: Product;
     discount: number;
-    endTime: string;
+    discountType: string;
+    endDate: string;
   };
   readBy: { userId: string }[];
   hide?: string[];

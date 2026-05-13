@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
 import Modal from './Modal';
-import { IItem } from '@/lib/types';
+import { IItem, Product } from '@/lib/types';
 import { useIssueReturn } from '@/api/customHooks';
 import { ImSpinner8 } from 'react-icons/im';
 import Link from 'next/link';
@@ -25,7 +25,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
         ]
     }
     const [inputs, setInputs] = useState<{
-        products: string[];
+        products: Product[];
         reason: string;
         itemUsed: string;
         phoneNumber: string;
@@ -43,10 +43,11 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
     })
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const handleSubmit = async () => {
+       
         const formData = new FormData();
 
         for (let i = 0; i < inputs.products.length; i++) {
-            formData.append("product[]", inputs.products[i]);
+            formData.append("product[]", inputs.products[i]._id);
         }
         formData.append("order", data._id);
         formData.append("reason", inputs.reason);
@@ -56,7 +57,6 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
         formData.append("imageEvidence", inputs.imageEvidence as File);
         formData.append("otherReason", inputs.otherReason);
         const req = await postIssueReturn(formData)
-
 
         if (req) {
             setReturnModal(false);
@@ -72,6 +72,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
         }
 
     }
+
     return <div className="font-poppins">
         <div className="flex mb-2  text-lg justify-between items-center">
             <p className="text-[20px] font-semibold hidden md:block">Return Request</p>
@@ -204,7 +205,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     <input
                         type="tel"
                         inputMode="numeric"
-                        placeholder="9062325092"
+                        placeholder="0000 000 0000"
                         className="flex-1 h-full px-2 outline-none"
                         value={inputs.phoneNumber}
                         onChange={(e) => {
@@ -239,7 +240,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     }}
                     className="relative  flex justify-between items-center  gap-3 border border-gray-200 px-2  h-[40px] rounded-sm cursor-pointer"
                 >
-                    <div className="text-[#888888] text-[14px]">Upload Image</div>
+                    <div className="text-[#888888] text-[14px]">{fileInputRef.current?.files![0] ? fileInputRef.current?.files![0].name : "Upload"}</div>
                     <div className="flex items-center gap-2">
                         <svg
                             width="13"

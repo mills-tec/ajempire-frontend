@@ -29,7 +29,6 @@ function CartCard({
 }) {
   const {
     removeItem,
-    getItem,
     decreaseQuantity,
     increaseQuantity,
     toggleItemSelect,
@@ -37,7 +36,8 @@ function CartCard({
     selectedItem,
     resetSelectedItem,
   } = useCartStore();
-  const cartItem = getItem(item._id);
+  const cartItem = item;
+
 
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
@@ -65,6 +65,8 @@ function CartCard({
       _id: item._id,
     });
   }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
+
+
   return (
     <section className="w-full">
       {selectedItem && <CartPopup />}
@@ -127,7 +129,10 @@ function CartCard({
                                   } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              selectOption(variant.name, value);
+                              if(isValid){
+
+                                selectOption(variant.name, value);
+                              }
                             }}
                             key={value}
                           >
@@ -157,9 +162,9 @@ function CartCard({
                     <p className="text-brand_pink font-semibold">
                       Save{" "}
                       {Number(
-                        item.price -
+                        item.basePrice -
                           calcDiscountPrice(
-                            item.price,
+                            item.basePrice,
                             item.flashSales?.discountValue ?? 0,
                             item.flashSales?.discountType ?? "percent",
                           ),
