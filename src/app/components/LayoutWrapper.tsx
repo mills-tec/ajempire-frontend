@@ -19,6 +19,7 @@ export default function LayoutWrapper({
     pathname.startsWith("/admin") || pathname === "/admin-login";
 
   const isProductPage = pathname.startsWith("/product/");
+  const isCategoriesPage = pathname.startsWith("/categories");
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
       {/* Navbar */}
@@ -33,7 +34,7 @@ export default function LayoutWrapper({
         className={`
     ${isProductPage ? "pb-0" : "pb-[90px]"}
     ${hideLayout ? "pt-0" : "lg:pt-[100px]"}
-    bg-[#FFF9FC]
+    ${isCategoriesPage ? "bg-gray-100" : "bg-[#FFF9FC]"}
   `}
       >
         {children}

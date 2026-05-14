@@ -3,6 +3,7 @@ import React from "react";
 import Image from "next/image";
 import Ajbanner from "@/assets/Ajbanner.png";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import BannerPlaceholder from "@/app/components/BannerPlaceholder";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import CountdownTimer from "@/components/CountDownTimer";
@@ -79,13 +80,8 @@ export default function HomeHeroSlider({
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {/* ---------------- Slide 1 ---------------- */}
-        <div className="relative w-full flex-shrink-0 h-full overflow-hidden ">
-          <Image
-            src={Ajbanner}
-            alt="banner image"
-            priority
-            className="w-full lg:h-[379px] h-full lg:object-cover object-contain"
-          />
+        <div className="relative w-full flex-shrink-0 h-full overflow-hidden">
+          <BannerPlaceholder className="!h-full !rounded-none" />
         </div>
 
         {flashProducts.length > 0 && (

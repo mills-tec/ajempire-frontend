@@ -14,7 +14,8 @@ export default function OrdersAndAccountPage() {
   const [isLoading, setIsLoading] = useState(true);
   // start with spinner showing
   const { getBrowsingHistory } = useBrowsingHistory();
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   // useEffect(() => {
   //   const handleRedirect = () => {
@@ -76,16 +77,23 @@ export default function OrdersAndAccountPage() {
     (async () => {
       const res = await getBrowsingHistory("", 10);
 
-      if (!res) return; // 👈 VERY IMPORTANT
+      if (!res) {
+        setHistoryLoading(false);
+        return;
+      }
 
       const browsingHistory = res.browsingHistory.flatMap(
         (item: { products: { product: Product }[] }) =>
-          item.products.map((product: { product: Product }) => product.product),
+          (item.products ?? []).map(
+            (product: { product: Product }) => product.product,
+          ),
       );
 
       setProducts(browsingHistory);
+      setHistoryLoading(false);
     })();
-  }, [getBrowsingHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // If loading, show spinner only
   if (isLoading) {
@@ -102,7 +110,7 @@ export default function OrdersAndAccountPage() {
         <MobileAccountLinks />
       </div>
       <div>
-        <BrowserHistory products={products} />
+        <BrowserHistory products={products} isLoading={historyLoading} />
       </div>
     </div>
   );

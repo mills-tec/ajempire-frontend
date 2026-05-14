@@ -152,7 +152,9 @@ export default function CategoryPage() {
               className="mx-auto mt-10"
             />
             <p className="text-center text-sm text-gray-500 mt-10">
-              No products match your search.
+              {searchedQuery
+                ? "No products match your search."
+                : "No products in this category yet."}
             </p>
           </div>
         )}
@@ -295,7 +297,9 @@ export default function CategoryPage() {
                 className="mx-auto mt-10"
               />
               <p className="text-center text-sm text-gray-500 mt-10">
-                No products match your search.
+                {searchedQuery
+                  ? "No products match your search."
+                  : "No products in this category yet."}
               </p>
             </div>
           )}
