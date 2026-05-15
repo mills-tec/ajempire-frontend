@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -54,7 +55,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@types/minimatch": "^6.0.0",
+    "@types/minimatch": "^5.1.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

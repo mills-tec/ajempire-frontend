@@ -65,12 +65,12 @@ export interface Product {
   relatedProducts?: Product[];
 }
 
-export interface Review {
-  user?: { id: string; name: string; email: string };
-  comment?: string;
+// src/lib/types.ts
+export type Review = {
+  _id: string;
   rating?: number;
+  comment: string;
   image?: string;
-  _id?: string;
   createdAt?: string;
   updatedAt?: string;
   product?: string;

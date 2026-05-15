@@ -46,7 +46,7 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
   const goToNextStep = async () => {
     const i = steps.indexOf(checkoutStep);
     if (i < steps.length - 1) {
-      let nextStep = steps[i + 1];
+      const nextStep = steps[i + 1];
 
       setCheckoutStep(nextStep);
     }

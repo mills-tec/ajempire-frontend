@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, X, Plus, Trash2, Save, Eye, EyeOff, UploadCloud, PlusIcon, Link, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import {Upload, X, Plus, Trash2,  UploadCloud, PlusIcon,  CheckCircle, AlertCircle, Info } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createProduct, getAllCategories, createCategory } from '@/lib/adminapi';
@@ -99,7 +99,7 @@ const AddProductPage = () => {
             }
 
             console.log('Creating category with FormData:');
-            for (let [key, value] of formData.entries()) {
+            for (const [key, value] of formData.entries()) {
                 console.log(`${key}:`, value);
             }
 
@@ -385,33 +385,33 @@ const AddProductPage = () => {
         setVariations(newVariations);
     };
 
-    const addVariationValue = (variationIndex: number) => {
-        const newVariations = [...variations];
-        newVariations[variationIndex].values.push('');
-        newVariations[variationIndex].images.push(null as File | null);
-        setVariations(newVariations);
-    };
+    // const addVariationValue = (variationIndex: number) => {
+    //     const newVariations = [...variations];
+    //     newVariations[variationIndex].values.push('');
+    //     newVariations[variationIndex].images.push(null as File | null);
+    //     setVariations(newVariations);
+    // };
 
-    const removeVariationValue = (variationIndex: number, valueIndex: number) => {
-        const newVariations = [...variations];
-        newVariations[variationIndex].values = newVariations[variationIndex].values.filter((_, i) => i !== valueIndex);
-        newVariations[variationIndex].images = newVariations[variationIndex].images.filter((_, i) => i !== valueIndex);
-        setVariations(newVariations);
-    };
+    // const removeVariationValue = (variationIndex: number, valueIndex: number) => {
+    //     const newVariations = [...variations];
+    //     newVariations[variationIndex].values = newVariations[variationIndex].values.filter((_, i) => i !== valueIndex);
+    //     newVariations[variationIndex].images = newVariations[variationIndex].images.filter((_, i) => i !== valueIndex);
+    //     setVariations(newVariations);
+    // };
 
-    const handleVariationImageUpload = (variationIndex: number, valueIndex: number, file: File) => {
-        const newVariations = [...variations];
-        newVariations[variationIndex].images[valueIndex] = file;
-        setVariations(newVariations);
-    };
+    // const handleVariationImageUpload = (variationIndex: number, valueIndex: number, file: File) => {
+    //     const newVariations = [...variations];
+    //     newVariations[variationIndex].images[valueIndex] = file;
+    //     setVariations(newVariations);
+    // };
 
-    const addNewVariation = () => {
-        setVariations(prev => [...prev, { type: '', values: [''], images: [null as File | null] }]);
-    };
+    // const addNewVariation = () => {
+    //     setVariations(prev => [...prev, { type: '', values: [''], images: [null as File | null] }]);
+    // };
 
-    const removeVariation = (variationIndex: number) => {
-        setVariations(prev => prev.filter((_, i) => i !== variationIndex));
-    };
+    // const removeVariation = (variationIndex: number) => {
+    //     setVariations(prev => prev.filter((_, i) => i !== variationIndex));
+    // };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -450,7 +450,7 @@ const AddProductPage = () => {
 
             // Media
             if (coverImage) formData.append('cover_image', coverImage);
-            additionalImages.forEach((image, index) => {
+            additionalImages.forEach((image) => {
                 formData.append(`images`, image);
             });
             if (productVideo) formData.append('video', productVideo);
@@ -491,7 +491,7 @@ const AddProductPage = () => {
             }
             
             // Log all FormData entries for debugging
-            for (let [key, value] of formData.entries()) {
+            for (const [key, value] of formData.entries()) {
                 console.log(`${key}:`, value);
             }
 
@@ -673,7 +673,7 @@ const AddProductPage = () => {
                                 {productCategory === 'CREATE_NEW' && (
                                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                         <p className="text-sm text-blue-800 mb-2">
-                                            Click "Add new category" below to create a new category
+                                            Click &quot;Add new category&quot; below to create a new category
                                         </p>
                                         <button 
                                             type='button' 

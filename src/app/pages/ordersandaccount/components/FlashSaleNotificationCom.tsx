@@ -60,7 +60,7 @@ export default function FlashSaleNotificationCom({ notification }: { notificatio
                         <p className="bg-[#FFD9EE] w-[38px] h-[20px] text-center flex items-center justify-center text-[11.11px] border border-primaryhover rounded-sm">-{notification.data?.discount}%</p>
                         <p className="text-[#2B2B2B] text-[11.11px] line-through">{Number(notification.data?.product.price).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}</p>
 
-                        <p className="text-[#2B2B2B] text-[11.11px]">{Number(notification.data?.product.price! - (notification.data?.product.price! * notification.data?.discount! / 100)).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}</p>
+                        <p className="text-[#2B2B2B] text-[11.11px]">{Number((notification.data?.product.price ?? 0) - ((notification.data?.product.price ?? 0) * (notification.data?.discount ?? 0) / 100)).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}</p>
                     </div>
                     <Link href={`/product/${notification.data?.product._id}`} className="bg-brand_solid_gradient w-[92px] h-[30px] text-[13px] text-white rounded-sm flex items-center justify-center">Shop Now</Link>
                 </div>

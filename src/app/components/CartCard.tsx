@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
 import { useRouter } from "next/navigation";
 import CountdownTimer from "@/components/CountDownTimer";
-import { formatPrice } from "../pages/cart/page";
 import { useProductVariants } from "@/lib/useProductVariants";
 
 function CartCard({
@@ -65,8 +64,12 @@ function CartCard({
       _id: item._id,
     });
   }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
-
-
+  const formatPrice = (amount: number) => {
+  return Number(amount).toLocaleString("en-ng", {
+    style: "currency",
+    currency: "NGN",
+  });
+};
   return (
     <section className="w-full">
       {selectedItem && <CartPopup />}
@@ -175,7 +178,7 @@ function CartCard({
                       extra
                     </p>
                     <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
-                      <CountdownTimer endTime={item.flashSales?.endDate!} />
+                      <CountdownTimer endTime={item.flashSales?.endDate} />
                     </p>
                   </div>
                 )}
@@ -199,8 +202,8 @@ function CartCard({
                         calcDiscountPrice(
                           item.price +
                             (selectedCombination?.additionalPrice ?? 0),
-                          item.flashSales?.discountValue!,
-                          item.flashSales?.discountType!,
+                          item.flashSales?.discountValue,
+                          item.flashSales?.discountType,
                         ),
                       ).toLocaleString("en-NG", {
                         style: "currency",

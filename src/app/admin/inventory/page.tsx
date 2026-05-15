@@ -535,7 +535,7 @@ const InventoryPage = () => {
                                 </div>
                                 
                                 <div className="mb-4">
-                                    <p className="text-gray-600">Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.</p>
+                                    <p className="text-gray-600">Are you sure you want to delete &quot;{selectedProduct?.name}&quot;? This action cannot be undone.</p>
                                 </div>
                                 
                                 <div className="flex gap-3">

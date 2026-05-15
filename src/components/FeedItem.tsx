@@ -169,6 +169,7 @@ function FeedContent({
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // ── Custom hooks ────────────────────────────────────────────────────────
+  // ── Custom hooks ────────────────────────────────────────────────────────
   const {
     addComments,
     likeUpdate,
@@ -193,7 +194,10 @@ function FeedContent({
   }>({ feeds: [], nextCursor: "", hasMore: false });
   const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [inWishlist, setInWishlist] = useState(false);
+
+  // ✅ FIX 1: Replace single inWishlist boolean with a per-item map
+  const [wishlistMap, setWishlistMap] = useState<Record<string, boolean>>({});
+
   const [showDesc, setShowDesc] = useState(false);
   const [isLastItem, setLastItem] = useState(false);
   const [share, setShare] = useState(false);
@@ -537,7 +541,13 @@ function FeedContent({
   );
 
   const replyComment = useCallback((parent: CommentState["parent"]) => {
-    setComment((prev) => ({ ...prev, parent }));
+    setComment((prev) => ({
+      ...prev,
+      parent: {
+        ...parent,
+        fullname: parent.fullname ?? "", // ✅ FIX: guard against undefined fullname
+      },
+    }));
   }, []);
 
   const sendComment = useCallback(
@@ -690,17 +700,20 @@ function FeedContent({
     [id, data.feeds, updateFeedComments, recursiveDeleteComment, deleteUpdateComment]
   );
 
+  // ✅ FIX 3: handleWishlistToggle now uses wishlistMap keyed by product._id
   const handleWishlistToggle = useCallback(
     (product: Product) => {
       if (!checkIfUserLoggedIn("manage your wishlist")) return;
 
-      if (inWishlist) {
+      const currentlyIn = wishlistMap[product._id] ?? isInWishlist(product._id);
+
+      if (currentlyIn) {
         removeItem(product._id);
-        setInWishlist(false);
+        setWishlistMap((prev) => ({ ...prev, [product._id]: false }));
         toast.success("Removed from wishlist", { position: "top-right" });
       } else {
         addItem(product);
-        setInWishlist(true);
+        setWishlistMap((prev) => ({ ...prev, [product._id]: true }));
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
