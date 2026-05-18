@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = "https://ajempire-backend-production.up.railway.app/api";
+const API_BASE_URL = "https://ajempire-backend-production-b8ff.up.railway.app/api";
 
 // Import all types from the types file
 import {
@@ -71,7 +71,6 @@ const apiCall = async <T>(
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.message || 'API request failed');
     }
@@ -330,7 +329,7 @@ export const fetchAdminProfile = (): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile');
 
 export const getReturns = (): Promise<ApiResponse<ReturnRequest[]>> =>
-  apiCall('/admin/returns');
+  apiCall('/admin/return');
 
 export const updateAdminProfile = (data: AdminProfile): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile', {

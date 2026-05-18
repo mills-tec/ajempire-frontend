@@ -12,7 +12,6 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import { useSearchStore } from "@/lib/search-store";
 import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
-
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
 import HomeHeroSlider from "./components/HomeHeroSlider";
