@@ -8,6 +8,7 @@ import useInfiniteScroll from "react-infinite-scroll-hook";
 import { getRelatedProducts } from "@/lib/api";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import type { Product } from "@/lib/types";
+import BannerPlaceholder from "@/app/components/BannerPlaceholder";
 
 export default function RelatedProducts({ category }: { category: string }) {
   const queryClient = useQueryClient();
@@ -137,6 +138,10 @@ export default function RelatedProducts({ category }: { category: string }) {
   console.log("HI");
 
   return (
+    <div className="space-y-6">
+      {/* Banner slot — swap this div for a real <Image> banner when ready */}
+      <BannerPlaceholder />
+
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
       {products.map((product, index) => (
         <div
@@ -158,6 +163,7 @@ export default function RelatedProducts({ category }: { category: string }) {
         infiniteRef={infiniteRef}
         hasNextPage={hasNextPage}
       />
+    </div>
     </div>
   );
 }

@@ -93,6 +93,7 @@ export default function UserUsageChart({ trendData }: UserUsageChartProps) {
               >
                 <img
                   src={item.image || categoryImages.default}
+                  alt={item.name}
                   className="w-8 h-8 object-cover rounded-full"
                 />
                 <p className="text-[14px] font-medium">

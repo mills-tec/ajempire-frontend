@@ -110,7 +110,7 @@ export default function ListOfLogistics() {
               `}
             >
               <div className="flex items-center gap-2">
-                <img src={logistic.courier_image} className="w-[50px]" />
+                <img src={logistic.courier_image} alt={logistic.courier_name} className="w-[50px]" />
                 <div>
                   <p>{logistic.courier_name}</p>
                   <p className="text-[12px] text-gray-500">
