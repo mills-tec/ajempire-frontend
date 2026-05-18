@@ -24,6 +24,7 @@ import { useModalStore } from "@/lib/stores/modal-store";
 import { useProductVariants } from "@/lib/useProductVariants";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { useExploreInterest } from "@/api/customHooks";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -54,6 +55,8 @@ export default function ProductDetailPage() {
     isInWishlist,
   } = useWishlistStore();
 
+  const { addProductToBrowsingHistory } = useExploreInterest();
+
   const { data, isLoading, isError } = useQuery(
     ["product", id],
     () => getProduct(id),
@@ -62,6 +65,13 @@ export default function ProductDetailPage() {
 
   // 🌀 Base variables
   const item = data?.message?.product ?? null;
+
+  useEffect(() => {
+    if (item?._id && getBearerToken()) {
+      addProductToBrowsingHistory(item._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?._id]);
   const {
     selectedVariantsArray,
     missingVariantName,
