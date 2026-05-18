@@ -21,7 +21,7 @@ import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
-import type { Category, Product, ProductsResponse } from "@/lib/types";
+import type {  Product, ProductsResponse } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
