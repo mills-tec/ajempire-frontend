@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_URL, getBearerToken } from "@/lib/api";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 function getInitials(name?: string) {
   if (!name) return "U";
@@ -15,44 +16,26 @@ interface ProfileNameProps {
 }
 
 export default function ProfileName({ email }: ProfileNameProps) {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  API_URL;
-
-  useEffect(() => {
-    const token = getBearerToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    axios
-      .get(`${API_URL}/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setProfile(res.data.message))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
-  if (loading)
-    return (
-      <div className="flex items-center gap-3 font-poppins animate-pulse">
-        <div className="w-[60px] h-[60px] rounded-full bg-gray-200 flex items-center justify-center font-semibold cursor-pointer"></div>
-        <p className=" bg-gray-50 w-[100px] h-[10px]"></p>
-      </div>
-    );
-
-  const fullName = profile?.fullname || profile?.shippingAddress?.fullName;
+  const { user } = useAuthStore()
+  const fullName = user?.name;
   const initials = getInitials(fullName);
 
+  function formatEmail(email: string, maxLength = 20) {
+    if (email.length <= maxLength) return email;
+
+    const [local, domain] = email.split("@");
+    const visibleChars = Math.floor((maxLength - 3) / 2); // 3 for "..."
+
+    return `${local.slice(0, visibleChars)}...@${domain}`;
+  }
   return (
     <div className="flex items-center gap-3 font-poppins">
-      <div className="w-[65px] h-[65px] rounded-full bg-brand_solid_gradient flex items-center justify-center font-semibold cursor-pointer">
+      <div className="w-[65px] h-[65px] rounded-full bg-brand_solid_gradient flex items-center justify-center font-semibold cursor-pointer text-white">
         {initials}
       </div>
       <div className="flex flex-col  gap-0">
         <p className="capitalize text-[14px]">{fullName}</p>
-        <p className="text-[15px] font-medium">{email}</p>
+        <p className="text-xs font-light text-black/40">{formatEmail(user?.email!)}</p>
       </div>
     </div>
   );

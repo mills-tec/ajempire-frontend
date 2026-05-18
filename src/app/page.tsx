@@ -1,3 +1,4 @@
+
 "use client";
 export const dynamic = "force-dynamic";
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -11,7 +12,6 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import { useSearchStore } from "@/lib/search-store";
 import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
-
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
 import HomeHeroSlider from "./components/HomeHeroSlider";
@@ -20,7 +20,7 @@ import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
-import type { Category, Product, ProductsResponse } from "@/lib/types";
+import type {  Product, ProductsResponse } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
@@ -113,6 +113,7 @@ function HomeContent({
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
 
   // Save scroll position when navigating away
   useEffect(() => {

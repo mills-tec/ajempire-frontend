@@ -183,14 +183,6 @@ export default function ShippingAdressForm({
     };
 
     try {
-      // checking if logistics is on
-      const req = await axios.get(`${globalUrl}/logisticsStatus`);
-      if (req.data.logisticsMode !== "auto") {
-        if (onContinue) onContinue();
-        if (onAddressUpdated) onAddressUpdated();
-
-        return;
-      }
       const res = await axios.patch(
         `${globalUrl}/shipping-address`,
         { shippingAddress: data.shippingAdress },
@@ -201,6 +193,15 @@ export default function ShippingAdressForm({
           position: "top-right",
         });
       }
+      // checking if logistics is on
+      const req = await axios.get(`${globalUrl}/logisticsStatus`);
+      if (req.data.logisticsMode !== "auto") {
+        if (onContinue) onContinue();
+        if (onAddressUpdated) onAddressUpdated();
+
+        return;
+      }
+
 
       if (onContinue) onContinue();
       if (onAddressUpdated) onAddressUpdated();
@@ -472,17 +473,16 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
-              !fullName ||
-              !phone ||
-              !street ||
-              !city ||
-              !selectedState ||
-              !selectedCountry ||
-              !postalCode
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
+                !phone ||
+                !street ||
+                !city ||
+                !selectedState ||
+                !selectedCountry ||
+                !postalCode
                 ? "opacity-50 cursor-not-allowed"
                 : ""
-            }`}
+              }`}
             disabled={
               !fullName ||
               !phone ||

@@ -161,15 +161,45 @@ function SearchContent() {
   // If text search is still loading — show skeletons
   // If text search is done (even with 0 results) — only wait for categories
   // if they are actually relevant (matchedCategoryNames.length > 0)
-const textSearchDone = !hasQuery || (!isLoading && data !== undefined);
-const showLoadingState =
-  hasAnySearch &&
-  (skeletonLoading ||
-    searchByImageLoading ||
-    !textSearchDone ||
-    (textSearchDone &&
-      matchedCategoryNames.length > 0 &&
-      isCategoryProductsLoading));
+  const textSearchDone = !isLoading && data !== undefined;
+  const showLoadingState = useMemo(() => {
+    // No search at all → no loading
+    if (!hasAnySearch) return false;
+
+    // Image search is explicitly still loading
+    if (searchByImageLoading) return true;
+
+    // Text search: wait for skeleton delay and query to finish
+    if (hasQuery) {
+      if (skeletonLoading) return true;
+      const textSearchDone = !isLoading && data !== undefined;
+      if (!textSearchDone) return true;
+      // Only wait for categories if they matched and are still loading
+      if (matchedCategoryNames.length > 0 && isCategoryProductsLoading)
+        return true;
+      return false;
+    }
+
+    // Image search (no text query): if we have results, we're done
+    if (hasImageResults) return false;
+
+    // Image search with no results yet — if not loading, show empty state (handled elsewhere)
+    // If we got here with hasAnySearch but no hasImageResults and not searchByImageLoading,
+    // the empty state will render. Don't show loading.
+    return false;
+  }, [
+    hasAnySearch,
+    hasQuery,
+    hasImageResults,
+    searchByImageLoading,
+    skeletonLoading,
+    isLoading,
+    data,
+    matchedCategoryNames,
+    isCategoryProductsLoading,
+  ]);
+
+  console.log(searchByImageProducts?.length, hasAnySearch);
 
   if (isError)
     return <p className="text-center mt-20">Error loading products.</p>;

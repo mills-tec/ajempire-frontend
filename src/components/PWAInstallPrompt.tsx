@@ -276,7 +276,7 @@
 // }
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2 } from "lucide-react";
 
@@ -496,7 +496,7 @@ export default function PWAInstallPrompt({
     const timer = setTimeout(() => {
       hasTriggeredRef.current = true;
       setState("prompt");
-    }, FIRST_PROMPT_DELAY);
+    }, CHECK_INTERVAL);
 
     return () => clearTimeout(timer);
   }, [platform, isInstalled, state, repromptGate, deferredPrompt]);

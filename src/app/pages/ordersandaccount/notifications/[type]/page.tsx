@@ -28,7 +28,7 @@ export default function Notification() {
     const params = useParams();
     const { user } = useAuthStore();
     const { deleteNotificationFromDb, markAsReadFromDb } = useNotification();
-    const { notifications, deleteNotification, markAsRead, updateNotifications } = useNotificationStore();
+    const { notifications, deleteNotification, markAsRead } = useNotificationStore();
 
     const handleDeleteNotification = async (id: string) => {
         deleteNotification(id);
@@ -51,9 +51,7 @@ export default function Notification() {
         })()
     }, [notifications.length])
 
-    useEffect(() => {
-
-    }, [])
+  
 
 
     return (
@@ -70,7 +68,7 @@ export default function Notification() {
                         <div className="flex justify-between items-center">
                             <div className='grid gap-2'>
 
-                                {notification.type === "flashsale" ? <FlashSaleNotificationCom notification={notification} /> : <>
+                                {notification.type === "flashsale" && notification.data ? <FlashSaleNotificationCom notification={notification} /> : <>
                                     <h1 className="font-bold w-[80%] md:w-full">{notification.title}</h1>
                                     <p className="text-sm w-[80%] md:w-full">{notification.message}</p>
                                     <p className="text-xs capitalize">

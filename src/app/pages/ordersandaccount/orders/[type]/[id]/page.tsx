@@ -1,133 +1,181 @@
 "use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { ImSpinner8 } from "react-icons/im";
+
 import { useIssueReturn, useOrders } from "@/api/customHooks";
 import OrderCard from "@/app/components/OrderCard";
 import OrderStatus from "@/app/components/OrderStatus";
 import OrderSummaryCard from "@/app/components/OrderSummaryCard";
 import ShippingAddressCard from "@/app/components/ShippingAddressCard";
-
-import { IItem } from "@/lib/types";
-
-import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import { ImSpinner8 } from "react-icons/im";
 import OrderTabs from "../../../components/OrderTabs";
 import IssueReturn from "@/components/IssueReturn";
+import { IItem } from "@/lib/types";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface ShippingAddress {
+  fullName: string;
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
+interface Order {
+  _id: string;
+  order_id: string;
+  orderStatus: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  items: IItem[];
+  totalPrice: number;
+  amountPaid: number;
+  discountedPrice: number;
+  deliveryFee: number;
+  shippingAddress: ShippingAddress;
+  createdAt: string;
+  processedAt: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+}
+
+interface ReturnInputs {
+  products: string[];
+  reason: string;
+  itemUsed: string;
+  phoneNumber: string;
+  additionalNotes: string;
+  imageEvidence: File | null;
+  otherReason: string;
+}
+
+const INITIAL_RETURN_INPUTS: ReturnInputs = {
+  products: [],
+  reason: "",
+  itemUsed: "",
+  phoneNumber: "",
+  additionalNotes: "",
+  imageEvidence: null,
+  otherReason: "",
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const formatDate = (date: string | null | undefined): string => {
+  if (!date) return "N/A";
+  return new Date(date).toLocaleDateString("en-US", { dateStyle: "long" });
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Status() {
   const params = useParams();
+  const orderId = params?.id as string | undefined;
+
   const { getOrder } = useOrders();
-  const [data, setData] = useState<{
-    _id: string;
-    paymentMethod: string;
-    paymentStatus: string;
-    items: IItem[];
-    totalPrice: number;
-    amountPaid: number;
-    discountedPrice: number;
-    deliveryFee: number;
-    shippingAddress: {
-      fullName: string;
-      street: string;
-      city: string;
-      postalCode: string;
-      country: string;
-    };
-    createdAt: Date | null;
-    processedAt: Date | null;
-    shippedAt: Date | null;
-    deliveredAt: Date | null;
-    order_id: string;
-    orderStatus: string;
-  }>({
-    _id: "",
-    orderStatus: "",
-    paymentMethod: "",
-    paymentStatus: "",
-    order_id: "",
-    items: [],
-    totalPrice: 0,
-    discountedPrice: 0,
-    amountPaid: 0,
-    deliveryFee: 0,
-    shippingAddress: {
-      fullName: "",
-      street: "",
-      city: "",
-      postalCode: "",
-      country: "",
-    },
-    createdAt: null,
-    processedAt: null,
-    shippedAt: null,
-    deliveredAt: null,
-  });
-  const [postLoading] = useState(false);
-  const [chooseProductModal, setChooseProductModal] = useState<boolean>(false);
-  const [showReview, setShowReview] = useState(false);
-  const [returnModal, setReturnModal] = useState(false);
   const { postIssueReturn } = useIssueReturn();
-  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
 
-  const [inputs, setInputs] = useState<{
-    products: string[];
-    reason: string;
-    itemUsed: string;
-    phoneNumber: string;
-    additionalNotes: string;
-    imageEvidence: File | null;
-    otherReason: string;
-  }>({
-    products: [],
-    reason: "",
-    itemUsed: "",
-    phoneNumber: "",
-    additionalNotes: "",
-    imageEvidence: null,
-    otherReason: "",
-  });
-  const toggleShowReview = () => {
-    setShowReview(!showReview);
-  };
+  const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    const formData = new FormData();
+  const [returnModal, setReturnModal] = useState(false);
+  const [inputs, setInputs] = useState<ReturnInputs>(INITIAL_RETURN_INPUTS);
 
-    for (let i = 0; i < inputs.products.length; i++) {
-      formData.append("product[]", inputs.products[i]);
+  // Fetch order data
+  useEffect(() => {
+    if (!orderId) {
+      setError("Order ID is required");
+      setIsLoading(false);
+      return;
     }
-    formData.append("order", data._id);
+
+    let cancelled = false;
+
+    const fetchOrder = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { message } = await getOrder(orderId);
+        if (!cancelled) setOrder(message);
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load order");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchOrder();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!order) return;
+
+    const formData = new FormData();
+    inputs.products.forEach((p) => formData.append("product[]", p));
+    formData.append("order", order._id);
     formData.append("reason", inputs.reason);
-    formData.append(
-      "itemUsed",
-      JSON.stringify(inputs.itemUsed === "Yes" ? true : false),
-    );
+    formData.append("itemUsed", JSON.stringify(inputs.itemUsed === "Yes"));
     formData.append("phoneNumber", inputs.phoneNumber);
     formData.append("additionalNotes", inputs.additionalNotes);
-    formData.append("imageEvidence", inputs.imageEvidence as File);
-    formData.append("otherReason", inputs.otherReason);
-    const req = await postIssueReturn(formData);
-
-    if (req) {
-      setReturnModal(false);
-      setInputs({
-        products: [],
-        reason: "",
-        itemUsed: "",
-        phoneNumber: "",
-        additionalNotes: "",
-        imageEvidence: null,
-        otherReason: "",
-      });
+    if (inputs.imageEvidence) {
+      formData.append("imageEvidence", inputs.imageEvidence);
     }
-  };
+    formData.append("otherReason", inputs.otherReason);
 
-  useEffect(() => {
-    (async () => {
-      const { message: order } = await getOrder(params?.id as string);
-      setData(order);
-    })();
-  }, []);
+    try {
+      const success = await postIssueReturn(formData);
+      if (success) {
+        setReturnModal(false);
+        setInputs(INITIAL_RETURN_INPUTS);
+      }
+    } catch (err) {
+      // Handle error appropriately — toast, alert, etc.
+      console.error("Return submission failed:", err);
+    }
+  }, [order, inputs, postIssueReturn]);
 
+  const isDelivered = useMemo(
+    () => order?.orderStatus.toLowerCase().includes("delivered") ?? false,
+    [order?.orderStatus],
+  );
+
+  const itemCount = order?.items.length ?? 0;
+
+  // ── Loading / Error states ────────────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <ImSpinner8 className="animate-spin text-2xl text-brand_pink" />
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-4">
+        <p className="text-red-500">{error ?? "Order not found"}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-full bg-brand_pink px-6 py-2 text-sm text-white"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  // return <></>;
   return (
     <div>
       <OrderTabs
@@ -135,135 +183,114 @@ export default function Status() {
         text="Order Tracking"
         showFilterTabs={false}
       />
-      <section className="flex flex-col   md:gap-5 rounded-2xl p-5  md:p-8 bg-white">
-        <div className="font-poppins ">
-          <h1 className="text-lg font-medium  mb-5">Order Tracking</h1>
 
-          <div className="text-sm flex flex-col gap-2">
-            <p>Order #{data.order_id}</p>
-            <p className="text-[#000000B2]">
-              Placed On:
+      <section className="flex flex-col rounded-2xl bg-white p-5 md:gap-5 md:p-8">
+        <div className="font-poppins">
+          <h1 className="mb-5 text-lg font-medium">Order Tracking</h1>
+
+          <div className="flex flex-col gap-2 text-sm">
+            <p>Order #{order.order_id}</p>
+            <p className="text-black/70">
+              Placed On:{" "}
               <span className="text-primaryhover">
-                {" "}
-                {new Date(data.processedAt!).toLocaleDateString("en-us", {
-                  dateStyle: "long",
-                })}
+                {formatDate(order.processedAt)}
               </span>
             </p>
-
-            <p className="text-[#000000B2]">
-              Delivery Date:
+            <p className="text-black/70">
+              Delivery Date:{" "}
               <span className="text-primaryhover">
-                {" "}
-                {new Date(data.processedAt!).toLocaleDateString("en-us", {
-                  dateStyle: "long",
-                })}
+                {formatDate(order.processedAt)}
               </span>
             </p>
+            <p className="text-black/70">No of Items: {itemCount}</p>
 
-            <p className="text-[#000000B2]">No of Items: {data.items.length}</p>
-
-            <p className="text-black text-sm mt-10 font-semibold">
-              Total for {data.items.length}{" "}
-              {data.items.length > 1 ? "Items" : "Item"}: ₦{data.totalPrice}
+            <p className="mt-10 text-sm font-semibold text-black">
+              Total for {itemCount} {itemCount === 1 ? "Item" : "Items"}: ₦
+              {order.amountPaid.toLocaleString()}
             </p>
           </div>
         </div>
 
-        <div className=" flex-1">
-          {data.items.map(
-            (
-              item: {
-                image: string;
-                name: string;
-                variant: { name: string; value: string };
-                price: number;
-                discountedPrice: number;
-                qty: number;
-              },
-              index,
-            ) => (
-              <OrderCard
-                key={index}
-                image={item.image}
-                title={item.name}
-                variant={
-                  item?.variant
-                    ? `${item.variant.name}: ${item.variant.value}`
-                    : ""
-                }
-                price={item.price}
-                discount={item.discountedPrice}
-                qty={item.qty}
-              />
-            ),
-          )}
+        <div className="flex-1">
+          {order.items.map((item, index) => (
+            <OrderCard
+              key={index}
+              image={item.image}
+              title={item.name}
+              variant={
+                item.variants.options.length > 0
+                  ? item.variants.options.map(item=> `${item.name}: ${item.value}`).join("")
+                  : undefined
+              }
+              price={item.price}
+              discount={item.discountedPrice}
+              qty={item.qty}
+            />
+          ))}
 
           <div className="flex-1">
             <OrderStatus
-              deliveredAt={data.deliveredAt}
-              createdAt={data.createdAt}
-              processedAt={data.processedAt}
-              shippedAt={data.shippedAt}
+              deliveredAt={order.deliveredAt}
+              createdAt={order.createdAt}
+              processedAt={order.processedAt}
+              shippedAt={order.shippedAt}
             />
           </div>
 
-          <div className="my-10 md:w-[50%]  grid grid-cols-3 gap-2 font-poppins">
-            <button className="rounded-full text-xs text-white py-1 px-3  md:px-6  border bg-brand_pink  flex items-center justify-center h-10">
-              {postLoading ? (
-                <ImSpinner8 className="animate-spin" />
-              ) : (
-                "Buy Again"
-              )}
+          <div className="my-10 grid grid-cols-3 gap-2 font-poppins md:w-1/2">
+            <button
+              type="button"
+              className="flex h-10 items-center justify-center rounded-full border bg-brand_pink px-3 py-1 text-xs text-white md:px-6"
+            >
+              Buy Again
             </button>
 
-            {data.orderStatus.toLowerCase().includes("delivered") && (
+            {isDelivered && (
               <>
                 <button
-                  className="rounded-full text-xs text-black py-1 px-3  md:px-6  border border-black  flex items-center justify-center h-10 "
-                  onClick={() =>
-                    data.items.length > 1
-                      ? setChooseProductModal(true)
-                      : toggleShowReview()
-                  }
+                  type="button"
+                  onClick={() => {
+                    // TODO: implement review flow
+                    // itemCount > 1 ? setChooseProductModal(true) : toggleShowReview()
+                  }}
+                  className="flex h-10 items-center justify-center rounded-full border border-black px-3 py-1 text-xs text-black md:px-6"
                 >
                   Leave Review
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setReturnModal(true)}
-                  className="rounded-full text-xs text-black py-1 px-3  md:px-6  border border-black  flex items-center justify-center h-10"
+                  className="flex h-10 items-center justify-center rounded-full border border-black px-3 py-1 text-xs text-black md:px-6"
                 >
                   Issue return
                 </button>
               </>
             )}
           </div>
+
           <div className="space-y-4">
             <OrderSummaryCard
-              amountPaid={data.amountPaid}
-              discount={data.discountedPrice}
-              shipping={data.deliveryFee}
-              totalPrice={data.totalPrice}
+              amountPaid={order.amountPaid}
+              discount={order.discountedPrice}
+              shipping={order.deliveryFee}
+              totalPrice={order.totalPrice}
             />
             <ShippingAddressCard
-              city={data.shippingAddress.city}
-              country={data.shippingAddress.country}
-              street={data.shippingAddress.street}
-              name={data.shippingAddress.fullName}
-              postalCode={data.shippingAddress.postalCode}
+              city={order.shippingAddress.city}
+              country={order.shippingAddress.country}
+              street={order.shippingAddress.street}
+              name={order.shippingAddress.fullName}
+              postalCode={order.shippingAddress.postalCode}
             />
           </div>
         </div>
 
         <IssueReturn
-          data={{ _id: data._id, items: data.items }}
+          data={{ _id: order._id, items: order.items }}
           returnModal={returnModal}
-          setReturnModal={(modal: boolean) => setReturnModal(modal)}
+          setReturnModal={setReturnModal}
         />
-
-        {/* <LeaveReview  selectedProduct={}/> */}
-        {/* <LeaveReview items={data.items} show={showReviewModal} toggleShow={() => setShowReviewModal(!showReviewModal)} chooseProductModal={chooseProductModal} toggleChooseProductModal={() => setChooseProductModal(!chooseProductModal)} /> */}
       </section>
     </div>
   );

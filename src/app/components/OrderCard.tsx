@@ -10,7 +10,7 @@ export default function OrderCard({
   image,
 }: {
   title: string;
-  variant: string;
+  variant: string | undefined;
   price: number;
   discount: number;
   qty: number;
@@ -20,7 +20,14 @@ export default function OrderCard({
     <div className="flex gap-5 border-b pb-3 md:border-b-0 ">
       <div>
         <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
-          <Image src={image} alt={title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 8.5rem" loading="eager" />
+          <Image
+            src={image}
+            alt={title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 8.5rem"
+            loading="eager"
+          />
         </div>
       </div>
       <div className="space-y-1 mt-2 col-span-2 ">
@@ -29,11 +36,19 @@ export default function OrderCard({
         <div className="text-xs font-light grid md:grid-cols-3  gap-4 w-[200px]">
           <div className="md:col-span-2 flex justify-between">
             <p className="font-semibold">
-              {Number((discount ? discount : price).toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" })}
+              {Number((discount ? discount : price).toFixed(2)).toLocaleString(
+                "en-NG",
+                { style: "currency", currency: "NGN" },
+              )}
             </p>
 
             <p className="text-black/50 line-through">
-              {discount ? Number(price.toFixed(2)).toLocaleString("en-NG", { style: "currency", currency: "NGN" }) : ""}
+              {discount
+                ? Number(price.toFixed(2)).toLocaleString("en-NG", {
+                    style: "currency",
+                    currency: "NGN",
+                  })
+                : ""}
             </p>
           </div>
           <p className="text-right text-sm">x{qty}</p>
