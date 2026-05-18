@@ -511,7 +511,10 @@ export const useExploreInterest = () => {
 
   const addProductToBrowsingHistory = async (productId: string) => {
     try {
-      await postData(`/products/browsing-history`, { productId }, config);
+      const token = getBearerToken();
+      if (!token) return;
+      const freshConfig = { headers: { Authorization: `Bearer ${token}` } };
+      await postData(`/products/browsing-history`, { productId }, freshConfig);
     } catch (err) {
       let message;
       if (err instanceof AxiosError) {
@@ -531,52 +534,31 @@ export const useBrowsingHistory = () => {
   const [uiLoading, setUILoading] = useState<boolean>(true);
 
   const getBrowsingHistory = async (cursor: string, limit: number) => {
-    if (!loading) {
-      setUILoading(true);
-      // try {
-      //   const req = await getData(
-      //     `/browsing-history?limit=${limit}&cursor=${cursor}`,
-      //     config,
-      //   );
-      //   if (req.status === 401) {
-      //     return null; // 👈 VERY IMPORTANT
-      //   }
-      //   return req.data.message;
-      // } catch (err) {
-      //   let message;
-      //   if (err instanceof AxiosError) {
-      //     message = err.response?.data?.error || "Request failed";
-      //   } else {
-      //     message = "Something went wrong.";
-      //   }
-      //   toast.error(message);
-      // } finally {
-      //   setUILoading(false);
-      // }
-      try {
-        const req = await getData(
-          `/browsing-history?limit=${limit}&cursor=${cursor}`,
-          config,
-        );
-
-        return req.data.message;
-      } catch (err) {
-        if (err instanceof AxiosError) {
-          // ✅ HANDLE 401 HERE
-          if (err.response?.status === 401) {
-            return null; // 👈 THIS is the correct place
-          }
-
-          const message = err.response?.data?.error || "Request failed";
-          toast.error(message);
-        } else {
-          toast.error("Something went wrong.");
+    setUILoading(true);
+    try {
+      const token = getBearerToken();
+      const freshConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      console.log("[BrowsingHistory] fetching, token present:", !!token);
+      const req = await getData(
+        `/browsing-history?limit=${limit}&cursor=${cursor}`,
+        freshConfig,
+      );
+      console.log("[BrowsingHistory] response:", req.data.message);
+      return req.data.message;
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        console.error("[BrowsingHistory] error:", err.response?.status, err.response?.data);
+        if (err.response?.status === 401) {
+          return null;
         }
-
-        return null; // 👈 always return something safe
-      } finally {
-        setUILoading(false);
+        const message = err.response?.data?.error || "Request failed";
+        toast.error(message);
+      } else {
+        toast.error("Something went wrong.");
       }
+      return null;
+    } finally {
+      setUILoading(false);
     }
   };
 
