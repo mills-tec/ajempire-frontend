@@ -46,7 +46,7 @@ export async function emailVerification(email: string, token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
   });
-  console.log("verification res: ", res)
+  console.log("verification res: ", res);
   if (!res.ok) throw new Error("Email verification failed");
   return res.json();
 }
@@ -79,7 +79,7 @@ export async function phoneNumberVerification(phone: string, token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, token }),
   });
-  console.log("verification res: ", res)
+  console.log("verification res: ", res);
   if (!res.ok) throw new Error("Phone verification failed");
   return res.json();
 }
@@ -134,7 +134,11 @@ export async function fogortPassword(email: string) {
   return res.json();
 }
 
-export async function signupBackend(email: string, password: string, fullname: string) {
+export async function signupBackend(
+  email: string,
+  password: string,
+  fullname: string,
+) {
   console.log("📡 Making signup request:", { email, password: "***" });
 
   const res = await fetch(API_URL + "/auth/register", {
@@ -210,7 +214,11 @@ export async function getUpdates(
   if (!res.ok) return null;
 
   const response = await res.json();
-  return response.message as { data: Feed[]; nextCursor: string; hasMore: boolean };
+  return response.message as {
+    data: Feed[];
+    nextCursor: string;
+    hasMore: boolean;
+  };
 }
 
 export async function getRelatedProducts(
@@ -341,9 +349,9 @@ export async function addToCart(products: CartItem[]) {
     qty: product.quantity,
     variants: product.selectedVariants?.length
       ? product.selectedVariants.map((variant) => ({
-        name: variant.name,
-        value: variant.value,
-      }))
+          name: variant.name,
+          value: variant.value,
+        }))
       : [],
   }));
 
@@ -600,18 +608,20 @@ export async function applyCouponCode(code: string): Promise<{
 }
 
 // SHIPPING API
-export async function getShippingRates(packageItems: Array<{
-  name?: string;
-  description?: string;
-  amount?: number;
-  quantity?: number;
-  weight?: number;
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-}>): Promise<{
+export async function getShippingRates(
+  packageItems: Array<{
+    name?: string;
+    description?: string;
+    amount?: number;
+    quantity?: number;
+    weight?: number;
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+    };
+  }>,
+): Promise<{
   message: {
     couriers: Array<{
       courier_id: string;
