@@ -22,8 +22,10 @@ export type Coupon = {
 };
 
 // lib/api.ts
-export const API_URL = "https://ajempire-backend-production.up.railway.app/api";
-export const BASE_URL = "https://ajempire-backend-production.up.railway.app";
+export const API_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app/api";
+export const BASE_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app";
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
@@ -72,8 +74,6 @@ export async function phoneNumberBackend(phone: string) {
 }
 
 export async function phoneNumberVerification(phone: string, token: string) {
-  console.log(phone, token);
-  return;
   const res = await fetch(API_URL + "/auth/verify-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,7 +95,7 @@ export async function googleVerification(token: string) {
 }
 
 export async function resendVerificationCode(email: string) {
-  const res = await fetch(API_URL + "/auth/resend-verification", {
+  const res = await fetch(API_URL + "/auth/resend-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -344,6 +344,14 @@ export async function addToCart(products: CartItem[]) {
     }
   }
 
+  console.log("🛒 RAW products going into addToCart:", JSON.stringify(products.map(p => ({
+    id: p._id,
+    name: p.name,
+    variants: p.variants,
+    variantCombinations: p.variantCombinations,
+    selectedVariants: p.selectedVariants,
+  })), null, 2));
+
   const items = products.map((product) => ({
     productId: product._id,
     qty: product.quantity,
@@ -355,7 +363,7 @@ export async function addToCart(products: CartItem[]) {
       : [],
   }));
 
-  console.log(items);
+  console.log("📦 Transformed items being sent to backend:", JSON.stringify(items, null, 2));
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);
@@ -387,6 +395,22 @@ export async function removeCartItem(id: string) {
       Authorization: `Bearer ${token}`,
     },
   });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchFromCart() {
+  const token = getBearerToken();
+  if (!token) return false;
+
+  const res = await fetch(API_URL + "/cart", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   if (!res.ok) return null;
   return res.json();
 }
@@ -610,16 +634,8 @@ export async function applyCouponCode(code: string): Promise<{
 // SHIPPING API
 export async function getShippingRates(
   packageItems: Array<{
-    name?: string;
-    description?: string;
-    amount?: number;
-    quantity?: number;
-    weight?: number;
-    dimensions?: {
-      length: number;
-      width: number;
-      height: number;
-    };
+    weight: number;
+    dimensions: { length: number; width: number; height: number };
   }>,
 ): Promise<{
   message: {

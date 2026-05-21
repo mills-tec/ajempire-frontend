@@ -26,6 +26,9 @@ export type CartItem = Product & {
   selectedVariants: SelectedVariant[];
   selected: boolean;
   synced?: boolean;
+  basePrice: number; 
+  discount: number; 
+  finalPrice: number
 };
 type AppliedCoupon = {
   code: string;
@@ -65,6 +68,7 @@ type CartStore = {
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
   addItem: (item: CartItem) => void;
+  setCartItems: (items: CartItem[]) => void;
   removeItem: (id: string) => void;
   removePurchasedItems: (ids: string[]) => void;
   resetSelectedItem: () => void;
@@ -153,6 +157,7 @@ export const useCartStore = create<CartStore>()(
       clearRequestToken: () => set({ requestToken: null }),
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
+      setCartItems: (items: CartItem[]) => set({ items }),
       addItem: (item) => {
         const hasVariants =
           (item.variants && item.variants.length > 0) ||
@@ -199,7 +204,8 @@ export const useCartStore = create<CartStore>()(
 
         if (!getBearerToken()) return;
 
-        addToCart([item]).catch(() => {
+        addToCart([item]).catch((err) => {
+          console.log(err);
           toast.error("Couldn't sync cart. Will retry.");
         });
       },
@@ -208,10 +214,16 @@ export const useCartStore = create<CartStore>()(
         const items = get().items;
         const currentItem = items.find((i) => i._id === id);
 
-        if (currentItem && areVariantsEqual(currentItem.selectedVariants, variants)) return;
+        if (
+          currentItem &&
+          areVariantsEqual(currentItem.selectedVariants, variants)
+        )
+          return;
 
         const updatedItems = items.map((i) =>
-          i._id === id ? { ...i, selectedVariants: variants, synced: false } : i,
+          i._id === id
+            ? { ...i, selectedVariants: variants, synced: false }
+            : i,
         );
         const updatedItem = updatedItems.find((i) => i._id === id);
 
@@ -226,7 +238,7 @@ export const useCartStore = create<CartStore>()(
         pendingSyncTimeouts.set(
           `variant:${id}`,
           setTimeout(() => {
-            addToCart([updatedItem])
+            addToCart([updatedItem]);
             pendingSyncTimeouts.delete(`variant:${id}`);
             addToCart([updatedItem])
               .then(() => {

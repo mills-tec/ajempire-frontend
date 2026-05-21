@@ -102,13 +102,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <p className="text-xs font-light text-gray-400">{label}</p>
             <p
               className="text-xs font-light cursor-pointer hover:underline"
-              onClick={() =>
+              onClick={() => {
                 onReply({
                   parentId: item._id,
                   fullname: item.user.fullname,
                   email: item.user.email,
-                })
-              }
+                });
+              }}
             >
               Reply
             </p>

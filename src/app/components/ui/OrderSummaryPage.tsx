@@ -55,7 +55,7 @@ export default function OrderSummaryPage() {
         }));
 
         await axios.delete(
-          "https://ajempire-backend-production.up.railway.app/api/cart/",
+          "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -66,7 +66,7 @@ export default function OrderSummaryPage() {
         );
 
         await axios.post(
-          "https://ajempire-backend-production.up.railway.app/api/cart/",
+          "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
           { items: itemsPayload },
           {
             headers: {
@@ -131,7 +131,7 @@ export default function OrderSummaryPage() {
 
     try {
       const response = await axios.post(
-        "https://ajempire-backend-production.up.railway.app/api/checkout",
+        "https://ajempire-backend-production-b8ff.up.railway.app/api/checkout",
         {
           paymentMethod,
           logistics: isLogisticsMode

@@ -22,7 +22,7 @@ export const UseAgeComponent = () => {
       const token = getBearerToken();
       try {
         const res = await axios.get(
-          "https://ajempire-backend-production.up.railway.app/api/stats",
+          "https://ajempire-backend-production-b8ff.up.railway.app/api/stats",
           {
             headers: { Authorization: `Bearer ${token}` },
           },

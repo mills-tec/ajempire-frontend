@@ -1,3 +1,4 @@
+
 "use client";
 export const dynamic = "force-dynamic";
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -11,16 +12,16 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import { useSearchStore } from "@/lib/search-store";
 import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
-
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
 import HomeHeroSlider from "./components/HomeHeroSlider";
 import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProvider";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import ScrollToTop from "./components/ui/ScrollToTop";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
-import type { Category, Product, ProductsResponse } from "@/lib/types";
+import type {  Product, ProductsResponse } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
@@ -107,6 +108,7 @@ function HomeContent({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollRestored = useRef(false);
+  const blockInfiniteLoadRef = useRef(false);
 
   // Ensure component only uses store data after hydration
   const [isMounted, setIsMounted] = React.useState(false);
@@ -114,11 +116,22 @@ function HomeContent({
     setIsMounted(true);
   }, []);
 
+
   // Save scroll position when navigating away
   useEffect(() => {
     return () => {
       sessionStorage.setItem("home-scroll-y", String(window.scrollY));
     };
+  }, []);
+
+  // Block infinite scroll from firing during scroll-to-top animation
+  useEffect(() => {
+    const onScrollToTop = () => {
+      blockInfiniteLoadRef.current = true;
+      setTimeout(() => { blockInfiniteLoadRef.current = false; }, 800);
+    };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
   // Restore scroll position once data is ready and DOM is painted
@@ -240,7 +253,7 @@ function HomeContent({
     loading: isLoadingMore,
     hasNextPage: isInitialized && !categoryFilterActive && hasNextPage,
     onLoadMore: async () => {
-      if (isLoadingMore) return;
+      if (isLoadingMore || blockInfiniteLoadRef.current) return;
       setIsLoadingMore(true);
       try {
         const newData = await getProducts(
@@ -497,6 +510,7 @@ function HomeContent({
           </div>
         </div>
       </PullToRefreshContainer>
+      <ScrollToTop />
     </>
   );
 }

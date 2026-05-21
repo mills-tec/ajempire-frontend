@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 export const globalUrl =
-  "https://ajempire-backend-production.up.railway.app/api";
+  "https://ajempire-backend-production-b8ff.up.railway.app/api";
 export const getData = async (url: string, config?: AxiosRequestConfig) =>
   axios.get(`${globalUrl}${url}`, config);
 export const postData = async (
@@ -12,3 +12,4 @@ export const updateData = async (url: string, data: unknown, config: object) =>
   axios.patch(`${globalUrl}${url}`, data, config);
 export const deleteData = async (url: string, config: object) =>
   axios.delete(`${globalUrl}${url}`, config);
+

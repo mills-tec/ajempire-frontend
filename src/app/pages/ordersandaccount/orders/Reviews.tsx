@@ -1,16 +1,15 @@
 "use client";
 import { useReviews } from "@/api/customHooks";
-import OrderCard from "@/app/components/OrderCard";
 import EmptyList from "@/components/EmptyList";
 import LeaveReview from "@/components/LeaveReview";
-import Modal from "@/components/Modal";
-import CheckCircle from "@/components/svgs/CheckCircle";
 import { IItem, Review } from "@/lib/types";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 
 export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; setUpdatedReviews: (review: Review) => void }) {
+  const router = useRouter();
   const filledStar = (
     <svg
       width="22"
@@ -45,19 +44,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
 
   const { deleteReview } =
     useReviews();
-  const [selectedProduct, setSelectedProduct] = useState<IItem>({
-    variant: {
-      _id: "",
-      name: "",
-      value: "",
-    },
-    image: "",
-    name: "",
-    price: 0,
-    discountedPrice: 0,
-    qty: 0,
-    product: "",
-  });
+  const [selectedProduct, setSelectedProduct] = useState<IItem | null>(null);
 
   const [showOverlay, setShowOverlay] = useState<boolean>(false);
 
@@ -76,17 +63,20 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
         {products.map((item, index: number) => {
 
 
-          const review = (item.product as any).reviews[0]
-          const product = (item.product as any)._id;
+          const review = item.product.reviews![0]
+          const product = item.product._id;
+
           return (
 
-            <div key={index} className="md:pr-5 grid md:grid-cols-2  mb-10">
+            <div key={index} className="md:pr-5 grid md:grid-cols-2  mb-10 cursor-pointer" onClick={() => {
+              router.push(`/product/${product}`)
+            }}>
               <div className="grid grid-cols-1 md:grid-cols-3">
                 <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
                   <Image src={item.image} alt={item.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 8.5rem" loading="eager" />
                 </div>
                 <div className="md:col-span-2">
-                  <h1 className="text-sm">{review.comment.slice(0, 30).concat(review.comment.length > 30 ? "..." : "")}</h1>
+                  <h1 className="text-sm">{review.comment!.slice(0, 30).concat(review.comment!.length > 30 ? "..." : "")}</h1>
                   {
                     <div className="flex text-brand_gray_dark">
                       {[...Array(5)].map((_, i) =>
@@ -99,14 +89,16 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
                     </div>
                   }
 
-                  <h1 className="text-xs text-black/60 mt-4">{new Date(!review.updatedAt ? review.createdAt : review.updatedAt).toDateString()}</h1>
+                  <h1 className="text-xs text-black/60 mt-4">{new Date(!review.updatedAt ? review.createdAt! : review.updatedAt).toDateString()}</h1>
 
 
 
                 </div>
               </div>
 
-              <div className="flex justify-end mt-5 gap-2 md:gap-5">
+              <div className="flex justify-end mt-5 gap-2 md:gap-5" onClick={(e) => {
+                e.stopPropagation()
+              }}>
 
                 <button
                   onClick={() => {
@@ -139,7 +131,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
           showOverlay && (
             <LeaveReview showOverlay={showOverlay} handleHideOverlay={() => setShowOverlay(!showOverlay)} selectedProduct={selectedProduct!} setUpdatedReviews={(review) => {
               setProducts((prev) =>
-                prev.map((item: any) => item.product._id === (selectedProduct.product as any)._id ? { ...item, product: { ...item.product, reviews: [review] } } : item)
+                prev.map((item: any) => item.product._id === (selectedProduct?.product as any)._id ? { ...item, product: { ...item.product, reviews: [review] } } : item)
               )
               setUpdatedReviews(review)
             }} />
@@ -152,7 +144,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
 
       </div>
     ) : (
-     <EmptyList message="No reviews found" writeup="You haven't reviewed any products yet." />
+      <EmptyList message="No reviews found" writeup="You haven't reviewed any products yet." />
     )
   );
 }

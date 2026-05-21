@@ -21,7 +21,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   markAsRead: (userId: string) => {
     set((state) => {
       let changed = false;
-
       const updated = state.notifications.map((n) => {
         const alreadyRead = n.readBy.some(
           (r) => r.userId.toString() === userId,

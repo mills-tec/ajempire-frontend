@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import OrderTabs from "../components/OrderTabs";
 import Loading from "../loading";
 import { IReturnRequest } from "@/lib/types";
+import EmptyList from "@/components/EmptyList";
 
 
 export default function Returns() {
@@ -107,7 +108,7 @@ export default function Returns() {
           </div>
         ))}
 
-      </ul> : <></>)}
+      </ul> : <EmptyList message="Nothing to return" writeup="You haven't started any returns yet. Browse your recent orders to return or exchange an item."  btnText="Browse Orders" href="/pages/ordersandaccount/orders/all"/>)}
 
 
     </div>
