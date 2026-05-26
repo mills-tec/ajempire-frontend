@@ -55,7 +55,7 @@ export default function ProductDetailPage() {
     isInWishlist,
   } = useWishlistStore();
 
-  const { addProductToBrowsingHistory } = useExploreInterest();
+  // const { addProductToBrowsingHistory } = useExploreInterest();
 
   const { data, isLoading, isError } = useQuery(
     ["product", id],
@@ -68,7 +68,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (item?._id && getBearerToken()) {
-      addProductToBrowsingHistory(item._id);
+      // addProductToBrowsingHistory(item._id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?._id]);
@@ -154,14 +154,14 @@ export default function ProductDetailPage() {
     );
 
     if (!existingItem) {
-      store.addItem({
+      store.addItem([{
         ...currentItem,
         price: resolvedCartPrice,
         stock: currentStock,
         quantity,
         selectedVariants: selectedVariantsArray,
         selected: true,
-      });
+      } as any]);
     }
 
     store.selectAllCartItems();
@@ -205,9 +205,9 @@ export default function ProductDetailPage() {
       prev[src]
         ? prev
         : {
-            ...prev,
-            [src]: true,
-          },
+          ...prev,
+          [src]: true,
+        },
     );
   }, []);
 
@@ -280,8 +280,8 @@ export default function ProductDetailPage() {
   return (
     <RefreshWrapper
       category={item.category?._id ?? ""}
-      // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
-      // onRefreshExtra={reshuffle}
+    // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
+    // onRefreshExtra={reshuffle}
     >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -307,29 +307,26 @@ export default function ProductDetailPage() {
             <div className="lg:w-1/2 h-full space-y-8">
               <div className="space-y-4">
                 <div
-                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${
-                    !isCurrentMediaLoaded
+                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${!isCurrentMediaLoaded
                       ? "bg-gray-200 animate-fast-pulse"
                       : ""
-                  }`}
+                    }`}
                 >
                   {currentCoverItem.type === "image" ? (
                     <Image
                       src={currentMediaSrc}
                       alt={item.name}
                       fill
-                      className={`absolute object-cover transition-opacity duration-200 ${
-                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                        }`}
                       onLoad={() => {
                         markMediaLoaded(currentMediaSrc);
                       }}
                     />
                   ) : (
                     <div
-                      className={`absolute w-full h-full transition-opacity duration-200 ${
-                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`absolute w-full h-full transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                        }`}
                     >
                       <VideoPlayer
                         handleVideoPlay={handleVideoPlay}
@@ -356,12 +353,11 @@ export default function ProductDetailPage() {
                         <button
                           type="button"
                           key={key}
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                            currentCoverItem.type === "image" &&
-                            currentCoverItem.src === image
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "image" &&
+                              currentCoverItem.src === image
                               ? "border-brand_pink"
                               : "border-transparent"
-                          }`}
+                            }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: image,
@@ -381,11 +377,10 @@ export default function ProductDetailPage() {
                       {item.video && (
                         <button
                           type="button"
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                            currentCoverItem.type === "video"
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "video"
                               ? "border-brand_pink"
                               : "border-transparent"
-                          }`}
+                            }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: item.video!,
@@ -563,7 +558,7 @@ export default function ProductDetailPage() {
             {item.category && (
               <RelatedProducts
                 category={item.category._id}
-                // shuffleSeed={shuffleSeed}
+              // shuffleSeed={shuffleSeed}
               />
             )}
           </div>
@@ -579,14 +574,14 @@ export default function ProductDetailPage() {
                     return;
                   }
 
-                  addItem({
+                  addItem([{
                     ...item,
                     price: resolvedCartPrice,
                     stock: currentStock,
                     quantity,
                     selected: false,
                     selectedVariants: selectedVariantsArray,
-                  });
+                  } as any]);
                 }}
                 className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
               >

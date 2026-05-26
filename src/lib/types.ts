@@ -155,7 +155,7 @@ export interface IReturnRequest {
   reason: string;
   itemUsed: boolean;
   imageEvidence: string;
-  additionalNotes: string;
+  additionalNotes?: string;
   phoneNumber: string;
 
   order: {
@@ -179,10 +179,12 @@ export interface IReturnRequest {
   }>;
 
   status: "processing" | "approved" | "rejected" | string;
+  statusUpdatedAt: Array<{ _id: string; status: string; updatedAt: string }>;
+  statusMessage?: string;
   total: number;
 
-  createdAt: string; // ISO date
-  updatedAt: string; // ISO date
+  createdAt: string;
+  updatedAt: string;
   __v: number;
 }
 

@@ -67,7 +67,7 @@ type CartStore = {
   selectedItem: Product | null; // this stores the product for the product card that has been clicked on for the popup
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
-  addItem: (item: CartItem) => void;
+  addItem: (items: CartItem[]) => void;
   setCartItems: (items: CartItem[]) => void;
   removeItem: (id: string) => void;
   removePurchasedItems: (ids: string[]) => void;
@@ -111,6 +111,8 @@ type CartStore = {
 
   retrySync: () => Promise<void>;
   syncGuestCartOnLogin: () => Promise<void>;
+  cartLoaded: boolean;
+  setCartLoaded: (v: boolean) => void;
 };
 
 export const useCartStore = create<CartStore>()(
@@ -158,53 +160,64 @@ export const useCartStore = create<CartStore>()(
       getSelectedItems: () => get().items.filter((i) => i.selected === true),
       getItem: (id: string) => get().items.find((i) => i._id === id),
       setCartItems: (items: CartItem[]) => set({ items }),
-      addItem: (item) => {
-        const hasVariants =
-          (item.variants && item.variants.length > 0) ||
-          (item.variantCombinations && item.variantCombinations.length > 0);
+      addItem: (incoming) => {
+        const validItems: CartItem[] = [];
 
-        const requiredVariantCount = item.variants?.length
-          ? item.variants.length
-          : Array.from(
-              new Set(
-                (item.variantCombinations ?? []).flatMap((combo) =>
-                  combo.options.map((option) => option.name),
+        for (const item of incoming) {
+          const hasVariants =
+            (item.variants && item.variants.length > 0) ||
+            (item.variantCombinations && item.variantCombinations.length > 0);
+
+          const requiredVariantCount = item.variants?.length
+            ? item.variants.length
+            : Array.from(
+                new Set(
+                  (item.variantCombinations ?? []).flatMap((combo) =>
+                    combo.options.map((option) => option.name),
+                  ),
                 ),
-              ),
-            ).length;
+              ).length;
 
-        if (
-          hasVariants &&
-          (!item.selectedVariants ||
-            item.selectedVariants.length !== requiredVariantCount)
-        ) {
-          toast.error(
-            "Please select all required variants before adding to cart",
-          );
-          return;
+          if (
+            hasVariants &&
+            (!item.selectedVariants ||
+              item.selectedVariants.length !== requiredVariantCount)
+          ) {
+            toast.error(
+              `Please select all required variants for "${item.name}" before adding to cart`,
+            );
+            continue;
+          }
+
+          validItems.push(item);
         }
 
-        const items = get().items;
-        const existing = items.find(
-          (i) =>
-            i._id === item._id &&
-            areVariantsEqual(i.selectedVariants, item.selectedVariants),
-        );
+        if (validItems.length === 0) return;
 
-        const newItems = existing
-          ? items.map((i) =>
+        let current = get().items;
+
+        for (const item of validItems) {
+          const existing = current.find(
+            (i) =>
               i._id === item._id &&
-              areVariantsEqual(i.selectedVariants, item.selectedVariants)
-                ? { ...i, quantity: i.quantity + item.quantity, synced: false }
-                : i,
-            )
-          : [...items, { ...item, synced: false }];
+              areVariantsEqual(i.selectedVariants, item.selectedVariants),
+          );
 
-        set({ items: newItems });
+          current = existing
+            ? current.map((i) =>
+                i._id === item._id &&
+                areVariantsEqual(i.selectedVariants, item.selectedVariants)
+                  ? { ...i, quantity: i.quantity + item.quantity, synced: false }
+                  : i,
+              )
+            : [...current, { ...item, synced: false }];
+        }
+
+        set({ items: current });
 
         if (!getBearerToken()) return;
 
-        addToCart([item]).catch((err) => {
+        addToCart(validItems).catch((err) => {
           console.log(err);
           toast.error("Couldn't sync cart. Will retry.");
         });
@@ -413,6 +426,9 @@ export const useCartStore = create<CartStore>()(
           finalTotal: total - discount - coupon + deliveryFee,
         };
       },
+
+      cartLoaded: false,
+      setCartLoaded: (v) => set({ cartLoaded: v }),
 
       retrySync: async () => {
         const { syncQueue } = get();

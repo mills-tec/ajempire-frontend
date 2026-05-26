@@ -219,12 +219,15 @@ export const useIssueReturn = () => {
     }
   };
 
-  const getReturnRequests = async () => {
+  const getReturnRequests = async (): Promise<{ status: boolean; message: any }> => {
     if (!loading) {
       setLoading(true);
       try {
         const req = await getData(`/return/`, config);
-        return req.data.message;
+        return {
+          status: true,
+          message: req.data.message
+        }
       } catch (err: unknown) {
         let message;
         if (err instanceof AxiosError) {
@@ -233,18 +236,36 @@ export const useIssueReturn = () => {
           message = "Something went wrong.";
         }
         toast.error(message);
+        return {
+          status: false,
+          message
+        }
       } finally {
         setLoading(false);
+      }
+    } else {
+      toast.error("Action is loadig...");
+
+      return {
+        status: false,
+        message: "Still loading!"
       }
     }
   };
 
-  const getReturnRequest = async (id: string) => {
+  const getReturnRequest = async (id: string): Promise<
+    {
+      status: boolean;
+      message: any
+    }> => {
     if (!loading) {
       setLoading(true);
       try {
         const req = await getData(`/return/${id}`, config);
-        return req.data.message;
+        return {
+          status: true,
+          message: req.data.message
+        };
       } catch (err: unknown) {
         let message;
         if (err instanceof AxiosError) {
@@ -253,10 +274,18 @@ export const useIssueReturn = () => {
           message = "Something went wrong.";
         }
         toast.error(message);
+        return {
+          status: false,
+          message
+        }
       } finally {
         setLoading(false);
       }
+    } else {
+
+      return { status: false, message: "Loading" }
     }
+
   };
   return { postIssueReturn, loading, getReturnRequests, getReturnRequest };
 };
@@ -560,24 +589,24 @@ export const useExploreInterest = () => {
     }
   };
 
-  const addProductToBrowsingHistory = async (productId: string) => {
-    try {
-      const token = getBearerToken();
-      if (!token) return;
-      const freshConfig = { headers: { Authorization: `Bearer ${token}` } };
-      await postData(`/products/browsing-history`, { productId }, freshConfig);
-    } catch (err) {
-      let message;
-      if (err instanceof AxiosError) {
-        message = err.response?.data?.error || "Request failed";
-      } else {
-        message = "Something went wrong.";
-      }
-      toast.error(message);
-    }
-  };
+  // const addProductToBrowsingHistory = async (productId: string) => {
+  //   try {
+  //     const token = getBearerToken();
+  //     if (!token) return;
+  //     const freshConfig = { headers: { Authorization: `Bearer ${token}` } };
+  //     await postData(`/products/browsing-history`, { productId }, freshConfig);
+  //   } catch (err) {
+  //     let message;
+  //     if (err instanceof AxiosError) {
+  //       message = err.response?.data?.error || "Request failed";
+  //     } else {
+  //       message = "Something went wrong.";
+  //     }
+  //     toast.error(message);
+  //   }
+  // };
 
-  return { loading, getExploreInterest, addProductToBrowsingHistory };
+  return { loading, getExploreInterest };
 };
 
 export const useBrowsingHistory = () => {
@@ -598,12 +627,10 @@ export const useBrowsingHistory = () => {
     try {
       const token = getBearerToken();
       const freshConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-      console.log("[BrowsingHistory] fetching, token present:", !!token);
       const req = await getData(
         `/browsing-history?limit=${limit}&cursor=${cursor}`,
         freshConfig,
       );
-      console.log("[BrowsingHistory] response:", req.data.message);
       return req.data.message;
     } catch (err) {
       if (err instanceof AxiosError) {

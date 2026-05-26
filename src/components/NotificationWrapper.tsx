@@ -1,6 +1,6 @@
 "use client";
 
-import Pusher from "pusher-js";
+import { io, Socket } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useNotification } from "@/api/customHooks";
@@ -9,57 +9,22 @@ import { useNotificationStore } from "@/lib/stores/notification-store";
 import { onMessage } from "firebase/messaging";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { Product } from "@/lib/admin-types";
-import { fetchFromCart } from "@/lib/api";
+import { fetchFromCart, getBearerToken } from "@/lib/api";
 import type { Notification as AppNotification } from "@/lib/types";
+import { usePathname } from "next/navigation";
+import { updateAdminPushNotification } from "@/lib/adminapi";
+import { globalUrl } from "@/api/api";
 
 export default function NotificationWrapper() {
   const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
   const { updatePushToken } = useNotification();
-  const { setCartItems } = useCartStore();
-  const { updateNotifications } = useNotificationStore();
-  const pusherRef = useRef<Pusher | null>(null);
+  const { setCartItems, setCartLoaded } = useCartStore();
+  const { setNotifications, updateNotifications } = useNotificationStore();
+  const socketRef = useRef<Socket | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const isUpdatingToken = useRef(false);
-
-  // Pusher setup
-  useEffect(() => {
-    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
-    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER;
-
-    if (!pusherKey || !pusherCluster) {
-      console.warn(
-        "Pusher keys missing: set NEXT_PUBLIC_PUSHER_APP_KEY and NEXT_PUBLIC_PUSHER_APP_CLUSTER",
-      );
-      return;
-    }
-
-    if (!pusherRef.current) {
-      pusherRef.current = new Pusher(pusherKey, {
-        cluster: pusherCluster,
-        forceTLS: true,
-      });
-    }
-
-    if (!user) return;
-    const pusher = pusherRef.current;
-
-    const publicChannel = pusher.subscribe("public-channel");
-    const privateChannel = pusher.subscribe(`private-${user.id}`);
-
-    const handler = (data: { message: AppNotification }) => {
-      updateNotifications(data.message);
-    };
-
-    publicChannel.bind("new-notification", handler);
-    privateChannel.bind("new-notification", handler);
-
-    return () => {
-      publicChannel.unbind("new-notification", handler);
-      privateChannel.unbind("new-notification", handler);
-      pusher.unsubscribe("public-channel");
-      pusher.unsubscribe(`private-${user.id}`);
-    };
-  }, [user, updateNotifications]);
+  const pathname = usePathname();
+  const isAdminRoute = pathname.includes("admin");
 
   // Firebase foreground message handler
   useEffect(() => {
@@ -82,42 +47,97 @@ export default function NotificationWrapper() {
 
   // Push token registration
   useEffect(() => {
-    if (!isMounted || !user || isPushTokenSet || isUpdatingToken.current) return;
+    if (!isAdminRoute) {
+      if (!isMounted || !user || isPushTokenSet || isUpdatingToken.current) return;
+    } else {
+      if (isPushTokenSet) return;
+    }
 
     const registerPushToken = async () => {
       isUpdatingToken.current = true;
 
       try {
         const token = await generateToken();
+
         if (!token) {
           console.warn("Failed to generate FCM token");
           return;
         }
 
-        const success = await updatePushToken(token);
-        
-        // Only mark as set if server confirms it
-        if (success) {
-          setIsPushTokenSet(true);
+        if (!isAdminRoute) {
+          const success = await updatePushToken(token);
+          if (success) {
+            setIsPushTokenSet(true);
+          } else {
+            console.warn("Server rejected push token update");
+          }
         } else {
-          console.warn("Server rejected push token update");
-          // Token will be retried on next mount since isPushTokenSet remains false
+          const updateAdminToken = await updateAdminPushNotification(token);
+          if (updateAdminToken.success) {
+            setIsPushTokenSet(true);
+          } else {
+            console.warn("Server rejected push token update");
+          }
         }
       } catch (error) {
         console.error("Push token registration failed:", error);
-        // Don't set isPushTokenSet — allows retry on next mount/session
       } finally {
         isUpdatingToken.current = false;
       }
     };
 
     registerPushToken();
-  }, [isMounted, user, isPushTokenSet, setIsPushTokenSet, updatePushToken]);
+  }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet, updatePushToken]);
 
-  // Cart hydration — only when user is available
+  // Socket.IO — user notifications (non-admin routes only)
   useEffect(() => {
+    if (isAdminRoute || !user) return;
+
+    const backendUrl = globalUrl.replace("/api", "");
+    if (!backendUrl) return;
+
+    const token = getBearerToken();
+    if (!token) return;
+
+    const socket = io(backendUrl, {
+      auth: { token },
+      transports: ["websocket"],
+      reconnection: true,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("get:userNotifications");
+    });
+
+    socket.on("userNotifications", ({ notifications }: { notifications: AppNotification[]; unreadCount: number }) => {
+      // console.log(notifications);
+      setNotifications(notifications);
+    });
+
+    // Live push from server (e.g. new order, flash sale)
+    socket.on("new-notification", (notification: AppNotification) => {
+      updateNotifications(notification);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [user, isAdminRoute, setNotifications, updateNotifications]);
+
+  // Cart hydration (non-admin routes only)
+  useEffect(() => {
+    if (isAdminRoute) return;
+
     if (!user) {
       setCartItems([]);
+      setCartLoaded(true);
       return;
     }
 
@@ -155,11 +175,13 @@ export default function NotificationWrapper() {
       } catch (error) {
         console.error("Failed to load cart:", error);
         setCartItems([]);
+      } finally {
+        setCartLoaded(true);
       }
     };
 
     loadCart();
-  }, [user, setCartItems]);
+  }, [user, isAdminRoute, setCartItems, setCartLoaded]);
 
   return null;
 }

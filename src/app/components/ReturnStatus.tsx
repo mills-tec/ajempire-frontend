@@ -33,7 +33,7 @@ export default function ReturnStatus() {
               x2="0.499996"
               y2="97"
               stroke="black"
-              stroke-dasharray="6 6"
+              strokeDasharray="6 6"
             />
           </svg>
         </div>
@@ -73,7 +73,7 @@ export default function ReturnStatus() {
               x2="0.499996"
               y2="97"
               stroke="black"
-              stroke-dasharray="6 6"
+              strokeDasharray="6 6"
             />
           </svg>
         </div>
@@ -113,7 +113,7 @@ export default function ReturnStatus() {
               x2="0.499996"
               y2="97"
               stroke="black"
-              stroke-dasharray="6 6"
+              strokeDasharray="6 6"
             />
           </svg>
         </div>
