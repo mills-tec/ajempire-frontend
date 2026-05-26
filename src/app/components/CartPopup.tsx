@@ -359,6 +359,9 @@ export default function CartPopup() {
                     quantity: 0,
                     selected: false,
                     selectedVariants: [],
+                    basePrice: selectedItem.price,
+                    finalPrice: selectedItem.price,
+                    discount: 0,
                   }}
                   cartRef={cartRef}
                 />

@@ -294,7 +294,7 @@ function FeedContent({
 
     const product = data.feeds[focusedIndex].product;
     if (product) {
-      setInWishlist(isInWishlist(product._id));
+      setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
     }
   }, [isLoading, data.feeds, idParam, isInWishlist]);
 
@@ -408,7 +408,7 @@ function FeedContent({
       setCurrentIndex(nextIndex);
       
       const product = feeds[nextIndex].product;
-      if (product) setInWishlist(isInWishlist(product._id));
+      if (product) setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
     },
     [currentIndex, data.feeds, isInWishlist, scrollToWithOffset]
   );
@@ -717,7 +717,7 @@ function FeedContent({
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
-    [checkIfUserLoggedIn, inWishlist, removeItem, addItem]
+    [checkIfUserLoggedIn, isInWishlist, removeItem, addItem]
   );
 
   // ── Infinite scroll ─────────────────────────────────────────────────────
@@ -1043,13 +1043,13 @@ function FeedContent({
                         {item.product && (
                           <div
                             className={`w-10 h-10 ${
-                              inWishlist ? "bg-primaryhover" : "bg-white"
+                              (wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "bg-primaryhover" : "bg-white"
                             } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
                             onClick={() =>
                               handleWishlistToggle(item.product as Product)
                             }
                           >
-                            <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
+                            <Favorite fill={(wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "#FFF" : "#FF81C6"} />
                           </div>
                         )}
                       </div>

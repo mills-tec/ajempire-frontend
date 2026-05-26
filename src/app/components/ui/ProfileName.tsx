@@ -16,7 +16,7 @@ interface ProfileNameProps {
 }
 
 export default function ProfileName({ email }: ProfileNameProps) {
-  const { user } = useAuthStore()
+  const { user } = useAuthStore();
   const fullName = user?.name;
   const initials = getInitials(fullName);
 
@@ -35,7 +35,9 @@ export default function ProfileName({ email }: ProfileNameProps) {
       </div>
       <div className="flex flex-col  gap-0">
         <p className="capitalize text-[14px]">{fullName}</p>
-        <p className="text-xs font-light text-black/40">{formatEmail(user?.email!)}</p>
+        <p className="text-xs font-light text-black/40">
+          {formatEmail(user?.email ?? "")}
+        </p>
       </div>
     </div>
   );

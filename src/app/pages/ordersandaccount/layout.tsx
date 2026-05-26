@@ -9,7 +9,6 @@ import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
 
-
 interface LayoutProps {
   children: ReactNode;
 }
@@ -31,7 +30,7 @@ export default function Layout({ children }: LayoutProps) {
   const [isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
-  const { getNotifications } = useNotification()
+  const { getNotifications } = useNotification();
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -49,7 +48,6 @@ export default function Layout({ children }: LayoutProps) {
     handleComplete();
     const timeout = setTimeout(() => setIsLoading(false), 50);
 
-
     return () => {
       document.removeEventListener("click", handleClick);
       clearTimeout(timeout);
@@ -58,10 +56,10 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     (async () => {
-      let req = await getNotifications();
-      setNotifications(req)
+      const req = await getNotifications();
+      setNotifications(req);
     })();
-  }, [])
+  }, []);
 
   return (
     <div className="relative ">
@@ -74,12 +72,8 @@ export default function Layout({ children }: LayoutProps) {
             <SideNav />
           </div>
           <div className="lg:w-[88%] w-full max-h-full lg:mb-10 lg:px-0">
-            <div>
-              {children}
-            </div>
+            <div>{children}</div>
           </div>
-
-
         </main>
         <ExploreInterest />
       </div>

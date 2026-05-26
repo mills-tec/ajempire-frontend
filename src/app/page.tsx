@@ -18,6 +18,7 @@ import HomeHeroSlider from "./components/HomeHeroSlider";
 import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProvider";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import ScrollToTop from "./components/ui/ScrollToTop";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
 import type {  Product, ProductsResponse } from "@/lib/types";
@@ -107,6 +108,7 @@ function HomeContent({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollRestored = useRef(false);
+  const blockInfiniteLoadRef = useRef(false);
 
   // Ensure component only uses store data after hydration
   const [isMounted, setIsMounted] = React.useState(false);
@@ -120,6 +122,16 @@ function HomeContent({
     return () => {
       sessionStorage.setItem("home-scroll-y", String(window.scrollY));
     };
+  }, []);
+
+  // Block infinite scroll from firing during scroll-to-top animation
+  useEffect(() => {
+    const onScrollToTop = () => {
+      blockInfiniteLoadRef.current = true;
+      setTimeout(() => { blockInfiniteLoadRef.current = false; }, 800);
+    };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
   // Restore scroll position once data is ready and DOM is painted
@@ -241,7 +253,7 @@ function HomeContent({
     loading: isLoadingMore,
     hasNextPage: isInitialized && !categoryFilterActive && hasNextPage,
     onLoadMore: async () => {
-      if (isLoadingMore) return;
+      if (isLoadingMore || blockInfiniteLoadRef.current) return;
       setIsLoadingMore(true);
       try {
         const newData = await getProducts(
@@ -498,6 +510,7 @@ function HomeContent({
           </div>
         </div>
       </PullToRefreshContainer>
+      <ScrollToTop />
     </>
   );
 }
