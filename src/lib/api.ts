@@ -631,6 +631,34 @@ export async function applyCouponCode(code: string): Promise<{
   }
 }
 
+// BANNER API
+export interface BannerImage {
+  url: string;
+  link: string;
+}
+
+export interface Banner {
+  _id: string;
+  images: BannerImage[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getBanner(): Promise<{ message: Banner } | null> {
+  const res = await fetch(`${API_URL}/banner/`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    console.error("Banner API error:", res.status);
+    return null;
+  }
+
+  return res.json();
+}
+
 // SHIPPING API
 export async function getShippingRates(
   packageItems: Array<{
