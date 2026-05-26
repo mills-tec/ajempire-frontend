@@ -1,10 +1,10 @@
 "use client";
 import React from "react";
 interface IOrderStatus {
-  createdAt: Date | null;
-  processedAt: Date | null;
-  shippedAt: Date | null;
-  deliveredAt: Date | null;
+  createdAt: string | null;
+  processedAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
 }
 export default function OrderStatus({
   createdAt,
@@ -12,7 +12,7 @@ export default function OrderStatus({
   shippedAt,
   deliveredAt,
 }: IOrderStatus) {
-  const formattedDate = (date: Date) =>
+  const formattedDate = (date: string) =>
     new Date(date).toLocaleString("en-US", {
       weekday: "short", // Fri
       day: "2-digit", // 05
@@ -221,13 +221,23 @@ export default function OrderStatus({
                 />
               </svg>
             </div>
-
-            <div className="space-y-4">
-              <h2 className="text-sm text-purple-600">Order Shipping</h2>
+           <div className="space-y-1">
+              <h2 className="text-sm text-purple-600">
+                Order Shipped
+              </h2>
+              <h3 className="text-xs font-medium">
+                {formattedDate(shippedAt)}
+              </h3>
               <p className="text-xs text-black/50">
-                Your order is currently in lagos
+                Your order has being Shipped
               </p>
             </div>
+            {/* <div className="space-y-4">
+              <h2 className="text-sm text-purple-600">Order Shipping</h2>
+              <p className="text-xs text-black/50">
+                Your order has been currently in lagos
+              </p>
+            </div> */}
           </>
         ) : (
           <>

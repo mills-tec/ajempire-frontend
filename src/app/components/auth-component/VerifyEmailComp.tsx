@@ -15,7 +15,7 @@ export default function VerifyEmailComp({
 }: AuthStepProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  let email = searchParams.get("email");
+  let email = JSON.parse(localStorage.getItem("ajempire_signup_email")!);
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
@@ -44,7 +44,6 @@ export default function VerifyEmailComp({
     }
 
     setIsVerifying(true);
-    console.log(email, otp, "email and token");
     try {
       await emailVerification(email, otp);
       toast.success("Email verified successfully!");

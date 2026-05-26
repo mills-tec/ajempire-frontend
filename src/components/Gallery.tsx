@@ -193,12 +193,12 @@ export default function Gallery() {
                                         if (getItem(feed.product._id)) {
                                             removeCartItem(feed.product._id);
                                         } else {
-                                            addCartItem({
-                                                ...feed.product,
-                                                quantity: 1,
-                                                selectedVariants: [],
-                                                selected: false
-                                            });
+                                            // addCartItem({
+                                            //     ...feed.product,
+                                            //     quantity: 1,
+                                            //     selectedVariants: [],
+                                            //     selected: false
+                                            // });
                                         }
                                     }}>
                                         {getItem(feed.product._id) ? (

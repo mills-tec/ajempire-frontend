@@ -37,6 +37,10 @@ import ShareModal from "./ShareModal";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useModalStore } from "@/lib/stores/modal-store";
+import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
+import { PullToRefreshProvider } from "@/app/components/pull-to-refresh/PullToRefreshProvider";
+import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
+import { usePullToRefresh } from "@/app/components/pull-to-refresh/PullToRefreshProvider";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
 
@@ -61,25 +65,12 @@ export function FeedSkeleton() {
 // ─── Countdown ───────────────────────────────────────────────────────────────
 
 function Countdown({ targetDate }: { targetDate: string }) {
-  const [mounted, setMounted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+  const [timeLeft, setTimeLeft] = useState(() => getCountdown(targetDate));
 
   useEffect(() => {
-    setMounted(true);
-    setTimeLeft(getCountdown(targetDate));
-    const timer = setInterval(
-      () => setTimeLeft(getCountdown(targetDate)),
-      1000,
-    );
+    const timer = setInterval(() => setTimeLeft(getCountdown(targetDate)), 1000);
     return () => clearInterval(timer);
   }, [targetDate]);
-
-  if (!mounted) return null;
 
   return (
     <span className="text-[10px]">
@@ -117,11 +108,55 @@ type CommentState = {
   focus: boolean;
 };
 
-// ─── FeedItem ─────────────────────────────────────────────────────────────────
+// ─── FeedItem (shell) ─────────────────────────────────────────────────────────
 
 export default function FeedItem() {
   const params = useParams();
+  const { type } = params;
+
+  const feedsForRefreshRef = useRef<Feed[]>([]);
+  const setFeedsExternallyRef = useRef<((feeds: Feed[]) => void) | null>(null);
+
+  const handleRefresh = useCallback(async () => {
+    try {
+      if (
+        feedsForRefreshRef.current.length === 0 ||
+        !setFeedsExternallyRef.current
+      )
+        return;
+
+      const shuffled = shuffleArray([...feedsForRefreshRef.current]);
+      setFeedsExternallyRef.current(shuffled);
+    } catch (error) {
+      console.error("Pull-to-refresh error (feed):", error);
+    }
+  }, []);
+
+  return (
+    <PullToRefreshProvider onRefresh={handleRefresh}>
+      <FeedContent
+        feedsForRefreshRef={feedsForRefreshRef}
+        setFeedsExternallyRef={setFeedsExternallyRef}
+      />
+    </PullToRefreshProvider>
+  );
+}
+
+// ─── FeedContent ──────────────────────────────────────────────────────────────
+
+function FeedContent({
+  feedsForRefreshRef,
+  setFeedsExternallyRef,
+}: {
+  feedsForRefreshRef: React.MutableRefObject<Feed[]>;
+  setFeedsExternallyRef: React.MutableRefObject<
+    ((feeds: Feed[]) => void) | null
+  >;
+}) {
+  const params = useParams();
   const { id: idParam, type } = params;
+
+  const { pull, refreshing } = usePullToRefresh();
 
   // ── Refs ────────────────────────────────────────────────────────────────
   const originalFeedsRef = useRef<Feed[]>([]);
@@ -129,9 +164,11 @@ export default function FeedItem() {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
-  const feedsRef = useRef<Feed[]>([]);
   const hasFocusedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // ── Custom hooks ────────────────────────────────────────────────────────
   // ── Custom hooks ────────────────────────────────────────────────────────
   const {
     addComments,
@@ -148,7 +185,7 @@ export default function FeedItem() {
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [, startDuplicateTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
-  const [id, setId] = useState(idParam);
+  const [id, setId] = useState<string | string[] | undefined>(idParam);
   const [href, setHref] = useState("");
   const [data, setData] = useState<{
     feeds: Feed[];
@@ -164,7 +201,7 @@ export default function FeedItem() {
   const [showDesc, setShowDesc] = useState(false);
   const [isLastItem, setLastItem] = useState(false);
   const [share, setShare] = useState(false);
-  const [loadedIndex, setLoadedIndex] = useState<number[]>([]);
+  const [loadedIndex, setLoadedIndex] = useState<Set<number>>(new Set());
   const [videoState, setVideoState] = useState({
     muted: true,
     showPlay: false,
@@ -179,15 +216,42 @@ export default function FeedItem() {
     _id: string;
     email: string;
     fullname: string;
-  } | null>({ _id: "", email: "", fullname: "" });
+  } | null>(null);
 
-  // Keep feedsRef in sync
+  // ── Memoized values ─────────────────────────────────────────────────────
+  const activeFeed = useMemo(
+    () => data.feeds.find((f) => f._id === id),
+    [data.feeds, id]
+  );
+  const activeComments = activeFeed?.comments ?? [];
+
+  // ── Sync refs with state ────────────────────────────────────────────────
   useEffect(() => {
-    feedsRef.current = data.feeds;
-  }, [data.feeds]);
+    feedsForRefreshRef.current = data.feeds;
+  }, [data.feeds, feedsForRefreshRef]);
+
+  useEffect(() => {
+    setFeedsExternallyRef.current = (shuffled: Feed[]) => {
+      setData((prev) => ({ ...prev, feeds: shuffled }));
+    };
+  }, [setFeedsExternallyRef]);
+
+  // ── Reset loading when pull-to-refresh completes ────────────────────────
+  useEffect(() => {
+    if (refreshing) {
+      setIsLoading(true);
+      return;
+    }
+    if (data.feeds.length > 0) {
+      setIsLoading(false);
+    }
+  }, [refreshing, data.feeds.length]);
 
   // ── Initial fetch ───────────────────────────────────────────────────────
   useEffect(() => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     const fetchInitialFeeds = async () => {
       try {
         const result = await getFeeds(type as string, "");
@@ -201,18 +265,121 @@ export default function FeedItem() {
         console.error("Error fetching initial feeds:", err);
       } finally {
         setIsLoading(false);
+        isFetchingRef.current = false;
       }
     };
 
     fetchInitialFeeds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+  }, [type, refreshing]);
+
+  // ── User & href initialization ──────────────────────────────────────────
+  useEffect(() => {
+    setUser(getUser());
+    setHref(window.location.href);
+  }, []);
+
+  // ── Focus to initial feed ───────────────────────────────────────────────
+  useEffect(() => {
+    if (isLoading || hasFocusedRef.current || !data.feeds.length) return;
+    const focusedIndex = data.feeds.findIndex((f) => f._id === idParam);
+    if (focusedIndex === -1) return;
+
+    const el = itemRefs.current[focusedIndex];
+    if (!el) return;
+
+    hasFocusedRef.current = true;
+    setCurrentIndex(focusedIndex);
+    scrollToWithOffset(el, 60);
+
+    const product = data.feeds[focusedIndex].product;
+    if (product) {
+      setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
+    }
+  }, [isLoading, data.feeds, idParam, isInWishlist]);
+
+  // ── Intersection Observer for feed visibility ───────────────────────────
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          const index = Number(entry.target.id.replace("feed-", ""));
+          const feed = data.feeds[index];
+          
+          if (feed) {
+            setShowDesc(false);
+            setId(feed._id);
+            window.history.replaceState(
+              null,
+              "",
+              `/pages/update/${type}/${feed._id}`
+            );
+          }
+
+          if (index === data.feeds.length - 1) {
+            setLastItem(true);
+            observerRef.current?.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+
+    const sections = document.querySelectorAll(".section");
+    sections.forEach((s) => observerRef.current?.observe(s));
+
+    return () => {
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+    };
+  }, [type, data.feeds]);
+
+  // ── Duplicate feeds when reaching end ───────────────────────────────────
+  useEffect(() => {
+    if (!isLastItem || data.hasMore || isDuplicating || !originalFeedsRef.current.length) return;
+    
+    setIsDuplicating(true);
+    setLastItem(false);
+  }, [isLastItem, data.hasMore, isDuplicating]);
+
+  useEffect(() => {
+    if (!isDuplicating || !originalFeedsRef.current.length) return;
+    
+    startDuplicateTransition(() => {
+      setData((prev) => ({
+        ...prev,
+        feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
+      }));
+    });
+    setIsDuplicating(false);
+  }, [isDuplicating, startDuplicateTransition]);
+
+  // ── Body scroll lock for comments ───────────────────────────────────────
+  useEffect(() => {
+    document.body.style.overflow = comment.show ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [comment.show]);
+
+  // ── Cleanup timeouts ────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
+    };
+  }, []);
 
   // ── Scroll helpers ──────────────────────────────────────────────────────
-
   const scrollToWithOffset = useCallback((el: HTMLElement, offset = 80) => {
     const container = containerRef.current;
     if (!container) return;
+    
     const containerRect = container.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
     const scrollTop =
@@ -221,32 +388,43 @@ export default function FeedItem() {
       container.clientHeight / 2 +
       el.clientHeight / 2 +
       offset;
+    
     container.scrollTo({ top: scrollTop, behavior: "smooth" });
   }, []);
 
   const smoothScrollTo = useCallback(
     (direction: "next" | "prev") => {
-      if (feedsRef.current.length === 0) return;
+      const feeds = data.feeds;
+      if (feeds.length === 0) return;
+
       const nextIndex =
         direction === "next" ? currentIndex + 1 : currentIndex - 1;
+      if (nextIndex < 0 || nextIndex >= feeds.length) return;
+
       const el = itemRefs.current[nextIndex];
       if (!el) return;
+
       scrollToWithOffset(el, 60);
       setCurrentIndex(nextIndex);
+      
+      const product = feeds[nextIndex].product;
+      if (product) setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
     },
-    [currentIndex, scrollToWithOffset],
+    [currentIndex, data.feeds, isInWishlist, scrollToWithOffset]
   );
 
   // ── Video helpers ───────────────────────────────────────────────────────
-
   const handleVideoPlay = useCallback((index: number) => {
     const video = videoRefs.current[index];
-    if (video?.paused) video.play();
-    else video?.pause();
+    if (!video) return;
+    
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
   }, []);
 
   const showPlayTemporarily = useCallback(() => {
     setVideoState((prev) => ({ ...prev, showPlay: true }));
+    
     if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
     hidePlayTimeout.current = setTimeout(() => {
       setVideoState((prev) => ({ ...prev, showPlay: false }));
@@ -254,7 +432,6 @@ export default function FeedItem() {
   }, []);
 
   // ── Auth helper ─────────────────────────────────────────────────────────
-
   const checkIfUserLoggedIn = useCallback(
     (action = "perform this action"): boolean => {
       if (!user?._id) {
@@ -266,33 +443,32 @@ export default function FeedItem() {
       }
       return true;
     },
-    [user?._id, openModal],
+    [user?._id, openModal]
   );
 
   // ── Comment helpers ─────────────────────────────────────────────────────
-
   const updateFeedComments = useCallback(
     (
       feedId: string | string[],
-      updater: (comments: CommentData[]) => CommentData[],
+      updater: (comments: CommentData[]) => CommentData[]
     ) => {
       setData((prev) => ({
         ...prev,
         feeds: prev.feeds.map((feed) =>
           feed._id === feedId
-            ? { ...feed, comments: updater(feed.comments!) }
-            : feed,
+            ? { ...feed, comments: updater(feed.comments ?? []) }
+            : feed
         ),
       }));
     },
-    [],
+    []
   );
 
   const addReplyRecursive = useCallback(
     (
       list: CommentData[],
       targetId: string,
-      reply: CommentData,
+      reply: CommentData
     ): CommentData[] =>
       list.map((node) => {
         if (node._id === targetId)
@@ -310,7 +486,7 @@ export default function FeedItem() {
           };
         return node;
       }),
-    [],
+    []
   );
 
   const addRecursiveLike = useCallback(
@@ -332,7 +508,7 @@ export default function FeedItem() {
           };
         return node;
       }),
-    [],
+    []
   );
 
   const recursiveDeleteComment = useCallback(
@@ -345,7 +521,7 @@ export default function FeedItem() {
             ? recursiveDeleteComment(node.replies, targetId)
             : node.replies,
         })),
-    [],
+    []
   );
 
   const handleToggle = useCallback(
@@ -358,10 +534,10 @@ export default function FeedItem() {
             return { ...node, replies: toggle(node.replies) };
           return node;
         });
-      const feed = feedsRef.current.find((f) => f._id === id);
-      if (feed?.comments) updateFeedComments(id!, toggle);
+      
+      if (id) updateFeedComments(id, toggle);
     },
-    [id, updateFeedComments],
+    [id, updateFeedComments]
   );
 
   const replyComment = useCallback((parent: CommentState["parent"]) => {
@@ -376,12 +552,12 @@ export default function FeedItem() {
 
   const sendComment = useCallback(
     async (parentId: string | null) => {
-      if (!checkIfUserLoggedIn("sends comment")) return;
-      if (!comment.commentText) return;
+      if (!checkIfUserLoggedIn("send a comment")) return;
+      if (!comment.commentText.trim()) return;
 
       const newComment: CommentData = {
-        _id: "",
-        text: comment.commentText,
+        _id: `temp-${Date.now()}`,
+        text: comment.commentText.trim(),
         user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
         parentId,
         likes: [],
@@ -391,11 +567,11 @@ export default function FeedItem() {
         updatedAt: new Date().toISOString(),
       };
 
-      const feedType = feedsRef.current.find((f) => f._id === id)?.type;
+      const feedType = data.feeds.find((f) => f._id === id)?.type;
 
       if (parentId) {
         updateFeedComments(id!, (comments) =>
-          addReplyRecursive(comments, parentId, newComment),
+          addReplyRecursive(comments, parentId, newComment)
         );
       } else {
         updateFeedComments(id!, (comments) => [...comments, newComment]);
@@ -407,87 +583,121 @@ export default function FeedItem() {
         parent: { parentId: "", fullname: "", email: "" },
       }));
 
-      await addComments({
-        feedId: id as string,
-        type: feedType as string,
-        comment: newComment.text,
-        parentId: parentId as string,
-      });
+      try {
+        await addComments({
+          feedId: id as string,
+          type: feedType as string,
+          comment: newComment.text,
+          parentId: parentId as string,
+        });
+      } catch (err) {
+        console.error("Failed to add comment:", err);
+        toast.error("Failed to post comment");
+      }
     },
     [
       comment.commentText,
       user,
       id,
+      data.feeds,
       updateFeedComments,
       addReplyRecursive,
       addComments,
-    ],
+      checkIfUserLoggedIn,
+    ]
   );
 
   const likePost = useCallback(
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like posts")) return;
 
-      // ✅ FIX 2: Optimistic update scoped to the specific feed by _id
+      const targetFeed = data.feeds.find((f) => f._id === _id);
+      if (!targetFeed) return;
+
+      const liked = targetFeed.likes?.some((l) => l === user!._id);
+      const newLikes = liked
+        ? targetFeed.likes!.filter((l) => l !== user!._id)
+        : [...(targetFeed.likes ?? []), user!._id];
+
       setData((prev) => ({
         ...prev,
-        feeds: prev.feeds.map((feed) => {
-          if (feed._id !== _id) return feed;
-          const liked = feed.likes!.some((l) => l === user!._id);
-          return {
-            ...feed,
-            likes: liked
-              ? feed.likes!.filter((l) => l !== user!._id)
-              : [...feed.likes!, user!._id],
-          };
-        }),
+        feeds: prev.feeds.map((feed) =>
+          feed._id === _id ? { ...feed, likes: newLikes } : feed
+        ),
       }));
 
       try {
-        await likeUpdate({ feedId: _id, type: type as string });
+        await likeUpdate({
+          feedId: _id,
+          type: targetFeed.type,
+        });
       } catch (err) {
-        console.error("Like failed:", err);
+        // Revert on failure
+        setData((prev) => ({
+          ...prev,
+          feeds: prev.feeds.map((feed) =>
+            feed._id === _id ? { ...feed, likes: targetFeed.likes } : feed
+          ),
+        }));
+        console.error("Failed to like post:", err);
       }
     },
-    [checkIfUserLoggedIn, user, likeUpdate, type],
+    [checkIfUserLoggedIn, user, data.feeds, likeUpdate]
   );
 
   const likeComment = useCallback(
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like comments")) return;
-      const feed = feedsRef.current.find((f) => f._id === id);
+      
+      const feed = data.feeds.find((f) => f._id === id);
+      if (!feed) return;
+
       updateFeedComments(id!, (comments) =>
-        addRecursiveLike(comments, _id, user!._id),
+        addRecursiveLike(comments, _id, user!._id)
       );
-      await likeUpdateComment({
-        feedId: id as string,
-        type: feed?.type as string,
-        commentId: _id,
-      });
+
+      try {
+        await likeUpdateComment({
+          feedId: id as string,
+          type: feed.type,
+          commentId: _id,
+        });
+      } catch (err) {
+        console.error("Failed to like comment:", err);
+      }
     },
     [
       checkIfUserLoggedIn,
       id,
       user,
+      data.feeds,
       updateFeedComments,
       addRecursiveLike,
       likeUpdateComment,
-    ],
+    ]
   );
 
   const deleteComment = useCallback(
     async (item: CommentData) => {
-      const selectedFeed = feedsRef.current.find((f) => f._id === id);
+      const selectedFeed = data.feeds.find((f) => f._id === id);
+      if (!selectedFeed) return;
+
       updateFeedComments(id!, (comments) =>
-        recursiveDeleteComment(comments, item._id),
+        recursiveDeleteComment(comments, item._id)
       );
-      await deleteUpdateComment({
-        feedId: id as string,
-        commentId: item._id,
-        type: selectedFeed?.type as string,
-      });
+
+      try {
+        await deleteUpdateComment({
+          feedId: id as string,
+          commentId: item._id,
+          type: selectedFeed.type,
+        });
+      } catch (err) {
+        console.error("Failed to delete comment:", err);
+        toast.error("Failed to delete comment");
+      }
     },
-    [id, updateFeedComments, recursiveDeleteComment, deleteUpdateComment],
+    [id, data.feeds, updateFeedComments, recursiveDeleteComment, deleteUpdateComment]
   );
 
   // ✅ FIX 3: handleWishlistToggle now uses wishlistMap keyed by product._id
@@ -507,99 +717,16 @@ export default function FeedItem() {
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
-    [checkIfUserLoggedIn, wishlistMap, isInWishlist, removeItem, addItem],
+    [checkIfUserLoggedIn, isInWishlist, removeItem, addItem]
   );
 
-  // ── Effects ─────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    setUser(getUser());
-    setHref(window.location.href);
-  }, []);
-
-  // Focus-scroll to the deep-linked item once data is ready — runs once
-  useEffect(() => {
-    if (isLoading || hasFocusedRef.current) return;
-    const focusedIndex = data.feeds.findIndex((f) => f._id === idParam);
-    if (focusedIndex === -1) return;
-    const el = itemRefs.current[focusedIndex];
-    if (!el) return;
-    hasFocusedRef.current = true;
-    setCurrentIndex(focusedIndex);
-    scrollToWithOffset(el, 60);
-  }, [isLoading, data.feeds, idParam, scrollToWithOffset]);
-
-  // Single persistent IntersectionObserver
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const index = Number(entry.target.id.replace("feed-", ""));
-          const feed = feedsRef.current[index];
-          if (feed) {
-            setShowDesc(false);
-            setId(feed._id);
-            window.history.replaceState(
-              null,
-              "",
-              `/pages/update/${type}/${feed._id}`,
-            );
-          }
-          if (index === feedsRef.current.length - 1) {
-            setLastItem(true);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.6 },
-    );
-
-    document.querySelectorAll(".section").forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, [type, data.feeds.length]);
-
-  // Duplication trigger
-  useEffect(() => {
-    if (!isLastItem) return;
-    if (data.hasMore) return;
-    if (isDuplicating) return;
-    setIsDuplicating(true);
-    setLastItem(false);
-  }, [isLastItem, data.hasMore, isDuplicating]);
-
-  useEffect(() => {
-    if (!isDuplicating) return;
-    if (!originalFeedsRef.current.length) return;
-    startDuplicateTransition(() => {
-      setData((prev) => ({
-        ...prev,
-        feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
-      }));
-    });
-    setIsDuplicating(false);
-  }, [isDuplicating]);
-
-  useEffect(() => {
-    document.body.style.overflow = comment.show ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [comment.show]);
-
-  useEffect(() => {
-    return () => {
-      if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
-    };
-  }, []);
-
   // ── Infinite scroll ─────────────────────────────────────────────────────
-
   const [infiniteRef] = useInfiniteScroll({
     loading,
     hasNextPage: data.hasMore,
-    onLoadMore: async () => {
-      if (data.hasMore) {
+    onLoadMore: useCallback(async () => {
+      if (data.hasMore && !isFetchingRef.current) {
+        isFetchingRef.current = true;
         try {
           const newData = await getFeeds(type as string, data.nextCursor || "");
           setData((prev) => ({
@@ -610,429 +737,461 @@ export default function FeedItem() {
           }));
         } catch (err) {
           console.error("Error loading more feeds:", err);
+        } finally {
+          isFetchingRef.current = false;
         }
-      } else {
+      } else if (!data.hasMore && originalFeedsRef.current.length) {
         setData((prev) => ({
           ...prev,
           feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
         }));
       }
-    },
+    }, [data.hasMore, data.nextCursor, type, getFeeds]),
   });
 
-  // ── Derived values ──────────────────────────────────────────────────────
+  // ── Comment count helper ────────────────────────────────────────────────
+  const getNumberOfComments = useCallback((comments: CommentData[]) => {
+    let number = 0;
+    comments.forEach((comment) => {
+      number++;
+      if (comment.replies) {
+        number += getNumberOfComments(comment.replies);
+      }
+    });
+    return number;
+  }, []);
 
-  // ✅ FIX 4: activeComments always reads from the currently active feed by id
-  const activeFeed = useMemo(
-    () => data.feeds.find((f) => f._id === id),
-    [data.feeds, id],
-  );
-  const activeComments = activeFeed?.comments ?? [];
+  // ── Media loaded handler ────────────────────────────────────────────────
+  const handleMediaLoaded = useCallback((index: number) => {
+    setLoadedIndex((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <section className="md:flex w-full pb-10">
-      <div
-        ref={containerRef}
-        className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
-        style={{ scrollSnapType: "y mandatory" }}
-      >
-        {isLoading ? (
-          <div className="w-full h-screen grid gap-3 overflow-y-hidden no-scrollbar">
-            <FeedSkeleton />
-          </div>
-        ) : data.feeds.length === 0 ? (
-          <div className="h-screen flex items-center justify-center text-sm text-gray-500">
-            No feeds available
-          </div>
-        ) : (
-          <>
-            {data.feeds.map((item, index) => (
-              <div
-                key={`${item._id}-${index}`}
-                id={`feed-${index}`}
-                ref={(el) => {
-                  itemRefs.current[index] = el;
-                }}
-                className={`flex gap-4 relative items-center duration-300 h-[70vh] md:h-[88vh] w-full ${
-                  comment.show
-                    ? "md:justify-start md:pl-[10%]"
-                    : "md:justify-center"
-                } section`}
-                style={{ scrollSnapAlign: "start" }}
-              >
-                {/* Media panel */}
-                <div className="w-full md:w-[40%] h-full lg:h-[80vh] relative overflow-hidden md:rounded-2xl selection:bg-transparent">
-                  {item.type === "flashsale" && (
-                    <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
-                      Flashsale
-                    </span>
-                  )}
+    <>
+      <PullToRefreshHeader />
 
-                  {item.mediaType === "image" ? (
-                    <>
-                      {!loadedIndex.includes(index) && (
-                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                      )}
-                      <Image
-                        src={item.mediaUrl}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 40vw"
-                        className="object-cover"
-                        onLoad={() =>
-                          setLoadedIndex((prev) =>
-                            prev.includes(index) ? prev : [...prev, index],
-                          )
-                        }
-                      />
-                    </>
-                  ) : (
-                    <>
-                      {!loadedIndex.includes(index) && (
-                        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                      )}
-                      <video
-                        preload="none"
-                        ref={(el) => {
-                          videoRefs.current[index] = el;
-                        }}
-                        autoPlay
-                        loop
-                        muted={videoState.muted}
-                        src={item.mediaUrl}
-                        className="w-full h-full object-cover cursor-pointer"
-                        onPlay={() =>
-                          setPlayingMap((prev) => ({ ...prev, [index]: true }))
-                        }
-                        onPause={() =>
-                          setPlayingMap((prev) => ({ ...prev, [index]: false }))
-                        }
-                        onLoadedData={() =>
-                          setPlayingMap((prev) => ({ ...prev, [index]: true }))
-                        }
-                        onCanPlay={() =>
-                          setLoadedIndex((prev) =>
-                            prev.includes(index) ? prev : [...prev, index],
-                          )
-                        }
-                        onClick={showPlayTemporarily}
-                        onMouseMove={showPlayTemporarily}
-                        playsInline
-                      />
+      <PullToRefreshContainer>
+        <section className="md:flex w-full pb-10">
+          {/* Feed scroll container */}
+          <div
+            ref={containerRef}
+            className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
+            style={{ scrollSnapType: "y mandatory" }}
+          >
+            {isLoading ? (
+              <div className="w-full h-screen grid gap-3 overflow-y-hidden no-scrollbar">
+                <FeedSkeleton />
+              </div>
+            ) : data.feeds.length === 0 ? (
+              <div className="h-screen flex items-center justify-center text-sm text-gray-500">
+                No feeds available
+              </div>
+            ) : (
+              <>
+                {data.feeds.map((item, index) => {
+                  const isLoaded = loadedIndex.has(index);
+                  const isPlaying = playingMap[index];
+                  const hasLiked = item.likes?.some((l) => l === user?._id) ?? false;
+                  const commentCount = item.comments ? getNumberOfComments(item.comments) : 0;
 
-                      <div
-                        onClick={() => handleVideoPlay(index)}
-                        className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${
-                          videoState.showPlay
-                            ? "opacity-100"
-                            : "hidden opacity-0"
-                        }`}
-                      >
-                        <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
-                          {playingMap[index] ? (
-                            <Pause size={40} color="white" />
-                          ) : (
-                            <Play size={40} color="white" />
-                          )}
-                        </div>
-                        <span
-                          className="absolute top-12 right-4 cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setVideoState((prev) => ({
-                              ...prev,
-                              muted: !prev.muted,
-                            }));
-                          }}
-                        >
-                          {videoState.muted ? (
-                            <VolumeX color="white" size={16} />
-                          ) : (
-                            <Volume2 color="white" size={16} />
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Overlay info */}
-                  <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+                  return (
                     <div
-                      onClick={() => setShowDesc((prev) => !prev)}
-                      className="w-[80%]"
+                      key={`${item._id}-${index}`}
+                      id={`feed-${index}`}
+                      ref={(el) => {
+                        itemRefs.current[index] = el;
+                      }}
+                      className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${
+                        comment.show
+                          ? "md:justify-start md:pl-[10%]"
+                          : "md:justify-center"
+                      } section`}
+                      style={{ scrollSnapAlign: "start" }}
                     >
-                      <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                        {item.title}
-                      </p>
-                      <p className="text-sm md:text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                        {showDesc
-                          ? item.description
-                          : item.description.slice(0, 80)}
-                        <span className="text-[#aaa] cursor-pointer">
-                          {showDesc ? " less..." : " more..."}
-                        </span>
-                      </p>
-                    </div>
+                      {/* Media panel */}
+                      <div
+                        className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent"
+                        style={{
+                          transform: `translateY(-${pull * 0.7}px)`,
+                          opacity: 1 - Math.min(pull / 150, 1),
+                          transition: pull === 0 ? "all 0.25s ease" : "none",
+                        }}
+                      >
+                        {item.type === "flashsale" && (
+                          <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
+                            Flashsale
+                          </span>
+                        )}
 
-                    {item.product && (
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 14 14"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              clipRule="evenodd"
-                              d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
-                              fill="white"
+                        {item.mediaType === "image" ? (
+                          <>
+                            {!isLoaded && (
+                              <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                            )}
+                            <Image
+                              src={item.mediaUrl}
+                              alt={item.title}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 40vw"
+                              className="object-cover"
+                              onLoad={() => handleMediaLoaded(index)}
+                              priority={index < 2}
                             />
-                          </svg>
-                          {item.flashPrice ? (
-                            <div className="flex items-center text-xs gap-2">
-                              <span>
-                                {Number(item.flashPrice).toLocaleString(
-                                  "en-NG",
-                                  { style: "currency", currency: "NGN" },
+                          </>
+                        ) : (
+                          <>
+                            {!isLoaded && (
+                              <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                            )}
+                            <video
+                              preload={index < 2 ? "auto" : "none"}
+                              ref={(el) => {
+                                videoRefs.current[index] = el;
+                              }}
+                              autoPlay
+                              loop
+                              muted={videoState.muted}
+                              src={item.mediaUrl}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onPlay={() =>
+                                setPlayingMap((prev) => ({
+                                  ...prev,
+                                  [index]: true,
+                                }))
+                              }
+                              onPause={() =>
+                                setPlayingMap((prev) => ({
+                                  ...prev,
+                                  [index]: false,
+                                }))
+                              }
+                              onLoadedData={() =>
+                                setPlayingMap((prev) => ({
+                                  ...prev,
+                                  [index]: true,
+                                }))
+                              }
+                              onCanPlay={() => handleMediaLoaded(index)}
+                              onClick={showPlayTemporarily}
+                              onMouseMove={showPlayTemporarily}
+                              playsInline
+                            />
+
+                            <div
+                              onClick={() => handleVideoPlay(index)}
+                              className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${
+                                videoState.showPlay
+                                  ? "opacity-100"
+                                  : "hidden opacity-0"
+                              }`}
+                            >
+                              <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
+                                {isPlaying ? (
+                                  <Pause size={40} color="white" />
+                                ) : (
+                                  <Play size={40} color="white" />
+                                )}
+                              </div>
+                              <span
+                                className="absolute top-12 right-4 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setVideoState((prev) => ({
+                                    ...prev,
+                                    muted: !prev.muted,
+                                  }));
+                                }}
+                              >
+                                {videoState.muted ? (
+                                  <VolumeX color="white" size={16} />
+                                ) : (
+                                  <Volume2 color="white" size={16} />
                                 )}
                               </span>
-                              <small className="line-through">
-                                {Number(item.product.price).toLocaleString(
-                                  "en-NG",
-                                  { style: "currency", currency: "NGN" },
-                                )}
-                              </small>
                             </div>
-                          ) : (
-                            <p className="text-xs">
-                              {Number(item.product.price).toLocaleString(
-                                "en-NG",
-                                { style: "currency", currency: "NGN" },
-                              )}
+                          </>
+                        )}
+
+                        {/* Overlay info */}
+                        <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+                          <div
+                            onClick={() => setShowDesc((prev) => !prev)}
+                            className="w-[80%]"
+                          >
+                            <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                              {item.title}
                             </p>
+                            <p className="text-sm md:text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                              {showDesc
+                                ? item.description
+                                : item.description.slice(0, 80)}
+                              <span className="text-[#aaa] cursor-pointer">
+                                {showDesc ? " less..." : " more..."}
+                              </span>
+                            </p>
+                          </div>
+
+                          {item.product && (
+                            <div className="flex items-center gap-4">
+                              <span className="flex items-center gap-1">
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 14 14"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
+                                    fill="white"
+                                  />
+                                </svg>
+                                {item.flashPrice ? (
+                                  <div className="flex items-center text-xs gap-2">
+                                    <span>
+                                      {Number(item.flashPrice).toLocaleString(
+                                        "en-NG",
+                                        { style: "currency", currency: "NGN" }
+                                      )}
+                                    </span>
+                                    <small className="line-through">
+                                      {Number(item.product.price).toLocaleString(
+                                        "en-NG",
+                                        { style: "currency", currency: "NGN" }
+                                      )}
+                                    </small>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs">
+                                    {Number(item.product.price).toLocaleString(
+                                      "en-NG",
+                                      { style: "currency", currency: "NGN" }
+                                    )}
+                                  </p>
+                                )}
+                              </span>
+                              <Link
+                                href={`/product/${item.product._id}`}
+                                className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
+                              >
+                                View Product
+                              </Link>
+                            </div>
                           )}
-                        </span>
-                        <Link
-                          href={`/product/${item.product._id}`}
-                          className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
-                        >
-                          View Product
-                        </Link>
+
+                          {item.type === "flashsale" && item.endDate && (
+                            <Countdown targetDate={item.endDate} />
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {item.type === "flashsale" && item.endDate && (
-                      <Countdown targetDate={item.endDate} />
-                    )}
-                  </div>
-                </div>
+                      {/* Action buttons */}
+                      <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
+                        {item.likes && (
+                          <div className="flex flex-col items-center gap-2">
+                            <div
+                              className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
+                              onClick={() => likePost(item._id)}
+                            >
+                              {hasLiked ? (
+                                <HeartFill />
+                              ) : (
+                                <Heart size={26} />
+                              )}
+                            </div>
+                            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                              {item.likes.length}
+                            </p>
+                          </div>
+                        )}
 
-                {/* Action buttons */}
-                <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
-                  {/* ✅ FIX 5: likes read directly from item.likes — each feed has its own */}
-                  {item.likes && (
-                    <div className="flex flex-col items-center gap-2">
-                      <div
-                        className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
-                        onClick={() => likePost(item._id)}
-                      >
-                        {item.likes.some((l) => l === user?._id) ? (
-                          <HeartFill />
-                        ) : (
-                          <Heart size={26} className="" />
+                        {item.comments && (
+                          <div
+                            className="flex flex-col items-center gap-2"
+                            onClick={() =>
+                              setComment((prev) => ({
+                                ...prev,
+                                show: !prev.show,
+                              }))
+                            }
+                          >
+                            <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
+                              <CommentIcon />
+                            </div>
+                            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+                              {commentCount}
+                            </p>
+                          </div>
+                        )}
+
+                        <div
+                          className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
+                          onClick={() => setShare(true)}
+                        >
+                          <ShareIcon />
+                        </div>
+
+                        {item.product && (
+                          <div
+                            className={`w-10 h-10 ${
+                              (wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "bg-primaryhover" : "bg-white"
+                            } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+                            onClick={() =>
+                              handleWishlistToggle(item.product as Product)
+                            }
+                          >
+                            <Favorite fill={(wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "#FFF" : "#FF81C6"} />
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                        {item.likes.length}
-                      </p>
                     </div>
-                  )}
+                  );
+                })}
 
-                  {/* ✅ FIX 6: setId(item._id) ensures comments panel shows THIS item's comments */}
-                  {item.comments && (
-                    <div
-                      className="flex flex-col items-center gap-2"
-                      onClick={() => {
-                        setId(item._id);
-                        setComment((prev) => ({ ...prev, show: !prev.show }));
-                      }}
-                    >
-                      <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
-                        <CommentIcon />
-                      </div>
-                      <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                        {item.comments.length}
-                      </p>
-                    </div>
-                  )}
+                <EndlessScrollLoading
+                  infiniteRef={infiniteRef}
+                  hasNextPage={data.hasMore}
+                  gridNumber="grid-cols-1"
+                />
 
-                  <div
-                    className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-                    onClick={() => setShare(true)}
+                <div className="h-[30vh] md:h-[10vh]" />
+              </>
+            )}
+          </div>
+
+          {/* Comments panel */}
+          <div
+            onClick={() => setComment((prev) => ({ ...prev, show: false }))}
+            className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${
+              comment.show ? "" : "translate-y-full md:translate-y-0"
+            }`}
+            style={{ zIndex: 100 }}
+          >
+            {/* Prev / Next navigation */}
+            <div
+              className="pr-4 gap-6 hidden md:grid"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="w-10 h-10 cursor-pointer bg-white rounded-full duration-300 flex items-center justify-center rotate-180 scale-90 hover:scale-100"
+                onClick={() => smoothScrollTo("prev")}
+              >
+                <ChevronDown />
+              </div>
+              <div
+                className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
+                onClick={() => smoothScrollTo("next")}
+              >
+                <ChevronDown />
+              </div>
+            </div>
+
+            {/* Comment drawer */}
+            <div
+              className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
+                comment.show
+                  ? "translate-y-0 md:translate-y-0"
+                  : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 flex-1 md:h-[70vh]">
+                <div className="flex items-center mb-6">
+                  <span
+                    className="cursor-pointer"
+                    onClick={() =>
+                      setComment((prev) => ({ ...prev, show: false }))
+                    }
                   >
-                    <ShareIcon />
-                  </div>
+                    <GoBack />
+                  </span>
+                  <p className="text-sm px-[30%]">Comments</p>
+                </div>
 
-                  {/* ✅ FIX 7: wishlistMap[item.product._id] gives per-item wishlist state */}
-                  {item.product && (
-                    <div
-                      className={`w-10 h-10 ${
-                        (wishlistMap[item.product._id] ??
-                        isInWishlist(item.product._id))
-                          ? "bg-primaryhover"
-                          : "bg-white"
-                      } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                      onClick={() =>
-                        handleWishlistToggle(item.product as Product)
-                      }
-                    >
-                      <Favorite
-                        fill={
-                          (wishlistMap[item.product._id] ??
-                          isInWishlist(item.product._id))
-                            ? "#FFF"
-                            : "#FF81C6"
-                        }
-                      />
+                <div className="overflow-y-auto h-[20vh] scrollbar-hide">
+                  {activeComments.length > 0 ? (
+                    <div className="grid gap-5">
+                      {activeComments.map((item, key) => (
+                        <CommentItem
+                          key={item._id || key}
+                          comments={activeComments}
+                          item={item}
+                          onToggle={handleToggle}
+                          onReply={replyComment}
+                          onLike={likeComment}
+                          deleteComment={deleteComment}
+                          user={user!}
+                        />
+                      ))}
                     </div>
+                  ) : (
+                    <p className="text-xs text-center">
+                      This post has no comments
+                    </p>
                   )}
                 </div>
               </div>
-            ))}
 
-            <EndlessScrollLoading
-              infiniteRef={infiniteRef}
-              hasNextPage={data.hasMore}
-              gridNumber="grid-cols-1"
-            />
-
-            <div className="h-[30vh] md:h-[10vh]" />
-          </>
-        )}
-      </div>
-
-      {/* Comments panel */}
-      <div
-        onClick={() => setComment((prev) => ({ ...prev, show: false }))}
-        className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${
-          comment.show ? "" : "translate-y-full md:translate-y-0"
-        }`}
-        style={{ zIndex: 100 }}
-      >
-        {/* Prev / Next navigation */}
-        <div
-          className="pr-4 gap-6 hidden md:grid"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            className="w-10 h-10 cursor-pointer bg-white rounded-full duration-300 flex items-center justify-center rotate-180 scale-90 hover:scale-100"
-            onClick={() => smoothScrollTo("prev")}
-          >
-            <ChevronDown />
-          </div>
-          <div
-            className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-            onClick={() => smoothScrollTo("next")}
-          >
-            <ChevronDown />
-          </div>
-        </div>
-
-        {/* Comment drawer */}
-        <div
-          className={`w-screen h-[65vh] md:h-[52vh] md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
-            comment.show
-              ? "translate-y-0 md:translate-y-0"
-              : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-5 flex-1">
-            <div className="flex items-center mb-6">
-              <span
-                className="cursor-pointer"
-                onClick={() => setComment((prev) => ({ ...prev, show: false }))}
-              >
-                <GoBack />
-              </span>
-              <p className="text-sm px-[30%]">Comments</p>
-            </div>
-
-            <div className="overflow-y-auto h-[20vh] scrollbar-hide">
-              {activeComments.length > 0 ? (
-                <div className="grid gap-5">
-                  {activeComments.map((item, key) => {
-                    console.log(
-                      `📝 Comment on feed [${activeFeed?.title ?? activeFeed?._id}]:`,
-                      item,
-                    );
-                    return (
-                      <CommentItem
-                        key={item._id || key}
-                        comments={activeComments}
-                        item={item}
-                        onToggle={handleToggle}
-                        onReply={replyComment}
-                        onLike={likeComment}
-                        deleteComment={deleteComment}
-                        user={user!}
-                      />
-                    );
-                  })}
+              <div className="w-full px-5 md:px-2 pb-10">
+                <div
+                  className={`bg-white relative rounded-2xl border ${
+                    comment.focus ? "border-primaryhover" : "border-transparent"
+                  }`}
+                >
+                  <textarea
+                    className="w-full h-32 text-base md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
+                    placeholder={
+                      comment.parent.parentId
+                        ? `Replying to @${comment.parent.fullname
+                            .replaceAll(" ", "")
+                            .toLowerCase()}`
+                        : "Write a comment"
+                    }
+                    value={comment.commentText}
+                    onChange={(e) =>
+                      setComment((prev) => ({
+                        ...prev,
+                        commentText: e.target.value,
+                      }))
+                    }
+                    onFocus={() =>
+                      setComment((prev) => ({ ...prev, focus: true }))
+                    }
+                    onBlur={() =>
+                      setComment((prev) => ({ ...prev, focus: false }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendComment(comment.parent.parentId);
+                      }
+                    }}
+                  />
+                  <button
+                    className={`w-10 h-10 md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${
+                      comment.show ? "" : "hidden"
+                    }`}
+                    onClick={() => sendComment(comment.parent.parentId)}
+                  >
+                    <SendHorizonal color="white" />
+                  </button>
                 </div>
-              ) : (
-                <p className="text-xs text-center">This post has no comments</p>
-              )}
+              </div>
             </div>
           </div>
 
-          <div className="w-full px-5 md:px-2 md:pb-10 absolute bottom-32 md:bottom-0">
-            <div
-              className={`bg-white relative rounded-2xl border ${
-                comment.focus ? "border-primaryhover" : "border-transparent"
-              }`}
-            >
-              <textarea
-                className="w-full h-32 text-base md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
-                placeholder={
-                  comment.parent.parentId
-                    ? `Replying to @${(comment.parent.fullname ?? "")
-                        .replaceAll(" ", "")
-                        .toLowerCase()}`
-                    : "Write a comment"
-                }
-                value={comment.commentText}
-                onChange={(e) =>
-                  setComment((prev) => ({
-                    ...prev,
-                    commentText: e.target.value,
-                  }))
-                }
-                onFocus={() => setComment((prev) => ({ ...prev, focus: true }))}
-                onBlur={() => setComment((prev) => ({ ...prev, focus: false }))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") sendComment(comment.parent.parentId);
-                }}
-              />
-              <button
-                className={`w-10 h-10 md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${
-                  comment.show ? "" : "hidden"
-                }`}
-                onClick={() => sendComment(comment.parent.parentId)}
-              >
-                <SendHorizonal color="white" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <ShareModal share={share} href={href} hideShare={() => setShare(false)} />
-    </section>
+          <ShareModal share={share} href={href} hideShare={() => setShare(false)} />
+        </section>
+      </PullToRefreshContainer>
+    </>
   );
 }

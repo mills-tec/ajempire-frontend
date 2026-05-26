@@ -1,7 +1,13 @@
 "use client";
-export default function BannerPlaceholder({ className = "" }: { className?: string }) {
+
+import { useEffect, useState, useRef } from "react";
+import { getBanner, BannerImage } from "@/lib/api";
+
+function BannerSkeleton({ className = "" }: { className?: string }) {
   return (
-    <div className={`relative w-full overflow-hidden rounded-2xl border-2 border-dashed border-pink-200 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 h-[100px] md:h-[140px] animate-pulse ${className}`}>
+    <div
+      className={`relative w-full overflow-hidden rounded-2xl border-2 border-dashed border-pink-200 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 h-[200px] lg:h-[379px] animate-pulse ${className}`}
+    >
       {/* Shimmer sweep — a lighter stripe that rides across */}
       <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
@@ -35,4 +41,75 @@ export default function BannerPlaceholder({ className = "" }: { className?: stri
       </span>
     </div>
   );
+}
+
+export default function BannerPlaceholder({
+  className = "",
+}: {
+  className?: string;
+}) {
+  const [images, setImages] = useState<BannerImage[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    getBanner().then((data) => {
+      if (data?.message?.isActive && data.message.images.length > 0) {
+        setImages(data.message.images);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [images]);
+
+  if (loading) return <BannerSkeleton className={className} />;
+  if (images.length === 0) return <BannerSkeleton className={className} />;
+
+  const image = images[current];
+  const content = (
+    <div
+      className={`relative w-full overflow-hidden rounded-2xl h-[220px] lg:h-[379px]     ${className}`}
+    >
+      <img
+        src={image.url}
+        alt="Banner"
+        className="w-full h-full object-fill transition-opacity duration-500"
+      />
+
+      {images.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrent(i);
+              }}
+              className={`w-2 h-2  rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/50"}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  if (image.link) {
+    return (
+      <a href={image.link} target="_blank" rel="noopener noreferrer">
+        {content}
+      </a>
+    );
+  }
+
+  return content;
 }

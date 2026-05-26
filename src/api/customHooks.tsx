@@ -2,22 +2,23 @@
 import { useState } from "react";
 import { deleteData, getData, postData, updateData } from "./api";
 import { toast } from "sonner";
-import { AxiosError } from "axios";
-import { getBearerToken } from "@/lib/api";
+import axios, { AxiosError } from "axios";
+import { API_URL, getBearerToken } from "@/lib/api";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useSearchStore } from "@/lib/search-store";
 
-let config = {};
-const token = getBearerToken();
-if (token) {
-  config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-}
+
 
 export const useOrders = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
 
@@ -71,6 +72,15 @@ export const useOrders = () => {
 };
 
 export const useReviews = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const postReview = async ({
@@ -172,13 +182,25 @@ export const useReviews = () => {
 };
 
 export const useIssueReturn = () => {
+
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
+
+
   const [loading, setLoading] = useState<boolean>(false);
 
   const postIssueReturn = async (data: unknown) => {
     if (!loading) {
       setLoading(true);
       try {
-        // const req = await axios.post(`http://localhost:3001/api/return/`, data, config);
+        const req = await axios.post(`${API_URL}/return`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;
@@ -240,6 +262,15 @@ export const useIssueReturn = () => {
 };
 
 export const useUpdates = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const getFeeds = async (type: string, cursor?: string) => {
@@ -293,6 +324,7 @@ export const useUpdates = () => {
         } else {
           message = "Something went wrong.";
         }
+        console.log(message);
         toast.error(message);
       } finally {
         setLoading(false);
@@ -304,11 +336,12 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        // const req = await postData(
-        //   `/updates/like`,
-        //   { id: data.feedId, type: data.type },
-        //   config,
-        // );
+        console.log(data.feedId, data.type);
+        const req = await postData(
+          `/updates/like`,
+          { id: data.feedId, type: data.type },
+          config,
+        );
 
         return true;
       } catch (err: unknown) {
@@ -393,6 +426,15 @@ export const useUpdates = () => {
 };
 
 export const useNotification = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
   const getNotifications = async () => {
     try {
@@ -487,6 +529,15 @@ export const useNotification = () => {
 };
 
 export const useExploreInterest = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
 
   const getExploreInterest = async () => {
@@ -530,6 +581,15 @@ export const useExploreInterest = () => {
 };
 
 export const useBrowsingHistory = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const [loading, setLoading] = useState<boolean>(false);
   const [uiLoading, setUILoading] = useState<boolean>(true);
 
@@ -612,6 +672,15 @@ export const useBrowsingHistory = () => {
 };
 
 export const useProduct = () => {
+  let config = {};
+  const token = getBearerToken();
+  if (token) {
+    config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  }
   const { searchByImageLoading, setSearchByImageLoading } = useSearchStore();
 
   const searchByImage = async (image: File) => {

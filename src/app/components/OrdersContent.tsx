@@ -7,12 +7,12 @@ import { ImSpinner8 } from "react-icons/im";
 import { usePathname } from "next/navigation";
 import IssueReturn from "@/components/IssueReturn";
 import LeaveReview from "@/components/LeaveReview";
-import { IItem } from "@/lib/types";
+import { IItem, Product } from "@/lib/types";
 import { Dot, Ellipsis } from "lucide-react";
 import Modal from "@/components/Modal";
 import Image from "next/image";
 import { getUser } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { toast } from "sonner";
 
 export default function OrdersContent({
@@ -25,55 +25,27 @@ export default function OrdersContent({
   setUpdatedReviews,
 }: {
   title: string;
-  items: {
-    product: string;
-    name: string;
-    variant: { name: string; value: string; _id: string };
-    price: number;
-    qty: number;
-    image: string;
-    discountedPrice: number;
-  }[];
+  items: IItem[];
   dateCreated: string;
   order_id: string;
   id: string;
   setUpdatedReviews: (product: any) => void;
 }) {
+  console.log(items);
   const date = new Date(dateCreated);
-  const { postLoading, addOrderToCart } = useOrders();
+  const { postLoading } = useOrders();
 
-  // const handleBuyAgain = async () => {
-  //   if (!postLoading) {
-  //     try {
-  //       const data = items.map((item) => ({
-  //         productId: item.product,
-  //         qty: item.qty,
-  //         variant: item.variant?._id ?? undefined,
-  //       }));
-  //       await addOrderToCart(data);
-  //     } catch (err) {
-  //       console.log(err);
-  //     }
-  //   }
-  // };
-
-  const { addItem, getItem } = useCartStore(); // <-- grab cart functions
+  const { addItem } = useCartStore(); // <-- grab cart functions
 
   const handleBuyAgain = () => {
     items.forEach((item) => {
-      // addItem({
-      //   _id: item.product, // match CartItem _id
-      //   name: item.name,
-      //   price: item.price,
-      //   discountedPrice: item.discountedPrice,
-      //   stock: 9999, // or pull actual stock if available
-      //   images: [item.image],
-      //   quantity: item.qty, // keep same quantity
-      //   selectedVariants: [], // preserve selected variant
-      //   selected: true, // mark selected in cart
-      // });
+      addItem({
+        ...item.product,
+        quantity: item.qty,
+        selectedVariants: item.variants.options,
+        selected: true,
+      });
     });
-
     toast.success("Items added to cart!");
   };
 
@@ -82,9 +54,15 @@ export default function OrdersContent({
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
   const [chooseProductModal, setChooseProductModal] = useState<boolean>(false);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
-  const [selectedProduct, setSelectedProduct] = useState<IItem | null>(
-    items[0],
-  );
+  const [selectedProduct, setSelectedProduct] = useState<IItem | null>({
+    product: items[0].product,
+    name: items[0].name,
+    image: items[0].image,
+    price: items[0].price,
+    discountedPrice: items[0].discountedPrice,
+    qty: items[0].qty,
+    variants: items[0].variants,
+  });
 
   return (
     <div className="border-8  border-[#F9F9F9] md:border-none">
@@ -101,8 +79,10 @@ export default function OrdersContent({
               image={item.image}
               title={item.name}
               variant={
-                item?.variant
-                  ? `${item.variant.name}: ${item.variant.value}`
+                item?.variants?.options?.length
+                  ? `${item.variants.options
+                      .map((option) => `${option.name}: ${option.value}`)
+                      .join(", ")}`
                   : ""
               }
               price={item.price}
@@ -191,7 +171,10 @@ export default function OrdersContent({
             </div>
 
             <IssueReturn
-              data={{ _id: id, items }}
+              data={{
+                _id: id,
+                items,
+              }}
               returnModal={showIssueModal}
               setReturnModal={(modal: boolean) => setShowIssueModal(modal)}
             />
@@ -243,7 +226,15 @@ export default function OrdersContent({
                       className="rounded-full text-xs text-white  py-3 px-6  border bg-brand_pink flex items-center justify-center disabled:opacity-40"
                       onClick={() => {
                         setChooseProductModal(false);
-                        setSelectedProduct(item);
+                        setSelectedProduct({
+                          discountedPrice: item.discountedPrice,
+                          price: item.price,
+                          image: item.image,
+                          name: item.name,
+                          product: item.product,
+                          qty: item.qty,
+                          variants: item.variants,
+                        });
                         setShowReviewModal(true);
                       }}
                     >

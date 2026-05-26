@@ -48,7 +48,8 @@ const matchesSelections = (product: Product, selections: SelectedOptions) => {
   return combinations.some((combo) =>
     entries.every(([name, value]) =>
       combo.options.some(
-        (option) => optionNameMatches(option.name, name) && option.value === value,
+        (option) =>
+          optionNameMatches(option.name, name) && option.value === value,
       ),
     ),
   );
@@ -63,7 +64,9 @@ const normalizeSelections = (
   const variants = getAvailableVariants(product);
 
   if (lockedVariantName) {
-    const lockedVariant = variants.find((variant) => variant.name === lockedVariantName);
+    const lockedVariant = variants.find(
+      (variant) => variant.name === lockedVariantName,
+    );
     const lockedValue = rawSelections[lockedVariantName];
 
     if (
@@ -142,13 +145,15 @@ export function useProductVariants(product?: Product | null) {
   };
 
   const selectedVariantsArray =
-    product && hasVariants ? buildSelectedVariants(product, selectedOptions) : [];
+    product && hasVariants
+      ? buildSelectedVariants(product, selectedOptions)
+      : [];
 
   const selectedCombination =
     product &&
     hasVariants &&
     selectedVariantsArray.length === availableVariants.length
-      ? (product.variantCombinations ?? []).find((combo) =>
+      ? ((product.variantCombinations ?? []).find((combo) =>
           availableVariants.every((variant) =>
             combo.options.some(
               (option) =>
@@ -156,12 +161,13 @@ export function useProductVariants(product?: Product | null) {
                 option.value === selectedOptions[variant.name],
             ),
           ),
-        ) ?? null
+        ) ?? null)
       : null;
 
   const missingVariantName =
     product && hasVariants
-      ? availableVariants.find((variant) => !selectedOptions[variant.name])?.name ?? null
+      ? (availableVariants.find((variant) => !selectedOptions[variant.name])
+          ?.name ?? null)
       : null;
 
   const currentStock = selectedCombination?.stock ?? product?.stock ?? 0;

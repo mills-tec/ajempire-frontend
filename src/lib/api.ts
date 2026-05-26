@@ -22,8 +22,10 @@ export type Coupon = {
 };
 
 // lib/api.ts
-export const API_URL = "https://ajempire-backend-production.up.railway.app/api";
-export const BASE_URL = "https://ajempire-backend-production.up.railway.app";
+export const API_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app/api";
+export const BASE_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app";
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
@@ -46,7 +48,7 @@ export async function emailVerification(email: string, token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token }),
   });
-  console.log("verification res: ", res)
+  console.log("verification res: ", res);
   if (!res.ok) throw new Error("Email verification failed");
   return res.json();
 }
@@ -72,14 +74,12 @@ export async function phoneNumberBackend(phone: string) {
 }
 
 export async function phoneNumberVerification(phone: string, token: string) {
-  console.log(phone, token);
-  return;
   const res = await fetch(API_URL + "/auth/verify-otp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, token }),
   });
-  console.log("verification res: ", res)
+  console.log("verification res: ", res);
   if (!res.ok) throw new Error("Phone verification failed");
   return res.json();
 }
@@ -95,7 +95,7 @@ export async function googleVerification(token: string) {
 }
 
 export async function resendVerificationCode(email: string) {
-  const res = await fetch(API_URL + "/auth/resend-verification", {
+  const res = await fetch(API_URL + "/auth/resend-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -134,7 +134,11 @@ export async function fogortPassword(email: string) {
   return res.json();
 }
 
-export async function signupBackend(email: string, password: string, fullname: string) {
+export async function signupBackend(
+  email: string,
+  password: string,
+  fullname: string,
+) {
   console.log("📡 Making signup request:", { email, password: "***" });
 
   const res = await fetch(API_URL + "/auth/register", {
@@ -210,7 +214,11 @@ export async function getUpdates(
   if (!res.ok) return null;
 
   const response = await res.json();
-  return response.message as { data: Feed[]; nextCursor: string; hasMore: boolean };
+  return response.message as {
+    data: Feed[];
+    nextCursor: string;
+    hasMore: boolean;
+  };
 }
 
 export async function getRelatedProducts(
@@ -336,18 +344,26 @@ export async function addToCart(products: CartItem[]) {
     }
   }
 
+  console.log("🛒 RAW products going into addToCart:", JSON.stringify(products.map(p => ({
+    id: p._id,
+    name: p.name,
+    variants: p.variants,
+    variantCombinations: p.variantCombinations,
+    selectedVariants: p.selectedVariants,
+  })), null, 2));
+
   const items = products.map((product) => ({
     productId: product._id,
     qty: product.quantity,
     variants: product.selectedVariants?.length
       ? product.selectedVariants.map((variant) => ({
-        name: variant.name,
-        value: variant.value,
-      }))
+          name: variant.name,
+          value: variant.value,
+        }))
       : [],
   }));
 
-  console.log(items);
+  console.log("📦 Transformed items being sent to backend:", JSON.stringify(items, null, 2));
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);
@@ -379,6 +395,22 @@ export async function removeCartItem(id: string) {
       Authorization: `Bearer ${token}`,
     },
   });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchFromCart() {
+  const token = getBearerToken();
+  if (!token) return false;
+
+  const res = await fetch(API_URL + "/cart", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   if (!res.ok) return null;
   return res.json();
 }
@@ -599,19 +631,41 @@ export async function applyCouponCode(code: string): Promise<{
   }
 }
 
+// BANNER API
+export interface BannerImage {
+  url: string;
+  link: string;
+}
+
+export interface Banner {
+  _id: string;
+  images: BannerImage[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getBanner(): Promise<{ message: Banner } | null> {
+  const res = await fetch(`${API_URL}/banner/`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    console.error("Banner API error:", res.status);
+    return null;
+  }
+
+  return res.json();
+}
+
 // SHIPPING API
-export async function getShippingRates(packageItems: Array<{
-  name?: string;
-  description?: string;
-  amount?: number;
-  quantity?: number;
-  weight?: number;
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-}>): Promise<{
+export async function getShippingRates(
+  packageItems: Array<{
+    weight: number;
+    dimensions: { length: number; width: number; height: number };
+  }>,
+): Promise<{
   message: {
     couriers: Array<{
       courier_id: string;
