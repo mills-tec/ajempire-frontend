@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
-import {Upload, X, Plus, Trash2,  UploadCloud, PlusIcon,  CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { createCategory, createProduct, getAllCategories } from '@/lib/adminapi';
+import { AlertCircle, CheckCircle, Info, Plus, PlusIcon, Trash2, Upload, UploadCloud, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { createProduct, getAllCategories, createCategory } from '@/lib/adminapi';
+import React, { useState } from 'react';
 
 // Toast component
 const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
@@ -55,7 +55,7 @@ const AddProductPage = () => {
         
         // Fetch categories from database
         fetchCategories();
-    }, [router]);
+    }, []);
 
     // Fetch categories from database
     const fetchCategories = async () => {

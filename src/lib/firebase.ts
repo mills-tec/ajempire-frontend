@@ -6,7 +6,6 @@ import {
   getMessaging,
   getToken,
   isSupported,
-  onMessage,
   Messaging,
 } from "firebase/messaging";
 // TODO: Add SDKs for Firebase products that you want to use

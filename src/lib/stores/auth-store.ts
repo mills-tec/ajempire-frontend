@@ -18,7 +18,7 @@ interface User {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isLoggedIn: false,
       user: null,
       setIsLoggedIn: (logged_in: boolean) => set({ isLoggedIn: logged_in }),

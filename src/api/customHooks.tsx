@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
-import { deleteData, getData, postData, updateData } from "./api";
-import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
 import { API_URL, getBearerToken } from "@/lib/api";
-import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useSearchStore } from "@/lib/search-store";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
+import axios, { AxiosError } from "axios";
+import { useState } from "react";
+import { toast } from "sonner";
+import { deleteData, getData, postData, updateData } from "./api";
 
 
 
@@ -200,7 +200,7 @@ export const useIssueReturn = () => {
     if (!loading) {
       setLoading(true);
       try {
-        const req = await axios.post(`${API_URL}/return`, data, config);
+         await axios.post(`${API_URL}/return`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;

@@ -1,9 +1,9 @@
+import { toast } from "sonner";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { addToCart, getBearerToken, removeCartItem } from "../api";
 import { Product } from "../types";
 import { calcDiscount } from "../utils";
-import { addToCart, getBearerToken, removeCartItem } from "../api";
-import { toast } from "sonner";
 
 export const areVariantsEqual = (
   v1?: SelectedVariant[] | null,
@@ -242,7 +242,6 @@ export const useCartStore = create<CartStore>()(
 
         // Update local state first
         set({ items: updatedItems });
-        const token = getBearerToken();
         set({ items: updatedItems });
 
         if (!getBearerToken() || !updatedItem) return;
