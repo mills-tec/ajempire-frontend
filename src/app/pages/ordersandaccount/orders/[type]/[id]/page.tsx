@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ImSpinner8 } from "react-icons/im";
 
 import { useIssueReturn, useOrders } from "@/api/customHooks";
@@ -9,11 +9,11 @@ import OrderCard from "@/app/components/OrderCard";
 import OrderStatus from "@/app/components/OrderStatus";
 import OrderSummaryCard from "@/app/components/OrderSummaryCard";
 import ShippingAddressCard from "@/app/components/ShippingAddressCard";
-import OrderTabs from "../../../components/OrderTabs";
 import IssueReturn from "@/components/IssueReturn";
-import { IItem } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { IItem } from "@/lib/types";
 import { toast } from "sonner";
+import OrderTabs from "../../../components/OrderTabs";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,8 @@ interface Order {
   processedAt: string;
   shippedAt: string | null;
   deliveredAt: string | null;
+  logistics?: { trackingUrl: string }
+
 }
 
 interface ReturnInputs {
@@ -106,8 +108,8 @@ export default function Status() {
       setError(null);
 
       try {
-        const { message } = await getOrder(orderId);
-        if (!cancelled) setOrder(message);
+        const data = await getOrder(orderId);
+        if (data.status) setOrder(data.message);
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load order");
@@ -241,6 +243,7 @@ export default function Status() {
               createdAt={order.createdAt}
               processedAt={order.processedAt}
               shippedAt={order.shippedAt}
+              trackingUrl={order.logistics?.trackingUrl}
             />
           </div>
 

@@ -6,10 +6,10 @@ import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { IReturnRequest } from "@/lib/types";
 import Image from "next/image";
 
-import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import OrderTabs from "../../components/OrderTabs";
 import Skeleton from "@/components/ui/Skeleton";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import OrderTabs from "../../components/OrderTabs";
 
 const ClockIcon = ({ active }: { active: boolean }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`size-5 ${active ? "fill-[#0085FF]" : "fill-black/45"}`}>

@@ -36,14 +36,21 @@ export const useOrders = () => {
     }
   };
 
-  const getOrder = async (id: string) => {
+  const getOrder = async (id: string): Promise<{status: boolean, message: any}> => {
     setIsLoading(true);
     try {
       const req = await getData(`/orders/${id}`, config);
       const resp = req.data;
-      return resp;
+      return {
+        status: true,
+        message: resp.message
+      };
     } catch (err) {
-      console.error(err);
+
+      return {
+        status: false,
+        message: err
+      };
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +207,7 @@ export const useIssueReturn = () => {
     if (!loading) {
       setLoading(true);
       try {
-         await axios.post(`${API_URL}/return`, data, config);
+        await axios.post(`${API_URL}/return`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;

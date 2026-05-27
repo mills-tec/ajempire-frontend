@@ -1,14 +1,14 @@
 "use client";
 
 import { useOrders } from "@/api/customHooks";
-import OrderTabs from "../../components/OrderTabs";
 import OrdersContent from "@/app/components/OrdersContent";
-import { useEffect, useMemo, useState } from "react";
 import OrdersContentSkeleton from "@/app/components/OrdersContentSkeleton";
-import Reviews from "../Reviews";
-import { IOrder } from "@/lib/types";
 import EmptyList from "@/components/EmptyList";
 import { getUser } from "@/lib/api";
+import { IOrder } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import OrderTabs from "../../components/OrderTabs";
+import Reviews from "../Reviews";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -170,9 +170,8 @@ export default function Orders({ params }: OrdersProps) {
     if (statusMatched.length > 0) return renderOrders(statusMatched);
 
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <h1>You do not have any {orderStatus} order yet.</h1>
-      </div>
+      <EmptyList message={`You do not have any ${orderStatus} order yet.`} writeup="Purchase an item to place order" btnText="" href="" />
+    
     );
   };
 
@@ -196,7 +195,9 @@ export default function Orders({ params }: OrdersProps) {
           text="Your Orders"
         />
         <EmptyList
-          writeup=""
+          writeup="Please Purchase an Item to place order"
+          href="/"
+          btnText="Purchase Item"
           message={
             isSearching
               ? "Couldn't find any order with that Id"
