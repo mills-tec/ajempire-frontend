@@ -1,6 +1,6 @@
+import { toast } from "sonner";
 import { create } from "zustand";
 import { likeFeedCommentPost, likeFeedPost } from "../api";
-import { toast } from "sonner";
 import { IFeed } from "../types";
 
 interface FeedStore {
@@ -72,7 +72,7 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
         await likeFeedPost(postId); // your API toggles it
         success = true;
         toast.success("Post liked successfully");
-      } catch (err) {
+      } catch (err: any) {
         toast.error("Couldn't like post. Retrying...");
         await new Promise((res) => setTimeout(res, 500));
       }

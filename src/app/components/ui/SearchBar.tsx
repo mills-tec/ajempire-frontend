@@ -51,12 +51,17 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   }, []);
 
   useEffect(() => {
-    setPlaceholderClass("");
-    const timeout = setTimeout(
-      () => setPlaceholderClass("placeholder:animate-placeholderFromBottom"),
-      10,
-    );
-    return () => clearTimeout(timeout);
+    let t2: ReturnType<typeof setTimeout>;
+    const t1 = setTimeout(() => {
+      setPlaceholderClass("");
+      t2 = setTimeout(() => {
+        setPlaceholderClass("placeholder:animate-placeholderFromBottom");
+      }, 10);
+    }, 0);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [placeholderIndex]);
 
   // Update dropdown position

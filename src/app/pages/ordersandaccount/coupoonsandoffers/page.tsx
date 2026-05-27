@@ -8,19 +8,29 @@ import FlashDealSkeleton from "@/components/FlashDealSkeleton";
 import EmptyList from "@/components/EmptyList";
 import { Store } from "lucide-react";
 export interface ICoupon {
-    id: string | number;
-    title: string;
-    description?: string;
-    validUntil?: string;
-    code: string;
-    ctaText?: string;
-    status: "unused" | "used" | "expired";
-    discountType: "fixed" | "percentage";
-    discountValue: number;
-    expiry: string; // ISO date string
-    isExpired: boolean;
-    __v: number;
-};
+  _id: string;
+  title: string;
+  description: string;
+  couponCode: string;
+  promotionType: "coupon" | string;
+  discountType: "fixed" | "percentage" | string;
+  discountValue: number;
+  isExpired: boolean;
+  usedBy: string[];
+
+  status: "active" | "inactive" | string;
+
+  applyTo: "product" | "category" | "order" | string;
+  applyToId: string[];
+
+  banner: string;
+
+  startDate: string;
+  endDate: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
 
 
 
@@ -68,7 +78,7 @@ export default function CouponsAndOffers() {
                             <p className="font-semibold text-[17px]">Special offers for you</p>
 
                             <FlashDealCard deals={deals} />
-                        </> : <EmptyList message="No expired coupons" writeup="There are currently no coupons that have passed their expiration date." Icon={<Store size={40} className="text-brand_solid_gradient" />} />}
+                        </> : <EmptyList message="No coupons available" writeup="There are currently no available coupons at the moment." Icon={<Store size={40} className="text-brand_solid_gradient" />} />}
                     </>
                 }
             </div>

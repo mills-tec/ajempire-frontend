@@ -118,7 +118,7 @@ export default function Deals() {
                 x2="0.499999"
                 y2="27.1915"
                 stroke="#24B147"
-                stroke-dasharray="2 2"
+                strokeDasharray="2 2"
               />
             </svg>
 

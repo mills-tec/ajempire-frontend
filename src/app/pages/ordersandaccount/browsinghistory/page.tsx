@@ -103,7 +103,7 @@ export default function BrowsingHistoryPage() {
       const res = await getBrowsingHistory("", 10);
 
       if (!res) return; // 🚨 prevents crash on 401
-
+      console.log(res);
       setData({
         hasPage: res.hasPage ?? false,
         items: res.browsingHistory ?? [],

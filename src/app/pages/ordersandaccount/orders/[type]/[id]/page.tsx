@@ -12,6 +12,8 @@ import ShippingAddressCard from "@/app/components/ShippingAddressCard";
 import OrderTabs from "../../../components/OrderTabs";
 import IssueReturn from "@/components/IssueReturn";
 import { IItem } from "@/lib/types";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,6 +85,11 @@ export default function Status() {
 
   const [returnModal, setReturnModal] = useState(false);
   const [inputs, setInputs] = useState<ReturnInputs>(INITIAL_RETURN_INPUTS);
+
+  const {
+    addItem,
+
+  } = useCartStore();
 
   // Fetch order data
   useEffect(() => {
@@ -179,7 +186,7 @@ export default function Status() {
   return (
     <div>
       <OrderTabs
-        handleSearchInputChange={() => {}}
+        handleSearchInputChange={() => { }}
         text="Order Tracking"
         showFilterTabs={false}
       />
@@ -219,7 +226,7 @@ export default function Status() {
               title={item.name}
               variant={
                 item.variants.options.length > 0
-                  ? item.variants.options.map(item=> `${item.name}: ${item.value}`).join("")
+                  ? item.variants.options.map(item => `${item.name}: ${item.value}`).join("")
                   : undefined
               }
               price={item.price}
@@ -241,6 +248,21 @@ export default function Status() {
             <button
               type="button"
               className="flex h-10 items-center justify-center rounded-full border bg-brand_pink px-3 py-1 text-xs text-white md:px-6"
+              onClick={() => {
+                addItem(
+                  order.items.map((item) => ({
+                    ...item.product,
+                    quantity: item.qty,
+                    selectedVariants: item.variants.options,
+                    selected: true,
+                    basePrice: item.price,
+                    discount: item.discountedPrice,
+                    finalPrice: item.price - item.discountedPrice,
+                  })),
+                );
+
+                toast.success("Items added to cart!");
+              }}
             >
               Buy Again
             </button>

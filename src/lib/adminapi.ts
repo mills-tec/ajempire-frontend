@@ -49,13 +49,13 @@ const apiCall = async <T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
-  
+
   // Don't set Content-Type for FormData - let browser set it with boundary
   const headers: HeadersInit = {};
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -330,6 +330,16 @@ export const fetchAdminProfile = (): Promise<ApiResponse<AdminProfile>> =>
 
 export const getReturns = (): Promise<ApiResponse<ReturnRequest[]>> =>
   apiCall('/admin/return');
+
+// PUSH NOTIFICATION
+
+export const updateAdminPushNotification = (token: string): Promise<ApiResponse<{
+  message: string;
+  admin: any;
+}>> => apiCall('/admin/notification/savePushToken', {
+  method: 'POST',
+  body: JSON.stringify({ token }),
+});
 
 export const updateAdminProfile = (data: AdminProfile): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile', {

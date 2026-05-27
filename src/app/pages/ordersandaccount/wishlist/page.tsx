@@ -11,6 +11,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import CountdownTimer from "@/components/CountDownTimer";
 import WishlistSkeleton from "../components/WishlistSkeleton";
 import { calcDiscountPrice } from "@/lib/utils";
+import EmptyList from "@/components/EmptyList";
+import { Store } from "lucide-react";
 
 function formatPrice(value: number) {
   return Number(value).toLocaleString("en-NG", {
@@ -77,7 +79,7 @@ export default function WishlistProductsPage() {
   return (
     <div className="flex flex-col gap-4">
       {items.length === 0 ? (
-        <p className="text-center text-gray-500">Your wishlist is empty.</p>
+      <EmptyList message="Empty Wishlist" writeup="Your wishlist is empty. Save items you love so you can find them quickly and shop them later." Icon={<Store size={40} className="text-brand_solid_gradient" />} />
       ) : (
         <AnimatePresence>
           {items.map((product) => {

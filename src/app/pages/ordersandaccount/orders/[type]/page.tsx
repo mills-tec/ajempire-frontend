@@ -4,7 +4,7 @@ import { useOrders } from "@/api/customHooks";
 import OrderTabs from "../../components/OrderTabs";
 import OrdersContent from "@/app/components/OrdersContent";
 import { useEffect, useMemo, useState } from "react";
-import Spinner from "@/app/components/Spinner";
+import OrdersContentSkeleton from "@/app/components/OrdersContentSkeleton";
 import Reviews from "../Reviews";
 import { IOrder } from "@/lib/types";
 import EmptyList from "@/components/EmptyList";
@@ -24,7 +24,8 @@ interface OrdersProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Orders({ params }: OrdersProps) {
-  const { getAllOrders, isLoading } = useOrders();
+  const { getAllOrders } = useOrders();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [orderStatus, setOrderStatus] = useState<string>("");
@@ -42,6 +43,8 @@ export default function Orders({ params }: OrdersProps) {
       if (!cancelled) {
         setOrders(fetchedOrders ?? []);
         setOrderStatus(resolvedParams.type);
+        setIsLoading(false);
+
       }
     })();
 
@@ -84,14 +87,14 @@ export default function Orders({ params }: OrdersProps) {
         items: order.items.map((item) =>
           (item.product as any)._id === product
             ? {
-                ...item,
-                product: {
-                  ...(item.product as any),
-                  reviews: (item.product as any).reviews.map((rev: any) =>
-                    rev._id === review._id ? { product, ...rest } : rev,
-                  ),
-                },
-              }
+              ...item,
+              product: {
+                ...(item.product as any),
+                reviews: (item.product as any).reviews.map((rev: any) =>
+                  rev._id === review._id ? { product, ...rest } : rev,
+                ),
+              },
+            }
             : item,
         ),
       })),
@@ -177,8 +180,10 @@ export default function Orders({ params }: OrdersProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Spinner />
+      <div className="mt-3 w-full overflow-hidden font-poppins lg:mt-0 lg:block lg:px-5">
+        {[1, 2, 3].map((i) => (
+          <OrdersContentSkeleton key={i} itemCount={2} />
+        ))}
       </div>
     );
   }
