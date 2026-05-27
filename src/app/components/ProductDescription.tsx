@@ -69,14 +69,14 @@ export default function ProductDescription({
       );
 
     if (!existingItem) {
-      addItem({
+      addItem([{
         ...product,
         price: basePrice,
         stock: currentStock,
         quantity,
-        selectedVariants: selectedVariantsArray ?? null, // ✅ FIXED
+        selectedVariants: selectedVariantsArray ?? [],
         selected: true,
-      });
+      } as any]);
     }
 
     selectAllCartItems();
@@ -143,10 +143,10 @@ export default function ProductDescription({
 
   const finalPrice = product.flashSales
     ? calcDiscountPrice(
-        basePrice,
-        product.flashSales.discountValue,
-        product.flashSales.discountType,
-      )
+      basePrice,
+      product.flashSales.discountValue,
+      product.flashSales.discountType,
+    )
     : basePrice;
 
   const filledStar = (
@@ -250,7 +250,7 @@ export default function ProductDescription({
                   {Number(
                     calcDiscountPrice(
                       product.price +
-                        (selectedCombination?.additionalPrice ?? 0),
+                      (selectedCombination?.additionalPrice ?? 0),
                       product.flashSales.discountValue,
                       product.flashSales.discountType,
                     ),
@@ -379,18 +379,16 @@ export default function ProductDescription({
                             if (!isValid) return;
                             selectOption(variant.name, value);
                           }}
-                          className={`relative ${
-                            isColorVariant
-                              ? "rounded-full size-[2rem]"
-                              : "min-h-[2rem] min-w-[3rem] max-w-[9rem] rounded-sm px-2"
-                          } flex items-center justify-center overflow-hidden whitespace-nowrap text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
-                                  ${
-                                    isSelected
-                                      ? isColorVariant
-                                        ? "outline outline-1 outline-offset-2  outline-purple-600 "
-                                        : "outline outline-1 outline-offset-2 outline-purple-600"
-                                      : ""
-                                  } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
+                          className={`relative ${isColorVariant
+                            ? "rounded-full size-[2rem]"
+                            : "min-h-[2rem] min-w-[3rem] max-w-[9rem] rounded-sm px-2"
+                            } flex items-center justify-center overflow-hidden whitespace-nowrap text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                                  ${isSelected
+                              ? isColorVariant
+                                ? "outline outline-1 outline-offset-2  outline-purple-600 "
+                                : "outline outline-1 outline-offset-2 outline-purple-600"
+                              : ""
+                            } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                           style={{
                             backgroundColor: isColorVariant ? value : undefined,
                           }}
@@ -487,14 +485,23 @@ export default function ProductDescription({
                     return;
                   }
 
-                  addItem({
+               
+                  addItem([{
                     ...product,
-                    price: basePrice,
+                    basePrice,
+                    discount: product.flashSales ? calcDiscountPrice(
+                      basePrice,
+                      product.flashSales.discountValue,
+                      product.flashSales.discountType,
+                    ) : 0,
                     stock: currentStock,
                     quantity,
                     selected: true,
                     selectedVariants: selectedVariantsArray,
-                  });
+                    finalPrice
+
+
+                  }]);
                 }}
                 className="h-[2.5rem] bg-brand_pink text-white rounded-full w-[calc(100%-2.5rem)]"
               >

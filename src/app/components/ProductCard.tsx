@@ -24,17 +24,16 @@ export default function ProductCard({
   const setSelectedItem = useCartStore((state) => state.setSelectedItem);
   const { getItem } = useCartStore();
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
-  const showSellerTag = Math.random() > 0.4;
   const openModal = useModalStore((s) => s.openModal);
 
   const [imgLoading, setLoading] = useState(true);
-  const [userToken, setUserToken] = useState(null);
+  const [userToken] = useState(null);
 
   useEffect(() => {
     const token = getBearerToken();
     if (!token) return;
     const fetchWishlist = async () => {
-      const wishlist = await getUsersWishlist();
+      await getUsersWishlist();
     };
     fetchWishlist();
   }, []);

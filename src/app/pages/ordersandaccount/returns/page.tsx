@@ -7,29 +7,65 @@ import { useParams, usePathname } from "next/navigation";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import OrderTabs from "../components/OrderTabs";
-import Loading from "../loading";
 import { IReturnRequest } from "@/lib/types";
 import EmptyList from "@/components/EmptyList";
-
+import Skeleton from "@/components/ui/Skeleton";
 
 export default function Returns() {
   const pathname = usePathname();
 
-  const { getReturnRequests, loading } = useIssueReturn();
+  const { getReturnRequests } = useIssueReturn();
+  const [loading, setLoading] = useState(true);
   const [returns, setReturns] = useState<IReturnRequest[]>([]);
 
   useEffect(() => {
     const fetchReturns = async () => {
-      const data = await getReturnRequests();
-      setReturns(data);
+      const data = await getReturnRequests().finally(() => {
+        setLoading(false);
+      });
+      if (data.status) {
+        setReturns(data.message);
+
+      }
 
     };
     fetchReturns();
   }, []);
 
+  // return;
+
   return (
     <div className="font-poppins">
-      {loading ? <Loading /> : (returns.length > 0 ? <ul className="space-y-4 overflow-auto h-screen">
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton height={44} borderRadius={8} className="w-full" />
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-4 md:p-6">
+              {/* Card header */}
+              <div className="flex items-center justify-between mb-6">
+                <Skeleton height={16} borderRadius={4} className="w-32" />
+                <Skeleton height={14} borderRadius={4} className="w-28" />
+              </div>
+              {/* Card body */}
+              <div className="flex gap-5 border-b pb-3 md:border-b-0">
+                <Skeleton width={136} height={96} borderRadius={8} className="shrink-0" />
+                <div className="flex flex-col gap-2 mt-2 flex-1">
+                  <Skeleton height={14} borderRadius={4} className="w-2/5" />
+                  <Skeleton height={12} borderRadius={4} className="w-1/4" />
+                </div>
+              </div>
+              {/* Card footer */}
+              <div className="flex justify-between items-end mt-5">
+                <div />
+                <div className="flex flex-col gap-3 w-full md:w-auto items-start md:items-end">
+                  <Skeleton height={14} borderRadius={4} className="w-48" />
+                  <Skeleton height={40} borderRadius={24} className="w-36" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (returns.length > 0 ? <ul className="space-y-4 overflow-auto h-screen">
         <OrderTabs showFilterTabs={false} text="Returns" handleSearchInputChange={() => { }} />
         {returns.map((ret, key) => (
           <div key={key}>
@@ -108,7 +144,7 @@ export default function Returns() {
           </div>
         ))}
 
-      </ul> : <EmptyList message="Nothing to return" writeup="You haven't started any returns yet. Browse your recent orders to return or exchange an item."  btnText="Browse Orders" href="/pages/ordersandaccount/orders/all"/>)}
+      </ul> : <EmptyList message="Nothing to return" writeup="You haven't started any returns yet. Browse your recent orders to return or exchange an item." btnText="Browse Orders" href="/pages/ordersandaccount/orders/all" />)}
 
 
     </div>

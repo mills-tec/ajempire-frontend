@@ -1,4 +1,5 @@
 import { postData } from "@/api/api";
+import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 import { CartItem } from "./stores/cart-store";
 import {
   Category,
@@ -8,7 +9,6 @@ import {
   ProductResponse,
   ProductsResponse,
 } from "./types";
-import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 
 export type Coupon = {
   _id: string;
@@ -661,10 +661,7 @@ export async function getBanner(): Promise<{ message: Banner } | null> {
 
 // SHIPPING API
 export async function getShippingRates(
-  packageItems: Array<{
-    weight: number;
-    dimensions: { length: number; width: number; height: number };
-  }>,
+  
 ): Promise<{
   message: {
     couriers: Array<{

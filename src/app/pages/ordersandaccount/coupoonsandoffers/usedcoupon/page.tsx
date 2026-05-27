@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { getCoupons } from "@/lib/api";
 import { ICoupon } from "../page";
 import FlashDealSkeleton from "@/components/FlashDealSkeleton";
+import EmptyList from "@/components/EmptyList";
+import { Store } from "lucide-react";
 
 
 export default function UsedCouPon() {
@@ -15,7 +17,6 @@ export default function UsedCouPon() {
         const fetchCoupons = async () => {
             try {
                 const res = await getCoupons("used");
-                console.log(res);
                 if (!res) return;
 
                 setDeals(res.message.map(item => ({ ...item, status: "used" })));
@@ -34,12 +35,15 @@ export default function UsedCouPon() {
             <CouponsTab />
 
             <div className="mt-11 text-[15px] flex flex-col gap-4">
-                {loading ? <>
+                {
+                    loading ? <FlashDealSkeleton /> : <>
+                        {deals.length > 0 ? <>
+                            <p className="font-semibold text-[17px]">Special offers for you</p>
 
-
-                    <FlashDealSkeleton />
-                </> : <> <p>Your Used Coupons will appear here</p> <FlashDealCard deals={deals} /></>}
-
+                            <FlashDealCard deals={deals} />
+                        </> : <EmptyList message="No used coupons" writeup="There are currently no coupons that have been used by you." Icon={<Store size={40} className="text-brand_solid_gradient" />} />}
+                    </>
+                }
             </div>
         </div>
     )
