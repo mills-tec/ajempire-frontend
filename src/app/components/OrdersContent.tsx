@@ -7,8 +7,8 @@ import { ImSpinner8 } from "react-icons/im";
 import { usePathname } from "next/navigation";
 import IssueReturn from "@/components/IssueReturn";
 import LeaveReview from "@/components/LeaveReview";
-import { IItem, Product } from "@/lib/types";
-import { Dot, Ellipsis } from "lucide-react";
+import { IItem } from "@/lib/types";
+import {  Ellipsis } from "lucide-react";
 import Modal from "@/components/Modal";
 import Image from "next/image";
 import { getUser } from "@/lib/api";
@@ -22,7 +22,6 @@ export default function OrdersContent({
   order_id,
   id,
 
-  setUpdatedReviews,
 }: {
   title: string;
   items: IItem[];
@@ -31,24 +30,27 @@ export default function OrdersContent({
   id: string;
   setUpdatedReviews: (product: any) => void;
 }) {
-  console.log(items);
   const date = new Date(dateCreated);
   const { postLoading } = useOrders();
 
   const { addItem } = useCartStore(); // <-- grab cart functions
 
   const handleBuyAgain = () => {
-    items.forEach((item) => {
-      addItem({
+    addItem(
+      items.map((item) => ({
         ...item.product,
         quantity: item.qty,
         selectedVariants: item.variants.options,
         selected: true,
-      });
-    });
+        basePrice: item.price,
+        discount:  item.discountedPrice,
+        finalPrice: item.price -  item.discountedPrice,
+      })),
+    );
     toast.success("Items added to cart!");
   };
 
+  
   const pathname = usePathname();
   const [showIssueModal, setShowIssueModal] = useState<boolean>(false);
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
@@ -81,8 +83,8 @@ export default function OrdersContent({
               variant={
                 item?.variants?.options?.length
                   ? `${item.variants.options
-                      .map((option) => `${option.name}: ${option.value}`)
-                      .join(", ")}`
+                    .map((option) => `${option.name}: ${option.value}`)
+                    .join(", ")}`
                   : ""
               }
               price={item.price}
@@ -183,7 +185,7 @@ export default function OrdersContent({
               showOverlay={showReviewModal}
               handleHideOverlay={() => setShowReviewModal(!showReviewModal)}
               selectedProduct={selectedProduct!}
-              setUpdatedReviews={(review: any) => {}}
+              setUpdatedReviews={(review: any) => { }}
             />
 
             <Modal

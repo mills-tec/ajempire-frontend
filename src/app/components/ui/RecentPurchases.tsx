@@ -34,7 +34,7 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
       console.log(product);
       // Item not in cart → add fresh
       // addItem({ quantity: purchase.qty, ...product! });
-      addItem({
+      addItem([{
         _id: product._id,
         name: product.name,
         price: product.price,
@@ -43,8 +43,8 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
         description: product.description,
         quantity: purchase.qty,
         selectedVariants: [],
-        selected: true, // IMPORTANT
-      });
+        selected: true,
+      } as any]);
       toast.success("Item added to cart successfully");
     }
   };

@@ -5,10 +5,9 @@ import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { fetchFromCart, getBearerToken } from "@/lib/api";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
-import { Product } from "@/lib/types";
 import clsx from "clsx";
 
 import Image from "next/image";
@@ -27,13 +26,13 @@ export default function CartPage() {
     deselectAllCartItems,
     selectAllCartItems,
     selectedItem,
-    setCartItems,
+    cartLoaded,
   } = useCartStore();
   const selectedCartItems = items.filter((item) => item.selected);
 
   const [expand, setExpand] = useState(false);
   const [signIn, setSingin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!cartLoaded);
   const selectedItems = items.filter((item) => item.selected);
   const selectedCount = selectedItems.length;
   const openModal = useModalStore((s) => s.openModal);
@@ -79,56 +78,9 @@ export default function CartPage() {
 
   // Show skeleton while loading
 
- useEffect(() => {
-  let timer: ReturnType<typeof setTimeout>;
-
-  (async () => {
-    try {
-      const res = await fetchFromCart();
-      if (res) {
-        const rawItems = res.message.items;
-        if (rawItems !== undefined) {
-          const items: CartItem[] = rawItems.map(
-            (item: {
-              product: Product;
-              price: number;
-              discount: number;
-              finalPrice: number;
-              qty: number;
-              variants?: {
-                options: {
-                  name: string;
-                  value: string;
-                }[];
-              };
-            }) => ({
-              ...item.product,
-              quantity: item.qty,
-              selected: true,
-              name: item.product.name,
-              basePrice: item.price,
-              discount: item.discount,
-              finalPrice: item.finalPrice,
-              selectedVariants: item.variants?.options ?? [],
-            }),
-          );
-          setCartItems(items);
-        } else {
-          setCartItems([]);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch cart:", err);
-      setCartItems([]);
-    } finally {
-      timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
-    }
-  })();
-
-  return () => clearTimeout(timer);
-}, []);
+  useEffect(() => {
+    if (cartLoaded) setIsLoading(false);
+  }, [cartLoaded]);
 
   useEffect(() => {
     if (cartAmount.length > 0) {

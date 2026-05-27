@@ -30,8 +30,8 @@ export default function OrderCard({
           />
         </div>
       </div>
-      <div className="space-y-1 mt-2 col-span-2 ">
-        <h2 className="text-sm">{title}</h2>
+      <div className="space-y-1 mt-2 col-span-2 min-w-0">
+        <h2 className="text-sm truncate">{title}</h2>
         <h4 className="text-xs font-light">{variant}</h4>
         <div className="text-xs font-light grid md:grid-cols-3  gap-4 w-[200px]">
           <div className="md:col-span-2 flex justify-between">

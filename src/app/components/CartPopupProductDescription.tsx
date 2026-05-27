@@ -81,13 +81,21 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     openModal("checkout");
 
     if (!cartItem) {
-      addItem({
+      addItem([{
         ...item,
-        price: basePrice,
+        basePrice,
+        finalPrice,
+        discount: item.flashSales ? calcDiscountPrice(
+          basePrice,
+          item.flashSales.discountValue!,
+          item.flashSales.discountType!,
+        ) : 0,
+        // discount: 
         stock: currentStock,
-        quantity,
+        quantity: quantity || 1,
         selectedVariants: selectedVariantsArray,
-      });
+        selected: true,
+      }]);
     }
 
     selectAllCartItems();
@@ -388,13 +396,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
         <div className="flex gap-2 items-center">
           {!cartItem ? (
             <button
-              // onClick={() =>
-              //   addItem({
-              //     ...item,
-              //     quantity,
-              //     selectedVariants: selectedVariants ?? [],
-              //   })
-              // }
+
               onClick={(e) => {
                 if (!ensureVariantSelection()) {
                   return;
@@ -404,14 +406,21 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                   buttonElement: e.currentTarget,
                   cartElement: cartRef.current!,
                   addItemCallback: () =>
-                    addItem({
+                    addItem([{
                       ...item,
-                      price: basePrice,
+                      basePrice,
+                      finalPrice,
+                      discount: item.flashSales ? calcDiscountPrice(
+                        basePrice,
+                        item.flashSales.discountValue!,
+                        item.flashSales.discountType!,
+                      ) : 0,
+                      // discount: 
                       stock: currentStock,
                       quantity: quantity || 1,
                       selectedVariants: selectedVariantsArray,
                       selected: true,
-                    }),
+                    }]),
                 });
               }}
               className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
@@ -420,7 +429,6 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
             </button>
           ) : (
             <div
-              // onClick={() => addItem({ ...item, quantity })}
               className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
             >
               <button

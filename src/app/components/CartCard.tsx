@@ -37,7 +37,7 @@ function CartCard({
   } = useCartStore();
   const cartItem = item;
 
-
+  console.log(cartItem);
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
 

@@ -68,7 +68,10 @@ function Countdown({ targetDate }: { targetDate: string }) {
   const [timeLeft, setTimeLeft] = useState(() => getCountdown(targetDate));
 
   useEffect(() => {
-    const timer = setInterval(() => setTimeLeft(getCountdown(targetDate)), 1000);
+    const timer = setInterval(
+      () => setTimeLeft(getCountdown(targetDate)),
+      1000,
+    );
     return () => clearInterval(timer);
   }, [targetDate]);
 
@@ -221,7 +224,7 @@ function FeedContent({
   // ── Memoized values ─────────────────────────────────────────────────────
   const activeFeed = useMemo(
     () => data.feeds.find((f) => f._id === id),
-    [data.feeds, id]
+    [data.feeds, id],
   );
   const activeComments = activeFeed?.comments ?? [];
 
@@ -291,12 +294,7 @@ function FeedContent({
     hasFocusedRef.current = true;
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
-
-    const product = data.feeds[focusedIndex].product;
-    if (product) {
-      setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
-    }
-  }, [isLoading, data.feeds, idParam, isInWishlist]);
+  }, [isLoading, data.feeds, idParam]);
 
   // ── Intersection Observer for feed visibility ───────────────────────────
   useEffect(() => {
@@ -311,14 +309,14 @@ function FeedContent({
 
           const index = Number(entry.target.id.replace("feed-", ""));
           const feed = data.feeds[index];
-          
+
           if (feed) {
             setShowDesc(false);
             setId(feed._id);
             window.history.replaceState(
               null,
               "",
-              `/pages/update/${type}/${feed._id}`
+              `/pages/update/${type}/${feed._id}`,
             );
           }
 
@@ -328,7 +326,7 @@ function FeedContent({
           }
         });
       },
-      { threshold: 0.6 }
+      { threshold: 0.6 },
     );
 
     const sections = document.querySelectorAll(".section");
@@ -342,15 +340,21 @@ function FeedContent({
 
   // ── Duplicate feeds when reaching end ───────────────────────────────────
   useEffect(() => {
-    if (!isLastItem || data.hasMore || isDuplicating || !originalFeedsRef.current.length) return;
-    
+    if (
+      !isLastItem ||
+      data.hasMore ||
+      isDuplicating ||
+      !originalFeedsRef.current.length
+    )
+      return;
+
     setIsDuplicating(true);
     setLastItem(false);
   }, [isLastItem, data.hasMore, isDuplicating]);
 
   useEffect(() => {
     if (!isDuplicating || !originalFeedsRef.current.length) return;
-    
+
     startDuplicateTransition(() => {
       setData((prev) => ({
         ...prev,
@@ -379,7 +383,7 @@ function FeedContent({
   const scrollToWithOffset = useCallback((el: HTMLElement, offset = 80) => {
     const container = containerRef.current;
     if (!container) return;
-    
+
     const containerRect = container.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
     const scrollTop =
@@ -388,7 +392,7 @@ function FeedContent({
       container.clientHeight / 2 +
       el.clientHeight / 2 +
       offset;
-    
+
     container.scrollTo({ top: scrollTop, behavior: "smooth" });
   }, []);
 
@@ -406,25 +410,22 @@ function FeedContent({
 
       scrollToWithOffset(el, 60);
       setCurrentIndex(nextIndex);
-      
-      const product = feeds[nextIndex].product;
-      if (product) setWishlistMap((prev) => ({ ...prev, [product._id]: isInWishlist(product._id) }));
     },
-    [currentIndex, data.feeds, isInWishlist, scrollToWithOffset]
+    [currentIndex, data.feeds, scrollToWithOffset],
   );
 
   // ── Video helpers ───────────────────────────────────────────────────────
   const handleVideoPlay = useCallback((index: number) => {
     const video = videoRefs.current[index];
     if (!video) return;
-    
+
     if (video.paused) video.play().catch(() => {});
     else video.pause();
   }, []);
 
   const showPlayTemporarily = useCallback(() => {
     setVideoState((prev) => ({ ...prev, showPlay: true }));
-    
+
     if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
     hidePlayTimeout.current = setTimeout(() => {
       setVideoState((prev) => ({ ...prev, showPlay: false }));
@@ -443,32 +444,32 @@ function FeedContent({
       }
       return true;
     },
-    [user?._id, openModal]
+    [user?._id, openModal],
   );
 
   // ── Comment helpers ─────────────────────────────────────────────────────
   const updateFeedComments = useCallback(
     (
       feedId: string | string[],
-      updater: (comments: CommentData[]) => CommentData[]
+      updater: (comments: CommentData[]) => CommentData[],
     ) => {
       setData((prev) => ({
         ...prev,
         feeds: prev.feeds.map((feed) =>
           feed._id === feedId
             ? { ...feed, comments: updater(feed.comments ?? []) }
-            : feed
+            : feed,
         ),
       }));
     },
-    []
+    [],
   );
 
   const addReplyRecursive = useCallback(
     (
       list: CommentData[],
       targetId: string,
-      reply: CommentData
+      reply: CommentData,
     ): CommentData[] =>
       list.map((node) => {
         if (node._id === targetId)
@@ -486,7 +487,7 @@ function FeedContent({
           };
         return node;
       }),
-    []
+    [],
   );
 
   const addRecursiveLike = useCallback(
@@ -508,7 +509,7 @@ function FeedContent({
           };
         return node;
       }),
-    []
+    [],
   );
 
   const recursiveDeleteComment = useCallback(
@@ -521,7 +522,7 @@ function FeedContent({
             ? recursiveDeleteComment(node.replies, targetId)
             : node.replies,
         })),
-    []
+    [],
   );
 
   const handleToggle = useCallback(
@@ -534,10 +535,10 @@ function FeedContent({
             return { ...node, replies: toggle(node.replies) };
           return node;
         });
-      
+
       if (id) updateFeedComments(id, toggle);
     },
-    [id, updateFeedComments]
+    [id, updateFeedComments],
   );
 
   const replyComment = useCallback((parent: CommentState["parent"]) => {
@@ -571,7 +572,7 @@ function FeedContent({
 
       if (parentId) {
         updateFeedComments(id!, (comments) =>
-          addReplyRecursive(comments, parentId, newComment)
+          addReplyRecursive(comments, parentId, newComment),
         );
       } else {
         updateFeedComments(id!, (comments) => [...comments, newComment]);
@@ -604,7 +605,7 @@ function FeedContent({
       addReplyRecursive,
       addComments,
       checkIfUserLoggedIn,
-    ]
+    ],
   );
 
   const likePost = useCallback(
@@ -622,7 +623,7 @@ function FeedContent({
       setData((prev) => ({
         ...prev,
         feeds: prev.feeds.map((feed) =>
-          feed._id === _id ? { ...feed, likes: newLikes } : feed
+          feed._id === _id ? { ...feed, likes: newLikes } : feed,
         ),
       }));
 
@@ -636,24 +637,24 @@ function FeedContent({
         setData((prev) => ({
           ...prev,
           feeds: prev.feeds.map((feed) =>
-            feed._id === _id ? { ...feed, likes: targetFeed.likes } : feed
+            feed._id === _id ? { ...feed, likes: targetFeed.likes } : feed,
           ),
         }));
         console.error("Failed to like post:", err);
       }
     },
-    [checkIfUserLoggedIn, user, data.feeds, likeUpdate]
+    [checkIfUserLoggedIn, user, data.feeds, likeUpdate],
   );
 
   const likeComment = useCallback(
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like comments")) return;
-      
+
       const feed = data.feeds.find((f) => f._id === id);
       if (!feed) return;
 
       updateFeedComments(id!, (comments) =>
-        addRecursiveLike(comments, _id, user!._id)
+        addRecursiveLike(comments, _id, user!._id),
       );
 
       try {
@@ -674,7 +675,7 @@ function FeedContent({
       updateFeedComments,
       addRecursiveLike,
       likeUpdateComment,
-    ]
+    ],
   );
 
   const deleteComment = useCallback(
@@ -683,7 +684,7 @@ function FeedContent({
       if (!selectedFeed) return;
 
       updateFeedComments(id!, (comments) =>
-        recursiveDeleteComment(comments, item._id)
+        recursiveDeleteComment(comments, item._id),
       );
 
       try {
@@ -697,7 +698,13 @@ function FeedContent({
         toast.error("Failed to delete comment");
       }
     },
-    [id, data.feeds, updateFeedComments, recursiveDeleteComment, deleteUpdateComment]
+    [
+      id,
+      data.feeds,
+      updateFeedComments,
+      recursiveDeleteComment,
+      deleteUpdateComment,
+    ],
   );
 
   // ✅ FIX 3: handleWishlistToggle now uses wishlistMap keyed by product._id
@@ -717,7 +724,7 @@ function FeedContent({
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
-    [checkIfUserLoggedIn, isInWishlist, removeItem, addItem]
+    [checkIfUserLoggedIn, wishlistMap, isInWishlist, removeItem, addItem],
   );
 
   // ── Infinite scroll ─────────────────────────────────────────────────────
@@ -798,8 +805,15 @@ function FeedContent({
                 {data.feeds.map((item, index) => {
                   const isLoaded = loadedIndex.has(index);
                   const isPlaying = playingMap[index];
-                  const hasLiked = item.likes?.some((l) => l === user?._id) ?? false;
-                  const commentCount = item.comments ? getNumberOfComments(item.comments) : 0;
+                  const hasLiked =
+                    item.likes?.some((l) => l === user?._id) ?? false;
+                  const commentCount = item.comments
+                    ? getNumberOfComments(item.comments)
+                    : 0;
+                  const itemInWishlist = item.product
+                    ? (wishlistMap[item.product._id] ??
+                      isInWishlist(item.product._id))
+                    : false;
 
                   return (
                     <div
@@ -960,21 +974,23 @@ function FeedContent({
                                     <span>
                                       {Number(item.flashPrice).toLocaleString(
                                         "en-NG",
-                                        { style: "currency", currency: "NGN" }
+                                        { style: "currency", currency: "NGN" },
                                       )}
                                     </span>
                                     <small className="line-through">
-                                      {Number(item.product.price).toLocaleString(
-                                        "en-NG",
-                                        { style: "currency", currency: "NGN" }
-                                      )}
+                                      {Number(
+                                        item.product.price,
+                                      ).toLocaleString("en-NG", {
+                                        style: "currency",
+                                        currency: "NGN",
+                                      })}
                                     </small>
                                   </div>
                                 ) : (
                                   <p className="text-xs">
                                     {Number(item.product.price).toLocaleString(
                                       "en-NG",
-                                      { style: "currency", currency: "NGN" }
+                                      { style: "currency", currency: "NGN" },
                                     )}
                                   </p>
                                 )}
@@ -1002,11 +1018,7 @@ function FeedContent({
                               className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
                               onClick={() => likePost(item._id)}
                             >
-                              {hasLiked ? (
-                                <HeartFill />
-                              ) : (
-                                <Heart size={26} />
-                              )}
+                              {hasLiked ? <HeartFill /> : <Heart size={26} />}
                             </div>
                             <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
                               {item.likes.length}
@@ -1043,13 +1055,15 @@ function FeedContent({
                         {item.product && (
                           <div
                             className={`w-10 h-10 ${
-                              (wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "bg-primaryhover" : "bg-white"
+                              itemInWishlist ? "bg-primaryhover" : "bg-white"
                             } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
                             onClick={() =>
                               handleWishlistToggle(item.product as Product)
                             }
                           >
-                            <Favorite fill={(wishlistMap[item.product._id] ?? isInWishlist(item.product._id)) ? "#FFF" : "#FF81C6"} />
+                            <Favorite
+                              fill={itemInWishlist ? "#FFF" : "#FF81C6"}
+                            />
                           </div>
                         )}
                       </div>
@@ -1189,7 +1203,11 @@ function FeedContent({
             </div>
           </div>
 
-          <ShareModal share={share} href={href} hideShare={() => setShare(false)} />
+          <ShareModal
+            share={share}
+            href={href}
+            hideShare={() => setShare(false)}
+          />
         </section>
       </PullToRefreshContainer>
     </>

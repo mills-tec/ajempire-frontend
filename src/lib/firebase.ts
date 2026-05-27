@@ -6,7 +6,6 @@ import {
   getMessaging,
   getToken,
   isSupported,
-  onMessage,
   Messaging,
 } from "firebase/messaging";
 // TODO: Add SDKs for Firebase products that you want to use
@@ -24,31 +23,37 @@ const firebaseConfig = {
   measurementId: "G-TXVDN58E4F",
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export let messaging: Messaging | null = null;
 
-if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) {
-      messaging = getMessaging(app);
-    }
-  });
-}
+const messagingReady: Promise<Messaging | null> =
+  typeof window !== "undefined"
+    ? isSupported().then((supported) => {
+        if (supported) {
+          messaging = getMessaging(app);
+        }
+        return messaging;
+      })
+    : Promise.resolve(null);
 
 export const generateToken = async () => {
   const permission = await Notification.requestPermission();
+  if (permission !== "granted") return null;
 
-  if (permission === "granted") {
-    try {
-      const token = await getToken(messaging!, {
-        vapidKey:
-          "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
-      });
-      // useAuthStore.getState().setPushToken(token);
-      return token;
-    } catch (err) {
-      console.log(err);
-    }
+  const m = await messagingReady;
+  if (!m) {
+    console.warn("Firebase messaging not supported in this browser");
+    return null;
+  }
+
+  try {
+    const token = await getToken(m, {
+      vapidKey:
+        "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
+    });
+    return token;
+  } catch (err) {
+    console.error("Failed to get FCM token:", err);
+    return null;
   }
 };

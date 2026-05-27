@@ -81,11 +81,16 @@ module.exports = {
           "50%": { opacity: "0.5", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(200%)" },
+        },
       },
       animation: {
         "dropdown-in": "dropdown-open 200ms ease-out forwards",
         "dropdown-out": "dropdown-close 150ms ease-in forwards",
         placeholderFromBottom: "placeholderFromBottom 0.5s ease-out",
+        shimmer: "shimmer 1.5s ease-in-out infinite",
       },
     },
   },
