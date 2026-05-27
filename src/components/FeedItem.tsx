@@ -292,11 +292,7 @@ function FeedContent({
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
 
-    const product = data.feeds[focusedIndex].product;
-    if (product) {
-      setInWishlist(isInWishlist(product._id));
-    }
-  }, [isLoading, data.feeds, idParam, isInWishlist]);
+  }, [isLoading, data.feeds, idParam]);
 
   // ── Intersection Observer for feed visibility ───────────────────────────
   useEffect(() => {
@@ -407,10 +403,8 @@ function FeedContent({
       scrollToWithOffset(el, 60);
       setCurrentIndex(nextIndex);
       
-      const product = feeds[nextIndex].product;
-      if (product) setInWishlist(isInWishlist(product._id));
     },
-    [currentIndex, data.feeds, isInWishlist, scrollToWithOffset]
+    [currentIndex, data.feeds, scrollToWithOffset]
   );
 
   // ── Video helpers ───────────────────────────────────────────────────────
@@ -717,7 +711,7 @@ function FeedContent({
         toast.success("Added to wishlist", { position: "top-right" });
       }
     },
-    [checkIfUserLoggedIn, inWishlist, removeItem, addItem]
+    [checkIfUserLoggedIn, wishlistMap, isInWishlist, removeItem, addItem]
   );
 
   // ── Infinite scroll ─────────────────────────────────────────────────────
@@ -800,6 +794,9 @@ function FeedContent({
                   const isPlaying = playingMap[index];
                   const hasLiked = item.likes?.some((l) => l === user?._id) ?? false;
                   const commentCount = item.comments ? getNumberOfComments(item.comments) : 0;
+                  const itemInWishlist = item.product
+                    ? (wishlistMap[item.product._id] ?? isInWishlist(item.product._id))
+                    : false;
 
                   return (
                     <div
@@ -1043,13 +1040,13 @@ function FeedContent({
                         {item.product && (
                           <div
                             className={`w-10 h-10 ${
-                              inWishlist ? "bg-primaryhover" : "bg-white"
+                              itemInWishlist ? "bg-primaryhover" : "bg-white"
                             } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
                             onClick={() =>
                               handleWishlistToggle(item.product as Product)
                             }
                           >
-                            <Favorite fill={inWishlist ? "#FFF" : "#FF81C6"} />
+                            <Favorite fill={itemInWishlist ? "#FFF" : "#FF81C6"} />
                           </div>
                         )}
                       </div>

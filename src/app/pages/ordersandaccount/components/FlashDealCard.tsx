@@ -99,16 +99,17 @@ export default function FlashDealCard({ deals = [] }: Props) {
                                     }`}
                             >
                                 <p>{coupon.description}</p>
-                                <p>Valid Until: {new Date(coupon.expiry).toLocaleDateString("en-us", { dateStyle: "full" })}</p>
+                                <p>Valid Until: {new Date(coupon.endDate).toLocaleDateString("en-us", { dateStyle: "full" })}</p>
                             </div>
 
                             {/* Buttons */}
                             {coupon.status === "unused" && (
                                 <button
-                                    onClick={() => handleGetCode(coupon.code)}
+                                    onClick={() => handleGetCode(coupon.couponCode)}
                                     className={`mt-2 text-white ${theme.accent} w-auto p-2 px-4 text-center flex items-center h-[30px] rounded-full transition-all duration-200 hover:opacity-90`}
                                 >
-                                    {coupon.ctaText}
+                                    {/* {coupon.ctaText} */}
+                                    See Code
                                 </button>
                             )}
 
@@ -150,7 +151,7 @@ export default function FlashDealCard({ deals = [] }: Props) {
             })}
 
             {showModal && (
-                <div className="fixed left-0 top-0 w-screen h-screen z-50 flex items-center justify-center bg-black/50">
+                <div className="fixed  left-0 top-0 w-screen h-screen z-50 flex items-center justify-center bg-black/50" style={{marginBlock: 0}}>
                     <div className="bg-white w-[90%] max-w-[350px] rounded-lg p-5 relative font-poppins">
 
                         {/* Close (X) */}
