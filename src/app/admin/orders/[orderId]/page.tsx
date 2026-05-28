@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Copy, MoreVertical, Truck, Home, CreditCard, Package, Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, ShoppingBag, MoreHorizontal, Mail, Phone, Calendar, ListFilter, Map, MapPin, CreditCardIcon, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getOrderById } from '@/lib/adminapi';
+import { getOrderById, updateOrder } from '@/lib/adminapi';
 
 const SingleOrderPage = () => {
   const params = useParams();
@@ -14,16 +14,34 @@ const SingleOrderPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
   useEffect(() => {
     fetchOrderDetails();
   }, [orderId]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.actions-dropdown-container')) {
+        setShowActionsDropdown(false);
+      }
+    };
+    if (showActionsDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionsDropdown]);
+
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
       const response = await getOrderById(orderId);
-      
+
+      console.log("response", response)
+
       if (response.message) {
         setOrder(response.message);
       } else {
@@ -66,7 +84,7 @@ const SingleOrderPage = () => {
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Order Not Found</h2>
-          <button 
+          <button
             onClick={() => router.push('/admin/orders')}
             className="text-brand_pink hover:underline"
           >
@@ -87,10 +105,35 @@ const SingleOrderPage = () => {
     setShowCancelConfirm(true);
   };
 
-  const confirmCancelOrder = () => {
-    // Handle order cancellation logic here
+  const handleUpdateStatus = async (newStatus: string) => {
+    setShowActionsDropdown(false);
+    try {
+      setLoading(true);
+      let apiStatus = newStatus;
+      if (newStatus === 'canceled') {
+        apiStatus = 'cancelled';
+      } else if (newStatus === 'shipping') {
+        apiStatus = 'shipped';
+      }
+      const response = await updateOrder(orderId, { 
+        orderStatus: apiStatus as any
+      });
+      if (response.success) {
+        await fetchOrderDetails();
+      } else {
+        alert(response.error || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('An error occurred while updating order status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmCancelOrder = async () => {
     setShowCancelConfirm(false);
-    router.push('/admin/orders');
+    await handleUpdateStatus('canceled');
   };
 
   const getStatusStyle = (status: string) => {
@@ -117,27 +160,62 @@ const SingleOrderPage = () => {
           </div>
 
           <div className='flex items-center gap-x-2'>
-            <h1 className="text-sm font-semibold text-brand_gray_dark">Tracking ID <span className="text-brand_gray font-normal">{order.trackingId || 'Not assigned'}</span></h1>
-            <Copy 
-              size={14} 
-              className="text-blue-500 cursor-pointer hover:text-blue-600" 
+            <h1 className="text-sm font-semibold text-brand_gray_dark">Tracking ID <span className="text-brand_gray font-normal">{order.order_id || 'Not assigned'}</span></h1>
+            <Copy
+              size={14}
+              className="text-blue-500 cursor-pointer hover:text-blue-600"
               onClick={handleCopyTrackingId}
             />
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-
-          <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-x-1">
-            <ListFilter size={18} className="text-brand_gray_dark" />
-            <select name="acrtions" id="action" className='outline-none text-sm'>
-              <option value="action">Action</option>
-            </select>
-          </button>
+          <div className="relative actions-dropdown-container">
+            <button
+              onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+              className="p-2 px-4 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-x-2 text-sm font-medium text-brand_gray_dark shadow-sm"
+            >
+              <ListFilter size={16} className="text-brand_gray_dark" />
+              <span>Action</span>
+            </button>
+            {showActionsDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-50 transition-all">
+                <button
+                  onClick={() => handleUpdateStatus('processing')}
+                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                  Mark as Processing
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus('shipping')}
+                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  Mark as Shipped
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus('delivered')}
+                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-green-50 hover:text-green-600 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Mark as Delivered
+                </button>
+                <div className="border-t border-gray-100 my-1"></div>
+                <button
+                  onClick={handleCancelOrder}
+                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                  Cancel Order
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleCancelOrder}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium shadow-sm"
           >
             Cancel Order
           </button>
@@ -190,12 +268,8 @@ const SingleOrderPage = () => {
             </div>
             <div className="flex justify-between items-center">
               <div className="items-center gap-2 text-xs">
-                <p className='text-gray-400'>Home Address</p>
-                <span className="text-sm text-black">{order.shippingAddress?.address || 'Not provided'}</span>
-              </div>
-              <div className="items-center gap-2 text-xs">
-                <p className='text-gray-400'>Billing Address</p>
-                <span className="text-sm text-black">{order.billingAddress?.address || order.shippingAddress?.address || 'Not provided'}</span>
+                <p className='text-gray-400'>Shipping Address</p>
+                <span className="text-sm text-black">{`${order.shippingAddress?.street}, ${order.shippingAddress?.city}, ${order.shippingAddress?.state}` || `Not provided`}</span>
               </div>
             </div>
           </div>
@@ -267,12 +341,12 @@ const SingleOrderPage = () => {
                   </td>
                 </tr>
               )) || (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">
-                    No items found in this order
-                  </td>
-                </tr>
-              )}
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                      No items found in this order
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>
@@ -310,14 +384,14 @@ const SingleOrderPage = () => {
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Cancel Order</h3>
-              <button 
+              <button
                 onClick={() => setShowCancelConfirm(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="mb-4">
               <p className="text-gray-600 mb-2">
                 Are you sure you want to cancel this order?
@@ -328,13 +402,13 @@ const SingleOrderPage = () => {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setShowCancelConfirm(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 No, Keep Order
               </button>
-              <button 
+              <button
                 onClick={confirmCancelOrder}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
               >

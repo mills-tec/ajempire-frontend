@@ -10,6 +10,7 @@ import TopSellingProducts from "../components/admin/TopSellingProducts";
 import TopSellingCategory from "../components/admin/TopSellingCategory";
 import InventoryAlert from "../components/admin/InventoryAlert";
 import { getUserOrders, getProducts, getAllCategories, getReturns } from '@/lib/adminapi';
+import { filterByPeriod, filterByDateRange, getPreviousPeriodRange, calculatePercentChange, aggregateOrdersByDate } from '@/lib/dashboard-utils';
 
 export default function AdminPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -17,7 +18,12 @@ export default function AdminPage() {
     const [categories, setCategories] = useState<any[]>([]);
     const [returns, setReturns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedPeriod, setSelectedPeriod] = useState('This week');
+    const [salesPeriod, setSalesPeriod] = useState('All time');
+    const [customersPeriod, setCustomersPeriod] = useState('All time');
+    const [productsPeriod, setProductsPeriod] = useState('All time');
+    const [returnsPeriod, setReturnsPeriod] = useState('All time');
+    const [summaryPeriod, setSummaryPeriod] = useState('All time');
+    const [inventoryPeriod, setInventoryPeriod] = useState('All time');
 
     useEffect(() => {
         fetchDashboardData();
@@ -64,69 +70,65 @@ export default function AdminPage() {
         }
     };
 
-    // Calculate dynamic statistics
-    const totalSales = orders?.reduce((sum, order) => sum + (order.totalPrice || 0), 0) || 0;
-    const totalCustomers = new Set(orders?.map(order => order.shippingAddress?.fullName).filter(Boolean)).size || 0;
-    const totalOrders = orders?.length || 0;
+    // Sales Card calculations
+    const salesFilteredOrders = filterByPeriod(orders, salesPeriod, (o) => o.createdAt);
+    const salesPrevRange = getPreviousPeriodRange(salesPeriod);
+    const salesPrevOrders = filterByDateRange(orders, salesPrevRange.start, salesPrevRange.end, (o) => o.createdAt);
+    const totalSales = salesFilteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const prevSales = salesPrevOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const salesChange = calculatePercentChange(totalSales, prevSales);
+
+    // Customers & Orders Card calculations
+    const customersFilteredOrders = filterByPeriod(orders, customersPeriod, (o) => o.createdAt);
+    const customersPrevRange = getPreviousPeriodRange(customersPeriod);
+    const customersPrevOrders = filterByDateRange(orders, customersPrevRange.start, customersPrevRange.end, (o) => o.createdAt);
+    const totalCustomers = new Set(customersFilteredOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
+    const prevCustomers = new Set(customersPrevOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
+    const customersChange = calculatePercentChange(totalCustomers, prevCustomers);
+    const totalOrders = customersFilteredOrders.length;
+    const prevOrdersCount = customersPrevOrders.length;
+    const ordersChange = calculatePercentChange(totalOrders, prevOrdersCount);
+
+    // Products & Categories stats
     const totalProducts = products?.length || 0;
     const totalCategories = categories?.length || 0;
-    const totalReturns = returns?.length || 0;
-    
-    // Calculate order status breakdown
-    const processingOrders = orders?.filter(o => o.orderStatus === 'processing').length || 0;
-    const shippingOrders = orders?.filter(o => o.orderStatus === 'shipping').length || 0;
-    const deliveredOrders = orders?.filter(o => o.orderStatus === 'delivered').length || 0;
-    const canceledOrders = orders?.filter(o => o.orderStatus === 'canceled').length || 0;
-    
-    // Calculate returns statistics
-    const pendingReturns = returns?.filter(r => r.status === 'pending').length || 0;
-    const approvedReturns = returns?.filter(r => r.status === 'approved').length || 0;
-    const rejectedReturns = returns?.filter(r => r.status === 'rejected').length || 0;
-    const completedReturns = returns?.filter(r => r.status === 'completed').length || 0;
-    
-    // Calculate product statistics
-    const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0;
-    const outOfStockProducts = products?.filter(p => p.stock === 0).length || 0;
-    const featuredProducts = products?.filter(p => p.isFeatured).length || 0;
-    
-    // Calculate sales by category
-    const salesByCategory = orders?.reduce((acc, order) => {
-        const category = order.items?.[0]?.category || 'Unknown';
-        acc[category] = (acc[category] || 0) + (order.totalPrice || 0);
-        return acc;
-    }, {} as Record<string, number>);
-    
-    // Top selling products
-    const topSellingProducts = orders?.reduce((acc, order) => {
-        order.items?.forEach((item: any) => {
-            const productId = item.productId || item._id;
-            if (productId) {
-                acc[productId] = (acc[productId] || 0) + (item.quantity || 1);
-            }
-        });
-        return acc;
-    }, {} as Record<string, number>);
-    
-    // Chart data
+
+    // Returns Card calculations
+    const returnsFilteredReturns = filterByPeriod(returns, returnsPeriod, (r) => r.createdAt);
+    const returnsPrevRange = getPreviousPeriodRange(returnsPeriod);
+    const returnsPrevReturns = filterByDateRange(returns, returnsPrevRange.start, returnsPrevRange.end, (r) => r.createdAt);
+    const totalReturns = returnsFilteredReturns.length;
+    const prevReturnsCount = returnsPrevReturns.length;
+    const returnsChange = calculatePercentChange(totalReturns, prevReturnsCount);
+    const pendingReturns = returnsFilteredReturns.filter(r => r.status === 'pending').length;
+
+    // Summary Card calculations
+    const summaryFilteredOrders = filterByPeriod(orders, summaryPeriod, (o) => o.createdAt);
+    const summaryTotalSales = summaryFilteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const salesData = aggregateOrdersByDate(summaryFilteredOrders).map(item => ({
+        date: item.date,
+        sales: item.sales
+    }));
+
+    // Inventory Values Card calculations
+    const inventoryFilteredOrders = filterByPeriod(orders, inventoryPeriod, (o) => o.createdAt);
+    const processingOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'processing').length;
+    const shippingOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'shipping' || o.orderStatus === 'shipped').length;
+    const deliveredOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'delivered').length;
+    const canceledOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'canceled' || o.orderStatus === 'cancelled').length;
+
     const orderStatusData = [
         { name: 'Processing', value: processingOrders, color: '#FFA500' },
         { name: 'Shipping', value: shippingOrders, color: '#3B82F6' },
         { name: 'Delivered', value: deliveredOrders, color: '#10B981' },
         { name: 'Canceled', value: canceledOrders, color: '#EF4444' }
     ];
-    
-    const salesData = orders?.map(order => ({
-        date: new Date(order.createdAt).toLocaleDateString(),
-        sales: order.totalPrice || 0
-    })) || [];
-    
-    const categoryData = Object.entries(salesByCategory).map(([name, value]) => ({
-        name,
-        value: Number(value) || 0
-    }));
+
+    const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0;
+    const outOfStockProducts = products?.filter(p => p.stock === 0).length || 0;
 
     return (
-        <main className="w-full h-screen overflow-y-auto">
+        <div className="w-full pb-10">
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-white border p-4 rounded-xl flex-1">
                     <div className="flex items-center justify-between">
@@ -134,10 +136,11 @@ export default function AdminPage() {
                             <ChartPie size={18} color="#ff008c" />
                         </div>
                         <select 
-                            value={selectedPeriod}
-                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                            value={salesPeriod}
+                            onChange={(e) => setSalesPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                         >
+                            <option value="All time">All time</option>
                             <option value="This week">This week</option>
                             <option value="This month">This month</option>
                             <option value="This year">This year</option>
@@ -147,7 +150,7 @@ export default function AdminPage() {
                     <h4 className="mt-6 text-brand_gray_dark text-xs">Sales</h4>
                     <div className="flex items-center gap-2">
                         <p className="text-lg font-bold">₦{totalSales.toLocaleString()}</p>
-                        <p className="text-green-500 text-xs">+{((totalSales / 100000) * 100).toFixed(2)}%</p>
+                        <p className={`text-xs ${salesChange.startsWith('+') || salesChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{salesChange}</p>
                     </div>
                 </div>
 
@@ -157,10 +160,11 @@ export default function AdminPage() {
                             <UsersRound size={18} />
                         </div>
                         <select 
-                            value={selectedPeriod}
-                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                            value={customersPeriod}
+                            onChange={(e) => setCustomersPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                         >
+                            <option value="All time">All time</option>
                             <option value="This week">This week</option>
                             <option value="This month">This month</option>
                             <option value="This year">This year</option>
@@ -172,7 +176,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Customers</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalCustomers}</p>
-                                <p className="text-green-500 text-xs">+{((totalCustomers / 100) * 100).toFixed(2)}%</p>
+                                <p className={`text-xs ${customersChange.startsWith('+') || customersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{customersChange}</p>
                             </div>
                         </div>
 
@@ -180,7 +184,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Orders</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalOrders}</p>
-                                <p className="text-green-500 text-xs">+{((totalOrders / 100) * 100).toFixed(2)}%</p>
+                                <p className={`text-xs ${ordersChange.startsWith('+') || ordersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{ordersChange}</p>
                             </div>
                         </div>
                     </div>
@@ -192,10 +196,11 @@ export default function AdminPage() {
                             <ShoppingBagIcon size={18} />
                         </div>
                         <select 
-                            value={selectedPeriod}
-                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                            value={productsPeriod}
+                            onChange={(e) => setProductsPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                         >
+                            <option value="All time">All time</option>
                             <option value="This week">This week</option>
                             <option value="This month">This month</option>
                             <option value="This year">This year</option>
@@ -207,7 +212,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Products</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalProducts}</p>
-                                <p className="text-green-500 text-xs">+{((totalProducts / 100) * 100).toFixed(2)}%</p>
+                                <p className="text-gray-400 text-xs">in catalog</p>
                             </div>
                         </div>
 
@@ -215,7 +220,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Categories</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalCategories}</p>
-                                <p className="text-green-500 text-xs">+{((totalCategories / 10) * 100).toFixed(2)}%</p>
+                                <p className="text-gray-400 text-xs">active</p>
                             </div>
                         </div>
                     </div>
@@ -236,7 +241,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-brand_gray_dark text-xs">All Products</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalProducts}</p>
-                                <p className="text-green-500 text-xs">+{((totalProducts / 100) * 100).toFixed(2)}%</p>
+                                <p className="text-gray-400 text-xs">in catalog</p>
                             </div>
                         </div>
 
@@ -246,10 +251,11 @@ export default function AdminPage() {
                                     <CornerDownLeft size={18} />
                                 </div>
                                 <select 
-                                    value={selectedPeriod}
-                                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                                    value={returnsPeriod}
+                                    onChange={(e) => setReturnsPeriod(e.target.value)}
                                     className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                                 >
+                                    <option value="All time">All time</option>
                                     <option value="This week">This week</option>
                                     <option value="This month">This month</option>
                                     <option value="This year">This year</option>
@@ -259,7 +265,7 @@ export default function AdminPage() {
                             <h4 className="mt-6 text-red-500 text-xs">Returns</h4>
                             <div className="flex items-center gap-2">
                                 <p className="text-lg font-bold">{totalReturns}</p>
-                                <p className="text-red-500 text-xs">{pendingReturns > 0 ? `(${pendingReturns} pending)` : ''}</p>
+                                <p className={`text-xs ${returnsChange.startsWith('+') ? 'text-red-500' : 'text-green-500'}`}>{returnsChange}{pendingReturns > 0 ? ` · ${pendingReturns} pending` : ''}</p>
                             </div>
                         </div>
                     </div>
@@ -275,15 +281,16 @@ export default function AdminPage() {
                                 </select>
 
                                 <div className="flex items-center gap-2 sm:ml-4">
-                                    <p className="text-brand_pink font-bold text-sm">N{totalSales.toLocaleString()}</p>
+                                    <p className="text-brand_pink font-bold text-sm">N{summaryTotalSales.toLocaleString()}</p>
                                 </div>
                             </div>
                             <select 
-                                value={selectedPeriod}
-                                onChange={(e) => setSelectedPeriod(e.target.value)}
+                                value={summaryPeriod}
+                                onChange={(e) => setSummaryPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                             >
-                                <option value="This week">Last 7 days</option>
+                                <option value="All time">All time</option>
+                                <option value="This week">This week</option>
                                 <option value="This month">This month</option>
                                 <option value="This year">This year</option>
                             </select>
@@ -300,10 +307,11 @@ export default function AdminPage() {
                         <div className="flex items-center justify-between">
                             <h4 className="font-medium text-brand_gray_dark text-sm">Inventory Values</h4>
                             <select 
-                                value={selectedPeriod}
-                                onChange={(e) => setSelectedPeriod(e.target.value)}
+                                value={inventoryPeriod}
+                                onChange={(e) => setInventoryPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
                             >
+                                <option value="All time">All time</option>
                                 <option value="This week">This week</option>
                                 <option value="This month">This month</option>
                                 <option value="This year">This year</option>
@@ -387,16 +395,16 @@ export default function AdminPage() {
             {/* New Design Section */}
             <section className="mt-8 flex flex-col gap-8">
                 <div className="flex flex-col lg:flex-row gap-6">
-                    <WebsiteTrafficChart data={salesData} />
+                    <WebsiteTrafficChart orders={summaryFilteredOrders} />
                     <RealTimeInsight orders={orders} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                    <TopSellingProducts orders={orders} />
-                    <TopSellingCategory orders={orders} />
+                    <TopSellingProducts orders={orders} period={salesPeriod} />
+                    <TopSellingCategory orders={salesFilteredOrders} period={salesPeriod} />
                     <InventoryAlert products={products} />
                 </div>
             </section>
-        </main>
+        </div>
     )
 }

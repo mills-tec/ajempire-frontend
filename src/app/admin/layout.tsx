@@ -10,35 +10,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <html lang="en" className="bg-[#F4F5FA]">
-            <body className="w-full">
-                <AuthProvider>
-                    <ProtectedRoute>
-                        {/* Mobile sidebar overlay */}
-                        {sidebarOpen && (
-                            <div 
-                                className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-                                onClick={() => setSidebarOpen(false)}
-                            />
-                        )}
-                        
-                        {/* Sidebar */}
-                        <div className={`
-                            fixed inset-y-0 left-0 z-50 w-[240px] bg-white transform transition-transform duration-300 ease-in-out
-                            lg:relative lg:translate-x-0
-                            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-                        `}>
-                            <Sidebar onClose={() => setSidebarOpen(false)} />
-                        </div>
-                        
-                        {/* Main content */}
-                        <div className="flex flex-col w-full lg:ml-0">
-                            <Header onMenuClick={() => setSidebarOpen(true)} />
-                            <main className="min-h-screen pt-6">{children}</main>
-                        </div>
-                    </ProtectedRoute>
-                </AuthProvider>
-            </body>
-        </html>
+        <div className="flex bg-[#F4F5FA] min-h-screen w-full lg:gap-x-0">
+            <AuthProvider>
+                <ProtectedRoute>
+                    {/* Mobile sidebar overlay */}
+                    {sidebarOpen && (
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                            onClick={() => setSidebarOpen(false)}
+                        />
+                    )}
+
+                    {/* Sidebar */}
+                    <div className={`
+                        fixed inset-y-0 left-0 z-50 w-[240px] bg-white transform transition-transform duration-300 ease-in-out
+                        lg:relative lg:translate-x-0
+                        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                    `}>
+                        <Sidebar onClose={() => setSidebarOpen(false)} />
+                    </div>
+
+                    {/* Main content */}
+                    <div className="flex flex-col w-full lg:ml-0 overflow-hidden">
+                        <Header onMenuClick={() => setSidebarOpen(true)} />
+                        <main className="min-h-screen pt-6 px-5">{children}</main>
+                    </div>
+                </ProtectedRoute>
+            </AuthProvider>
+        </div>
     );
 }

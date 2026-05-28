@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, LogOut, Settings, TrafficCone, ShoppingBag, Package, Users, RotateCcw, Truck, FileText, Gift, HeadphonesIcon, X } from 'lucide-react'
+import { LayoutDashboard, LogOut, Settings, TrafficCone, ShoppingBag, Package, Users, RotateCcw, Truck, FileText, Gift, HeadphonesIcon, X, ImagePlay } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
@@ -13,10 +13,14 @@ interface SidebarProps {
 const Sidebar = ({ onClose }: SidebarProps) => {
     const pathname = usePathname();
     const router = useRouter();
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
+    const isJunior = user?.role?.toLowerCase() === 'junior';
 
     const currentPath = (_path: string) => {
-        return pathname === _path;
+        if (_path === "/admin") {
+            return pathname === "/admin";
+        }
+        return pathname.startsWith(_path);
     }
 
     const handleLogout = () => {
@@ -71,9 +75,9 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             label: "Promotions"
         },
         {
-            href: "/admin/support",
-            icon: <HeadphonesIcon size={18} color={currentPath("/admin/support") ? "white" : "black"} />,
-            label: "Support"
+            href: "/admin/banners",
+            icon: <ImagePlay size={18} color={currentPath("/admin/banners") ? "white" : "black"} />,
+            label: "Banners"
         },
         {
             href: "/admin/settings",
@@ -81,6 +85,10 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             label: "Settings"
         },
     ]
+
+    const filteredLinks = isJunior
+        ? links.filter(link => link.href === "/admin" || link.href === "/admin/inventory")
+        : links;
 
     return (
         <aside className='bg-white w-[240px] h-screen px-4 pt-4 flex flex-col'>
@@ -115,10 +123,10 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             </div>
 
             <ul className='mt-6 flex flex-col gap-y-1'>
-                {links.map((link, index) => (
-                    <Link 
-                        key={index} 
-                        href={link.href} 
+                {filteredLinks.map((link, index) => (
+                    <Link
+                        key={index}
+                        href={link.href}
                         onClick={handleLinkClick}
                         className={`flex items-center gap-2 ${currentPath(link.href) ? "bg-brand_solid_gradient text-white" : "text-black"} p-2.5 rounded-xl transition-all`}
                     >
@@ -129,7 +137,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             </ul>
 
             <div className="mt-auto mb-6">
-                <button 
+                <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 p-2.5 text-brand_pink hover:bg-brand_pink/5 w-full rounded-xl transition-colors"
                 >

@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = "https://ajempire-backend-production.up.railway.app/api";
+const API_BASE_URL = "https://ajempire-backend-production-b8ff.up.railway.app/api";
 
 // Import all types from the types file
 import {
@@ -31,6 +31,8 @@ import {
   Coupon,
   CreateCouponData,
   SystemNotification,
+  Banner,
+  BannerImage,
 } from './admin-types';
 
 // Helper function for API calls
@@ -39,13 +41,13 @@ const apiCall = async <T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
-  
+
   // Don't set Content-Type for FormData - let browser set it with boundary
   const headers: HeadersInit = {};
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -63,7 +65,7 @@ const apiCall = async <T>(
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'API request failed');
+      throw new Error(data.error || data.message || 'API request failed');
     }
 
     return data;
@@ -170,7 +172,7 @@ export const getOrderById = (id: string): Promise<ApiResponse<Order>> =>
 
 export const updateOrder = (id: string, data: UpdateOrderData): Promise<ApiResponse<Order>> =>
   apiCall(`/admin/order/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -234,17 +236,31 @@ export const createFlashSale = (data: CreateFlashSaleData): Promise<ApiResponse<
 export const getPromotions = (): Promise<ApiResponse<any[]>> =>
   apiCall('/admin/promotions');
 
-export const createPromotion = (data: any): Promise<ApiResponse<any>> =>
-  apiCall('/admin/promotions', {
+export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
+  if (data instanceof FormData) {
+    return apiCall('/admin/promotions', {
+      method: 'POST',
+      body: data,
+    });
+  }
+  return apiCall('/admin/promotions', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+};
 
-export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> =>
-  apiCall(`/admin/promotions/${id}`, {
+export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> => {
+  if (data instanceof FormData) {
+    return apiCall(`/admin/promotions/${id}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+  return apiCall(`/admin/promotions/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+};
 
 export const deletePromotion = (id: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/promotions/${id}`, {
@@ -342,7 +358,7 @@ export const updateAdminNotificationSettings = (data: any): Promise<ApiResponse<
 
 // Logistics endpoints
 export const getLogisticsSettings = (): Promise<ApiResponse<any>> =>
-  apiCall('/admin/logistics');
+  apiCall('/logisticsStatus');
 
 export const updateLogisticsSettings = (data: any): Promise<ApiResponse<any>> =>
   apiCall('/admin/logistics', {
@@ -377,6 +393,39 @@ export const updateCustomerStatus = (id: string, status: string): Promise<ApiRes
     body: JSON.stringify({ status }),
   });
 
+export const toggleCustomerStatus = (id: string): Promise<ApiResponse<any>> =>
+  apiCall(`/admin/customer/toggleStatus/${id}`, {
+    method: 'PATCH',
+  });
+
+// Banner endpoints
+export const getBanners = (): Promise<ApiResponse<Banner[]>> =>
+  apiCall('/admin/banner');
+
+export const createBanner = (data: FormData): Promise<ApiResponse<Banner>> =>
+  apiCall('/admin/banner', {
+    method: 'POST',
+    body: data,
+  });
+
+export const updateBanner = (id: string, data: FormData): Promise<ApiResponse<Banner>> =>
+  apiCall(`/admin/banner/${id}`, {
+    method: 'PATCH',
+    body: data,
+  });
+
+export const removeImageFromBanner = (id: string, url: string): Promise<ApiResponse<any>> =>
+  apiCall(`/admin/banner/${id}/images`, {
+    method: 'DELETE',
+    body: JSON.stringify({ url }),
+  });
+
+export const deleteBanner = (id: string): Promise<ApiResponse<void>> =>
+  apiCall(`/admin/banner/${id}`, {
+    method: 'DELETE',
+  });
+
+
 // Export all interfaces for use in components (re-export from types file)
 export type {
   ApiResponse,
@@ -409,4 +458,6 @@ export type {
   SystemNotification,
   LogisticsSettings,
   UpdateLogisticsData,
+  Banner,
+  BannerImage,
 } from './admin-types';
