@@ -1,19 +1,19 @@
 "use client";
 
-import { io, Socket } from "socket.io-client";
-import { useEffect, useRef, useState } from "react";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { useNotification } from "@/api/customHooks";
-import { generateToken, messaging } from "@/lib/firebase";
-import { useNotificationStore } from "@/lib/stores/notification-store";
-import { onMessage } from "firebase/messaging";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
-import { Product } from "@/lib/admin-types";
-import { fetchFromCart, getBearerToken } from "@/lib/api";
-import type { Notification as AppNotification } from "@/lib/types";
-import { usePathname } from "next/navigation";
-import { updateAdminPushNotification } from "@/lib/adminapi";
 import { globalUrl } from "@/api/api";
+import { useNotification } from "@/api/customHooks";
+import { Product } from "@/lib/admin-types";
+import { updateAdminPushNotification } from "@/lib/adminapi";
+import { fetchFromCart, getBearerToken } from "@/lib/api";
+import { generateToken, messaging } from "@/lib/firebase";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import type { Notification as AppNotification } from "@/lib/types";
+import { onMessage } from "firebase/messaging";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
 
 export default function NotificationWrapper() {
   const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
@@ -50,7 +50,7 @@ export default function NotificationWrapper() {
     if (!isAdminRoute) {
       if (!isMounted || !user || isPushTokenSet || isUpdatingToken.current) return;
     } else {
-      if (isPushTokenSet) return;
+      if (isPushTokenSet || !localStorage.getItem('adminToken')) return;
     }
 
     const registerPushToken = async () => {

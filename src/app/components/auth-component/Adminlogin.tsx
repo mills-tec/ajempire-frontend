@@ -1,9 +1,9 @@
-import Image from "next/image"
+import Spinner from "@/app/components/Spinner";
+import { adminLogin, LoginCredentials } from "@/lib/adminapi";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import Spinner from "@/app/components/Spinner";
-import { adminLogin, LoginCredentials } from "@/lib/adminapi";
 
 export default function AdminLogin() {
   const [emailinput, setEmailinput] = useState("");
