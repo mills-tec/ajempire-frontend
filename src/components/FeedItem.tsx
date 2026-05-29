@@ -1,5 +1,9 @@
 "use client";
 
+import { useUpdates } from "@/api/customHooks";
+import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
+import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
+import { PullToRefreshProvider, usePullToRefresh } from "@/app/components/pull-to-refresh/PullToRefreshProvider";
 import CommentItem from "@/components/CommentItem";
 import {
   CommentIcon,
@@ -9,6 +13,8 @@ import {
   ShareIcon,
 } from "@/components/svgs/Icons";
 import { getUser } from "@/lib/api";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { CommentData, Feed, Product } from "@/lib/types";
 import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import {
@@ -19,7 +25,9 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -28,19 +36,10 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useParams } from "next/navigation";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import useInfiniteScroll from "react-infinite-scroll-hook";
-import { useUpdates } from "@/api/customHooks";
+import { toast } from "sonner";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
-import Image from "next/image";
-import { toast } from "sonner";
-import { useModalStore } from "@/lib/stores/modal-store";
-import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
-import { PullToRefreshProvider } from "@/app/components/pull-to-refresh/PullToRefreshProvider";
-import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
-import { usePullToRefresh } from "@/app/components/pull-to-refresh/PullToRefreshProvider";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
 
@@ -1075,7 +1074,7 @@ function FeedContent({
           >
             {/* Prev / Next navigation */}
             <div
-              className="pr-4 gap-6 hidden md:grid"
+              className="pr-4 gap-6 hidden md:grid md:-translate-y-[10vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div
@@ -1096,12 +1095,12 @@ function FeedContent({
             <div
               className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
                 comment.show
-                  ? "translate-y-0 md:translate-y-0"
+                  ? "-translate-y-[22vh] md:-translate-y-[10vh]"
                   : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-5 flex-1 md:h-[70vh]">
+              <div className="p-5 h-[50vh] flex-1 ">
                 <div className="flex items-center mb-6">
                   <span
                     className="cursor-pointer"
@@ -1138,14 +1137,14 @@ function FeedContent({
                 </div>
               </div>
 
-              <div className="w-full px-5 md:px-2 pb-10">
+              <div className="w-full px-2 md:px-2 pb-10 md:pb-3">
                 <div
                   className={`bg-white relative rounded-2xl border ${
                     comment.focus ? "border-primaryhover" : "border-transparent"
                   }`}
                 >
                   <textarea
-                    className="w-full h-32 text-base md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
+                    className="w-full h-32 text-base md:text-sm md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
                     placeholder={
                       comment.parent.parentId
                         ? `Replying to @${comment.parent.fullname
@@ -1179,7 +1178,7 @@ function FeedContent({
                     }`}
                     onClick={() => sendComment(comment.parent.parentId)}
                   >
-                    <SendHorizonal color="white" />
+                    <SendHorizonal color="white" size={13} />
                   </button>
                 </div>
               </div>
