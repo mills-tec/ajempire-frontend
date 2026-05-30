@@ -21,17 +21,19 @@ export default function HomeHeroSlider({
   const [isHovered, setIsHovered] = React.useState(false);
   const router = useRouter();
 
-  const flashProducts = React.useMemo(
-    () =>
-      products
-        .filter(
-          (product) =>
-            product.flashSales?.endDate &&
-            new Date(product.flashSales.endDate).getTime() > Date.now(),
-        )
-        .slice(0, 3),
-    [products],
-  );
+  const flashProducts = React.useMemo(() => {
+    const seen = new Set<string>();
+    return products
+      .filter((product) => {
+        if (seen.has(product._id)) return false;
+        seen.add(product._id);
+        return (
+          product.flashSales?.endDate &&
+          new Date(product.flashSales.endDate).getTime() > Date.now()
+        );
+      })
+      .slice(0, 3);
+  }, [products]);
 
   const totalSlides = flashProducts.length > 0 ? 2 : 1;
 
