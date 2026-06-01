@@ -66,7 +66,7 @@ export default function FlashSaleNotificationCom({ notification }: { notificatio
                 </div>
             </div>
             <div className="flex  items-end">
-                <CountdownTimer endDate={notification.data?.endDate!} />
+                <CountdownTimer endDate={notification.data?.endDate ?? ''} />
 
             </div>
         </div>

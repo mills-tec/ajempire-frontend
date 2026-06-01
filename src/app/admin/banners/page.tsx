@@ -375,7 +375,7 @@ export default function BannersPage() {
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-1">No Banners Uploaded</h3>
           <p className="text-sm text-brand_gray max-w-sm mb-6">
-            You haven't uploaded any promotional banners yet. Create one to highlight collections or deals on the store homepage.
+            You haven&apos;t uploaded any promotional banners yet. Create one to highlight collections or deals on the store homepage.
           </p>
           <button
             onClick={() => {

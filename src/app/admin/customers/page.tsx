@@ -611,7 +611,7 @@ const CustomersPage = () => {
                 Are you sure you want to delete this customer?
               </p>
               <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                This action is permanent, cannot be undone, and will permanently remove the customer record for "{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}".
+                This action is permanent, cannot be undone, and will permanently remove the customer record for &quot;{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}&quot;.
               </p>
             </div>
 
@@ -778,15 +778,15 @@ const CustomersPage = () => {
 
             <div className="mb-6 space-y-2">
               <p className="text-sm text-brand_gray">
-                Are you sure you want to {customerToToggle?.user?.active ? 'deactivate' : 'activate'} this customer's account?
+                Are you sure you want to {customerToToggle?.user?.active ? 'deactivate' : 'activate'} this customer&apos;s account?
               </p>
               {customerToToggle?.user?.active ? (
                 <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                  Deactivating "{customerToToggle?.user?.fullname || 'this customer'}" will restrict them from logging in, shopping, or placing new orders on AJ Empire.
+                  Deactivating &quot;{customerToToggle?.user?.fullname || 'this customer'}&quot; will restrict them from logging in, shopping, or placing new orders on AJ Empire.
                 </p>
               ) : (
                 <p className="text-xs font-semibold text-green-500 bg-green-50 border border-green-100 rounded-lg p-2.5">
-                  Activating "{customerToToggle?.user?.fullname || 'this customer'}" will restore full access to their AJ Empire account.
+                  Activating &quot;{customerToToggle?.user?.fullname || 'this customer'}&quot; will restore full access to their AJ Empire account.
                 </p>
               )}
             </div>

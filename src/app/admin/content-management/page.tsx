@@ -894,7 +894,7 @@ const ContentManagementPage = () => {
                 Are you sure you want to delete this content?
               </p>
               <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                This action is permanent, cannot be undone, and will permanently delete the article/video content "{selectedContent.title || 'Untitled content'}".
+                This action is permanent, cannot be undone, and will permanently delete the article/video content &quot;{selectedContent.title || 'Untitled content'}&quot;.
               </p>
             </div>
             

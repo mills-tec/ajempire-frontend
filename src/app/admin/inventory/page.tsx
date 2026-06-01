@@ -607,7 +607,7 @@ const InventoryPage = () => {
                                         Are you sure you want to delete this product?
                                     </p>
                                     <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                                        This action is permanent and will permanently delete "{selectedProduct?.name}" and all its images from store inventory.
+                                        This action is permanent and will permanently delete &quot;{selectedProduct?.name}&quot; and all its images from store inventory.
                                     </p>
                                 </div>
                                 

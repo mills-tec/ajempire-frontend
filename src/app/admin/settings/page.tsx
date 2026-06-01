@@ -651,7 +651,7 @@ const SettingsPage = () => {
                   Are you sure you want to delete this administrator?
                 </p>
                 <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                  This action is permanent, cannot be undone, and will immediately revoke all access privileges for "{adminToDelete?.name || 'Unknown Admin'}" ({adminToDelete?.email || 'No email'}).
+                  This action is permanent, cannot be undone, and will immediately revoke all access privileges for &quot;{adminToDelete?.name || 'Unknown Admin'}&quot; ({adminToDelete?.email || 'No email'}).
                 </p>
               </div>
 

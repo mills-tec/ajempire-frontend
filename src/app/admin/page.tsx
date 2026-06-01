@@ -13,10 +13,10 @@ import TopSellingProducts from "../components/admin/TopSellingProducts";
 import WebsiteTrafficChart from "../components/admin/WebsiteTrafficChart";
 
 export default function AdminPage() {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [categories, setCategories] = useState<unknown[]>([]);
-    const [returns, setReturns] = useState<ReturnItem[]>([]);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [returns, setReturns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [salesPeriod, setSalesPeriod] = useState('All time');
     const [customersPeriod, setCustomersPeriod] = useState('All time');
@@ -27,7 +27,6 @@ export default function AdminPage() {
 
     useEffect(() => {
         fetchDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchDashboardData = async () => {
@@ -40,21 +39,25 @@ export default function AdminPage() {
                 getReturns()
             ]);
 
+            // Transform orders data
             if (ordersResponse.message && Array.isArray(ordersResponse.message)) {
                 setOrders(ordersResponse.message);
             }
 
-            const productsData = productsResponse.message as { products?: Product[] };
+            // Transform products data
+            const productsData = productsResponse.message as any;
             if (productsData && productsData.products && Array.isArray(productsData.products)) {
                 setProducts(productsData.products);
             } else if (productsResponse.message && Array.isArray(productsResponse.message)) {
                 setProducts(productsResponse.message);
             }
 
+            // Transform categories data
             if (categoriesResponse.message && Array.isArray(categoriesResponse.message)) {
                 setCategories(categoriesResponse.message);
             }
 
+            // Transform returns data
             if (returnsResponse.message && Array.isArray(returnsResponse.message)) {
                 setReturns(returnsResponse.message);
             } else if (returnsResponse.data && Array.isArray(returnsResponse.data)) {
@@ -320,7 +323,7 @@ export default function AdminPage() {
                                     <div className="w-2 h-2 rounded-full bg-brand_pink" />
                                     <p className="text-brand_gray text-sm">In Stock</p>
                                 </div>
-                                <p className="text-brand_gray text-sm font-medium">{products?.filter(p => (p.stock ?? 0) > 0).length || 0}</p>
+                                <p className="text-brand_gray text-sm font-medium">{products?.filter(p => p.stock > 0).length || 0}</p>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -340,6 +343,7 @@ export default function AdminPage() {
                             </div>
                         </div>
 
+                        {/* chart placeholder fix */}
                         <div className="flex justify-center items-center mt-10">
                             <div className="relative w-32 h-32">
                                 <DoughnutChart data={orderStatusData} />
@@ -359,13 +363,7 @@ export default function AdminPage() {
                                     <div className="flex w-full gap-x-3">
                                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden">
                                             {order.items?.[0]?.image ? (
-                                                <Image
-                                                    src={order.items[0].image}
-                                                    alt="Product"
-                                                    fill
-                                                    className="object-cover"
-                                                    sizes="32px"
-                                                />
+                                                <img src={order.items[0].image} alt="Product" className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-400 font-bold">IMG</div>
                                             )}
@@ -378,12 +376,12 @@ export default function AdminPage() {
                                     <div className="text-right flex-shrink-0 ml-2">
                                         <p className="text-[8px] text-brand_gray mb-1">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                                         <span className={`text-[8px] px-2 py-0.5 rounded-full ${
-                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' :
-                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' :
+                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' : 
+                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' : 
                                             'bg-gray-100 text-gray-600'
                                         }`}>
-                                            {order.orderStatus === 'delivered' ? 'Done' :
-                                             order.orderStatus === 'processing' ? 'Pending' :
+                                            {order.orderStatus === 'delivered' ? 'Done' : 
+                                             order.orderStatus === 'processing' ? 'Pending' : 
                                              order.orderStatus}
                                         </span>
                                     </div>

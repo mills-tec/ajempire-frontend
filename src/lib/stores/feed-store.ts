@@ -72,7 +72,7 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
         await likeFeedPost(postId); // your API toggles it
         success = true;
         toast.success("Post liked successfully");
-      } catch (err: any) {
+      } catch (err) {
         toast.error("Couldn't like post. Retrying...");
         await new Promise((res) => setTimeout(res, 500));
       }

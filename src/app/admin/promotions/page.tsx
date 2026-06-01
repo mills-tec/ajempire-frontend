@@ -745,7 +745,7 @@ discountType: 'percent' as 'percent' | 'fixed',
                     </td>
                     <td className="p-4 text-sm text-brand_gray_dark/80">
                       {promotion.discountType === 'percent' ? `${promotion.discountValue}% OFF` :
-                        promotion.discountType === 'fixed' ? `₦${promotion.discountValue.toLocaleString()} OFF` :
+                        promotion.discountType === 'fixed' ? `₦${promotion.discountValue!.toLocaleString()} OFF` :
                           promotion.discountType || 'N/A'}
                     </td>
                     <td className="p-4">
@@ -1332,7 +1332,7 @@ discountType: 'percent' as 'percent' | 'fixed',
                   Are you sure you want to delete this promotion?
                 </p>
                 <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                  This action is permanent, cannot be undone, and will immediately deactivate and delete the promotion "{selectedPromotion.title || 'Untitled promotion'}".
+                  This action is permanent, cannot be undone, and will immediately deactivate and delete the promotion &quot;{selectedPromotion.title || 'Untitled promotion'}&quot;.
                 </p>
               </div>
 
