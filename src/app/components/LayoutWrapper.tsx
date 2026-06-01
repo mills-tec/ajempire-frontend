@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
+import Navbar from "@/app/components/Navbar";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import CartPopup from "./CartPopup";
 
 export default function LayoutWrapper({
@@ -12,7 +13,13 @@ export default function LayoutWrapper({
   children: React.ReactNode;
   hideNavbar?: boolean;
 }) {
-  const pathname = usePathname();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTo(0, 0);
+        document.body.scrollTo(0, 0);
+    }, [pathname]);
 
   // Routes where navbar & footer should be hidden
   const hideLayout =

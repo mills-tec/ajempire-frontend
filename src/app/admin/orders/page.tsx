@@ -1,18 +1,18 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, ShoppingBag, TrendingUp, Package, Users, RotateCcw, X, ShoppingCart, MoreHorizontal } from 'lucide-react';
-import { getUserOrders, deleteOrder } from '@/lib/adminapi';
+import { Search, Filter, Eye, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { getUserOrders } from '@/lib/adminapi';
 import { useRouter } from 'next/navigation';
+import { filterByPeriod } from '@/lib/dashboard-utils';
 
 const OrdersPage = () => {
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = useState('This Week');
+  const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -22,7 +22,10 @@ const OrdersPage = () => {
     try {
       setLoading(true);
       const response = await getUserOrders();
-      
+
+      console.log("order:::", response);
+
+
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
         const transformedOrders = response.message.map((order: any) => ({
@@ -52,30 +55,6 @@ const OrdersPage = () => {
     router.push(`/admin/orders/${orderId}`);
   };
 
-  const handleDeleteClick = (order: any) => {
-    setSelectedOrder(order);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (selectedOrder) {
-      try {
-        await deleteOrder(selectedOrder.id);
-        // Remove from local state
-        setOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
-        setShowDeleteModal(false);
-        setSelectedOrder(null);
-      } catch (error) {
-        console.error('Error deleting order:', error);
-      }
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setSelectedOrder(null);
-  };
-
   const handleExportOrders = () => {
     // Create CSV content from filtered orders
     const headers = ['Order ID', 'Customer', 'Products', 'Total Price', 'Status', 'Date'];
@@ -95,38 +74,52 @@ const OrdersPage = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     // Generate filename with current date
     const currentDate = new Date().toISOString().split('T')[0];
     link.setAttribute('href', url);
     link.setAttribute('download', `orders_export_${currentDate}.csv`);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Calculate stats dynamically with safe defaults
-  const totalOrders = orders?.length || 0;
-  const processingOrders = orders?.filter(o => o.status === 'processing').length || 0;
-  const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0;
-  const canceledOrders = orders?.filter(o => o.status === 'canceled').length || 0;
-  const shippingOrders = orders?.filter(o => o.status === 'shipping').length || 0;
+  // Filter orders by selected period
+  const periodFilteredOrders = filterByPeriod(orders, selectedPeriod, (o) => o.fullOrder?.createdAt);
 
-  // Filter orders based on search with safe checks
-  const filteredOrders = orders?.filter(order => 
-    order?.id?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order?.status?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Calculate stats dynamically with safe defaults
+  const totalOrders = periodFilteredOrders?.length || 0;
+  const processingOrders = periodFilteredOrders?.filter(o => o.status?.toLowerCase() === 'processing').length || 0;
+  const deliveredOrders = periodFilteredOrders?.filter(o => o.status?.toLowerCase() === 'delivered').length || 0;
+  const canceledOrders = periodFilteredOrders?.filter(o => o.status?.toLowerCase() === 'canceled' || o.status?.toLowerCase() === 'cancelled').length || 0;
+  const shippingOrders = periodFilteredOrders?.filter(o => o.status?.toLowerCase() === 'shipping' || o.status?.toLowerCase() === 'shipped').length || 0;
+
+  // Filter orders based on search and status filter with safe checks
+  const filteredOrders = periodFilteredOrders?.filter(order => {
+    const matchesSearch =
+      order?.id?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order?.status?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      order?.status?.toLowerCase() === statusFilter.toLowerCase() ||
+      (statusFilter.toLowerCase() === 'shipping' && order?.status?.toLowerCase() === 'shipped') ||
+      (statusFilter.toLowerCase() === 'canceled' && order?.status?.toLowerCase() === 'cancelled');
+
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'Processing': return 'bg-orange-50 text-orange-500 border-orange-100';
-      case 'Shipping': return 'bg-blue-50 text-blue-500 border-blue-100';
-      case 'Delivered': return 'bg-green-50 text-green-500 border-green-100';
-      case 'Canceled': return 'bg-red-50 text-red-500 border-red-100';
+    switch (status?.toLowerCase()) {
+      case 'processing': return 'bg-orange-50 text-orange-500 border-orange-100';
+      case 'shipping':
+      case 'shipped': return 'bg-blue-50 text-blue-500 border-blue-100';
+      case 'delivered': return 'bg-green-50 text-green-500 border-green-100';
+      case 'canceled':
+      case 'cancelled': return 'bg-red-50 text-red-500 border-red-100';
       default: return 'bg-gray-50 text-gray-500 border-gray-100';
     }
   };
@@ -173,6 +166,7 @@ const OrdersPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -182,7 +176,7 @@ const OrdersPage = () => {
             <div className="flex justify-between items-end">
               <div>
                 <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Returned</p>
-                <h3 className="text-2xl font-bold text-brand_gray_dark">{orders.filter(o => o.status === 'Returned').length}</h3>
+                <h3 className="text-2xl font-bold text-brand_gray_dark">{periodFilteredOrders.filter(o => o.status?.toLowerCase() === 'returned').length}</h3>
               </div>
 
               <div className="text-left">
@@ -206,6 +200,7 @@ const OrdersPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -220,7 +215,7 @@ const OrdersPage = () => {
 
               <div className="text-left">
                 <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Customers</p>
-                <h3 className="text-2xl font-bold text-brand_gray_dark">{new Set(orders.map(o => o.customer)).size}</h3>
+                <h3 className="text-2xl font-bold text-brand_gray_dark">{new Set(periodFilteredOrders.map(o => o.customer)).size}</h3>
               </div>
             </div>
           </div>
@@ -229,7 +224,7 @@ const OrdersPage = () => {
 
       {/* Action Bar */}
       <div className="flex justify-end mb-6">
-        <button 
+        <button
           onClick={handleExportOrders}
           className="bg-brand_pink hover:bg-brand_pink/90 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-md active:scale-95"
         >
@@ -253,14 +248,26 @@ const OrdersPage = () => {
             />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 text-brand_gray_dark px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors">
-              <Filter size={16} />
-              Filter
-            </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 text-brand_gray_dark px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors">
-              <MoreHorizontal size={16} />
-              More
-            </button>
+            <div className="relative flex-1 md:flex-none">
+              <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand_gray_dark pointer-events-none" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 text-brand_gray_dark pl-9 pr-8 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors outline-none cursor-pointer appearance-none"
+              >
+                <option value="all">Filter</option>
+                <option value="all">All Statuses</option>
+                <option value="processing">Processing</option>
+                <option value="shipping">Shipping</option>
+                <option value="delivered">Delivered</option>
+                <option value="canceled">Canceled</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-brand_gray_dark flex items-center">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -288,9 +295,17 @@ const OrdersPage = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredOrders.map((order, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr
+                    key={idx}
+                    onClick={() => handleViewOrder(order.id)}
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="p-4 text-center">
-                      <input type="checkbox" className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer" />
+                      <input
+                        type="checkbox"
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer"
+                      />
                     </td>
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{order.id}</td>
                     <td className="p-4">
@@ -311,24 +326,19 @@ const OrdersPage = () => {
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{order.date}</td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-3">
-                        <button 
-                          onClick={() => handleDeleteClick(order)}
-                          className="text-brand_gray hover:text-red-500 transition-colors"
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleViewOrder(order.id); }}
+                          className="text-brand_gray hover:text-brand_pink transition-colors"
+                          title="View Order"
                         >
-                          <Trash2 size={16} />
+                          <Eye size={16} />
                         </button>
-                      <button 
-                        onClick={() => handleViewOrder(order.id)}
-                        className="text-brand_gray hover:text-brand_pink transition-colors"
-                    >
-                        <Eye size={16} />
-                    </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
 
@@ -363,52 +373,7 @@ const OrdersPage = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Delete Order</h3>
-              <button 
-                onClick={cancelDelete}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to delete this order?
-              </p>
-              <p className="font-medium text-gray-900">
-                Order #{selectedOrder.id}
-              </p>
-              <p className="text-sm text-gray-600 mt-1">
-                Customer: {selectedOrder.customer}
-              </p>
-              <p className="text-sm text-gray-600">
-                Total: {selectedOrder.total}
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={cancelDelete}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Delete Order
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation Modal removed */}
     </main>
   );
 };

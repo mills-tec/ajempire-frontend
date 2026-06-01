@@ -57,28 +57,32 @@ export default function AdminLogin() {
             if (response.message) {
                 const token = response.message;
                 console.log('Token extracted:', token);
-                const user = { 
-                    email: emailinput, 
-                    name: 'Admin User', 
-                    role: 'Administrator' 
+                const user = {
+                    id: response.data?.user?.id || '',
+                    email: emailinput,
+                    name: 'Administrator',
+                    role: response.data?.user?.role || 'Administrator'
                 };
 
                 localStorage.setItem("adminToken", token);
                 localStorage.setItem("adminUser", JSON.stringify(user));
+                document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
             } else if (response.data && response.data.token) {
                 // Alternative: check if token is in response.data.token
                 const token = response.data.token;
                 console.log('Token extracted from data:', token);
-                const user = { 
-                    email: emailinput, 
-                    name: 'Admin User', 
-                    role: 'Administrator' 
+                const user = {
+                    id: response.data?.user?.id || '',
+                    email: emailinput,
+                    name: 'Administrator',
+                    role: response.data?.user?.role || 'Administrator'
                 };
 
                 localStorage.setItem("adminToken", token);
                 localStorage.setItem("adminUser", JSON.stringify(user));
+                document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
             } else {

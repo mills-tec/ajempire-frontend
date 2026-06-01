@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
-import { Search, Filter, Eye, Trash2, Edit2, ChevronLeft, ChevronRight,  Megaphone, Plus, X } from 'lucide-react';
-import { createEducationWithFiles, getEducation, deleteEducation, updateEducation } from '@/lib/adminapi';
+import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import { Education } from '@/lib/admin-types';
-import { useToast, ToastContainer } from '@/app/components/ui/Toast';
+import { createEducationWithFiles, deleteEducation, getEducation, updateEducation } from '@/lib/adminapi';
+import { AlertCircle, ChevronLeft, ChevronRight, Edit2, Eye, Filter, Loader2, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
+import React, { useState } from 'react';
 
 const ContentManagementPage = () => {
   const toast = useToast();
@@ -424,7 +424,11 @@ const ContentManagementPage = () => {
                 </tr>
               ) : (
                 content.map((item, idx) => (
-                  <tr key={item._id || idx} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr 
+                    key={item._id || idx} 
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                    onClick={() => handleViewClick(item)}
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-sm text-brand_gray_dark max-w-xs truncate">
@@ -451,21 +455,21 @@ const ContentManagementPage = () => {
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleEditClick(item)}
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
                           className="text-brand_gray hover:text-brand_pink transition-colors"
                           title="Edit Content"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button 
-                          onClick={() => handleDeleteClick(item)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
                           className="text-brand_gray hover:text-red-500 transition-colors"
                           title="Delete Content"
                         >
                           <Trash2 size={16} />
                         </button>
                         <button 
-                          onClick={() => handleViewClick(item)}
+                          onClick={(e) => { e.stopPropagation(); handleViewClick(item); }}
                           className="text-brand_gray hover:text-blue-500 transition-colors"
                           title="View Content"
                         >
@@ -870,46 +874,49 @@ const ContentManagementPage = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedContent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Delete Content</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <AlertCircle size={20} className="text-red-500" />
+                <span>Delete Content</span>
+              </h3>
               <button 
                 onClick={cancelDelete}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
             
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">
+            <div className="mb-6 space-y-2">
+              <p className="text-sm text-brand_gray">
                 Are you sure you want to delete this content?
               </p>
-              <p className="font-medium text-gray-900">
-                &quot;{selectedContent.title || 'Untitled content'}&quot;
+              <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                This action is permanent, cannot be undone, and will permanently delete the article/video content "{selectedContent.title || 'Untitled content'}".
               </p>
             </div>
             
             <div className="flex gap-3">
               <button
                 onClick={cancelDelete}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Deleting...
                   </>
                 ) : (
-                  'Delete'
+                  'Delete Content'
                 )}
               </button>
             </div>

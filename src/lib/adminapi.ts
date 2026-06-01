@@ -9,6 +9,7 @@ import {
   AdminProfile,
   AdminSecuritySettings,
   ApiResponse,
+  Banner,
   Category,
   Coupon,
   CreateAdminData,
@@ -16,9 +17,7 @@ import {
   CreateCouponData,
   CreateEducationData,
   CreateFlashSaleData,
-  CreateProductData,
-  CreatePromotionData,
-  CreateShippingFeeData,
+  CreateProductData, CreateShippingFeeData,
   Customer,
   Education,
   FlashSale,
@@ -69,7 +68,7 @@ const apiCall = async <T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || 'API request failed');
+      throw new Error(data.error || data.message || 'API request failed');
     }
 
     return data;
@@ -176,7 +175,7 @@ export const getOrderById = (id: string): Promise<ApiResponse<Order>> =>
 
 export const updateOrder = (id: string, data: UpdateOrderData): Promise<ApiResponse<Order>> =>
   apiCall(`/admin/order/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -240,17 +239,31 @@ export const createFlashSale = (data: CreateFlashSaleData): Promise<ApiResponse<
 export const getPromotions = (): Promise<ApiResponse<Promotion[]>> =>
   apiCall('/admin/promotions');
 
-export const createPromotion = (data: CreatePromotionData): Promise<ApiResponse<Promotion>> =>
-  apiCall('/admin/promotions', {
+export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
+  if (data instanceof FormData) {
+    return apiCall('/admin/promotions', {
+      method: 'POST',
+      body: data,
+    });
+  }
+  return apiCall('/admin/promotions', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+};
 
-export const updatePromotion = (id: string, data: CreatePromotionData): Promise<ApiResponse<Promotion>> =>
-  apiCall(`/admin/promotions/${id}`, {
+export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> => {
+  if (data instanceof FormData) {
+    return apiCall(`/admin/promotions/${id}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+  return apiCall(`/admin/promotions/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+};
 
 export const deletePromotion = (id: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/promotions/${id}`, {
@@ -357,8 +370,8 @@ export const updateAdminNotificationSettings = (data: AdminNotificationSettings)
   });
 
 // Logistics endpoints
-export const getLogisticsSettings = (): Promise<ApiResponse<LogisticsSettings>> =>
-  apiCall('/admin/logistics');
+export const getLogisticsSettings = (): Promise<ApiResponse<any>> =>
+  apiCall('/logisticsStatus');
 
 export const updateLogisticsSettings = (data: LogisticsSettings): Promise<ApiResponse<LogisticsSettings>> =>
   apiCall('/admin/logistics', {
@@ -393,9 +406,43 @@ export const updateCustomerStatus = (id: string, status: string): Promise<ApiRes
     body: JSON.stringify({ status }),
   });
 
+export const toggleCustomerStatus = (id: string): Promise<ApiResponse<any>> =>
+  apiCall(`/admin/customer/toggleStatus/${id}`, {
+    method: 'PATCH',
+  });
+
+// Banner endpoints
+export const getBanners = (): Promise<ApiResponse<Banner[]>> =>
+  apiCall('/admin/banner');
+
+export const createBanner = (data: FormData): Promise<ApiResponse<Banner>> =>
+  apiCall('/admin/banner', {
+    method: 'POST',
+    body: data,
+  });
+
+export const updateBanner = (id: string, data: FormData): Promise<ApiResponse<Banner>> =>
+  apiCall(`/admin/banner/${id}`, {
+    method: 'PATCH',
+    body: data,
+  });
+
+export const removeImageFromBanner = (id: string, url: string): Promise<ApiResponse<any>> =>
+  apiCall(`/admin/banner/${id}/images`, {
+    method: 'DELETE',
+    body: JSON.stringify({ url }),
+  });
+
+export const deleteBanner = (id: string): Promise<ApiResponse<void>> =>
+  apiCall(`/admin/banner/${id}`, {
+    method: 'DELETE',
+  });
+
+
 // Export all interfaces for use in components (re-export from types file)
 export type {
-  Address, AddressValidation, ApiResponse, Category, Coupon, CreateCategoryData, CreateCouponData, CreateEducationData, CreateFlashSaleData, CreateProductData, CreateShippingFeeData, Education, FlashSale, LoginCredentials,
+  Address, AddressValidation, ApiResponse, Banner,
+  BannerImage, Category, Coupon, CreateCategoryData, CreateCouponData, CreateEducationData, CreateFlashSaleData, CreateProductData, CreateShippingFeeData, Education, FlashSale, LoginCredentials,
   LoginResponse, LogisticsSettings, Order,
   OrderItem, Product, ReturnItem, ReturnRequest, Review, ShippingFee, SystemNotification, UpdateCategoryData, UpdateLogisticsData, UpdateOrderData, UpdateProductData, UpdateReturnData, UpdateShippingFeeData
 } from './admin-types';

@@ -67,6 +67,7 @@ export interface Product {
   stock: number;
   weight: number;
   status: 'active' | 'inactive' | 'draft';
+  isReturnable?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +81,7 @@ export interface CreateProductData {
   stock: number;
   weight: number;
   status?: 'active' | 'inactive' | 'draft';
+  isReturnable?: boolean;
 }
 
 export interface UpdateProductData {
@@ -91,6 +93,7 @@ export interface UpdateProductData {
   stock?: number;
   weight?: number;
   status?: 'active' | 'inactive' | 'draft';
+  isReturnable?: boolean;
 }
 
 // Order interfaces
@@ -122,6 +125,7 @@ export interface Address {
 
 export interface UpdateOrderData {
   status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  orderStatus?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   trackingNumber?: string;
 }
 
@@ -435,3 +439,37 @@ export interface SystemNotification {
   sendEmail?: boolean;
   sendPush?: boolean;
 }
+
+// Logistics interface
+export interface LogisticsSettings {
+  id: string;
+  mode: 'automatic' | 'manual';
+  automaticProvider?: string; // e.g., 'dhl', 'fedex', 'ups'
+  manualInstructions?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateLogisticsData {
+  mode: 'automatic' | 'manual';
+  automaticProvider?: string;
+  manualInstructions?: string;
+  isActive?: boolean;
+}
+
+// Banner interfaces
+export interface BannerImage {
+  url: string;
+  link?: string;
+}
+
+export interface Banner {
+  _id: string;
+  id?: string;
+  images: BannerImage[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+

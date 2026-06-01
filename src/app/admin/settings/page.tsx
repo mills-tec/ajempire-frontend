@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, SquarePen, Megaphone, User, Camera, MapPin, Briefcase, Globe, Lock, Bell, Shield, Key, Plus, X, Check, CheckCircle, AlertCircle, Info } from 'lucide-react';
-import { 
-  fetchAdminProfile, 
-  updateAdminProfile, 
-  getAllAdmins, 
-  addAdmin, 
-  updateAdminPermission, 
-  deleteAdmin, 
+import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, SquarePen, Megaphone, User, Camera, MapPin, Briefcase, Globe, Lock, Bell, Shield, Key, Plus, X, Check, CheckCircle, AlertCircle, Info, Loader2 } from 'lucide-react';
+import {
+  fetchAdminProfile,
+  updateAdminProfile,
+  getAllAdmins,
+  addAdmin,
+  updateAdminPermission,
+  deleteAdmin,
   fetchPermissions,
   updateAdminSecuritySettings,
   updateAdminNotificationSettings,
@@ -46,7 +46,7 @@ const SettingsPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('This Week');
   const [selectedTab, setSelectedTab] = useState('profile');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  
+
   // Profile state
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -55,7 +55,7 @@ const SettingsPage = () => {
     profilePicture: '' as string | null
   });
   const [profileLoading, setProfileLoading] = useState(false);
-  
+
   // Roles & Access state
   const [admins, setAdmins] = useState<any[]>([]);
   const [permissions, setPermissions] = useState<any[]>([]);
@@ -68,7 +68,10 @@ const SettingsPage = () => {
     // permissions: []
   });
   const [adminLoading, setAdminLoading] = useState(false);
-  
+  const [showDeleteAdminModal, setShowDeleteAdminModal] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<any>(null);
+  const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
+
   // Notifications state
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
@@ -79,7 +82,7 @@ const SettingsPage = () => {
     marketingEmails: false
   });
   const [notificationLoading, setNotificationLoading] = useState(false);
-  
+
   // Security state
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorAuth: false,
@@ -88,7 +91,7 @@ const SettingsPage = () => {
     loginAlerts: true
   });
   const [securityLoading, setSecurityLoading] = useState(false);
-  
+
   // Logistics state
   const [logisticsSettings, setLogisticsSettings] = useState({
     logisticsMode: 'auto' as 'auto' | 'manual',
@@ -146,7 +149,7 @@ const SettingsPage = () => {
         getAllAdmins(),
         fetchPermissions()
       ]);
-      
+
       if (adminsResponse.message && Array.isArray(adminsResponse.message)) {
         setAdmins(adminsResponse.message);
       } else if (adminsResponse.data) {
@@ -198,11 +201,12 @@ const SettingsPage = () => {
     try {
       setLogisticsLoading(true);
       const response = await getLogisticsSettings();
-      if (response.data) {
-        setLogisticsSettings({
-          logisticsMode: response.data.logisticsMode || 'auto',
-        });
-      }
+      console.log("Logistics Response: ", response)
+      
+      const mode = (response as any).logisticsMode || response.data?.logisticsMode || 'auto';
+      setLogisticsSettings({
+        logisticsMode: mode,
+      });
     } catch (error) {
       console.error('Error fetching logistics settings:', error);
     } finally {
@@ -241,100 +245,100 @@ const SettingsPage = () => {
   }, [selectedTab]);
 
   const renderProfileTab = () => {
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate form data
-    if (!profileData.firstName.trim() || !profileData.email.trim()) {
-      alert('Please fill in all required fields.');
-      return;
-    }
+    const handleProfileUpdate = async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(profileData.email)) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-
-    try {
-      setProfileLoading(true);
-      const response = await updateAdminProfile(profileData);
-      
-      if (response.message || response.data) {
-        alert('Profile updated successfully!');
-        // Refresh data to ensure we have the latest
-        fetchProfileData();
-      } else {
-        throw new Error('No success response');
-      }
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setProfileData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type and size
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file.');
-        return;
-      }
-      
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('Image size should be less than 5MB.');
+      // Validate form data
+      if (!profileData.firstName.trim() || !profileData.email.trim()) {
+        alert('Please fill in all required fields.');
         return;
       }
 
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: reader.result as string
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(profileData.email)) {
+        alert('Please enter a valid email address.');
+        return;
+      }
 
-  const handleDeleteProfilePicture = () => {
-    if (window.confirm('Are you sure you want to remove your profile picture?')) {
+      try {
+        setProfileLoading(true);
+        const response = await updateAdminProfile(profileData);
+
+        if (response.message || response.data) {
+          alert('Profile updated successfully!');
+          // Refresh data to ensure we have the latest
+          fetchProfileData();
+        } else {
+          throw new Error('No success response');
+        }
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
       setProfileData(prev => ({
         ...prev,
-        profilePicture: null
+        [name]: value
       }));
-    }
-  };
+    };
 
-  const handleResetProfile = () => {
-    if (window.confirm('Are you sure you want to reset all profile changes?')) {
-      fetchProfileData();
-    }
-  };
+    const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file.');
+          return;
+        }
 
-  return (
-    <div className="space-y-6">
-      {/* Personal Information */}
-      <div className='mt-5'>
-        <h3 className="text-lg font-medium text-brand_gray_dark mb-4">Personal Information</h3>
-        <p className='text-gray-600'>Manage your personal details and keep your contact info up to date</p>
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          alert('Image size should be less than 5MB.');
+          return;
+        }
 
-        {/* Profile Picture */}
-        <div className="flex items-end gap-3 pb-6 mt-10">
-          <div className="relative">
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfileData(prev => ({
+            ...prev,
+            profilePicture: reader.result as string
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleDeleteProfilePicture = () => {
+      if (window.confirm('Are you sure you want to remove your profile picture?')) {
+        setProfileData(prev => ({
+          ...prev,
+          profilePicture: null
+        }));
+      }
+    };
+
+    const handleResetProfile = () => {
+      if (window.confirm('Are you sure you want to reset all profile changes?')) {
+        fetchProfileData();
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Personal Information */}
+        <div className='mt-5'>
+          <h3 className="text-lg font-medium text-brand_gray_dark mb-4">Personal Information</h3>
+          <p className='text-gray-600'>Manage your personal details and keep your contact info up to date</p>
+
+          {/* Profile Picture */}
+          <div className="flex items-end gap-3 pb-6 mt-10">
+            {/* <div className="relative">
             {profileData.profilePicture ? (
               <img src={profileData.profilePicture} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
             ) : (
@@ -348,274 +352,337 @@ const SettingsPage = () => {
               onChange={handleProfilePictureChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-center justify-center bg-gray-100 rounded-full p-2">
-              <button 
-                type="button"
-                onClick={handleDeleteProfilePicture}
-                className="text-brand_gray hover:text-red-500 transition-colors"
-                title="Remove Profile Picture"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-            <div className="flex items-center justify-center bg-gray-100 rounded-full p-2">
-              <button 
-                type="button"
-                className="text-brand_gray hover:text-blue-500 transition-colors"
-                title="Change Profile Picture"
-                onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
-              >
-                <Camera size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleProfileUpdate} className="mt-10 flex flex-col gap-5">
-          <div className='flex items-center gap-36'>
-            <label className="text-sm font-medium text-brand_gray_dark">First Name</label>
-            <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
-              <input
-                type="text"
-                name="firstName"
-                value={profileData.firstName}
-                onChange={handleInputChange}
-                className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
-              />
-              <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
-            </div>
-          </div>
-
-          <div className='flex items-center gap-[11.1rem]'>
-            <label className="text-sm font-medium text-brand_gray_dark">Email</label>
-            <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
-              <input
-                type="email"
-                name="email"
-                value={profileData.email}
-                onChange={handleInputChange}
-                className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
-              />
-              <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
-            </div>
-          </div>
-
-          <div className='flex items-center gap-28'>
-            <label className="text-sm font-medium text-brand_gray_dark">Phone number</label>
-            <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
-              <input
-                type="tel"
-                name="phone"
-                value={profileData.phone}
-                onChange={handleInputChange}
-                className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
-              />
-              <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
-        <button 
-          type="button"
-          onClick={handleResetProfile}
-          className="px-6 py-2 border border-gray-200 text-brand_gray_dark rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Reset
-        </button>
-        <button 
-          type="submit"
-          disabled={profileLoading}
-          className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors disabled:opacity-50"
-        >
-          {profileLoading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-  const renderRolesTab = () => {
-  const handleAddAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setAdminLoading(true);
-      await addAdmin(adminFormData);
-      setShowAddAdminModal(false);
-      fetchAdminsData();
-      setAdminFormData({ name: '', email: '', role: '' });
-    } catch (error) {
-      console.error('Error adding admin:', error);
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const handleDeleteAdmin = async (adminId: string) => {
-    if (window.confirm('Are you sure you want to delete this admin?')) {
-      try {
-        await deleteAdmin(adminId);
-        fetchAdminsData();
-      } catch (error) {
-        console.error('Error deleting admin:', error);
-      }
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-medium text-brand_gray_dark mb-2">Admin Users & Permissions</h3>
-          <p className="text-gray-600">Manage admin accounts and their access permissions</p>
-        </div>
-        <button
-          onClick={() => setShowAddAdminModal(true)}
-          className="flex items-center gap-2 bg-brand_pink text-white px-4 py-2 rounded-lg hover:bg-brand_pink/90 transition-colors"
-        >
-          <Plus size={16} />
-          Add Admin
-        </button>
-      </div>
-
-      {/* Admins Table */}
-      <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Email</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Role</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {adminLoading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand_pink mx-auto"></div>
-                </td>
-              </tr>
-            ) : admins.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                  No admin users found
-                </td>
-              </tr>
-            ) : (
-              admins.map((admin) => (
-                <tr key={admin._id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3">{admin.name}</td>
-                  <td className="px-4 py-3">{admin.email}</td>
-                  <td className="px-4 py-3">{admin.role}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      admin.status === 'active' 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {admin.status || 'active'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button className="text-blue-500 hover:text-blue-700">
-                        <SquarePen size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteAdmin(admin._id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Admin Modal */}
-      {showAddAdminModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Add New Admin</h3>
-              <button
-                onClick={() => setShowAddAdminModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddAdmin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  required
-                  value={adminFormData.name}
-                  onChange={(e) => setAdminFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={adminFormData.email}
-                  onChange={(e) => setAdminFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  required
-                  value={adminFormData.role}
-                  onChange={(e) => setAdminFormData(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
-                >
-                  <option value="">Select Role</option>
-                  <option value="senior">Senior</option>
-                  <option value="junior">Junior</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-4">
+          </div> */}
+            {/* <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center bg-gray-100 rounded-full p-2">
                 <button
                   type="button"
+                  onClick={handleDeleteProfilePicture}
+                  className="text-brand_gray hover:text-red-500 transition-colors"
+                  title="Remove Profile Picture"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              <div className="flex items-center justify-center bg-gray-100 rounded-full p-2">
+                <button
+                  type="button"
+                  className="text-brand_gray hover:text-blue-500 transition-colors"
+                  title="Change Profile Picture"
+                  onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                >
+                  <Camera size={16} />
+                </button>
+              </div>
+            </div> */}
+          </div>
+
+          <form onSubmit={handleProfileUpdate} className="flex flex-col gap-5">
+            <div className='flex items-center gap-36'>
+              <label className="text-sm font-medium text-brand_gray_dark">First Name</label>
+              <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
+                <input
+                  type="text"
+                  name="firstName"
+                  value={profileData.firstName}
+                  onChange={handleInputChange}
+                  className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
+                />
+                <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
+              </div>
+            </div>
+
+            <div className='flex items-center gap-[11.1rem]'>
+              <label className="text-sm font-medium text-brand_gray_dark">Email</label>
+              <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
+                <input
+                  type="email"
+                  name="email"
+                  value={profileData.email}
+                  onChange={handleInputChange}
+                  className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
+                />
+                <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
+              </div>
+            </div>
+
+            <div className='flex items-center gap-28'>
+              <label className="text-sm font-medium text-brand_gray_dark">Phone number</label>
+              <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
+                <input
+                  type="tel"
+                  name="phone"
+                  value={profileData.phone}
+                  onChange={handleInputChange}
+                  className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
+                />
+                <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={handleResetProfile}
+            className="px-6 py-2 border border-gray-200 text-brand_gray_dark rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Reset
+          </button>
+          <button
+            type="submit"
+            disabled={profileLoading}
+            className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors disabled:opacity-50"
+          >
+            {profileLoading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRolesTab = () => {
+    const handleAddAdmin = async (e: React.FormEvent) => {
+      e.preventDefault();
+      try {
+        setAdminLoading(true);
+        await addAdmin(adminFormData);
+        setShowAddAdminModal(false);
+        fetchAdminsData();
+        setAdminFormData({ name: '', email: '', role: '' });
+      } catch (error) {
+        console.error('Error adding admin:', error);
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    const handleDeleteAdmin = (admin: any) => {
+      setAdminToDelete(admin);
+      setShowDeleteAdminModal(true);
+    };
+
+    const confirmDeleteAdmin = async () => {
+      if (!adminToDelete?._id) return;
+      try {
+        setIsDeletingAdmin(true);
+        await deleteAdmin(adminToDelete._id);
+        showToast('Admin deleted successfully', 'success');
+        fetchAdminsData();
+      } catch (error: any) {
+        console.error('Error deleting admin:', error);
+        showToast(error.message || 'Failed to delete admin', 'error');
+      } finally {
+        setIsDeletingAdmin(false);
+        setShowDeleteAdminModal(false);
+        setAdminToDelete(null);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium text-brand_gray_dark mb-2">Admin Users & Permissions</h3>
+            <p className="text-gray-600">Manage admin accounts and their access permissions</p>
+          </div>
+          <button
+            onClick={() => setShowAddAdminModal(true)}
+            className="flex items-center gap-2 bg-brand_pink text-white px-4 py-2 rounded-lg hover:bg-brand_pink/90 transition-colors"
+          >
+            <Plus size={16} />
+            Add Admin
+          </button>
+        </div>
+
+        {/* Admins Table */}
+        <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Email</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Role</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand_pink mx-auto"></div>
+                  </td>
+                </tr>
+              ) : admins.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                    No admin users found
+                  </td>
+                </tr>
+              ) : (
+                admins.map((admin) => (
+                  <tr key={admin._id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="px-4 py-3">{admin.name}</td>
+                    <td className="px-4 py-3">{admin.email}</td>
+                    <td className="px-4 py-3">{admin.role}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${admin.status === 'active'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                        }`}>
+                        {admin.status || 'active'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button className="text-blue-500 hover:text-blue-700">
+                          <SquarePen size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAdmin(admin)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Delete Admin"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Add Admin Modal */}
+        {showAddAdminModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Add New Admin</h3>
+                <button
                   onClick={() => setShowAddAdminModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddAdmin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminFormData.name}
+                    onChange={(e) => setAdminFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={adminFormData.email}
+                    onChange={(e) => setAdminFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select
+                    required
+                    value={adminFormData.role}
+                    onChange={(e) => setAdminFormData(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
+                  >
+                    <option value="">Select Role</option>
+                    <option value="senior">Senior</option>
+                    <option value="junior">Junior</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAdminModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adminLoading}
+                    className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 disabled:opacity-50"
+                  >
+                    {adminLoading ? 'Adding...' : 'Add Admin'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteAdminModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <AlertCircle size={20} className="text-red-500" />
+                  <span>Delete Admin User</span>
+                </h3>
+                <button
+                  onClick={() => { setShowDeleteAdminModal(false); setAdminToDelete(null); }}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mb-6 space-y-2">
+                <p className="text-sm text-brand_gray">
+                  Are you sure you want to delete this administrator?
+                </p>
+                <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                  This action is permanent, cannot be undone, and will immediately revoke all access privileges for "{adminToDelete?.name || 'Unknown Admin'}" ({adminToDelete?.email || 'No email'}).
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowDeleteAdminModal(false); setAdminToDelete(null); }}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={adminLoading}
-                  className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 disabled:opacity-50"
+                  onClick={confirmDeleteAdmin}
+                  disabled={isDeletingAdmin}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
                 >
-                  {adminLoading ? 'Adding...' : 'Add Admin'}
+                  {isDeletingAdmin ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Admin'
+                  )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        )}
+      </div>
+    );
+  };
 
   const renderNotificationsTab = () => {
     const handleNotificationUpdate = async (e: React.FormEvent) => {
@@ -657,14 +724,12 @@ const SettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => handleNotificationChange('emailNotifications', !notificationSettings.emailNotifications)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    notificationSettings.emailNotifications ? 'bg-brand_pink' : 'bg-gray-200'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.emailNotifications ? 'bg-brand_pink' : 'bg-gray-200'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      notificationSettings.emailNotifications ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationSettings.emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -675,7 +740,7 @@ const SettingsPage = () => {
             <button type="button" className="px-6 py-2 border border-gray-200 text-brand_gray_dark rounded-lg hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               disabled={notificationLoading}
               className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors disabled:opacity-50"
@@ -728,14 +793,12 @@ const SettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => handleSecurityChange('twoFactorAuth', !securitySettings.twoFactorAuth)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    securitySettings.twoFactorAuth ? 'bg-brand_pink' : 'bg-gray-200'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${securitySettings.twoFactorAuth ? 'bg-brand_pink' : 'bg-gray-200'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      securitySettings.twoFactorAuth ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${securitySettings.twoFactorAuth ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -746,7 +809,7 @@ const SettingsPage = () => {
             <button type="button" className="px-6 py-2 border border-gray-200 text-brand_gray_dark rounded-lg hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               disabled={securityLoading}
               className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors disabled:opacity-50"
@@ -765,7 +828,7 @@ const SettingsPage = () => {
       try {
         setLogisticsLoading(true);
         const response = await updateLogisticsSettings(logisticsSettings);
-        
+
         if (response.message || response.data) {
           showToast('Logistics settings updated successfully!', 'success');
         } else {
@@ -854,25 +917,7 @@ const SettingsPage = () => {
                 </div>
               )} */}
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-gray-900">Enable Logistics</h4>
-                  <p className="text-sm text-gray-500">Activate logistics processing for orders</p>
-                </div>
-                <button
-                  type="button"
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isActive ? 'bg-brand_pink' : 'bg-gray-200'
-                  }`}
-                  onClick={handleIsActiveToggle}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isActive ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
+
             </div>
           </div>
 
@@ -948,13 +993,13 @@ const SettingsPage = () => {
           </div>
         </div>
       </main>
-      
+
       {/* Toast Notification */}
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </ProtectedRoute>

@@ -159,13 +159,13 @@ const AddProductPage = () => {
     const [productDescription, setProductDescription] = useState('');
     const [productCategory, setProductCategory] = useState('');
     const [productPrice, setProductPrice] = useState('');
-    const [discountedPrice, setDiscountedPrice] = useState('');
     const [stock, setStock] = useState('');
     const [weight, setWeight] = useState('');
     const [productStatus, setProductStatus] = useState('in stock');
     const [isFeatured, setIsFeatured] = useState(false);
     const [sku, setSku] = useState('');
     const [barcode, setBarcode] = useState('');
+    const [isReturnable, setIsReturnable] = useState(true);
 
     // Special Offer states
     const [isSpecialOffer, setIsSpecialOffer] = useState(false);
@@ -443,6 +443,12 @@ const AddProductPage = () => {
             formData.append('price', productPrice);
             formData.append('stock', stock);
             formData.append('weight', weight);
+            formData.append('isReturnable', String(isReturnable));
+            formData.append('isTimedSpecialOffer', String(isTimedSpecialOffer));
+            if (isTimedSpecialOffer) {
+                if (specialOfferDate) formData.append('specialOfferDate', specialOfferDate);
+                if (specialOfferTime) formData.append('specialOfferTime', specialOfferTime);
+            }
             
             // Optional fields
             if (sku) formData.append('sku', sku);
@@ -512,7 +518,6 @@ const AddProductPage = () => {
                 setProductDescription('');
                 setProductCategory('');
                 setProductPrice('');
-                setDiscountedPrice('');
                 setStock('');
                 setWeight('');
                 setSku('');
@@ -524,6 +529,7 @@ const AddProductPage = () => {
                 setProductVideo(null);
                 setProductStatus('in stock');
                 setIsFeatured(false);
+                setIsReturnable(true);
                 setIsSpecialOffer(false);
                 setIsTimedSpecialOffer(false);
                 setSpecialOfferDate('');
@@ -851,20 +857,6 @@ const AddProductPage = () => {
                                     />
                                 </div>
 
-                                <div className=''>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Tags / Label
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={productName}
-                                        onChange={(e) => setProductName(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Add tags"
-                                        required
-                                    />
-                                </div>
-
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-2">
                                         Base Price (₦)
@@ -879,18 +871,7 @@ const AddProductPage = () => {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Discount Price (%)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={discountedPrice}
-                                        onChange={(e) => setDiscountedPrice(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="0.00"
-                                    />
-                                </div>
+
 
                                 <div className='col-span-2'>
                                     <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -926,6 +907,25 @@ const AddProductPage = () => {
                     </div>
 
                     <div className="space-y-8">
+                        {/* Product Policy */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-6">
+                            <h2 className="text-sm text-gray-900 mb-6 font-semibold">Product Policy</h2>
+                            <div className="flex items-center justify-between gap-6">
+                                <label className="text-xs font-medium text-gray-700">
+                                    Is this product returnable?
+                                </label>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={isReturnable}
+                                        onChange={(e) => setIsReturnable(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
                         {/* Basic Information */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
                             <h2 className="text-sm text-gray-900 mb-6">Special Offer</h2>
@@ -949,9 +949,33 @@ const AddProductPage = () => {
                                     </div>
                                 </div>
 
-                                <div className='col-span-2'>
-                                    <input type="date" name="date" id="date" />
-                                </div>
+                                {isTimedSpecialOffer && (
+                                    <div className='col-span-2 grid grid-cols-2 gap-4'>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                Special Offer Expiry Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={specialOfferDate}
+                                                onChange={(e) => setSpecialOfferDate(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                Special Offer Expiry Time
+                                            </label>
+                                            <input
+                                                type="time"
+                                                value={specialOfferTime}
+                                                onChange={(e) => setSpecialOfferTime(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className='col-span-2 flex items-center gap-2'>
                                     <div className="flex items-center justify-between mb-2 gap-6">
