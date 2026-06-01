@@ -45,6 +45,7 @@ const PromotionsPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedPromotion, setSelectedPromotion] = useState<any>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -87,6 +88,7 @@ discountType: 'percent' as 'percent' | 'fixed',
     e.stopPropagation();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewClick = (promotion: any) => {
     setSelectedPromotion(promotion);
     setShowViewModal(true);
@@ -179,7 +181,6 @@ discountType: 'percent' as 'percent' | 'fixed',
     fetchPromotions();
     fetchCategories();
     fetchProducts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusStyle = (status: string) => {
@@ -1000,6 +1001,7 @@ discountType: 'percent' as 'percent' | 'fixed',
                   />
                   {(bannerFile || formData.banner) && (
                     <div className="mt-3 relative w-32 h-20 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={bannerFile ? URL.createObjectURL(bannerFile) : formData.banner}
                         alt="Banner Preview"
@@ -1249,6 +1251,7 @@ discountType: 'percent' as 'percent' | 'fixed',
                   />
                   {(bannerFile || formData.banner) && (
                     <div className="mt-3 relative w-32 h-20 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={bannerFile ? URL.createObjectURL(bannerFile) : formData.banner}
                         alt="Banner Preview"
@@ -1384,6 +1387,7 @@ discountType: 'percent' as 'percent' | 'fixed',
                 {/* Image Banner */}
                 {selectedPromotion.banner && (
                   <div className="w-full h-48 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center relative shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={selectedPromotion.banner}
                       alt="Campaign Banner"

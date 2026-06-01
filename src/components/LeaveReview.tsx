@@ -8,6 +8,7 @@ import { ImSpinner8 } from 'react-icons/im'
 import { getUser } from '@/lib/api'
 import MobilePage from './MobilePage'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showOverlay }: { selectedProduct: IItem, handleHideOverlay: () => void, setUpdatedReviews: (review: any) => void, showOverlay: boolean }) => {
   const { postReview, loading } = useReviews();
   const ratingValues = [1, 2, 3, 4, 5];
@@ -26,6 +27,7 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
 
     const data = {
       data: { rating: inputs.selectedRating, comment: inputs.comment },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       product: (selectedProduct.product as any)._id,
     };
 
@@ -35,6 +37,7 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
 
     if (req) {
       handleHideOverlay();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setUpdatedReviews({ ...updatedReview, product: (selectedProduct.product as any)._id });
       setInputs({
         selectedRating: 0,
@@ -44,13 +47,16 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
   };
 
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const reviews: [] = (selectedProduct.product as any).reviews;
     const user = getUser();
-const userReview: any = reviews.find((review: any) => review.user == user?._id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userReview: any = reviews.find((review: any) => review.user == user?._id);
     setInputs({
       selectedRating: userReview?.rating || 0,
       comment: userReview?.comment || "",
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showOverlay]);
 
   return <>
@@ -157,6 +163,7 @@ const userReview: any = reviews.find((review: any) => review.user == user?._id);
 
 export default function LeaveReview({ showOverlay, handleHideOverlay, selectedProduct, setUpdatedReviews }: {
   showOverlay: boolean, handleHideOverlay: () => void, selectedProduct: IItem,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setUpdatedReviews: (review: any) => void
 }) {
 

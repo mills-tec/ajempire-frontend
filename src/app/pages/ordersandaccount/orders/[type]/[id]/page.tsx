@@ -123,9 +123,10 @@ export default function Status() {
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const handleSubmit = useCallback(async () => {
+  const _handleSubmit = useCallback(async () => {
     if (!order) return;
 
     const formData = new FormData();

@@ -23,6 +23,7 @@ ChartJS.register(
 );
 
 interface WebsiteTrafficChartProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: any[];
 }
 
@@ -163,7 +164,7 @@ const WebsiteTrafficChart = ({ orders = [] }: WebsiteTrafficChartProps) => {
             </div>
             <div className="h-[250px] relative">
                 {chartData.length > 0 ? (
-                    <Line data={trafficData} options={options as any} />
+                    <Line data={trafficData} options={options as unknown as object} />
                 ) : (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                         No traffic data for this period

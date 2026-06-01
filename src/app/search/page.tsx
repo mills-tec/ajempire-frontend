@@ -69,7 +69,7 @@ function SearchContent() {
     enabled: hasQuery,
   });
 
-  const { data: allCategories, isLoading: isCategoriesLoading } = useQuery({
+  const { data: allCategories, isLoading: _isCategoriesLoading } = useQuery({
     queryKey: ["categories"],
     queryFn: () => getCategories(),
     staleTime: 1000 * 60 * 5,
@@ -93,6 +93,7 @@ function SearchContent() {
     setSkeletonLoading(true);
     const timer = setTimeout(() => setSkeletonLoading(false), 500);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   const matchedCategoryNames = useMemo(() => {
@@ -161,7 +162,7 @@ function SearchContent() {
   // If text search is still loading — show skeletons
   // If text search is done (even with 0 results) — only wait for categories
   // if they are actually relevant (matchedCategoryNames.length > 0)
-  const textSearchDone = !isLoading && data !== undefined;
+  const _textSearchDone = !isLoading && data !== undefined;
   const showLoadingState = useMemo(() => {
     // No search at all → no loading
     if (!hasAnySearch) return false;

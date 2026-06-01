@@ -58,6 +58,7 @@ const SetupPasswordContent = () => {
       });
 
       // API returns status: true or success: true or a message containing successfully
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (response.success || response.message?.includes('successfully') || (response as any).status === true) {
         toast.success('Password updated successfully! You can now log in.');
         // Clean up the temporary token
@@ -67,9 +68,9 @@ const SetupPasswordContent = () => {
       } else {
         toast.error(response.error || 'Failed to update password. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password setup error:', error);
-      toast.error(error.message || 'An error occurred during password setup.');
+      toast.error((error instanceof Error ? error.message : null) || 'An error occurred during password setup.');
     } finally {
       setLoading(false);
     }

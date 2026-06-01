@@ -22,16 +22,19 @@ export default function AdminLogin() {
 
   useEffect(() => {
     setIsValidPassword(passwordRegex.test(passwordinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passwordinput]);
 
   // Validate email whenever it changes
   useEffect(() => {
     setIsValidEmail(emailRegex.test(emailinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailinput]);
 
   // Validate password whenever it changes
   useEffect(() => {
     setIsValidPassword(passwordRegex.test(passwordinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passwordinput]);
 
   // Only enable login if both are valid
@@ -89,9 +92,10 @@ export default function AdminLogin() {
                 console.log('No token found in response');
                 toast.error(response.error || "Login failed");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Login error:", error);
-            toast.error("Login failed: " + (error.message || "Unknown error"));
+            const msg = error instanceof Error ? error.message : "Unknown error";
+            toast.error("Login failed: " + msg);
         } finally {
             setLoading(false);
         }

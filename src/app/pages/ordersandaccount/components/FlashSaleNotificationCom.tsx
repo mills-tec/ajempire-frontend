@@ -26,6 +26,7 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
         }, 1000);
 
         return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeLeft]);
 
 
@@ -51,6 +52,7 @@ export default function FlashSaleNotificationCom({ notification }: { notificatio
         <div className="flex justify-between  ">
             <div className="flex items-center gap-4">
                 <div className="w-26 h-20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={notification.data?.product.cover_image} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col gap-2">

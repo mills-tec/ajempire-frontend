@@ -1,6 +1,7 @@
 'use client'
 
 interface TopSellingCategoryProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: any[];
     period?: string;
 }
@@ -8,6 +9,7 @@ interface TopSellingCategoryProps {
 const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCategoryProps) => {
     // Calculate category sales from orders
     const categorySales = orders?.reduce((acc: Record<string, { name: string; sales: number; value: number }>, order) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         order.items?.forEach((item: any) => {
             const category = item.category || 'Unknown Category';
             

@@ -111,7 +111,7 @@ type CommentState = {
 
 export default function FeedItem() {
   const params = useParams();
-  const { type } = params;
+  const { type: _type } = params;
 
   const feedsForRefreshRef = useRef<Feed[]>([]);
   const setFeedsExternallyRef = useRef<((feeds: Feed[]) => void) | null>(null);
@@ -291,6 +291,7 @@ function FeedContent({
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, data.feeds, idParam]);
 
   // ── Intersection Observer for feed visibility ───────────────────────────

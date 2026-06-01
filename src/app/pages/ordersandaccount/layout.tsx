@@ -28,7 +28,7 @@ function findActiveTitle(items: SideBarItem[], pathname: string): string {
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
   const { getNotifications } = useNotification()
@@ -61,6 +61,7 @@ export default function Layout({ children }: LayoutProps) {
       const req = await getNotifications();
       setNotifications(req)
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

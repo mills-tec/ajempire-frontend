@@ -1,6 +1,6 @@
 "use client";
 import axios from "axios";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 interface ShippingAdressProps {
   setIsadress: React.Dispatch<React.SetStateAction<boolean>>;

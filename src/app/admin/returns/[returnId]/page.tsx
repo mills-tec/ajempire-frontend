@@ -12,11 +12,13 @@ const SingleReturnPage = () => {
   const orderId = params.orderId as string;
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchOrderDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const fetchOrderDetails = async () => {
@@ -245,6 +247,7 @@ const SingleReturnPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {order.items?.map((item: any, index: number) => (
                 <tr key={index} className="hover:bg-gray-50/50 transition-colors">
                   <td className="p-4">

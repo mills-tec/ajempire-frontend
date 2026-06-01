@@ -4,6 +4,7 @@ import Link from "next/link";
 import { filterByPeriod } from '@/lib/dashboard-utils';
 
 interface TopSellingProductsProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: any[];
     period?: string;
 }
@@ -12,6 +13,7 @@ const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingPro
     const filteredOrders = filterByPeriod(orders, period, (o) => o.createdAt);
 
     const productSales = filteredOrders.reduce((acc: Record<string, { id: string; name: string; sales: number; price: number; image: string }>, order) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         order.items?.forEach((item: any) => {
             const productId = item.productId || item.product || item._id;
             if (!productId || productId === 'unknown') return;

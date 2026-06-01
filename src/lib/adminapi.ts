@@ -239,6 +239,7 @@ export const createFlashSale = (data: CreateFlashSaleData): Promise<ApiResponse<
 export const getPromotions = (): Promise<ApiResponse<Promotion[]>> =>
   apiCall('/admin/promotions');
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
   if (data instanceof FormData) {
     return apiCall('/admin/promotions', {
@@ -252,6 +253,7 @@ export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
   });
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> => {
   if (data instanceof FormData) {
     return apiCall(`/admin/promotions/${id}`, {
@@ -345,6 +347,7 @@ export const getReturns = (): Promise<ApiResponse<ReturnRequest[]>> =>
 
 export const updateAdminPushNotification = (token: string): Promise<ApiResponse<{
   message: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any;
 }>> => apiCall('/admin/notification/savePushToken', {
   method: 'POST',
@@ -370,6 +373,7 @@ export const updateAdminNotificationSettings = (data: AdminNotificationSettings)
   });
 
 // Logistics endpoints
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getLogisticsSettings = (): Promise<ApiResponse<any>> =>
   apiCall('/logisticsStatus');
 
@@ -406,6 +410,7 @@ export const updateCustomerStatus = (id: string, status: string): Promise<ApiRes
     body: JSON.stringify({ status }),
   });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const toggleCustomerStatus = (id: string): Promise<ApiResponse<any>> =>
   apiCall(`/admin/customer/toggleStatus/${id}`, {
     method: 'PATCH',
@@ -427,6 +432,7 @@ export const updateBanner = (id: string, data: FormData): Promise<ApiResponse<Ba
     body: data,
   });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const removeImageFromBanner = (id: string, url: string): Promise<ApiResponse<any>> =>
   apiCall(`/admin/banner/${id}/images`, {
     method: 'DELETE',

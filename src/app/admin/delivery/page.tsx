@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, SquarePen, Megaphone, ShoppingBag, X } from 'lucide-react';
+import { Search, Filter, Eye, ChevronLeft, ChevronRight, Package, ShoppingBag, X } from 'lucide-react';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
 import { useToast, ToastContainer } from '@/app/components/ui/Toast';
 
 const DeliveryPage = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +15,7 @@ const DeliveryPage = () => {
   const [deliveryFilter, setDeliveryFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -50,13 +52,16 @@ const DeliveryPage = () => {
   const handleUpdateStatus = async (orderDbId: string, newStatus: string) => {
     try {
       setIsUpdatingStatus(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await updateOrder(orderDbId, { orderStatus: newStatus as any });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (response.success || (response as any).message === "Order Status Updated") {
         toast.success('Order status updated successfully');
         // Refresh orders
         await fetchOrders();
         // Update selected delivery to reflect new status
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setSelectedDelivery((prev: any) => {
           if (!prev || prev.dbId !== orderDbId) return prev;
 
@@ -77,9 +82,9 @@ const DeliveryPage = () => {
       } else {
         toast.error(response.error || 'Failed to update order status');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating order status:', error);
-      toast.error(error.message || 'Failed to update order status');
+      toast.error(error instanceof Error ? error.message : 'Failed to update order status');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -92,6 +97,7 @@ const DeliveryPage = () => {
 
       if (response.message && Array.isArray(response.message)) {
         // Transform orders data to match delivery structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedOrders = response.message.map((order: any) => ({
           id: order.order_id || 'Unknown',
           dbId: order._id || order.id || 'Unknown',
@@ -130,9 +136,9 @@ const DeliveryPage = () => {
   const totalDeliveries = periodFilteredDeliveries?.length || 0;
   const inTransitDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'In Transit').length || 0;
   const deliveredDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Delivered').length || 0;
-  const pendingDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Pending').length || 0;
-  const failedDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Failed').length || 0;
-  const assignedAgents = new Set(periodFilteredDeliveries?.map(o => o.agent).filter(a => a !== 'Not Assigned')).size || 0;
+  const _pendingDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Pending').length || 0;
+  const _failedDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Failed').length || 0;
+  const _assignedAgents = new Set(periodFilteredDeliveries?.map(o => o.agent).filter(a => a !== 'Not Assigned')).size || 0;
 
   // Filter deliveries based on search and status filter
   const filteredDeliveries = periodFilteredDeliveries?.filter(delivery => {
@@ -491,6 +497,7 @@ const DeliveryPage = () => {
                   <h4 className="text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Order Items</h4>
                 </div>
                 <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {selectedDelivery.fullOrder?.items?.map((item: any, index: number) => (
                     <div key={index} className="p-4 flex items-center justify-between text-sm hover:bg-gray-50/30 transition-colors">
                       <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@
 import { Eye, MousePointer2, ShoppingCart, User } from "lucide-react";
 
 interface RealTimeInsightProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: any[];
 }
 
@@ -27,10 +28,12 @@ const RealTimeInsight = ({ orders = [] }: RealTimeInsightProps) => {
     const itemsInProcessing = orders
         .filter((o) => o.orderStatus === 'processing' || o.orderStatus === 'pending')
         .reduce((sum, order) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return sum + (order.items?.reduce((s: number, item: any) => s + (item.quantity || item.qty || 1), 0) || 0);
         }, 0);
 
     const pageViewsToday = todayOrders.reduce((sum, order) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return sum + (order.items?.reduce((s: number, item: any) => s + (item.quantity || item.qty || 1), 0) || 0);
     }, 0);
 

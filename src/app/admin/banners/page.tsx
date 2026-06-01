@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Trash2, Edit2, Eye, Link2, Image as ImageIcon, X, Check, 
+  Plus, Trash2, Edit2, Eye, Link2, Image as ImageIcon, X,
   Loader2, ToggleLeft, ToggleRight, ExternalLink, Calendar, Copy,
   Images, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { 
   getBanners, createBanner, updateBanner, removeImageFromBanner, deleteBanner,
-  Banner, BannerImage 
+  Banner
 } from '@/lib/adminapi';
 import { toast } from 'sonner';
 

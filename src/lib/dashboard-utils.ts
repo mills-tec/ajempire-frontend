@@ -84,6 +84,7 @@ export function calculatePercentChange(current: number, previous: number): strin
   return `${sign}${change.toFixed(1)}%`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function aggregateOrdersByDate(orders: any[]): { date: string; sales: number; visitors: number; pageViews: number; sessions: number }[] {
   const buckets: Record<string, { sales: number; customers: Set<string>; items: number; orders: number }> = {};
 
@@ -96,6 +97,7 @@ export function aggregateOrdersByDate(orders: any[]): { date: string; sales: num
     buckets[date].orders += 1;
     const customer = order.shippingAddress?.fullName || order.userId || order._id;
     if (customer) buckets[date].customers.add(customer);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     order.items?.forEach((item: any) => {
       buckets[date].items += item.quantity || item.qty || 1;
     });

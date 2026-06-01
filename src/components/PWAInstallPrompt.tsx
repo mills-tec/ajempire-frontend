@@ -307,7 +307,7 @@ interface PWAInstallPromptProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FIRST_PROMPT_DELAY    = 5_000;    // ms before first prompt appears
+const _FIRST_PROMPT_DELAY    = 5_000;    // ms before first prompt appears
 const REPROMPT_DELAY        = 45_000;   // ms user must wait before seeing prompt again
 const REPROMPT_INTERACTIONS = 3;        // interactions required before re-prompting after dismiss
 const SUCCESS_DURATION      = 3_500;    // ms success banner is visible
@@ -580,6 +580,7 @@ export default function PWAInstallPrompt({
           >
             {/* App icon */}
             <div className="w-9 h-9 rounded-xl bg-white/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/promptlogo.png"
                 alt="AJ Empire"
@@ -658,6 +659,7 @@ export default function PWAInstallPrompt({
             <div className="flex items-center gap-3">
               {/* App icon */}
               <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/promptlogo.png"
                   alt="AJ Empire"

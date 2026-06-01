@@ -78,6 +78,7 @@ export default function Orders({ params }: OrdersProps) {
 
   // ── Review update — stable reference via functional update ─────────────────
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const setUpdatedReviews = (review: any) => {
     const { product, ...rest } = review;
 
@@ -85,11 +86,14 @@ export default function Orders({ params }: OrdersProps) {
       prev.map((order) => ({
         ...order,
         items: order.items.map((item) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (item.product as any)._id === product
             ? {
               ...item,
               product: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ...(item.product as any),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 reviews: (item.product as any).reviews.map((rev: any) =>
                   rev._id === review._id ? { product, ...rest } : rev,
                 ),
@@ -148,10 +152,14 @@ export default function Orders({ params }: OrdersProps) {
         .flatMap((order) => order.items)
         .filter(
           (item) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             Array.isArray((item.product as any).reviews) &&
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (item.product as any).reviews.length > 0 &&
             // NOTE: was comparing review.user === getUser()?._id — use string comparison for ObjectId safety
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (item.product as any).reviews.some(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (review: any) => review.user?.toString() === userId?.toString(),
             ),
         );

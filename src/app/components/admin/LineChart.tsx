@@ -55,7 +55,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                     tooltip: {
                         enabled: true,
                         callbacks: {
-                            label: (context: any) => `₦${context.raw.toLocaleString()}`,
+                            label: (context: unknown) => `₦${(context as { raw: number }).raw.toLocaleString()}`,
                         }
                     },
                 },
@@ -76,7 +76,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                                 size: 10,
                                 family: 'Poppins',
                             },
-                            callback: (value: any) => {
+                            callback: (value: unknown) => {
                                 if (value === 0) return '0';
                                 return value / 1000 + 'k';
                             },
@@ -101,7 +101,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                         },
                     },
                 },
-            } as any}
+            } as unknown as object}
         />
     )
 }

@@ -8,8 +8,11 @@ export interface AdminNotification {
 }
 
 export function buildAdminNotifications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   orders: any[] = [],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   returns: any[] = [],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   products: any[] = []
 ): AdminNotification[] {
   const notifications: AdminNotification[] = [];

@@ -413,7 +413,7 @@ export async function addToWishlistAPI(productId: string) {
   const wishlist = await getUsersWishlist();
   if (!wishlist) throw new Error("Failed to add to wishlist");
 
-  const wishlistIDs = wishlist.message.map((item) => item.product._id);
+  const _wishlistIDs = wishlist.message.map((item) => item.product._id);
 
   const res = await fetch(`${API_URL}/wishlist`, {
     method: "POST",

@@ -1,13 +1,12 @@
 "use client";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { Product } from "@/lib/types";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { calcDiscountPrice, getCountdown } from "@/lib/utils";
+import { calcDiscountPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { getBearerToken, getUser, getUsersWishlist } from "@/lib/api";
+import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
 import { useModalStore } from "@/lib/stores/modal-store";
 
@@ -169,9 +168,11 @@ export default function ProductCard({
               <div
                 onClick={(e) => {
                   e.stopPropagation();
-                  !isInWishlist(product._id)
-                    ? addItem(product)
-                    : removeItem(product._id);
+                  if (!isInWishlist(product._id)) {
+                    addItem(product);
+                  } else {
+                    removeItem(product._id);
+                  }
                 }}
               >
                 {isInWishlist(product._id) ? (

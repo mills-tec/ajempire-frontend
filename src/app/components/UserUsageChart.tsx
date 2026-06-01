@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApexOptions } from "apexcharts";
 interface UserUsageChartProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trendData?: any[];
 }
 
@@ -91,6 +92,7 @@ export default function UserUsageChart({ trendData }: UserUsageChartProps) {
                   transform: "translate(-50%, -50%)",
                 }}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.image || categoryImages.default}
                   alt={item.name}

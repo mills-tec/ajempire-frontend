@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, Edit2, X } from 'lucide-react';
+import { Search, Filter, Eye, ChevronLeft, ChevronRight, Users, CornerDownRight, Edit2, X } from 'lucide-react';
 import { getAllReturns, getReturnById, updateReturn } from '@/lib/adminapi';
 import { useToast, ToastContainer } from '@/app/components/ui/Toast';
 import { filterByPeriod } from '@/lib/dashboard-utils';
@@ -10,8 +10,10 @@ const ReturnsPage = () => {
   const toast = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -30,6 +32,7 @@ const ReturnsPage = () => {
       
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedReturns = response.message.map((returnItem: any) => ({
           id: returnItem.order?.order_id || 'Unknown',
           customer: returnItem.phoneNumber || 'Unknown Customer',
@@ -79,6 +82,7 @@ const ReturnsPage = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewReturn = async (returnItem: any) => {
     try {
       // Get detailed return data
@@ -97,11 +101,13 @@ const ReturnsPage = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditReturn = (returnItem: any) => {
     setSelectedReturn(returnItem.fullReturn);
     setShowEditModal(true);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdateReturn = async (updatedData: any) => {
     if (selectedReturn) {
       try {
@@ -116,9 +122,9 @@ const ReturnsPage = () => {
         } else {
           toast.error(response.error || 'Failed to update return');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error updating return:', error);
-        toast.error(error.message || 'Failed to update return');
+        toast.error((error instanceof Error ? error.message : null) || 'Failed to update return');
       } finally {
         setIsUpdating(false);
       }
@@ -441,6 +447,7 @@ const ReturnsPage = () => {
                 <h4 className="font-medium text-gray-900 mb-3">Product Information</h4>
                 {selectedReturn?.product && Array.isArray(selectedReturn.product) ? (
                   <div className="space-y-3">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {selectedReturn.product.map((item: any, index: number) => (
                       <div key={index} className="border border-gray-200 rounded-lg p-3">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

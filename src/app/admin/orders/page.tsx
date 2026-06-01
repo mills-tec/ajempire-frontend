@@ -11,6 +11,7 @@ const OrdersPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +29,7 @@ const OrdersPage = () => {
 
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedOrders = response.message.map((order: any) => ({
           id: order.order_id || 'Unknown',
           customer: order.shippingAddress?.fullName || 'Unknown Customer',

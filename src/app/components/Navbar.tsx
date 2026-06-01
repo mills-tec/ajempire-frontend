@@ -12,8 +12,6 @@ const Navbar = () => {
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
 
-  // Hide navbar on product pages so cart bar can fill bottom
-  const isProductPage = pathname.startsWith("/product/");
 
   const isActive = (path: string) => {
     if (path === "/") {

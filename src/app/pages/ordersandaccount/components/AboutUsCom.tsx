@@ -2,7 +2,7 @@ interface AboutUsComProp {
     topRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export default function AboutUsComp({ topRef }: AboutUsComProp) {
+export default function AboutUsComp({ topRef: _topRef }: AboutUsComProp) {
     return (
         <div className="font-poppins lg:bg-white  lg:p-10 rounded-md flex flex-col gap-7">
             <p className="font-semibold hidden lg:flex">About Us</p>

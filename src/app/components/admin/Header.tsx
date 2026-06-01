@@ -81,7 +81,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                         ? returnsRes.data
                         : [];
 
-                const productsData = productsRes.message as any;
+                const productsData = productsRes.message as unknown as { products?: unknown[] };
                 const products = productsData?.products
                     ? productsData.products
                     : Array.isArray(productsRes.message)

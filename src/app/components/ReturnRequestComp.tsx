@@ -15,12 +15,12 @@ export default function ReturnRequestComp() {
   const [useitemcondition, setUseitemcondition] = useState("");
   const isitemused = ["yes", "No"];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [evidenceImage, setEvidenceImage] = useState(null);
+  const [evidenceImage, setEvidenceImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [phone, setPhone] = useState("");
-  const [otherNote, setOtherNote] = useState("");
+  const [_otherNote, setOtherNote] = useState("");
 
   const isFormValid = selectedReason && useitemcondition && phone.length === 10;
 
@@ -43,7 +43,7 @@ export default function ReturnRequestComp() {
       if (evidenceImage) {
         formData.append("imageEvidence", evidenceImage);
       }
-      const debugFormData: Record<string, any> = {};
+      const debugFormData: Record<string, unknown> = {};
 
       for (const [key, value] of formData.entries()) {
         debugFormData[key] = value;
@@ -71,13 +71,13 @@ export default function ReturnRequestComp() {
     }
   };
 
-  const validateImageFile = (file: any) => {
+  const validateImageFile = (file: File) => {
     if (!file) return false;
 
     const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
     const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
 
-    const extension = file.name.split(".").pop().toLowerCase();
+    const extension = (file.name.split(".").pop() ?? "").toLowerCase();
 
     return (
       allowedExtensions.includes(extension) &&
@@ -85,7 +85,7 @@ export default function ReturnRequestComp() {
     );
   };
 
-  const handleImageChange = (e: any) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -286,6 +286,7 @@ export default function ReturnRequestComp() {
               </div>
             </div>
             {evidenceImage && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={URL.createObjectURL(evidenceImage)}
                 alt="Evidence preview"

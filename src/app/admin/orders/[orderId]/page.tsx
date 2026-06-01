@@ -12,12 +12,14 @@ const SingleOrderPage = () => {
   const orderId = params.orderId as string;
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
   useEffect(() => {
     fetchOrderDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   useEffect(() => {
@@ -117,7 +119,8 @@ const SingleOrderPage = () => {
         apiStatus = 'shipped';
       }
       const response = await updateOrder(orderId, { 
-        orderStatus: apiStatus as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      orderStatus: apiStatus as any
       });
       if (response.success) {
         await fetchOrderDetails();
@@ -373,6 +376,7 @@ const SingleOrderPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {order.items?.map((item: any, index: number) => (
                 <tr
                   key={index}

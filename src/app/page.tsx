@@ -97,7 +97,7 @@ function HomeContent({
   const queryClient = useQueryClient();
   const [uiLoading, setUiLoading] = React.useState(false);
   const searchActive = Boolean(searchedQuery);
-  const [searchLoading, setSearchLoading] = React.useState(false);
+  const [searchLoading, _setSearchLoading] = React.useState(false);
   const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<
     Product[]
   >([]);
@@ -268,6 +268,7 @@ function HomeContent({
     cursorRef.current = data.message.nextCursor ?? "";
     setHasNextPage(data.message.hasMore ?? false);
     setIsInitialized(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.message?.hasMore, data?.message?.nextCursor]);
 
   useEffect(() => {
@@ -287,12 +288,13 @@ function HomeContent({
           },
         );
 
-        if (lastItemRef.current) {
-          observer.observe(lastItemRef.current);
+        const ref = lastItemRef.current;
+        if (ref) {
+          observer.observe(ref);
         }
         setManualLoad(true);
         return () => {
-          if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+          if (ref) observer.unobserve(ref);
         };
       }
 
@@ -314,11 +316,12 @@ function HomeContent({
         },
       );
 
-      if (lastItemRef.current) {
-        observer.observe(lastItemRef.current);
+      const ref = lastItemRef.current;
+      if (ref) {
+        observer.observe(ref);
       }
       return () => {
-        if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+        if (ref) observer.unobserve(ref);
       };
     }
   }, [

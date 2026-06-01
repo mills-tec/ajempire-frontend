@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, LogOut, Settings, TrafficCone, ShoppingBag, Package, Users, RotateCcw, Truck, FileText, Gift, HeadphonesIcon, X, ImagePlay } from 'lucide-react'
+import { LayoutDashboard, LogOut, Settings, ShoppingBag, Package, Users, RotateCcw, Truck, FileText, Gift, X, ImagePlay } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'

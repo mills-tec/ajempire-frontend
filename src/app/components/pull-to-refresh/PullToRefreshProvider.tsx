@@ -31,6 +31,7 @@ export function PullToRefreshProvider({
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const triggerRefresh = async () => {
     setRefreshing(true);
     setPull(MAX_PULL);

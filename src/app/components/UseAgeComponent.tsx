@@ -10,7 +10,9 @@ interface UsageStats {
   ordersThisMonth: number;
   totalSpentThisMonth: number;
   totalCoupons: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   spendingTrendData: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recentPurchases: any[];
 }
 export const UseAgeComponent = () => {

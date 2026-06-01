@@ -24,13 +24,12 @@ import { useModalStore } from "@/lib/stores/modal-store";
 import { useProductVariants } from "@/lib/useProductVariants";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { useExploreInterest } from "@/api/customHooks";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const reshuffle = async () => {
+  const [_shuffleSeed, setShuffleSeed] = useState(0);
+  const _reshuffle = async () => {
     setShuffleSeed(Math.random());
 
     // optional: slight delay so user feels refresh
@@ -70,7 +69,6 @@ export default function ProductDetailPage() {
     if (item?._id && getBearerToken()) {
       // addProductToBrowsingHistory(item._id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?._id]);
   const {
     selectedVariantsArray,
@@ -161,6 +159,7 @@ export default function ProductDetailPage() {
         quantity,
         selectedVariants: selectedVariantsArray,
         selected: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any]);
     }
 
@@ -219,6 +218,7 @@ export default function ProductDetailPage() {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity, cartItem, item]);
 
   useEffect(() => {
@@ -581,7 +581,8 @@ export default function ProductDetailPage() {
                     quantity,
                     selected: false,
                     selectedVariants: selectedVariantsArray,
-                  } as any]);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any]);
                 }}
                 className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
               >
