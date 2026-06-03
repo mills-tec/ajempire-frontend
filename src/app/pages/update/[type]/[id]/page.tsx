@@ -1,9 +1,9 @@
 import FeedItem from "@/components/FeedItem";
 import Gallery from "@/components/Gallery";
 import { getUpdates } from "@/lib/api";
+import { buildFeedMetadata } from "@/lib/feedMetadata"; // ✅ import only
 import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { Metadata } from "next";
-import { buildFeedMetadata } from "@/lib/feedMetadata"; // ✅ import only
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
