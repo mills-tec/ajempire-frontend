@@ -22,11 +22,10 @@ import { CommentData, Feed, Product } from "@/lib/types";
 import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import {
   Heart,
+  LoaderCircle,
   Pause,
-  Play,
-  SendHorizonal,
-  Volume2,
-  VolumeX,
+  Play, SendHorizonal, Volume2,
+  VolumeX
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -159,6 +158,7 @@ function FeedContent({
   >;
 }) {
   const params = useParams();
+  const [addCommentLoading, setAddCommentLoading] = useState<boolean>(false);
   const { id: idParam, type } = params;
 
   const { pull, refreshing } = usePullToRefresh();
@@ -423,7 +423,7 @@ function FeedContent({
     const video = videoRefs.current[index];
     if (!video) return;
 
-    if (video.paused) video.play().catch(() => {});
+    if (video.paused) video.play().catch(() => { });
     else video.pause();
   }, []);
 
@@ -560,44 +560,57 @@ function FeedContent({
       if (!checkIfUserLoggedIn("send a comment")) return;
       if (!comment.commentText.trim()) return;
 
-      const newComment: CommentData = {
-        _id: `temp-${Date.now()}`,
-        text: comment.commentText.trim(),
-        user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
-        parentId,
-        likes: [],
-        replies: [],
-        showReplies: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      const feedType = data.feeds.find((f) => f._id === id)?.type;
-
-      if (parentId) {
-        updateFeedComments(id!, (comments) =>
-          addReplyRecursive(comments, parentId, newComment),
-        );
-      } else {
-        updateFeedComments(id!, (comments) => [...comments, newComment]);
-      }
-
-      setComment((prev) => ({
-        ...prev,
-        commentText: "",
-        parent: { parentId: "", fullname: "", email: "" },
-      }));
+      setAddCommentLoading(true);
 
       try {
-        await addComments({
+
+
+        const newComment: CommentData = {
+          _id: "",
+          text: comment.commentText.trim(),
+          user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
+          parentId,
+          likes: [],
+          replies: [],
+          showReplies: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const feedType = data.feeds.find((f) => f._id === id)?.type;
+
+
+
+
+       
+
+
+        let req = await addComments({
           feedId: id as string,
           type: feedType as string,
           comment: newComment.text,
           parentId: parentId as string,
         });
+        newComment._id = req._id;
+
+        if (parentId) {
+          updateFeedComments(id!, (comments) =>
+            addReplyRecursive(comments, parentId, newComment),
+          );
+        } else {
+          updateFeedComments(id!, (comments) => [...comments, newComment]);
+        }
+
+         setComment((prev) => ({
+          ...prev,
+          commentText: "",
+          parent: { parentId: "", fullname: "", email: "" },
+        }));
       } catch (err) {
         console.error("Failed to add comment:", err);
         toast.error("Failed to post comment");
+      } finally {
+        setAddCommentLoading(false);
       }
     },
     [
@@ -690,7 +703,6 @@ function FeedContent({
       updateFeedComments(id!, (comments) =>
         recursiveDeleteComment(comments, item._id),
       );
-
       try {
         await deleteUpdateComment({
           feedId: id as string,
@@ -807,7 +819,6 @@ function FeedContent({
             ) : (
               <>
                 {data.feeds.map((item, index) => {
-                  console.log(item);
                   const isLoaded = loadedIndex.has(index);
                   const isPlaying = playingMap[index];
                   const hasLiked =
@@ -827,11 +838,10 @@ function FeedContent({
                       ref={(el) => {
                         itemRefs.current[index] = el;
                       }}
-                      className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${
-                        comment.show
-                          ? "md:justify-start md:pl-[10%]"
-                          : "md:justify-center"
-                      } section`}
+                      className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show
+                        ? "md:justify-start md:pl-[10%]"
+                        : "md:justify-center"
+                        } section`}
                       style={{ scrollSnapAlign: "start" }}
                     >
                       {/* Media panel */}
@@ -905,11 +915,10 @@ function FeedContent({
 
                             <div
                               onClick={() => handleVideoPlay(index)}
-                              className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${
-                                videoState.showPlay
-                                  ? "opacity-100"
-                                  : "hidden opacity-0"
-                              }`}
+                              className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${videoState.showPlay
+                                ? "opacity-100"
+                                : "hidden opacity-0"
+                                }`}
                             >
                               <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
                                 {isPlaying ? (
@@ -1059,9 +1068,8 @@ function FeedContent({
 
                         {item.product && (
                           <div
-                            className={`w-10 h-10 ${
-                              itemInWishlist ? "bg-primaryhover" : "bg-white"
-                            } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+                            className={`w-10 h-10 ${itemInWishlist ? "bg-primaryhover" : "bg-white"
+                              } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
                             onClick={() =>
                               handleWishlistToggle(item.product as Product)
                             }
@@ -1090,9 +1098,8 @@ function FeedContent({
           {/* Comments panel */}
           <div
             onClick={() => setComment((prev) => ({ ...prev, show: false }))}
-            className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${
-              comment.show ? "" : "translate-y-full md:translate-y-0"
-            }`}
+            className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${comment.show ? "" : "translate-y-full md:translate-y-0"
+              }`}
             style={{ zIndex: 100 }}
           >
             {/* Prev / Next navigation */}
@@ -1116,11 +1123,10 @@ function FeedContent({
 
             {/* Comment drawer */}
             <div
-              className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${
-                comment.show
-                  ? "-translate-y-[22vh] md:-translate-y-[10vh]"
-                  : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
-              }`}
+              className={`w-screen md:w-[350px] bg-[#FBE8FD] relative outline outline-white duration-300 rounded-tl-2xl rounded-bl-2xl ${comment.show
+                ? "-translate-y-[22vh] md:-translate-y-[10vh]"
+                : "translate-y-0 md:translate-y-0 md:translate-x-full hidden"
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-5 h-[50vh] flex-1 ">
@@ -1162,17 +1168,16 @@ function FeedContent({
 
               <div className="w-full px-2 md:px-2 pb-10 md:pb-3">
                 <div
-                  className={`bg-white relative rounded-2xl border ${
-                    comment.focus ? "border-primaryhover" : "border-transparent"
-                  }`}
+                  className={`bg-white relative rounded-2xl border ${comment.focus ? "border-primaryhover" : "border-transparent"
+                    }`}
                 >
                   <textarea
                     className="w-full h-32 text-base md:text-sm md:h-20 outline-none p-3 font-poppins resize-none rounded-2xl border border-transparent transition duration-300 bg-transparent"
                     placeholder={
                       comment.parent.parentId
                         ? `Replying to @${comment.parent.fullname
-                            .replaceAll(" ", "")
-                            .toLowerCase()}`
+                          .replaceAll(" ", "")
+                          .toLowerCase()}`
                         : "Write a comment"
                     }
                     value={comment.commentText}
@@ -1196,12 +1201,16 @@ function FeedContent({
                     }}
                   />
                   <button
-                    className={`w-10 h-10 md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${
-                      comment.show ? "" : "hidden"
-                    }`}
-                    onClick={() => sendComment(comment.parent.parentId)}
+                    className={`w-10 h-10 md:w-6 md:h-6 bg-primaryhover rounded-full flex items-center justify-center absolute right-3 bottom-3 transition duration-300 ${comment.show ? "" : "hidden"
+                      }`}
+                    onClick={() => {
+                      if (addCommentLoading) return;
+                      sendComment(comment.parent.parentId)
+                    }}
                   >
-                    <SendHorizonal color="white" size={13} />
+
+                    {addCommentLoading ? <LoaderCircle className="animate-spin text-white" /> : <SendHorizonal color="white" size={13} />}
+
                   </button>
                 </div>
               </div>
