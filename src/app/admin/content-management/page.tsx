@@ -39,7 +39,7 @@ const ContentManagementPage = () => {
       setContentLoading(true);
       const response = await getEducation();
       console.log('API Response:', response); // Debug log
-      
+
       // Handle different response structures
       if (response.message && Array.isArray(response.message)) {
         setContent(response.message);
@@ -91,7 +91,7 @@ const ContentManagementPage = () => {
   // Confirm delete
   const confirmDelete = async () => {
     if (!selectedContent?._id) return;
-    
+
     try {
       setLoading(true);
       const response = await deleteEducation(selectedContent._id);
@@ -216,15 +216,15 @@ const ContentManagementPage = () => {
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
       // formDataToSend.append('type', formData.type);
-      
+
       // Image is compulsory
       formDataToSend.append('image', formData.image);
-      
+
       // Video is now compulsory as well
       formDataToSend.append('video', formData.video);
 
       const response = await createEducationWithFiles(formDataToSend);
-      
+
       if (response.message) {
         // Reset form and close modal
         setFormData({
@@ -253,24 +253,24 @@ const ContentManagementPage = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContent?._id) return;
-    
+
     setLoading(true);
 
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('title', editFormData.title);
       formDataToSend.append('description', editFormData.description);
-      
+
       if (editFormData.image) {
         formDataToSend.append('image', editFormData.image);
       }
-      
+
       if (editFormData.video) {
         formDataToSend.append('video', editFormData.video);
       }
 
       const response = await updateEducation(selectedContent._id, formDataToSend);
-      
+
       if (response.message) {
         // Reset form and close modal
         setEditFormData({
@@ -378,7 +378,7 @@ const ContentManagementPage = () => {
             />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button 
+            <button
               onClick={() => setShowAddModal(true)}
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-brand_pink hover:bg-brand_pink/90 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-md active:scale-95"
             >
@@ -424,8 +424,8 @@ const ContentManagementPage = () => {
                 </tr>
               ) : (
                 content.map((item, idx) => (
-                  <tr 
-                    key={item._id || idx} 
+                  <tr
+                    key={item._id || idx}
                     className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
                     onClick={() => handleViewClick(item)}
                   >
@@ -454,21 +454,21 @@ const ContentManagementPage = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
                           className="text-brand_gray hover:text-brand_pink transition-colors"
                           title="Edit Content"
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
                           className="text-brand_gray hover:text-red-500 transition-colors"
                           title="Delete Content"
                         >
                           <Trash2 size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleViewClick(item); }}
                           className="text-brand_gray hover:text-blue-500 transition-colors"
                           title="View Content"
@@ -807,12 +807,12 @@ const ContentManagementPage = () => {
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Title</h3>
                 <p className="font-medium">{selectedContent.title || 'No title'}</p>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
                 <p className="text-gray-700">{selectedContent.description || 'No description'}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Type</h3>
@@ -825,7 +825,7 @@ const ContentManagementPage = () => {
                   </span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Likes</h3>
@@ -836,30 +836,35 @@ const ContentManagementPage = () => {
                   <p className="font-medium">{Array.isArray(selectedContent.comments) ? selectedContent.comments.length : 0}</p>
                 </div>
               </div>
-              
+
               {selectedContent.image && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Image</h3>
-                  <Image 
-                    src={selectedContent.image} 
-                    alt="Content preview" 
-                    className="w-full h-48 object-cover rounded-lg"
-                  />
+                  <div className='w-full h-48 relative'>
+                    <Image
+                      src={selectedContent.image}
+                      alt="Content preview"
+                      className=" object-cover rounded-lg"
+                      fill
+
+                    />
+                  </div>
+
                 </div>
               )}
-              
+
               {selectedContent.video && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Video</h3>
-                  <video 
-                    src={selectedContent.video} 
-                    controls 
+                  <video
+                    src={selectedContent.video}
+                    controls
                     className="w-full h-48 rounded-lg"
                   />
                 </div>
               )}
             </div>
-            
+
             <div className="mt-6">
               <button
                 onClick={() => setShowViewModal(false)}
@@ -881,14 +886,14 @@ const ContentManagementPage = () => {
                 <AlertCircle size={20} className="text-red-500" />
                 <span>Delete Content</span>
               </h3>
-              <button 
+              <button
                 onClick={cancelDelete}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
-            
+
             <div className="mb-6 space-y-2">
               <p className="text-sm text-brand_gray">
                 Are you sure you want to delete this content?
@@ -897,7 +902,7 @@ const ContentManagementPage = () => {
                 This action is permanent, cannot be undone, and will permanently delete the article/video content &quot;{selectedContent.title || 'Untitled content'}&quot;.
               </p>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={cancelDelete}
@@ -923,7 +928,7 @@ const ContentManagementPage = () => {
           </div>
         </div>
       )}
-      
+
       {/* Toast Container */}
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </main>

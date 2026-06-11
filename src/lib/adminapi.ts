@@ -67,6 +67,7 @@ const apiCall = async <T>(
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const data = await response.json();
+    console.log(data);
     if (!response.ok) {
       throw new Error(data.error || data.message || 'API request failed');
     }

@@ -1,20 +1,20 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Trash2, SquarePen, User, Lock, Bell, Shield, Plus, X, CheckCircle, AlertCircle, Info, Loader2 } from 'lucide-react';
+import ProtectedRoute from '@/components/auth-component/ProtectedRoute';
 import {
-  fetchAdminProfile,
-  updateAdminProfile,
-  getAllAdmins,
   addAdmin,
   deleteAdmin,
+  fetchAdminProfile,
   fetchPermissions,
-  updateAdminSecuritySettings,
-  updateAdminNotificationSettings,
+  getAllAdmins,
   getLogisticsSettings,
+  updateAdminNotificationSettings,
+  updateAdminProfile,
+  updateAdminSecuritySettings,
   updateLogisticsSettings
 } from '@/lib/adminapi';
-import ProtectedRoute from '@/components/auth-component/ProtectedRoute';
+import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Toast component
 const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
@@ -478,7 +478,7 @@ const SettingsPage = () => {
         fetchAdminsData();
       } catch (error: unknown) {
         console.error('Error deleting admin:', error);
-        showToast(error.message || 'Failed to delete admin', 'error');
+        showToast((error as any).message || 'Failed to delete admin', 'error');
       } finally {
         setIsDeletingAdmin(false);
         setShowDeleteAdminModal(false);
