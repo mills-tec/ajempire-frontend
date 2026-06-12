@@ -22,8 +22,10 @@ export type Coupon = {
 };
 
 // lib/api.ts
-export const API_URL = "https://ajempire-backend-production-b8ff.up.railway.app/api";
-export const BASE_URL = "https://ajempire-backend-production-b8ff.up.railway.app";
+export const API_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app/api";
+export const BASE_URL =
+  "https://ajempire-backend-production-b8ff.up.railway.app";
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
@@ -342,18 +344,26 @@ export async function addToCart(products: CartItem[]) {
     }
   }
 
+  console.log("🛒 RAW products going into addToCart:", JSON.stringify(products.map(p => ({
+    id: p._id,
+    name: p.name,
+    variants: p.variants,
+    variantCombinations: p.variantCombinations,
+    selectedVariants: p.selectedVariants,
+  })), null, 2));
+
   const items = products.map((product) => ({
     productId: product._id,
     qty: product.quantity,
     variants: product.selectedVariants?.length
       ? product.selectedVariants.map((variant) => ({
-        name: variant.name,
-        value: variant.value,
-      }))
+          name: variant.name,
+          value: variant.value,
+        }))
       : [],
   }));
 
-  console.log(items);
+  console.log("📦 Transformed items being sent to backend:", JSON.stringify(items, null, 2));
 
   // 🔥 Log payload here to check
   // console.log("Sending cart payload:", items);
@@ -619,6 +629,34 @@ export async function applyCouponCode(code: string): Promise<{
     console.error("Coupon fetch error:", error);
     return null;
   }
+}
+
+// BANNER API
+export interface BannerImage {
+  url: string;
+  link: string;
+}
+
+export interface Banner {
+  _id: string;
+  images: BannerImage[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getBanner(): Promise<{ message: Banner } | null> {
+  const res = await fetch(`${API_URL}/banner/`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!res.ok) {
+    console.error("Banner API error:", res.status);
+    return null;
+  }
+
+  return res.json();
 }
 
 // SHIPPING API

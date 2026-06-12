@@ -1,29 +1,29 @@
-"use client"
+"use client";
 import { Notification } from "@/lib/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const CountdownTimer = ({ endDate }: { endDate: string }) => {
-    const calculateTimeLeft = () => {
-        const difference = +new Date(endDate) - +new Date();
-        let timeLeft = {};
+  const calculateTimeLeft = () => {
+    const difference = +new Date(endDate) - +new Date();
+    let timeLeft = {};
 
-        if (difference > 0) {
-            timeLeft = {
-                hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                minutes: Math.floor((difference / 1000 / 60) % 60),
-                seconds: Math.floor((difference / 1000) % 60),
-            };
-        }
-        return timeLeft;
-    };
+    if (difference > 0) {
+      timeLeft = {
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    }
+    return timeLeft;
+  };
 
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setTimeLeft(calculateTimeLeft());
-        }, 1000);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
 
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,18 +32,19 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
 
 
 
-    return (
-        <div className="w-16 h-[20px] text-primaryhover text-[13.33px] bg-[#FFD9EE] text-center rounded-sm flex justify-between items-center p-2">
-            {Object.entries(timeLeft).map(([unit, value], index) => {
-                console.log(unit)
-                return <span key={unit} className="">
-                    {value!.toString().padStart(2, "0")}
-                    {index !== Object.keys(timeLeft).length - 1 && ":"}
-                </span>
-            })}
-        </div>
-
-    );
+  return (
+    <div className="w-16 h-[20px] text-primaryhover text-[13.33px] bg-[#FFD9EE] text-center rounded-sm flex justify-between items-center p-2">
+      {Object.entries(timeLeft).map(([unit, value], index) => {
+        console.log(unit);
+        return (
+          <span key={unit} className="">
+            {value!.toString().padStart(2, "0")}
+            {index !== Object.keys(timeLeft).length - 1 && ":"}
+          </span>
+        );
+      })}
+    </div>
+  );
 };
 
 export default function FlashSaleNotificationCom({ notification }: { notification: Notification }) {

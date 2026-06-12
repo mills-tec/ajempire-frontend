@@ -1,35 +1,51 @@
 "use client";
+import CommentCard from "@/app/components/CommentCard";
+import ProductDescription from "@/app/components/ProductDescription";
+import ProductReview from "@/app/components/ProductReview";
+import RefreshWrapper from "@/app/components/RefreshWrapper";
+import DraggableCartButton from "@/app/components/ui/DraggableCartButton";
+import ScrollToTop from "@/app/components/ui/ScrollToTop";
+import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
+import RelatedProducts from "@/components/RelatedProducts";
+import { Checkbox } from "@/components/ui/checkbox";
+import VideoPlayer from "@/components/VideoPlayer";
+import { animateToCart } from "@/lib/animateToCart";
+import { getBearerToken, getProduct } from "@/lib/api";
+import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { useProductVariants } from "@/lib/useProductVariants";
+import { calcDiscountPrice } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import React, {
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import ProductReview from "@/app/components/ProductReview";
-import CommentCard from "@/app/components/CommentCard";
-import ProductDescription from "@/app/components/ProductDescription";
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { getBearerToken, getProduct } from "@/lib/api";
-import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
-import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
-import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
 import { toast } from "sonner";
-import VideoPlayer from "@/components/VideoPlayer";
-import RelatedProducts from "@/components/RelatedProducts";
-import { useModalStore } from "@/lib/stores/modal-store";
-import { useProductVariants } from "@/lib/useProductVariants";
-import RefreshWrapper from "@/app/components/RefreshWrapper";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const [_shuffleSeed, setShuffleSeed] = useState(0);
-  const _reshuffle = async () => {
+  const router = useRouter();
+  const cartRef = useRef<HTMLAnchorElement>(null);
+
+  const handleShare = async (productName: string) => {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: productName, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard");
+    }
+  };
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const reshuffle = async () => {
     setShuffleSeed(Math.random());
 
     // optional: slight delay so user feels refresh
@@ -128,6 +144,15 @@ export default function ProductDetailPage() {
     item && selectedCombination
       ? item.price + selectedCombination.additionalPrice
       : (item?.price ?? 0);
+
+  const resolvedFinalPrice = item?.flashSales
+    ? calcDiscountPrice(
+        resolvedCartPrice,
+        item.flashSales.discountValue!,
+        item.flashSales.discountType!,
+      )
+    : resolvedCartPrice;
+  const resolvedDiscount = resolvedCartPrice - resolvedFinalPrice;
   const checkoutHandler = useCallback(() => {
     if (!ensureVariantSelection()) return;
 
@@ -152,15 +177,19 @@ export default function ProductDetailPage() {
     );
 
     if (!existingItem) {
-      store.addItem([{
-        ...currentItem,
-        price: resolvedCartPrice,
-        stock: currentStock,
-        quantity,
-        selectedVariants: selectedVariantsArray,
-        selected: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any]);
+      store.addItem([
+        {
+          ...currentItem,
+          price: resolvedCartPrice,
+          basePrice: resolvedCartPrice,
+          finalPrice: resolvedFinalPrice,
+          discount: resolvedDiscount,
+          stock: currentStock,
+          quantity,
+          selectedVariants: selectedVariantsArray,
+          selected: true,
+        } as any,
+      ]);
     }
 
     store.selectAllCartItems();
@@ -204,9 +233,9 @@ export default function ProductDetailPage() {
       prev[src]
         ? prev
         : {
-          ...prev,
-          [src]: true,
-        },
+            ...prev,
+            [src]: true,
+          },
     );
   }, []);
 
@@ -280,8 +309,8 @@ export default function ProductDetailPage() {
   return (
     <RefreshWrapper
       category={item.category?._id ?? ""}
-    // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
-    // onRefreshExtra={reshuffle}
+      // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
+      // onRefreshExtra={reshuffle}
     >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -300,33 +329,76 @@ export default function ProductDetailPage() {
             </svg>
           </Link>
 
-          <div className="flex gap-2 items-center"></div>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => router.push("/search")}
+              aria-label="Search"
+              className="p-1 active:scale-90 transition-transform"
+            >
+              <svg
+                width="21"
+                height="21"
+                viewBox="0 0 21 21"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18.3752 18.3757L13.8278 13.8283M13.8278 13.8283C15.0586 12.5976 15.75 10.9283 15.75 9.18775C15.75 7.4472 15.0586 5.77794 13.8278 4.54718C12.5971 3.31643 10.9278 2.625 9.18726 2.625C7.44671 2.625 5.77745 3.31643 4.5467 4.54718C3.31594 5.77794 2.62451 7.4472 2.62451 9.18775C2.62451 10.9283 3.31594 12.5976 4.5467 13.8283C5.77745 15.0591 7.44671 15.7505 9.18726 15.7505C10.9278 15.7505 12.5971 15.0591 13.8278 13.8283Z"
+                  stroke="black"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => handleShare(item.name)}
+              aria-label="Share"
+              className="p-1 active:scale-90 transition-transform"
+            >
+              <svg
+                width="21"
+                height="21"
+                viewBox="0 0 21 21"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19.4955 8.72372L12.933 2.16122C12.8413 2.06939 12.7244 2.00682 12.5971 1.98143C12.4698 1.95604 12.3378 1.96897 12.2179 2.01858C12.0979 2.06819 11.9954 2.15225 11.9232 2.26014C11.8511 2.36803 11.8125 2.4949 11.8124 2.6247V5.93466C9.68456 6.11677 7.33436 7.15856 5.40089 8.79837C3.07284 10.7737 1.62335 13.3191 1.31901 15.9654C1.29523 16.1712 1.33695 16.3792 1.43822 16.5598C1.5395 16.7405 1.69518 16.8846 1.88311 16.9717C2.07103 17.0587 2.28163 17.0843 2.48492 17.0447C2.68822 17.0052 2.87386 16.9025 3.01542 16.7513C3.91776 15.7907 7.12847 12.7531 11.8124 12.4857V15.7497C11.8125 15.8795 11.8511 16.0064 11.9232 16.1143C11.9954 16.2221 12.0979 16.3062 12.2179 16.3558C12.3378 16.4054 12.4698 16.4184 12.5971 16.393C12.7244 16.3676 12.8413 16.305 12.933 16.2132L19.4955 9.65067C19.6182 9.52765 19.6871 9.36097 19.6871 9.1872C19.6871 9.01342 19.6182 8.84674 19.4955 8.72372ZM13.1249 14.1657V11.8122C13.1249 11.6381 13.0558 11.4712 12.9327 11.3482C12.8097 11.2251 12.6427 11.1559 12.4687 11.1559C10.1653 11.1559 7.92171 11.7572 5.80038 12.9442C4.71998 13.5514 3.71335 14.2814 2.8005 15.1197C3.27628 13.1641 4.47558 11.3044 6.24991 9.79915C8.15468 8.18395 10.4794 7.21845 12.4687 7.21845C12.6427 7.21845 12.8097 7.14931 12.9327 7.02623C13.0558 6.90316 13.1249 6.73624 13.1249 6.5622V4.20954L18.1034 9.1872L13.1249 14.1657Z"
+                  fill="black"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="px-4 lg:pl-[3.5rem] pt-4 lg:pt-8 ">
           <div className="lg:flex lg:space-x-20">
             <div className="lg:w-1/2 h-full space-y-8">
               <div className="space-y-4">
                 <div
-                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${!isCurrentMediaLoaded
+                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${
+                    !isCurrentMediaLoaded
                       ? "bg-gray-200 animate-fast-pulse"
                       : ""
-                    }`}
+                  }`}
                 >
                   {currentCoverItem.type === "image" ? (
                     <Image
                       src={currentMediaSrc}
                       alt={item.name}
                       fill
-                      className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                        }`}
+                      className={`absolute object-cover transition-opacity duration-200 ${
+                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                      }`}
                       onLoad={() => {
                         markMediaLoaded(currentMediaSrc);
                       }}
                     />
                   ) : (
                     <div
-                      className={`absolute w-full h-full transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                        }`}
+                      className={`absolute w-full h-full transition-opacity duration-200 ${
+                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                      }`}
                     >
                       <VideoPlayer
                         handleVideoPlay={handleVideoPlay}
@@ -353,11 +425,12 @@ export default function ProductDetailPage() {
                         <button
                           type="button"
                           key={key}
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "image" &&
-                              currentCoverItem.src === image
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
+                            currentCoverItem.type === "image" &&
+                            currentCoverItem.src === image
                               ? "border-brand_pink"
                               : "border-transparent"
-                            }`}
+                          }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: image,
@@ -377,10 +450,11 @@ export default function ProductDetailPage() {
                       {item.video && (
                         <button
                           type="button"
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "video"
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
+                            currentCoverItem.type === "video"
                               ? "border-brand_pink"
                               : "border-transparent"
-                            }`}
+                          }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: item.video!,
@@ -558,31 +632,42 @@ export default function ProductDetailPage() {
             {item.category && (
               <RelatedProducts
                 category={item.category._id}
-              // shuffleSeed={shuffleSeed}
+                // shuffleSeed={shuffleSeed}
               />
             )}
           </div>
         </div>
+
+        <DraggableCartButton cartRef={cartRef} itemCount={items.length} />
 
         {/* add to cart div  */}
         <div className="w-full bottom-0 flex items-center z-50 fixed left-0  pt-4 pb-4 lg:py-4 bg-white border-t border-t-black/40 gap-8 lg:hidden px-4">
           <div className="flex gap-2 items-center">
             {!cartItem ? (
               <button
-                onClick={() => {
+                onClick={(e) => {
                   if (!ensureVariantSelection()) {
                     return;
                   }
 
-                  addItem([{
-                    ...item,
-                    price: resolvedCartPrice,
-                    stock: currentStock,
-                    quantity,
-                    selected: false,
-                    selectedVariants: selectedVariantsArray,
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any]);
+                  animateToCart({
+                    buttonElement: e.currentTarget,
+                    cartElement: cartRef.current!,
+                    addItemCallback: () =>
+                      addItem([
+                        {
+                          ...item,
+                          price: resolvedCartPrice,
+                          basePrice: resolvedCartPrice,
+                          finalPrice: resolvedFinalPrice,
+                          discount: resolvedDiscount,
+                          stock: currentStock,
+                          quantity,
+                          selected: false,
+                          selectedVariants: selectedVariantsArray,
+                        },
+                      ]),
+                  });
                 }}
                 className="h-[2rem] lg:h-[3rem] text-xs bg-brand_pink text-white rounded-full w-max  px-8"
               >
@@ -661,6 +746,7 @@ export default function ProductDetailPage() {
           </button>
         </div>
       </section>
+      <ScrollToTop />
     </RefreshWrapper>
   );
 }

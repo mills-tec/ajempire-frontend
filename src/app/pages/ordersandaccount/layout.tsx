@@ -1,14 +1,15 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import SideNav from "./components/SideNav";
-import BreadCrumb from "./components/BreadCrumb";
-import { usePathname } from "next/navigation";
-import { SideBarItem, sidebarItems } from "./data/sidebarData";
-import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useEffect, useState } from "react";
+import BreadCrumb from "./components/BreadCrumb";
+import SideNav from "./components/SideNav";
+import { SideBarItem, sidebarItems } from "./data/sidebarData";
 
+import { getBearerToken } from "@/lib/api";
 
 interface LayoutProps {
   children: ReactNode;
@@ -27,28 +28,35 @@ function findActiveTitle(items: SideBarItem[], pathname: string): string {
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [_isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
-  const { getNotifications } = useNotification()
+  const { getNotifications } = useNotification();
+
+  useEffect(() => {
+    const token = getBearerToken();
+    if (!token) {
+      router.replace("/");
+      return;
+    }
+    setCheckingAuth(false);
+  }, [router]);
+
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
 
-    // When a link is clicked, start loading
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("a")) handleStart();
     };
 
-    // Add listener for clicks
     document.addEventListener("click", handleClick);
 
-    // Turn off spinner when pathname changes
     handleComplete();
     const timeout = setTimeout(() => setIsLoading(false), 50);
-
 
     return () => {
       document.removeEventListener("click", handleClick);
@@ -57,6 +65,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [pathname]);
 
   useEffect(() => {
+    if (checkingAuth) return;
     (async () => {
       const req = await getNotifications();
       setNotifications(req)
@@ -75,12 +84,8 @@ export default function Layout({ children }: LayoutProps) {
             <SideNav />
           </div>
           <div className="lg:w-[88%] w-full max-h-full lg:mb-10 lg:px-0">
-            <div>
-              {children}
-            </div>
+            <div>{children}</div>
           </div>
-
-
         </main>
         <ExploreInterest />
       </div>

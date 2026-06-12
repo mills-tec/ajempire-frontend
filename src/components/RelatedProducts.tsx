@@ -21,6 +21,16 @@ export default function RelatedProducts({ category }: { category: string }) {
 
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isPending, startDuplicateTransition] = useTransition();
+  const blockLoadRef = useRef(false);
+
+  useEffect(() => {
+    const onScrollToTop = () => {
+      blockLoadRef.current = true;
+      setTimeout(() => { blockLoadRef.current = false; }, 800);
+    };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
+  }, []);
 
   /*
    * INITIAL FETCH
@@ -86,6 +96,7 @@ export default function RelatedProducts({ category }: { category: string }) {
     hasNextPage,
     disabled: Boolean(isLoading),
     onLoadMore: async () => {
+      if (blockLoadRef.current) return;
       try {
         const newData = await getRelatedProducts(
           category,
@@ -110,7 +121,7 @@ export default function RelatedProducts({ category }: { category: string }) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !isDuplicating) {
+        if (entry.isIntersecting && !isDuplicating && !blockLoadRef.current) {
           setIsDuplicating(true);
         }
       },

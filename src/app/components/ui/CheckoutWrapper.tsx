@@ -61,9 +61,11 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
   useEffect(() => {
     if (checkoutStep === CheckoutStep.ORDER_SUMMARY && !redirected.current) {
       redirected.current = true;
+      closeModal();
+      resetCheckoutFlow();
       router.replace("/checkoutpage");
     }
-  }, [checkoutStep, router]);
+  }, [checkoutStep, router, closeModal, resetCheckoutFlow]);
 
   const stepVariants = {
     initial: { opacity: 0 },
@@ -108,7 +110,41 @@ export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
         />
       );
 
+    case CheckoutStep.ORDER_SUMMARY:
+      return (
+        <div className="p-4 space-y-4 animate-pulse">
+          {/* Header */}
+          <div className="h-6 w-40 bg-gray-200 rounded-md" />
+
+          {/* Item rows */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-3 items-center">
+              <div className="w-14 h-14 bg-gray-200 rounded-lg flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-200 rounded w-3/4" />
+                <div className="h-3 bg-gray-200 rounded w-1/2" />
+              </div>
+              <div className="h-4 w-12 bg-gray-200 rounded" />
+            </div>
+          ))}
+
+          {/* Divider */}
+          <div className="h-px bg-gray-200" />
+
+          {/* Summary rows */}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex justify-between">
+              <div className="h-3 w-24 bg-gray-200 rounded" />
+              <div className="h-3 w-16 bg-gray-200 rounded" />
+            </div>
+          ))}
+
+          {/* Button */}
+          <div className="h-11 w-full bg-gray-200 rounded-full mt-2" />
+        </div>
+      );
+
     default:
-      return <div>Checkout flow error</div>;
+      return null;
   }
 }
