@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import SideNav from "./components/SideNav";
 import BreadCrumb from "./components/BreadCrumb";
 import { usePathname } from "next/navigation";
@@ -8,6 +9,9 @@ import { SideBarItem, sidebarItems } from "./data/sidebarData";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
+
+import Spinner from "@/app/components/Spinner";
+import { getBearerToken } from "@/lib/api";
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,25 +30,34 @@ function findActiveTitle(items: SideBarItem[], pathname: string): string {
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
   const { getNotifications } = useNotification();
+
+  useEffect(() => {
+    const token = getBearerToken();
+    if (!token) {
+      router.replace("/");
+      return;
+    }
+    setCheckingAuth(false);
+  }, [router]);
+
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
 
-    // When a link is clicked, start loading
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("a")) handleStart();
     };
 
-    // Add listener for clicks
     document.addEventListener("click", handleClick);
 
-    // Turn off spinner when pathname changes
     handleComplete();
     const timeout = setTimeout(() => setIsLoading(false), 50);
 
@@ -55,11 +68,15 @@ export default function Layout({ children }: LayoutProps) {
   }, [pathname]);
 
   useEffect(() => {
+    if (checkingAuth) return;
     (async () => {
       const req = await getNotifications();
       setNotifications(req);
     })();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkingAuth]);
+
+  if (checkingAuth) return <Spinner />;
 
   return (
     <div className="relative ">

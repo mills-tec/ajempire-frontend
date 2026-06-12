@@ -1,8 +1,35 @@
-import OrderSummaryPage from '../components/ui/OrderSummaryPage';
+"use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import OrderSummaryPage from "../components/ui/OrderSummaryPage";
 
-// Note: The CheckoutProvider must be defined in your RootLayout.tsx (as you previously had it)
-// or a higher shared layout that wraps this route.
+import Spinner from "@/app/components/Spinner";
+import { useCartStore } from "@/lib/stores/cart-store"; // adjust path
+import { getBearerToken } from "@/lib/api";
+
 export default function CheckoutRoute() {
-    return <OrderSummaryPage />;
-} 
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+  const getSelectedItems = useCartStore((state) => state.getSelectedItems);
+
+  useEffect(() => {
+    const token = getBearerToken();
+    if (!token) {
+      router.replace("/");
+      return;
+    }
+
+    const selectedItems = getSelectedItems();
+    if (selectedItems.length === 0) {
+      router.replace("/pages/cart"); // adjust to your cart route
+      return;
+    }
+
+    setChecking(false);
+  }, [router, getSelectedItems]);
+
+  if (checking) return <Spinner />;
+
+  return <OrderSummaryPage />;
+}
