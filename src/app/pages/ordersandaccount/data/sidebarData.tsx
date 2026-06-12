@@ -14,8 +14,7 @@ import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
 import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
-import { toast, Toaster } from "sonner";
-import { useModalStore } from "@/lib/stores/modal-store";
+import { toast } from "sonner";
 
 export type SideBarItem = {
   title: string;

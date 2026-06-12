@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, SquarePen, Megaphone, Plus, X } from 'lucide-react';
-import { getPromotions, createPromotion, updatePromotion, deletePromotion, getAllCategories, getProducts } from '@/lib/adminapi';
+import { createPromotion, deletePromotion, getAllCategories, getProducts, getPromotions, updatePromotion } from '@/lib/adminapi';
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Megaphone, Plus, Search, SquarePen, Trash2, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 interface Promotion {
   _id?: string;
@@ -45,7 +45,12 @@ const PromotionsPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedPromotion, setSelectedPromotion] = useState<any>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [promotionFilter, setPromotionFilter] = useState('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -60,6 +65,50 @@ discountType: 'percent' as 'percent' | 'fixed',
     endDate: '',
     couponCode: ''
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setBannerFile(e.target.files[0]);
+    }
+  };
+
+  useEffect(() => {
+    if (!showFilterDropdown) return;
+    const handleClose = () => setShowFilterDropdown(false);
+    document.addEventListener('click', handleClose);
+    return () => document.removeEventListener('click', handleClose);
+  }, [showFilterDropdown]);
+
+  const toggleFilterDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowFilterDropdown(!showFilterDropdown);
+  };
+
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleViewClick = (promotion: any) => {
+    setSelectedPromotion(promotion);
+    setShowViewModal(true);
+  };
+
+  const getAppliedNames = () => {
+    if (!selectedPromotion || !selectedPromotion.applyToId || selectedPromotion.applyToId.length === 0) return 'None';
+    if (selectedPromotion.applyTo === 'product') {
+      return selectedPromotion.applyToId.map((id: string) => {
+        const prod = products.find(p => (p._id || p.id) === id);
+        return prod?.name || prod?.title || id;
+      }).join(', ');
+    } else if (selectedPromotion.applyTo === 'category') {
+      return selectedPromotion.applyToId.map((id: string) => {
+        const cat = categories.find(c => (c._id || c.id) === id);
+        return cat?.name || id;
+      }).join(', ');
+    }
+    return 'All Products';
+  };
 
   // Fetch promotions from server
   const fetchPromotions = async () => {
@@ -132,7 +181,6 @@ discountType: 'percent' as 'percent' | 'fixed',
     fetchPromotions();
     fetchCategories();
     fetchProducts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusStyle = (status: string) => {
@@ -148,12 +196,19 @@ discountType: 'percent' as 'percent' | 'fixed',
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
+    // Reset applyToId when applyTo changes to 'all'
     if (name === 'applyTo' && value === 'all') {
       setFormData(prev => ({
         ...prev,
         [name]: value,
         applyToId: []
+      }));
+    } else if (name === 'promotionType' && value === 'flashsale') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        couponCode: ''
       }));
     } else {
       setFormData(prev => ({
@@ -178,6 +233,7 @@ discountType: 'percent' as 'percent' | 'fixed',
       endDate: '',
       couponCode: ''
     });
+    setBannerFile(null);
     setError(null);
     setShowAddModal(true);
   };
@@ -198,6 +254,7 @@ discountType: 'percent' as 'percent' | 'fixed',
       endDate: promotion.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : '',
       couponCode: promotion.couponCode || ''
     });
+    setBannerFile(null);
     setError(null);
     setShowEditModal(true);
   };
@@ -215,12 +272,40 @@ discountType: 'percent' as 'percent' | 'fixed',
     setError(null);
 
     try {
-      const payload = {
-        ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate) : null,
-        endDate: formData.endDate ? new Date(formData.endDate) : null
-      };
-      
+      const payload = new FormData();
+      payload.append('title', formData.title);
+      payload.append('description', formData.description);
+      payload.append('promotionType', formData.promotionType);
+      payload.append('discountType', formData.discountType);
+      payload.append('discountValue', String(formData.discountValue));
+      payload.append('applyTo', formData.applyTo);
+
+      if (formData.applyToId && formData.applyToId.length > 0) {
+        formData.applyToId.forEach(id => {
+          payload.append('applyToId', id);
+        });
+      }
+
+      if (bannerFile) {
+        payload.append('banner', bannerFile);
+      } else if (formData.banner) {
+        payload.append('banner', formData.banner);
+      }
+
+      if (formData.startDate) {
+        payload.append('startDate', new Date(formData.startDate).toISOString());
+      }
+      if (formData.endDate) {
+        payload.append('endDate', new Date(formData.endDate).toISOString());
+      }
+      if (formData.promotionType === 'coupon') {
+        if (formData.couponCode) {
+          payload.append('couponCode', formData.couponCode);
+        }
+      } else {
+        payload.append('couponCode', '');
+      }
+
       const response = await createPromotion(payload);
       if (response.message) {
         setShowAddModal(false);
@@ -238,6 +323,7 @@ discountType: 'percent' as 'percent' | 'fixed',
           endDate: '',
           couponCode: ''
         });
+        setBannerFile(null);
       } else {
         setError(response.error || 'Failed to create promotion');
       }
@@ -253,22 +339,51 @@ discountType: 'percent' as 'percent' | 'fixed',
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPromotion?._id) return;
-    
+
     setLoading(true);
     setError(null);
 
     try {
-      const payload = {
-        ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate) : null,
-        endDate: formData.endDate ? new Date(formData.endDate) : null
-      };
-      
+      const payload = new FormData();
+      payload.append('title', formData.title);
+      payload.append('description', formData.description);
+      payload.append('promotionType', formData.promotionType);
+      payload.append('discountType', formData.discountType);
+      payload.append('discountValue', String(formData.discountValue));
+      payload.append('applyTo', formData.applyTo);
+
+      if (formData.applyToId && formData.applyToId.length > 0) {
+        formData.applyToId.forEach(id => {
+          payload.append('applyToId', id);
+        });
+      }
+
+      if (bannerFile) {
+        payload.append('banner', bannerFile);
+      } else if (formData.banner) {
+        payload.append('banner', formData.banner);
+      }
+
+      if (formData.startDate) {
+        payload.append('startDate', new Date(formData.startDate).toISOString());
+      }
+      if (formData.endDate) {
+        payload.append('endDate', new Date(formData.endDate).toISOString());
+      }
+      if (formData.promotionType === 'coupon') {
+        if (formData.couponCode) {
+          payload.append('couponCode', formData.couponCode);
+        }
+      } else {
+        payload.append('couponCode', '');
+      }
+
       const response = await updatePromotion(selectedPromotion._id, payload);
       if (response.message) {
         setShowEditModal(false);
         fetchPromotions();
         setSelectedPromotion(null);
+        setBannerFile(null);
       } else {
         setError(response.error || 'Failed to update promotion');
       }
@@ -283,7 +398,7 @@ discountType: 'percent' as 'percent' | 'fixed',
   // Handle delete confirmation
   const confirmDelete = async () => {
     if (!selectedPromotion?._id) return;
-    
+
     setLoading(true);
 
     try {
@@ -302,6 +417,35 @@ discountType: 'percent' as 'percent' | 'fixed',
       setLoading(false);
     }
   };
+
+  // Filter promotions based on search and status/type filters
+  const filteredPromotions = promotions.filter(promotion => {
+    const matchesSearch = !searchTerm ||
+      promotion.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      promotion.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      promotion.promotionType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      promotion.couponCode?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (promotionFilter === 'active') {
+      return promotion.status?.toLowerCase() === 'active';
+    }
+    if (promotionFilter === 'scheduled') {
+      return promotion.status?.toLowerCase() === 'scheduled';
+    }
+    if (promotionFilter === 'expired') {
+      return promotion.status?.toLowerCase() === 'expired';
+    }
+    if (promotionFilter === 'flashsale') {
+      return promotion.promotionType?.toLowerCase() === 'flashsale';
+    }
+    if (promotionFilter === 'coupon') {
+      return promotion.promotionType?.toLowerCase() === 'coupon';
+    }
+
+    return true;
+  });
 
   // Calculate promotion statistics
   const calculateStats = () => {
@@ -432,11 +576,11 @@ discountType: 'percent' as 'percent' | 'fixed',
                     <>
                       {stats.totalDiscountValue}
                       <span className="text-sm font-normal ml-1">
-                        {stats.hasPercentageDiscount && stats.hasFixedDiscount 
-                          ? 'mixed' 
-                          : stats.hasPercentageDiscount 
-                          ? '%' 
-                          : '₦'}
+                        {stats.hasPercentageDiscount && stats.hasFixedDiscount
+                          ? 'mixed'
+                          : stats.hasPercentageDiscount
+                            ? '%'
+                            : '₦'}
                       </span>
                     </>
                   ) : '0'}
@@ -453,9 +597,9 @@ discountType: 'percent' as 'percent' | 'fixed',
       </div>
 
       {/* Table Container */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-10 mt-10">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm mb-10 mt-10 relative z-20">
         {/* Search and Filters */}
-        <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-gray-50">
+        <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-gray-50 rounded-t-2xl">
           <div className="relative w-full md:w-96 group">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand_gray group-focus-within:text-brand_pink transition-colors" />
             <input
@@ -467,17 +611,83 @@ discountType: 'percent' as 'percent' | 'fixed',
             />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button 
+            <button
               onClick={handleAddClick}
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-brand_pink hover:bg-brand_pink/90 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-md active:scale-95"
             >
               <Plus size={16} />
               Add Promotion
             </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 text-brand_gray_dark px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors">
-              <Filter size={16} />
-              Filter
-            </button>
+            <div className="flex items-center gap-3 w-full md:w-auto relative z-30">
+              <button
+                onClick={toggleFilterDropdown}
+                className={`flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${promotionFilter !== 'all'
+                  ? 'bg-brand_pink/10 border-brand_pink/30 text-brand_pink'
+                  : 'bg-gray-50 border-gray-100 text-brand_gray_dark hover:bg-gray-100'
+                  }`}
+              >
+                <Filter size={16} />
+                {promotionFilter === 'all' && 'Filter'}
+                {promotionFilter === 'active' && 'Active'}
+                {promotionFilter === 'scheduled' && 'Scheduled'}
+                {promotionFilter === 'expired' && 'Expired'}
+                {promotionFilter === 'flashsale' && 'Flash Sale'}
+                {promotionFilter === 'coupon' && 'Coupon'}
+              </button>
+
+              {showFilterDropdown && (
+                <div
+                  onClick={handleDropdownClick}
+                  className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+                >
+                  <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Filter by Status
+                  </div>
+                  <button
+                    onClick={() => { setPromotionFilter('all'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'all' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    All Promotions
+                  </button>
+                  <button
+                    onClick={() => { setPromotionFilter('active'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'active' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    onClick={() => { setPromotionFilter('scheduled'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'scheduled' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    Scheduled / Upcoming
+                  </button>
+                  <button
+                    onClick={() => { setPromotionFilter('expired'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'expired' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    Expired
+                  </button>
+
+                  <div className="h-px bg-gray-100 my-1"></div>
+
+                  <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Filter by Type
+                  </div>
+                  <button
+                    onClick={() => { setPromotionFilter('flashsale'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'flashsale' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    Flash Sales
+                  </button>
+                  <button
+                    onClick={() => { setPromotionFilter('coupon'); setShowFilterDropdown(false); }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === 'coupon' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                  >
+                    Coupons
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -504,15 +714,19 @@ discountType: 'percent' as 'percent' | 'fixed',
                     </div>
                   </td>
                 </tr>
-              ) : promotions.length === 0 ? (
+              ) : filteredPromotions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-gray-500">
-                    No promotions found. Click &quot;Add Promotion&quot; to create your first promotion.
+                    {searchTerm || promotionFilter !== 'all' ? 'No promotions found matching your filters.' : 'No promotions found.'}
                   </td>
                 </tr>
               ) : (
-                promotions.map((promotion, idx) => (
-                  <tr key={promotion._id || idx} className="hover:bg-gray-50/50 transition-colors group">
+                filteredPromotions.map((promotion, idx) => (
+                  <tr 
+                    key={promotion._id || idx} 
+                    onClick={() => handleViewClick(promotion)}
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <span className="font-medium text-sm text-brand_gray_dark">{promotion.title}</span>
@@ -531,27 +745,28 @@ discountType: 'percent' as 'percent' | 'fixed',
                       </span>
                     </td>
                     <td className="p-4 text-sm text-brand_gray_dark/80">
-                      {promotion.discountType === 'percent' ? `${promotion.discountValue}% OFF` : 
-                       promotion.discountType === 'fixed' ? `N${promotion.discountValue} OFF` : 
-                       promotion.discountType || 'N/A'}
+                      {promotion.discountType === 'percent' ? `${promotion.discountValue}% OFF` :
+                        promotion.discountType === 'fixed' ? `₦${promotion.discountValue!.toLocaleString()} OFF` :
+                          promotion.discountType || 'N/A'}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleEditClick(promotion)}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(promotion); }}
                           className="text-brand_gray hover:text-brand_pink transition-colors"
                           title="Edit Promotion"
                         >
                           <SquarePen size={16} />
                         </button>
-                        <button 
-                          onClick={() => handleDeleteClick(promotion)}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(promotion); }}
                           className="text-brand_gray hover:text-red-500 transition-colors"
                           title="Delete Promotion"
                         >
                           <Trash2 size={16} />
                         </button>
-                        <button 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleViewClick(promotion); }}
                           className="text-brand_gray hover:text-blue-500 transition-colors"
                           title="View Promotion"
                         >
@@ -567,7 +782,7 @@ discountType: 'percent' as 'percent' | 'fixed',
         </div>
 
         {/* Pagination */}
-        <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-50 bg-gray-50/20">
+        <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-50 bg-gray-50/20 rounded-b-2xl">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <select className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none">
@@ -577,17 +792,19 @@ discountType: 'percent' as 'percent' | 'fixed',
               </select>
               <span className="text-xs text-brand_gray font-medium">Items per page</span>
             </div>
-            <span className="text-xs text-brand_gray font-medium">1-8 of 1,248 items</span>
+            <span className="text-xs text-brand_gray font-medium">
+              {filteredPromotions.length > 0 ? `1-${filteredPromotions.length} of ${filteredPromotions.length} items` : '0 items'}
+            </span>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <select className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none">
                 <option>1</option>
-                <option>2</option>
-                <option>3</option>
               </select>
-              <span className="text-xs text-brand_gray font-medium">of 156 pages</span>
+              <span className="text-xs text-brand_gray font-medium">
+                of 1 pages
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button className="p-1 rounded-md text-brand_gray hover:bg-gray-100"><ChevronLeft className="w-4 h-4" /></button>
@@ -596,329 +813,101 @@ discountType: 'percent' as 'percent' | 'fixed',
           </div>
         </div>
 
-      {/* Add Promotion Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Add New Promotion</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <X size={12} className="text-white" />
-                  </div>
-                  <p className="text-red-700 text-sm font-medium">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Promotion Name</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    placeholder="Enter promotion name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                  <select
-                    name="promotionType"
-                    value={formData.promotionType}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  >
-                    <option value="flashsale">Flash Sale</option>
-                    <option value="coupon">Coupon</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Enter promotion description"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
-                <select
-                    name="discountType"
-                    value={formData.discountType}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  >
-                    <option value="percent">Percentage</option>
-                    <option value="fixed">Fixed Amount</option>
-                  </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount Value</label>
-                  <input
-                    type="number"
-                    name="discountValue"
-                    value={formData.discountValue}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    placeholder="Enter discount value"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Apply To</label>
-                  <select
-                    name="applyTo"
-                    value={formData.applyTo}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  >
-                    <option value="product">Product</option>
-                    <option value="category">Category</option>
-                    <option value="all">All Products</option>
-                  </select>
-                </div>
-              </div>
-
-              {formData.applyTo !== 'all' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.applyTo === 'product' ? 'Select Products' : 'Select Categories'}
-                  </label>
-                  <div className="text-xs text-red-500 mb-2">
-                    Debug: applyTo={formData.applyTo}, products={products.length}, categories={categories.length}
-                  </div>
-                  <select
-                    multiple
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    value={formData.applyToId}
-                    onChange={(e) => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                      console.log('Selected options:', selectedOptions);
-                      setFormData(prev => ({
-                        ...prev,
-                        applyToId: selectedOptions
-                      }));
-                    }}
-                    size={4}
-                  >
-                    {formData.applyTo === 'product' && products.length > 0 ? (
-                      products.map(product => (
-                        <option key={product._id || product.id} value={product._id || product.id}>
-                          {product.name || product.title || 'Unnamed Product'}
-                        </option>
-                      ))
-                    ) : formData.applyTo === 'category' && categories.length > 0 ? (
-                      categories.map(category => (
-                        <option key={category._id || category.id} value={category._id || category.id}>
-                          {category.name || 'Unnamed Category'}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">No {formData.applyTo === 'product' ? 'products' : 'categories'} available</option>
-                    )}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Hold Ctrl/Cmd to select multiple items
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Banner URL</label>
-                <input
-                  type="url"
-                  name="banner"
-                  value={formData.banner}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Enter banner image URL"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Coupon Code</label>
-                <input
-                  type="text"
-                  name="couponCode"
-                  value={formData.couponCode}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Optional: Enter coupon code"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
+        {/* Add Promotion Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Add New Promotion</h2>
                 <button
-                  type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Promotion'
-                  )}
+                  <X size={20} />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Edit Promotion Modal */}
-      {showEditModal && selectedPromotion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Edit Promotion</h2>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <X size={12} className="text-white" />
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                      <X size={12} className="text-white" />
+                    </div>
+                    <p className="text-red-700 text-sm font-medium">{error}</p>
                   </div>
-                  <p className="text-red-700 text-sm font-medium">{error}</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            <form onSubmit={handleEditSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Promotion Name</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Enter promotion name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      name="promotionType"
+                      value={formData.promotionType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    >
+                      <option value="flashsale">Flash Sale</option>
+                      <option value="coupon">Coupon</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Promotion Name</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
                     onChange={handleInputChange}
                     required
+                    rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    placeholder="Enter promotion name"
+                    placeholder="Enter promotion description"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
                   <select
-                    name="promotionType"
-                    value={formData.promotionType}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  >
-                    <option value="flashsale">Flash Sale</option>
-                    <option value="coupon">Coupon</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Enter promotion description"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
-                <select
                     name="discountType"
                     value={formData.discountType}
                     onChange={handleInputChange}
@@ -928,180 +917,573 @@ discountType: 'percent' as 'percent' | 'fixed',
                     <option value="percent">Percentage</option>
                     <option value="fixed">Fixed Amount</option>
                   </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount Value</label>
-                  <input
-                    type="number"
-                    name="discountValue"
-                    value={formData.discountValue}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    placeholder="Enter discount value"
-                  />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Apply To</label>
-                  <select
-                    name="applyTo"
-                    value={formData.applyTo}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  >
-                    <option value="product">Product</option>
-                    <option value="category">Category</option>
-                    <option value="all">All Products</option>
-                  </select>
-                </div>
-              </div>
 
-              {formData.applyTo !== 'all' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.applyTo === 'product' ? 'Select Products' : 'Select Categories'}
-                  </label>
-                  <div className="text-xs text-red-500 mb-2">
-                    Debug: applyTo={formData.applyTo}, products={products.length}, categories={categories.length}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Discount Value</label>
+                    <input
+                      type="number"
+                      name="discountValue"
+                      value={formData.discountValue}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Enter discount value"
+                    />
                   </div>
-                  <select
-                    multiple
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                    value={formData.applyToId}
-                    onChange={(e) => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                      console.log('Selected options:', selectedOptions);
-                      setFormData(prev => ({
-                        ...prev,
-                        applyToId: selectedOptions
-                      }));
-                    }}
-                    size={4}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Apply To</label>
+                    <select
+                      name="applyTo"
+                      value={formData.applyTo}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    >
+                      <option value="product">Product</option>
+                      <option value="category">Category</option>
+                      <option value="all">All Products</option>
+                    </select>
+                  </div>
+                </div>
+
+                {formData.applyTo !== 'all' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.applyTo === 'product' ? 'Select Products' : 'Select Categories'}
+                    </label>
+                    <div className="text-xs text-red-500 mb-2">
+                      Debug: applyTo={formData.applyTo}, products={products.length}, categories={categories.length}
+                    </div>
+                    <select
+                      multiple
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      value={formData.applyToId}
+                      onChange={(e) => {
+                        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                        console.log('Selected options:', selectedOptions);
+                        setFormData(prev => ({
+                          ...prev,
+                          applyToId: selectedOptions
+                        }));
+                      }}
+                      size={4}
+                    >
+                      {formData.applyTo === 'product' && products.length > 0 ? (
+                        products.map(product => (
+                          <option key={product._id || product.id} value={product._id || product.id}>
+                            {product.name || product.title || 'Unnamed Product'}
+                          </option>
+                        ))
+                      ) : formData.applyTo === 'category' && categories.length > 0 ? (
+                        categories.map(category => (
+                          <option key={category._id || category.id} value={category._id || category.id}>
+                            {category.name || 'Unnamed Category'}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No {formData.applyTo === 'product' ? 'products' : 'categories'} available</option>
+                      )}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Hold Ctrl/Cmd to select multiple items
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Banner Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand_pink/10 file:text-brand_pink hover:file:bg-brand_pink/20"
+                  />
+                  {(bannerFile || formData.banner) && (
+                    <div className="mt-3 relative w-32 h-20 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={bannerFile ? URL.createObjectURL(bannerFile) : formData.banner}
+                        alt="Banner Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBannerFile(null);
+                          setFormData(prev => ({ ...prev, banner: '' }));
+                        }}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {formData.promotionType === 'coupon' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Coupon Code</label>
+                    <input
+                      type="text"
+                      name="couponCode"
+                      value={formData.couponCode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Optional: Enter coupon code"
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                   >
-                    {formData.applyTo === 'product' && products.length > 0 ? (
-                      products.map(product => (
-                        <option key={product._id || product.id} value={product._id || product.id}>
-                          {product.name || product.title || 'Unnamed Product'}
-                        </option>
-                      ))
-                    ) : formData.applyTo === 'category' && categories.length > 0 ? (
-                      categories.map(category => (
-                        <option key={category._id || category.id} value={category._id || category.id}>
-                          {category.name || 'Unnamed Category'}
-                        </option>
-                      ))
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Creating...
+                      </>
                     ) : (
-                      <option value="">No {formData.applyTo === 'product' ? 'products' : 'categories'} available</option>
+                      'Create Promotion'
                     )}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Hold Ctrl/Cmd to select multiple items
-                  </p>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Promotion Modal */}
+        {showEditModal && selectedPromotion && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Edit Promotion</h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                      <X size={12} className="text-white" />
+                    </div>
+                    <p className="text-red-700 text-sm font-medium">{error}</p>
+                  </div>
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Banner URL</label>
-                <input
-                  type="url"
-                  name="banner"
-                  value={formData.banner}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Enter banner image URL"
-                />
-              </div>
+              <form onSubmit={handleEditSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Promotion Name</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Enter promotion name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      name="promotionType"
+                      value={formData.promotionType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    >
+                      <option value="flashsale">Flash Sale</option>
+                      <option value="coupon">Coupon</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Coupon Code</label>
-                <input
-                  type="text"
-                  name="couponCode"
-                  value={formData.couponCode}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
-                  placeholder="Optional: Enter coupon code"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    required
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    placeholder="Enter promotion description"
+                  />
+                </div>
 
-              <div className="flex gap-3 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type</label>
+                  <select
+                    name="discountType"
+                    value={formData.discountType}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                  >
+                    <option value="percent">Percentage</option>
+                    <option value="fixed">Fixed Amount</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Discount Value</label>
+                    <input
+                      type="number"
+                      name="discountValue"
+                      value={formData.discountValue}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Enter discount value"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Apply To</label>
+                    <select
+                      name="applyTo"
+                      value={formData.applyTo}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                    >
+                      <option value="product">Product</option>
+                      <option value="category">Category</option>
+                      <option value="all">All Products</option>
+                    </select>
+                  </div>
+                </div>
+
+                {formData.applyTo !== 'all' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.applyTo === 'product' ? 'Select Products' : 'Select Categories'}
+                    </label>
+                    <div className="text-xs text-red-500 mb-2">
+                      Debug: applyTo={formData.applyTo}, products={products.length}, categories={categories.length}
+                    </div>
+                    <select
+                      multiple
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      value={formData.applyToId}
+                      onChange={(e) => {
+                        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                        console.log('Selected options:', selectedOptions);
+                        setFormData(prev => ({
+                          ...prev,
+                          applyToId: selectedOptions
+                        }));
+                      }}
+                      size={4}
+                    >
+                      {formData.applyTo === 'product' && products.length > 0 ? (
+                        products.map(product => (
+                          <option key={product._id || product.id} value={product._id || product.id}>
+                            {product.name || product.title || 'Unnamed Product'}
+                          </option>
+                        ))
+                      ) : formData.applyTo === 'category' && categories.length > 0 ? (
+                        categories.map(category => (
+                          <option key={category._id || category.id} value={category._id || category.id}>
+                            {category.name || 'Unnamed Category'}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No {formData.applyTo === 'product' ? 'products' : 'categories'} available</option>
+                      )}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Hold Ctrl/Cmd to select multiple items
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Banner Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand_pink/10 file:text-brand_pink hover:file:bg-brand_pink/20"
+                  />
+                  {(bannerFile || formData.banner) && (
+                    <div className="mt-3 relative w-32 h-20 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={bannerFile ? URL.createObjectURL(bannerFile) : formData.banner}
+                        alt="Banner Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBannerFile(null);
+                          setFormData(prev => ({ ...prev, banner: '' }));
+                        }}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {formData.promotionType === 'coupon' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Coupon Code</label>
+                    <input
+                      type="text"
+                      name="couponCode"
+                      value={formData.couponCode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors"
+                      placeholder="Optional: Enter coupon code"
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      'Update Promotion'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedPromotion && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <AlertCircle size={20} className="text-red-500" />
+                  <span>Delete Promotion</span>
+                </h3>
                 <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mb-6 space-y-2">
+                <p className="text-sm text-brand_gray">
+                  Are you sure you want to delete this promotion?
+                </p>
+                <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                  This action is permanent, cannot be undone, and will immediately deactivate and delete the promotion &quot;{selectedPromotion.title || 'Untitled promotion'}&quot;.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  onClick={confirmDelete}
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Updating...
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Deleting...
                     </>
                   ) : (
-                    'Update Promotion'
+                    'Delete Promotion'
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedPromotion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Delete Promotion</h3>
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to delete this promotion?
-              </p>
-              <p className="font-medium text-gray-900">
-                &quot;{selectedPromotion.title || 'Untitled promotion'}&quot;
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={loading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
+        {/* View Promotion Details Modal */}
+        {showViewModal && selectedPromotion && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                <div>
+                  <h2 className="text-xl font-bold text-brand_gray_dark">Promotion Details</h2>
+                  <p className="text-xs text-brand_gray font-medium">Campaign ID: {selectedPromotion._id || 'N/A'}</p>
+                </div>
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedPromotion(null); }}
+                  className="p-1.5 rounded-lg text-brand_gray hover:bg-gray-50 hover:text-brand_gray_dark transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Image Banner */}
+                {selectedPromotion.banner && (
+                  <div className="w-full h-48 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center relative shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedPromotion.banner}
+                      alt="Campaign Banner"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 right-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusStyle(selectedPromotion.status)}`}>
+                        {selectedPromotion.status || 'inactive'}
+                      </span>
+                    </div>
+                  </div>
                 )}
-              </button>
+
+                {/* Grid details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50/50 border border-gray-100 rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Campaign Information</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Campaign Name</p>
+                        <p className="text-sm font-semibold text-brand_gray_dark">{selectedPromotion.title || 'Untitled'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Description</p>
+                        <p className="text-sm font-medium text-brand_gray_dark/80">{selectedPromotion.description || 'No description provided.'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Promotion Type</p>
+                        <p className="text-sm font-semibold text-brand_pink capitalize">{selectedPromotion.promotionType || 'N/A'}</p>
+                      </div>
+                      {selectedPromotion.couponCode && (
+                        <div>
+                          <p className="text-[10px] text-brand_gray font-medium">Coupon Code</p>
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-brand_pink/10 border border-brand_pink/20 rounded text-xs font-bold text-brand_pink uppercase tracking-wider">
+                            {selectedPromotion.couponCode}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50/50 border border-gray-100 rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Discount & Application</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Discount Value</p>
+                        <p className="text-sm font-bold text-brand_gray_dark">
+                          {selectedPromotion.discountType === 'percent' ? `${selectedPromotion.discountValue}% OFF` :
+                            selectedPromotion.discountType === 'fixed' ? `₦${selectedPromotion.discountValue.toLocaleString()} OFF` :
+                              selectedPromotion.discountValue || '0'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Applies To</p>
+                        <p className="text-sm font-semibold text-brand_gray_dark capitalize">{selectedPromotion.applyTo || 'All Products'}</p>
+                      </div>
+                      {selectedPromotion.applyTo !== 'all' && (
+                        <div>
+                          <p className="text-[10px] text-brand_gray font-medium">Applied Items / Collections</p>
+                          <p className="text-xs font-medium text-brand_gray_dark/80 whitespace-pre-wrap max-h-24 overflow-y-auto mt-1 bg-white p-2 border border-gray-100 rounded-lg">
+                            {getAppliedNames()}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Duration Period</p>
+                        <p className="text-xs font-medium text-brand_gray_dark/80 mt-0.5">
+                          Start: {selectedPromotion.startDate ? new Date(selectedPromotion.startDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                          End: {selectedPromotion.endDate ? new Date(selectedPromotion.endDate).toLocaleDateString('en-GB') : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    handleEditClick(selectedPromotion);
+                  }}
+                  className="px-5 py-2 border border-gray-200 text-brand_gray_dark font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Edit Campaign
+                </button>
+                <button
+                  onClick={() => { setShowViewModal(false); setSelectedPromotion(null); }}
+                  className="px-6 py-2 bg-brand_pink text-white font-semibold text-sm rounded-xl hover:bg-brand_pink/90 transition-colors"
+                >
+                  Close Details
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </main>
   );

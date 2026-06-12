@@ -22,16 +22,15 @@ interface LineChartProps {
 }
 
 const LineChart = ({ data = [] }: LineChartProps) => {
-    // Use dynamic data if provided, otherwise use default data
-    const chartData = data.length > 0 ? data : [
-        { date: 'Sept 10', sales: 90000 },
-        { date: 'Sept 11', sales: 40000 },
-        { date: 'Sept 12', sales: 68000 },
-        { date: 'Sept 13', sales: 25000 },
-        { date: 'Sept 14', sales: 85000 },
-        { date: 'Sept 15', sales: 50000 },
-        { date: 'Sept 16', sales: 85000 }
-    ];
+    if (!data || data.length === 0) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center text-brand_gray text-xs font-poppins min-h-[180px] border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                <span className="text-gray-400 font-medium">No sales data for this period</span>
+            </div>
+        );
+    }
+
+    const chartData = data;
 
     return (
         <Bar
@@ -56,7 +55,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                     tooltip: {
                         enabled: true,
                         callbacks: {
-                            label: (context: any) => `₦${context.raw.toLocaleString()}`,
+                            label: (context: unknown) => `₦${(context as { raw: number }).raw.toLocaleString()}`,
                         }
                     },
                 },
@@ -77,7 +76,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                                 size: 10,
                                 family: 'Poppins',
                             },
-                            callback: (value: any) => {
+                            callback: (value: unknown) => {
                                 if (value === 0) return '0';
                                 return value / 1000 + 'k';
                             },
@@ -102,7 +101,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                         },
                     },
                 },
-            } as any}
+            } as unknown as object}
         />
     )
 }

@@ -75,13 +75,12 @@ export default function ShippingAdressForm({
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  const [states, setStates] = useState<string[]>(nigeriaStates);
+  const [_states, _setStates] = useState<string[]>(nigeriaStates);
   const [selectedState, setSelectedState] = useState("Delta");
   const [selectedCountry, setSelectedCountry] = useState("Nigeria");
   const [loading, setLoading] = useState(false);
-  const { setIsLogisticsMode } = useCartStore();
+  const { setIsLogisticsMode: _setIsLogisticsMode } = useCartStore();
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
-  API_URL;
   const convertToLocalPhone = (phone: string) => {
     if (!phone) return "";
 
@@ -205,7 +204,7 @@ export default function ShippingAdressForm({
 
       if (onContinue) onContinue();
       if (onAddressUpdated) onAddressUpdated();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error updating address:", error);
 
       if (error.response) {

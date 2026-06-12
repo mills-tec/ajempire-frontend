@@ -11,7 +11,7 @@ interface SelectLogisticsProps {
 }
 
 export default function SelectLogistics({
-  setIsadress,
+  setIsadress: _setIsadress,
   onContinue,
   onBack,
   onClose,

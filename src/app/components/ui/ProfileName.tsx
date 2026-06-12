@@ -1,7 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_URL, getBearerToken } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 
 function getInitials(name?: string) {
@@ -15,8 +12,8 @@ interface ProfileNameProps {
   email?: string;
 }
 
-export default function ProfileName({ email }: ProfileNameProps) {
-  const { user } = useAuthStore();
+export default function ProfileName({ email: _email }: ProfileNameProps) {
+  const { user } = useAuthStore()
   const fullName = user?.name;
   const initials = getInitials(fullName);
 
@@ -35,9 +32,7 @@ export default function ProfileName({ email }: ProfileNameProps) {
       </div>
       <div className="flex flex-col  gap-0">
         <p className="capitalize text-[14px]">{fullName}</p>
-        <p className="text-xs font-light text-black/40">
-          {formatEmail(user?.email ?? "")}
-        </p>
+        <p className="text-xs font-light text-black/40">{formatEmail(user?.email ?? '')}</p>
       </div>
     </div>
   );

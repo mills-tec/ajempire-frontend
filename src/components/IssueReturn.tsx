@@ -4,7 +4,6 @@ import { IItem, Product } from '@/lib/types';
 import { useIssueReturn } from '@/api/customHooks';
 import { ImSpinner8 } from 'react-icons/im';
 import Link from 'next/link';
-import OrderTabs from '@/app/pages/ordersandaccount/components/OrderTabs';
 import MobileHeader from './MobileHeader';
 
 const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[] }, setReturnModal: (modal: boolean) => void }) => {
@@ -118,6 +117,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     Choose product to return
                 </p>
                 <div className="text-sm">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {data.items.map((item: any, index: number) => (
                         <div key={index} className="flex flex-col gap-1">
                             <div className="flex flex-row gap-2 items-center">
@@ -274,6 +274,7 @@ const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[
                     </div>
                 </div>
                 {inputs.imageEvidence && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={URL.createObjectURL(inputs.imageEvidence)}
                         alt="Evidence preview"

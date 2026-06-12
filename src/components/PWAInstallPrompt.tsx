@@ -276,9 +276,9 @@
 // }
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { CheckCircle2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -499,7 +499,7 @@ export default function PWAInstallPrompt({
       const enoughTime = Date.now() - dismissedAt >= REPROMPT_DELAY;
       if (!enoughTime || !repromptGate) return;
     }
-
+    const CHECK_INTERVAL = 1000;
     const timer = setTimeout(() => {
       hasTriggeredRef.current = true;
       setState("prompt");
@@ -587,6 +587,7 @@ export default function PWAInstallPrompt({
           >
             {/* App icon */}
             <div className="w-9 h-9 rounded-xl bg-white/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/promptlogo.png"
                 alt="AJ Empire"
@@ -665,6 +666,7 @@ export default function PWAInstallPrompt({
             <div className="flex items-center gap-3">
               {/* App icon */}
               <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/promptlogo.png"
                   alt="AJ Empire"

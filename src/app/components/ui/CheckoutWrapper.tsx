@@ -3,15 +3,12 @@
 import ShippingAdressForm from "../ShippingAdressForm";
 import PaymentMethod from "../PaymentMethod";
 import SelectLogistics from "../SelectLogistics";
-import Spinner from "../Spinner";
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCartStore, CheckoutStep } from "@/lib/stores/cart-store";
 import { useEffect, useRef } from "react";
 import { useModalStore } from "@/lib/stores/modal-store";
-import axios from "axios";
-import { globalUrl } from "@/api/api";
 
 // import { useCartStore, CheckoutStep } from "@/store/cartStore";
 
@@ -21,7 +18,7 @@ interface CheckoutWrapperProps {
 
 export default function CheckoutWrapper({ setIsadress }: CheckoutWrapperProps) {
   const router = useRouter();
-  const isLogisticsMode = useCartStore((s) => s.isLogisticsMode);
+  const _isLogisticsMode = useCartStore((s) => s.isLogisticsMode);
 
   // const {} = useCartStore();
   const checkoutStep = useCartStore((s) => s.checkoutStep);

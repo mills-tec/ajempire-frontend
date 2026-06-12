@@ -1,4 +1,3 @@
-import Lottie from "lottie-react"
 
 
 // function RefreshAnimation() {

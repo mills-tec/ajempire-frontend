@@ -1,13 +1,13 @@
+import { toast } from "sonner";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { toast } from "sonner";
-import { Product } from "../types";
 import {
   addToWishlistAPI,
   getBearerToken,
   getUsersWishlist,
   removeFromWishlistAPI,
 } from "../api";
+import { Product } from "../types";
 import { useModalStore } from "./modal-store";
 
 type WishlistItem = Product;

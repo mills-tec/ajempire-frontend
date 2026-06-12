@@ -15,6 +15,7 @@ export default function SwitchAccount() {
   const [showIntro, setShowIntro] = useState(false);
   const { setUser, user } = useAuthStore();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSwitchAccount = (account: any) => {
     if (typeof window !== "undefined") {
       localStorage.setItem(
@@ -56,6 +57,7 @@ export default function SwitchAccount() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {accounts.map((account: any, index: number) => (
             <div
               onClick={() => handleSwitchAccount(account)}

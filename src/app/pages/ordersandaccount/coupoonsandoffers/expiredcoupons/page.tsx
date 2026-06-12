@@ -1,9 +1,8 @@
 "use client";
 
-import { mapCouponToDeal } from "@/lib/couponMapper";
 import CouponsTab from "../../components/CouponsTab";
 import FlashDealCard from "../../components/FlashDealCard";
-import { Coupon, getCoupons } from "@/lib/api";
+import { getCoupons } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { ICoupon } from "../page";
 import FlashDealSkeleton from "@/components/FlashDealSkeleton";
@@ -23,7 +22,7 @@ export default function ExpiredCoupons() {
 
                 setDeals(res.message.map(item => ({ ...item, status: "expired" })))
 
-            } catch (err) {
+            } catch {
 
             } finally {
                 setLoading(false)

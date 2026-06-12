@@ -1,16 +1,14 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import SideNav from "./components/SideNav";
-import BreadCrumb from "./components/BreadCrumb";
-import { usePathname } from "next/navigation";
-import { SideBarItem, sidebarItems } from "./data/sidebarData";
-import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useEffect, useState } from "react";
+import BreadCrumb from "./components/BreadCrumb";
+import SideNav from "./components/SideNav";
+import { SideBarItem, sidebarItems } from "./data/sidebarData";
 
-import Spinner from "@/app/components/Spinner";
 import { getBearerToken } from "@/lib/api";
 
 interface LayoutProps {
@@ -32,8 +30,7 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [_isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
   const { getNotifications } = useNotification();
@@ -71,12 +68,10 @@ export default function Layout({ children }: LayoutProps) {
     if (checkingAuth) return;
     (async () => {
       const req = await getNotifications();
-      setNotifications(req);
+      setNotifications(req)
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkingAuth]);
-
-  if (checkingAuth) return <Spinner />;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="relative ">

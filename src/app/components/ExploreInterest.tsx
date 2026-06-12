@@ -18,7 +18,7 @@ export default function ExploreInterest() {
   const [hasNextPage, setHasNextPage] = useState(true);
 
   const lastItemRef = useRef<HTMLDivElement>(null);
-  const originalProductsRef = useRef<any[]>([]);
+  const originalProductsRef = useRef<unknown[]>([]);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isPending, startDuplicateTransition] = useTransition();
 
@@ -52,8 +52,8 @@ export default function ExploreInterest() {
   /*
    * Append helper
    */
-  const appendProducts = (newProducts: any[]) => {
-    queryClient.setQueryData(["exploreInterest"], (oldData: any) => {
+  const appendProducts = (newProducts: unknown[]) => {
+    queryClient.setQueryData(["exploreInterest"], (oldData: unknown) => {
       if (!oldData) return oldData;
 
       return {
@@ -120,6 +120,7 @@ export default function ExploreInterest() {
       appendProducts(shuffleArray(originalProductsRef.current));
     });
     setIsDuplicating(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDuplicating]);
 
   return (
@@ -133,7 +134,7 @@ export default function ExploreInterest() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-        {products.map((product: any, index: number) => (
+        {products.map((product: unknown, index: number) => (
           <div
             key={`${product._id}-${index}`}
             ref={

@@ -148,6 +148,7 @@ const SearchDropdown = React.forwardRef<HTMLDivElement, SearchDropdownProps>(
           <div className="flex flex-wrap gap-2 mt-4">
             {recentImageSearches.map((item, idx) => (
               <div key={idx} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   onClick={() => handleImageSearchClick(item)}
                   src={item.base64}

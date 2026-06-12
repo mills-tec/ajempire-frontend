@@ -1,6 +1,3 @@
-interface AboutAppFeatureoneProp {
-    number: string
-}
 export default function AboutAppFeatureone() {
     return (
         <div className="w-full flex items-center justify-between border border-gray-300 rounded-md p-4">
@@ -11,6 +8,7 @@ export default function AboutAppFeatureone() {
                 <p>beauty products.</p>
             </div>
             <div className="bg-gray-400 w-[160px] h-[118px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="" alt="" />
             </div>
         </div>

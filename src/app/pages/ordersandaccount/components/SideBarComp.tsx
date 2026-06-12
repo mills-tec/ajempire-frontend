@@ -25,7 +25,7 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState({ _id: "" });
-  const { getUnreadNotifications, notifications } = useNotificationStore();
+  const { getUnreadNotifications, notifications: _notifications } = useNotificationStore();
   const openModal = useModalStore((s) => s.openModal);
   // Automatically open the parent that matches current pathname
   useEffect(() => {

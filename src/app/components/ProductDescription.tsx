@@ -1,22 +1,21 @@
 "use client";
-import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
-import { ProductResponse } from "@/lib/types";
-import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { getBearerToken } from "@/lib/api";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import CountdownTimer from "@/components/CountDownTimer";
+import { getBearerToken } from "@/lib/api";
+import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { ProductResponse } from "@/lib/types";
 import { useProductVariants } from "@/lib/useProductVariants";
-import { useRef } from "react";
+import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export default function ProductDescription({
   product_data,
-  handleSelectCover,
+  handleSelectCover: _handleSelectCover,
 }: {
   product_data: ProductResponse;
-  handleSelectCover: (src: string, type: "image" | "video") => void;
+  handleSelectCover?: (src: string, type: "image" | "video") => void;
 }) {
   const { product } = product_data.message;
   const cartItems = useCartStore((state) => state.items);
@@ -71,18 +70,26 @@ export default function ProductDescription({
     if (!existingItem) {
       addItem([{
         ...product,
-        price: basePrice,
+        basePrice,
+        finalPrice,
+        discount: product.flashSales ? calcDiscountPrice(
+          basePrice,
+          product.flashSales.discountValue!,
+          product.flashSales.discountType!,
+        ) : 0,
+        // discount: 
         stock: currentStock,
-        quantity,
-        selectedVariants: selectedVariantsArray ?? [],
+        quantity: quantity || 1,
+        selectedVariants: selectedVariantsArray,
         selected: true,
-      } as any]);
+      }]);
+
     }
 
     selectAllCartItems();
 
     setTimeout(() => {
-      const selectedItems = getSelectedItems();
+      getSelectedItems();
       openModal("checkout");
     }, 0);
   };
@@ -105,7 +112,6 @@ export default function ProductDescription({
     cartItems,
     hasVariants,
     product._id,
-    product.variants,
     selectedVariantsArray,
   ]);
   const [quantity, setQuantity] = useState(() =>
@@ -124,6 +130,7 @@ export default function ProductDescription({
 
     // Update cart store with the new quantity
     setCartItemQty(item._id, quantity);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity, item?._id]);
 
   useEffect(() => {
@@ -134,6 +141,7 @@ export default function ProductDescription({
     if (item.quantity !== quantity) {
       setQuantity(item.quantity === 0 ? 1 : item.quantity);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.quantity]);
 
   const basePrice =
@@ -485,7 +493,7 @@ export default function ProductDescription({
                     return;
                   }
 
-               
+
                   addItem([{
                     ...product,
                     basePrice,

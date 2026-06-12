@@ -1,9 +1,9 @@
-import Image from "next/image"
+import Spinner from "@/app/components/Spinner";
+import { adminLogin, LoginCredentials } from "@/lib/adminapi";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import Spinner from "@/app/components/Spinner";
-import { adminLogin, LoginCredentials } from "@/lib/adminapi";
 
 export default function AdminLogin() {
   const [emailinput, setEmailinput] = useState("");
@@ -22,16 +22,19 @@ export default function AdminLogin() {
 
   useEffect(() => {
     setIsValidPassword(passwordRegex.test(passwordinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passwordinput]);
 
   // Validate email whenever it changes
   useEffect(() => {
     setIsValidEmail(emailRegex.test(emailinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailinput]);
 
   // Validate password whenever it changes
   useEffect(() => {
     setIsValidPassword(passwordRegex.test(passwordinput));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passwordinput]);
 
   // Only enable login if both are valid
@@ -57,37 +60,42 @@ export default function AdminLogin() {
             if (response.message) {
                 const token = response.message;
                 console.log('Token extracted:', token);
-                const user = { 
-                    email: emailinput, 
-                    name: 'Admin User', 
-                    role: 'Administrator' 
+                const user = {
+                    id: response.data?.user?.id || '',
+                    email: emailinput,
+                    name: 'Administrator',
+                    role: response.data?.user?.role || 'Administrator'
                 };
 
                 localStorage.setItem("adminToken", token);
                 localStorage.setItem("adminUser", JSON.stringify(user));
+                document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
             } else if (response.data && response.data.token) {
                 // Alternative: check if token is in response.data.token
                 const token = response.data.token;
                 console.log('Token extracted from data:', token);
-                const user = { 
-                    email: emailinput, 
-                    name: 'Admin User', 
-                    role: 'Administrator' 
+                const user = {
+                    id: response.data?.user?.id || '',
+                    email: emailinput,
+                    name: 'Administrator',
+                    role: response.data?.user?.role || 'Administrator'
                 };
 
                 localStorage.setItem("adminToken", token);
                 localStorage.setItem("adminUser", JSON.stringify(user));
+                document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
             } else {
                 console.log('No token found in response');
                 toast.error(response.error || "Login failed");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Login error:", error);
-            toast.error("Login failed: " + (error.message || "Unknown error"));
+            const msg = error instanceof Error ? error.message : "Unknown error";
+            toast.error("Login failed: " + msg);
         } finally {
             setLoading(false);
         }

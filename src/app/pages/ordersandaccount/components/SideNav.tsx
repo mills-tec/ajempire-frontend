@@ -1,8 +1,5 @@
 import SideBarComp from "./SideBarComp";
-import { SideBarItem, sidebarItems } from "../data/sidebarData";
-type SideNavProps = {
-    setActiveItem: (item: string) => void;
-};
+import { sidebarItems } from "../data/sidebarData";
 
 
 const SideNav = () => {

@@ -1,5 +1,4 @@
 import React from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function MobileHeader({ text, handleBack }: { text: string, handleBack: () => void }) {
 

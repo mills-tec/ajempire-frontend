@@ -6,10 +6,10 @@ import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { IReturnRequest } from "@/lib/types";
 import Image from "next/image";
 
-import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import OrderTabs from "../../components/OrderTabs";
 import Skeleton from "@/components/ui/Skeleton";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import OrderTabs from "../../components/OrderTabs";
 
 const ClockIcon = ({ active }: { active: boolean }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`size-5 ${active ? "fill-[#0085FF]" : "fill-black/45"}`}>
@@ -49,7 +49,7 @@ const STATUS_STEPS = [
     { key: "delivered",  label: "Return Delivered",  desc: "Items are being shipped back",    Icon: TruckIcon,       activeColor: "text-purple-600" },
     { key: "refunded",   label: "Return Completed",  desc: "Return successfully received",    Icon: CheckCircleIcon, activeColor: "text-green-500"  },
 ];
-const STATUS_ORDER = ["processing", "approved", "delivered", "refunded"];
+const _STATUS_ORDER = ["processing", "approved", "delivered", "refunded"];
 
 export default function Status() {
     const { getReturnRequest } = useIssueReturn();
@@ -87,6 +87,7 @@ export default function Status() {
             }
             setLoading(false);
         })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const isRejected = data.status === "rejected";

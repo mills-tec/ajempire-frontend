@@ -1,33 +1,61 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Trash2, ChevronLeft, ChevronRight, Users, TrendingUp,  X } from 'lucide-react';
-import { getCustomers, deleteCustomer, updateCustomerStatus } from '@/lib/adminapi';
-import { useToast, ToastContainer } from '@/app/components/ui/Toast';
+import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import { deleteCustomer, getCustomers, toggleCustomerStatus, updateCustomerStatus } from '@/lib/adminapi';
+import { getPeriodStartDate } from '@/lib/dashboard-utils';
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Search, Trash2, TrendingUp, UserCheck, Users, UserX, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 const CustomersPage = () => {
   const toast = useToast();
-  const [selectedPeriod, setSelectedPeriod] = useState('This Week');
+  const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showToggleStatusModal, setShowToggleStatusModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [customerToToggle, setCustomerToToggle] = useState<any>(null);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (!showFilterDropdown) return;
+    const handleClose = () => setShowFilterDropdown(false);
+    document.addEventListener('click', handleClose);
+    return () => document.removeEventListener('click', handleClose);
+  }, [showFilterDropdown]);
+
+  const toggleFilterDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowFilterDropdown(!showFilterDropdown);
+  };
+
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
 
   const fetchCustomers = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getCustomers();
-      
+
+      console.log("response", response);
+
       // Handle different response structures with type assertions
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responseAny = response as any;
       if (responseAny.message && typeof responseAny.message === 'object' && responseAny.message.users && Array.isArray(responseAny.message.users)) {
         setCustomers(responseAny.message.users);
@@ -40,20 +68,22 @@ const CustomersPage = () => {
       } else {
         setCustomers([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching customers:', error);
-      setError(error.message || 'Failed to fetch customers');
+      setError(error instanceof Error ? error.message : 'Failed to fetch customers');
       setCustomers([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewCustomer = (customer: any) => {
     setSelectedCustomer(customer);
     setShowViewModal(true);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDeleteCustomer = (customer: any) => {
     setSelectedCustomer(customer);
     setShowDeleteModal(true);
@@ -64,24 +94,24 @@ const CustomersPage = () => {
       try {
         setIsDeleting(true);
         const customerId = selectedCustomer.user?._id || selectedCustomer._id;
-        
+
         if (!customerId) {
           toast.error('Customer ID is missing or invalid');
           return;
         }
-        
+
         console.log('Deleting customer with ID:', customerId);
         const response = await deleteCustomer(customerId);
-        
+
         if (response.message) {
           toast.success('Customer deleted successfully');
           fetchCustomers(); // Refresh list
         } else {
           toast.error(response.error || 'Failed to delete customer');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error deleting customer:', error);
-        toast.error(error.message || 'Failed to delete customer');
+        toast.error(error instanceof Error ? error.message : 'Failed to delete customer');
       } finally {
         setIsDeleting(false);
         setShowDeleteModal(false);
@@ -95,7 +125,64 @@ const CustomersPage = () => {
     setSelectedCustomer(null);
   };
 
-  const handleUpdateStatus = async (customerId: string, newStatus: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleToggleStatusClick = (customer: any) => {
+    setCustomerToToggle(customer);
+    setShowToggleStatusModal(true);
+  };
+
+  const confirmToggleStatus = async () => {
+    if (customerToToggle) {
+      try {
+        setIsTogglingStatus(true);
+        const customerId = customerToToggle.user?._id || customerToToggle._id;
+
+        if (!customerId) {
+          toast.error('Customer ID is missing or invalid');
+          return;
+        }
+
+        const response = await toggleCustomerStatus(customerId);
+
+        if (response.message) {
+          const isCurrentlyActive = customerToToggle.user?.active;
+          toast.success(`Customer account successfully ${isCurrentlyActive ? 'deactivated' : 'activated'}`);
+          
+          if (selectedCustomer && (selectedCustomer.user?._id === customerId || selectedCustomer._id === customerId)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setSelectedCustomer((prev: any) => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                user: {
+                  ...prev.user,
+                  active: !isCurrentlyActive
+                }
+              };
+            });
+          }
+          
+          fetchCustomers(); // Refresh list
+        } else {
+          toast.error(response.error || 'Failed to update customer status');
+        }
+      } catch (error: unknown) {
+        console.error('Error toggling customer status:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to toggle customer status');
+      } finally {
+        setIsTogglingStatus(false);
+        setShowToggleStatusModal(false);
+        setCustomerToToggle(null);
+      }
+    }
+  };
+
+  const cancelToggleStatus = () => {
+    setShowToggleStatusModal(false);
+    setCustomerToToggle(null);
+  };
+
+  const _handleUpdateStatus = async (customerId: string, newStatus: string) => {
     try {
       const response = await updateCustomerStatus(customerId, newStatus);
       if (response.message) {
@@ -104,18 +191,53 @@ const CustomersPage = () => {
       } else {
         toast.error(response.error || 'Failed to update customer status');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating customer status:', error);
-      toast.error(error.message || 'Failed to update customer status');
+      toast.error(error instanceof Error ? error.message : 'Failed to update customer status');
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    (customer.user && customer.user.fullname && customer.user.fullname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (customer.user && customer.user.email && customer.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (customer.user && customer.user.phone && customer.user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (customer.user && customer.user._id && customer.user._id.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter customers by selected period (with fallback to include customers with missing dates)
+  const periodFilteredCustomers = customers.filter(customer => {
+    const dateValue = customer.user?.createdAt || customer.user?.joinedDate || customer.createdAt;
+    if (!dateValue) return true; // Fallback: if no date is available, display the customer
+
+    try {
+      const start = getPeriodStartDate(selectedPeriod);
+      return new Date(dateValue) >= start;
+    } catch {
+      return true;
+    }
+  });
+
+  const filteredCustomers = periodFilteredCustomers.filter(customer => {
+    const matchesSearch = !searchTerm ||
+      (customer.user && customer.user.fullname && customer.user.fullname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (customer.user && customer.user.email && customer.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (customer.user && customer.user.phone && customer.user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (customer.user && customer.user._id && customer.user._id.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    if (customerFilter === 'active') {
+      return customer.user?.active === true;
+    }
+    if (customerFilter === 'inactive') {
+      return customer.user?.active === false;
+    }
+    if (customerFilter === 'vip') {
+      return (customer.totalSpent || 0) >= 100000;
+    }
+    if (customerFilter === 'new') {
+      const joinedDate = customer.user && (customer.user.createdAt || customer.user.joinedDate) ? new Date(customer.user.createdAt || customer.user.joinedDate) : null;
+      if (!joinedDate) return false;
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return joinedDate > thirtyDaysAgo;
+    }
+
+    return true;
+  });
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -127,10 +249,10 @@ const CustomersPage = () => {
   };
 
   // Calculate statistics
-  const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(c => c.user && c.user.active).length;
-  const inactiveCustomers = customers.filter(c => c.user && !c.user.active).length;
-  const newCustomers = customers.filter(c => {
+  const totalCustomers = periodFilteredCustomers.length;
+  const activeCustomers = periodFilteredCustomers.filter(c => c.user && c.user.active).length;
+  const inactiveCustomers = periodFilteredCustomers.filter(c => c.user && !c.user.active).length;
+  const newCustomers = periodFilteredCustomers.filter(c => {
     const joinedDate = c.user && (c.user.createdAt || c.user.joinedDate) ? new Date(c.user.createdAt || c.user.joinedDate) : null;
     if (!joinedDate) return false;
     const thirtyDaysAgo = new Date();
@@ -148,7 +270,7 @@ const CustomersPage = () => {
               <span className="text-white text-xs">×</span>
             </div>
             <p className="text-red-700 text-sm font-medium">{error}</p>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="ml-auto text-red-500 hover:text-red-700"
             >
@@ -172,6 +294,7 @@ const CustomersPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -218,6 +341,7 @@ const CustomersPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -261,16 +385,73 @@ const CustomersPage = () => {
               className="w-full bg-gray-50/50 border border-gray-100 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand_pink/30 focus:bg-white transition-all font-medium"
             />
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-50 border border-gray-100 text-brand_gray_dark px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors">
+          <div className="flex items-center gap-3 w-full md:w-auto relative">
+            <button
+              onClick={toggleFilterDropdown}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${customerFilter !== 'all'
+                ? 'bg-brand_pink/10 border-brand_pink/30 text-brand_pink'
+                : 'bg-gray-50 border-gray-100 text-brand_gray_dark hover:bg-gray-100'
+                }`}
+            >
               <Filter size={16} />
-              Filter
+              {customerFilter === 'all' && 'Filter'}
+              {customerFilter === 'active' && 'Active'}
+              {customerFilter === 'inactive' && 'Inactive'}
+              {customerFilter === 'vip' && 'VIP'}
+              {customerFilter === 'new' && 'New'}
             </button>
+
+            {showFilterDropdown && (
+              <div
+                onClick={handleDropdownClick}
+                className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+              >
+                <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Filter by Status
+                </div>
+                <button
+                  onClick={() => { setCustomerFilter('all'); setShowFilterDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${customerFilter === 'all' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                >
+                  All Customers
+                </button>
+                <button
+                  onClick={() => { setCustomerFilter('active'); setShowFilterDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${customerFilter === 'active' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                >
+                  Active Customers
+                </button>
+                <button
+                  onClick={() => { setCustomerFilter('inactive'); setShowFilterDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${customerFilter === 'inactive' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                >
+                  Inactive Customers
+                </button>
+
+                <div className="h-px bg-gray-100 my-1"></div>
+
+                <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Filter by Activity / Spend
+                </div>
+                <button
+                  onClick={() => { setCustomerFilter('vip'); setShowFilterDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${customerFilter === 'vip' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                >
+                  <span>VIP Customers <span className="text-[10px] text-gray-400">(Spend ≥ ₦100k)</span></span>
+                </button>
+                <button
+                  onClick={() => { setCustomerFilter('new'); setShowFilterDropdown(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${customerFilter === 'new' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
+                >
+                  <span>New Customers <span className="text-[10px] text-gray-400">(Last 30 Days)</span></span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="overflow-x-auto scrollbar-hide px-6">
           <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-gray-50/50">
@@ -280,11 +461,11 @@ const CustomersPage = () => {
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Customer ID</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Name</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Email</th>
-                <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Phone</th>
+                {/* <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Phone</th> */}
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Total Orders</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Total Spent</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Joined Date</th>
+                {/* <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Joined Date</th> */}
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Action</th>
               </tr>
             </thead>
@@ -305,9 +486,17 @@ const CustomersPage = () => {
                 </tr>
               ) : (
                 filteredCustomers.map((customer, idx) => (
-                  <tr key={customer.user?._id || idx} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr 
+                    key={customer.user?._id || idx} 
+                    onClick={() => handleViewCustomer(customer)}
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="p-4 text-center">
-                      <input type="checkbox" className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer" />
+                      <input 
+                        type="checkbox" 
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer" 
+                      />
                     </td>
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{customer.user?._id || 'N/A'}</td>
                     <td className="p-4">
@@ -320,39 +509,46 @@ const CustomersPage = () => {
                         <span className="text-sm text-brand_gray_dark/80">{customer.user?.email || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="p-4">
+                    {/* <td className="p-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-brand_gray_dark/80">{customer.user?.phone || 'N/A'}</span>
                       </div>
-                    </td>
+                    </td> */}
                     <td className="p-4 text-sm font-bold text-brand_gray_dark/80 text-center">{customer.totalOrders || 0}</td>
                     <td className="p-4 text-sm font-medium text-brand_gray_dark">
-                      {customer.totalSpent ? `N${customer.totalSpent.toLocaleString()}` : 'N0'}
+                      {customer.totalSpent ? `₦${customer.totalSpent.toLocaleString()}` : '₦0'}
                     </td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(customer.user?.active ? 'Active' : 'Inactive')}`}>
                         {customer.user?.active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="p-4">
+                    {/* <td className="p-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-brand_gray_dark/80">
                           {customer.user?.createdAt ? new Date(customer.user.createdAt).toLocaleDateString('en-GB') : 'N/A'}
                         </span>
                       </div>
-                    </td>
+                    </td> */}
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-3">
-                        <button 
-                          onClick={() => handleDeleteCustomer(customer)}
-                          className="text-brand_gray hover:text-red-500 transition-colors" 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatusClick(customer); }}
+                          className={`transition-colors ${customer.user?.active ? 'text-brand_gray hover:text-red-500' : 'text-brand_gray hover:text-green-500'}`}
+                          title={customer.user?.active ? "Deactivate Customer" : "Activate Customer"}
+                        >
+                          {customer.user?.active ? <UserX size={16} /> : <UserCheck size={16} />}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                          className="text-brand_gray hover:text-red-500 transition-colors"
                           title="Delete Customer"
                         >
                           <Trash2 size={16} />
                         </button>
-                        <button 
-                          onClick={() => handleViewCustomer(customer)}
-                          className="text-brand_gray hover:text-brand_pink transition-colors" 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleViewCustomer(customer); }}
+                          className="text-brand_gray hover:text-brand_pink transition-colors"
                           title="View Customer"
                         >
                           <Eye size={16} />
@@ -403,46 +599,49 @@ const CustomersPage = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Delete Customer</h3>
-              <button 
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <AlertCircle size={20} className="text-red-500" />
+                <span>Delete Customer</span>
+              </h3>
+              <button
                 onClick={cancelDelete}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">
-                Are you sure you want to delete this customer? This action cannot be undone.
+
+            <div className="mb-6 space-y-2">
+              <p className="text-sm text-brand_gray">
+                Are you sure you want to delete this customer?
               </p>
-              <p className="font-medium text-gray-900">
-                &quot;{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}&quot;
+              <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                This action is permanent, cannot be undone, and will permanently remove the customer record for &quot;{selectedCustomer?.user?.fullname || selectedCustomer?.fullname || 'Unknown Customer'}&quot;.
               </p>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={cancelDelete}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
               >
                 {isDeleting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Deleting...
                   </>
                 ) : (
-                  'Delete'
+                  'Delete Customer'
                 )}
               </button>
             </div>
@@ -456,14 +655,14 @@ const CustomersPage = () => {
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900">Customer Details</h3>
-              <button 
+              <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {/* Customer Basic Info */}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -511,7 +710,7 @@ const CustomersPage = () => {
                   <div>
                     <p className="text-sm text-gray-500">Total Spent</p>
                     <p className="font-medium text-lg">
-                      {selectedCustomer.totalSpent ? `N${selectedCustomer.totalSpent.toLocaleString()}` : 'N0'}
+                      {selectedCustomer.totalSpent ? `₦${selectedCustomer.totalSpent.toLocaleString()}` : '₦0'}
                     </p>
                   </div>
                 </div>
@@ -532,7 +731,7 @@ const CustomersPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setShowViewModal(false)}
@@ -542,12 +741,88 @@ const CustomersPage = () => {
               </button>
               <button
                 onClick={() => {
+                  handleToggleStatusClick(selectedCustomer);
+                }}
+                className={`px-4 py-2 text-white rounded-lg font-medium transition-colors ${
+                  selectedCustomer.user?.active ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'
+                }`}
+              >
+                {selectedCustomer.user?.active ? 'Deactivate Account' : 'Activate Account'}
+              </button>
+              <button
+                onClick={() => {
                   setShowViewModal(false);
                   handleDeleteCustomer(selectedCustomer);
                 }}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
               >
                 Delete Customer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle Status Confirmation Modal */}
+      {showToggleStatusModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                {customerToToggle?.user?.active ? (
+                  <UserX size={20} className="text-red-500" />
+                ) : (
+                  <UserCheck size={20} className="text-green-500" />
+                )}
+                <span>{customerToToggle?.user?.active ? 'Deactivate Customer' : 'Activate Customer'}</span>
+              </h3>
+              <button
+                onClick={cancelToggleStatus}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mb-6 space-y-2">
+              <p className="text-sm text-brand_gray">
+                Are you sure you want to {customerToToggle?.user?.active ? 'deactivate' : 'activate'} this customer&apos;s account?
+              </p>
+              {customerToToggle?.user?.active ? (
+                <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                  Deactivating &quot;{customerToToggle?.user?.fullname || 'this customer'}&quot; will restrict them from logging in, shopping, or placing new orders on AJ Empire.
+                </p>
+              ) : (
+                <p className="text-xs font-semibold text-green-500 bg-green-50 border border-green-100 rounded-lg p-2.5">
+                  Activating &quot;{customerToToggle?.user?.fullname || 'this customer'}&quot; will restore full access to their AJ Empire account.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelToggleStatus}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmToggleStatus}
+                disabled={isTogglingStatus}
+                className={`flex-1 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                  customerToToggle?.user?.active
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-green-500 hover:bg-green-600'
+                }`}
+              >
+                {isTogglingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {customerToToggle?.user?.active ? 'Deactivating...' : 'Activating...'}
+                  </>
+                ) : (
+                  customerToToggle?.user?.active ? 'Deactivate' : 'Activate'
+                )}
               </button>
             </div>
           </div>

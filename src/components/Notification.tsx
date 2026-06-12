@@ -19,6 +19,7 @@ export default function Notification({ data }: { data: NotificationType[] }) {
 
         setNotifications(data);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.type])
     return (
         <div className="px-5 lg:px-14 lg:mt-4 font-poppins">

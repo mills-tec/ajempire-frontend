@@ -12,6 +12,7 @@ export default function OptimizedMedia({ src, alt, mediaType, attributes, onLoad
             )}
 
             {mediaType === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                     src={src || ""}
                     alt={alt}

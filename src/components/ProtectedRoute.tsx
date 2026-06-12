@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Spinner from '@/app/components/Spinner';
 
@@ -12,12 +12,20 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && (!token || !user)) {
-      router.push('/admin-login');
+    if (!isLoading) {
+      if (!token || !user) {
+        router.push('/admin-login');
+      } else if (user.role?.toLowerCase() === 'junior') {
+        const isAllowed = pathname === '/admin' || pathname.startsWith('/admin/inventory') || pathname.startsWith('/admin/add-product');
+        if (!isAllowed) {
+          router.push('/admin');
+        }
+      }
     }
-  }, [token, user, isLoading, router]);
+  }, [token, user, isLoading, pathname, router]);
 
   if (isLoading) {
     return (
