@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import CouponsTab from "../components/CouponsTab";
 import FlashDealCard from "../components/FlashDealCard";
 import { getCoupons } from "@/lib/api";
-import { mapCouponToDeal } from "@/lib/couponMapper";
 import FlashDealSkeleton from "@/components/FlashDealSkeleton";
 import EmptyList from "@/components/EmptyList";
 import { Store } from "lucide-react";
@@ -44,7 +43,7 @@ export default function CouponsAndOffers() {
 
                 if (!res) return;
                 setDeals(res.message.map(item => ({ ...item, status: "unused" })));
-            } catch (err) {
+            } catch {
 
             } finally {
                 setLoading(false);

@@ -36,14 +36,21 @@ export const useOrders = () => {
     }
   };
 
-  const getOrder = async (id: string) => {
+  const getOrder = async (id: string): Promise<{status: boolean, message: unknown}> => {
     setIsLoading(true);
     try {
       const req = await getData(`/orders/${id}`, config);
       const resp = req.data;
-      return resp;
+      return {
+        status: true,
+        message: resp.message
+      };
     } catch (err) {
-      console.error(err);
+
+      return {
+        status: false,
+        message: err
+      };
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +207,7 @@ export const useIssueReturn = () => {
     if (!loading) {
       setLoading(true);
       try {
-         await axios.post(`${API_URL}/return`, data, config);
+        await axios.post(`${API_URL}/return`, data, config);
 
         toast.success("Return request submitted successfully");
         return true;
@@ -219,7 +226,7 @@ export const useIssueReturn = () => {
     }
   };
 
-  const getReturnRequests = async (): Promise<{ status: boolean; message: any }> => {
+  const getReturnRequests = async (): Promise<{ status: boolean; message: unknown }> => {
     if (!loading) {
       setLoading(true);
       try {
@@ -256,7 +263,7 @@ export const useIssueReturn = () => {
   const getReturnRequest = async (id: string): Promise<
     {
       status: boolean;
-      message: any
+      message: unknown
     }> => {
     if (!loading) {
       setLoading(true);
@@ -366,7 +373,7 @@ export const useUpdates = () => {
       setLoading(true);
       try {
         console.log(data.feedId, data.type);
-        const req = await postData(
+        await postData(
           `/updates/like`,
           { id: data.feedId, type: data.type },
           config,
@@ -425,7 +432,7 @@ export const useUpdates = () => {
       setLoading(true);
 
       try {
-        const req = await deleteData(
+        await deleteData(
           `/updates/comment/${data.type}/${data.feedId}/${data.commentId}`,
           config,
         );

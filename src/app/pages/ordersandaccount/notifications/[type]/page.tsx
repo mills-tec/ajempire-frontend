@@ -26,7 +26,7 @@ export const TimerInterval = ({ date }: { date: string }) => {
 
 export default function Notification() {
     const params = useParams();
-    const { user } = useAuthStore();
+    const { user: _user } = useAuthStore();
     const { deleteNotificationFromDb, markAsReadFromDb } = useNotification();
     const { notifications, deleteNotification, markAsRead } = useNotificationStore();
 
@@ -49,6 +49,7 @@ export default function Notification() {
         (async () => {
             await handleMarkRead();
         })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notifications.length])
 
   

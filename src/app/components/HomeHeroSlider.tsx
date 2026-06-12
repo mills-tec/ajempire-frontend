@@ -1,12 +1,12 @@
 "use client";
-import React from "react";
-import Image from "next/image";
-import Ajbanner from "@/assets/Ajbanner.png";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import BannerPlaceholder from "@/app/components/BannerPlaceholder";
-import { useRouter } from "next/navigation";
-import type { Product } from "@/lib/types";
+import Ajbanner from "@/assets/Ajbanner.png";
 import CountdownTimer from "@/components/CountDownTimer";
+import type { Product } from "@/lib/types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 interface HomeHeroSliderProps {
   products: Product[];
@@ -100,9 +100,9 @@ export default function HomeHeroSlider({
             {/* Content */}
             <div className="absolute z-0 inset-0 flex flex-col justify-center items-center px-4 lg:px-10">
               <div className="grid grid-cols-3 gap-4 lg:gap-6 w-full max-w-4xl">
-                {flashProducts.map((product) => (
+                {flashProducts.map((product, index) => (
                   <div
-                    key={product._id}
+                    key={index}
                     className="flex flex-col items-center group cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();

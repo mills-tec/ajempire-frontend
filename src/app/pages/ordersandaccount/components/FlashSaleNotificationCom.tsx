@@ -25,8 +25,12 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    return () => clearTimeout(timer);
-  }, [timeLeft]);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeLeft]);
+
+
+
 
   return (
     <div className="w-16 h-[20px] text-primaryhover text-[13.33px] bg-[#FFD9EE] text-center rounded-sm flex justify-between items-center p-2">
@@ -43,60 +47,31 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
   );
 };
 
-export default function FlashSaleNotificationCom({
-  notification,
-}: {
-  notification: Notification;
-}) {
-  return (
-    <div className="flex justify-between  ">
-      <div className="flex items-center gap-4">
-        <div className="w-26 h-20">
-          <img
-            src={notification.data?.product.cover_image}
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-[#2B2B2B] text-[16px]">{notification.title}</p>
-          <p className="text-[13px] text-primaryhover capitalize">
-            {notification.message}
-          </p>
-          <div className="flex items-center gap-2">
-            <p className="bg-[#FFD9EE] w-[38px] h-[20px] text-center flex items-center justify-center text-[11.11px] border border-primaryhover rounded-sm">
-              -{notification.data?.discount}%
-            </p>
-            <p className="text-[#2B2B2B] text-[11.11px] line-through">
-              {Number(notification.data?.product.price).toLocaleString(
-                "en-ng",
-                { style: "currency", currency: "NGN" },
-              )}
-            </p>
+export default function FlashSaleNotificationCom({ notification }: { notification: Notification }) {
 
-            <p className="text-[#2B2B2B] text-[11.11px]">
-              {Number(
-                (notification.data?.product.price ?? 0) -
-                  ((notification.data?.product.price ?? 0) *
-                    (notification.data?.discount ?? 0)) /
-                    100,
-              ).toLocaleString("en-ng", {
-                style: "currency",
-                currency: "NGN",
-              })}
-            </p>
-          </div>
-          <Link
-            href={`/product/${notification.data?.product._id}`}
-            className="bg-brand_solid_gradient w-[92px] h-[30px] text-[13px] text-white rounded-sm flex items-center justify-center"
-          >
-            Shop Now
-          </Link>
+    return (
+        <div className="flex justify-between  ">
+            <div className="flex items-center gap-4">
+                <div className="w-26 h-20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={notification.data?.product.cover_image} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex flex-col gap-2">
+                    <p className="text-[#2B2B2B] text-[16px]" >{notification.title}</p>
+                    <p className="text-[13px] text-primaryhover capitalize">{notification.message}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="bg-[#FFD9EE] w-[38px] h-[20px] text-center flex items-center justify-center text-[11.11px] border border-primaryhover rounded-sm">-{notification.data?.discount}%</p>
+                        <p className="text-[#2B2B2B] text-[11.11px] line-through">{Number(notification.data?.product.price).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}</p>
+
+                        <p className="text-[#2B2B2B] text-[11.11px]">{Number((notification.data?.product.price ?? 0) - ((notification.data?.product.price ?? 0) * (notification.data?.discount ?? 0) / 100)).toLocaleString("en-ng", { style: "currency", currency: "NGN" })}</p>
+                    </div>
+                    <Link href={`/product/${notification.data?.product._id}`} className="bg-brand_solid_gradient w-[92px] h-[30px] text-[13px] text-white rounded-sm flex items-center justify-center">Shop Now</Link>
+                </div>
+            </div>
+            <div className="flex  items-end">
+                <CountdownTimer endDate={notification.data?.endDate ?? ''} />
+
+            </div>
         </div>
-      </div>
-      <div className="flex  items-end">
-        <CountdownTimer endDate={notification.data?.endDate ?? ""} />
-      </div>
-    </div>
-  );
+    )
 }

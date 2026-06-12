@@ -12,7 +12,7 @@ import {  Ellipsis } from "lucide-react";
 import Modal from "@/components/Modal";
 import Image from "next/image";
 import { getUser } from "@/lib/api";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { toast } from "sonner";
 
 export default function OrdersContent({
@@ -28,7 +28,7 @@ export default function OrdersContent({
   dateCreated: string;
   order_id: string;
   id: string;
-  setUpdatedReviews: (product: any) => void;
+  setUpdatedReviews: (product: unknown) => void;
 }) {
   const date = new Date(dateCreated);
   const { postLoading } = useOrders();
@@ -185,7 +185,7 @@ export default function OrdersContent({
               showOverlay={showReviewModal}
               handleHideOverlay={() => setShowReviewModal(!showReviewModal)}
               selectedProduct={selectedProduct!}
-              setUpdatedReviews={(review: any) => { }}
+              setUpdatedReviews={(_review: unknown) => { }}
             />
 
             <Modal
@@ -197,8 +197,8 @@ export default function OrdersContent({
               <h1 className="mb-10">Choose a product you want to review</h1>
 
               {items.map((item, key) => {
-                const review = (item.product as any).reviews.find(
-                  (review: any) => review.user == getUser()?._id,
+                const review = (item.product as unknown as { reviews: { user: unknown }[] }).reviews.find(
+                  (review: { user: unknown }) => review.user == getUser()?._id,
                 );
 
                 return (

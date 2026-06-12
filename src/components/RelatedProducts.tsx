@@ -1,14 +1,14 @@
 "use client";
-import React, { useEffect, useRef, useState, useTransition } from "react";
+import BannerPlaceholder from "@/app/components/BannerPlaceholder";
+import { getRelatedProducts } from "@/lib/api";
+import type { Product } from "@/lib/types";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, useTransition } from "react";
+import useInfiniteScroll from "react-infinite-scroll-hook";
+import EndlessScrollLoading from "./EndlessScrollLoading";
 import ProductItem from "./ProductItem";
 import Skeleton from "./Skeleton";
-import EndlessScrollLoading from "./EndlessScrollLoading";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import useInfiniteScroll from "react-infinite-scroll-hook";
-import { getRelatedProducts } from "@/lib/api";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
-import type { Product } from "@/lib/types";
-import BannerPlaceholder from "@/app/components/BannerPlaceholder";
 
 export default function RelatedProducts({ category }: { category: string }) {
   const queryClient = useQueryClient();
@@ -65,6 +65,7 @@ export default function RelatedProducts({ category }: { category: string }) {
     }
 
     prevProductCountRef.current = currentCount;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.products?.length]);
 
   /*
@@ -142,6 +143,7 @@ export default function RelatedProducts({ category }: { category: string }) {
       appendProducts(shuffleArray([...originalProductsRef.current]));
     });
     setIsDuplicating(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDuplicating]);
 
   const products: Product[] = data?.products ?? [];

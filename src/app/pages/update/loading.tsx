@@ -1,5 +1,3 @@
-import Spinner from "@/app/components/Spinner";
-import { FeedSkeleton } from "@/components/FeedItem";
 
 export default function Loading() {
     return (

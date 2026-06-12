@@ -19,7 +19,6 @@ interface Address {
 const AddressPageCard = () => {
   const [address, setAddress] = useState<Address | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  API_URL;
 
   const fetchAddress = async () => {
     try {

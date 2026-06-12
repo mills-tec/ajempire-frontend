@@ -1,8 +1,6 @@
 "use client"
-import { useRef, useState } from "react";
-import AboutTab from "../../components/AboutTab";
+import { useRef } from "react";
 import AboutUsComp from "../../components/AboutUsCom";
-import ReturnRequestComp from "@/app/components/ReturnRequestComp";
 import Link from "next/link";
 
 export default function About() {

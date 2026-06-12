@@ -7,13 +7,12 @@ import { toast } from "sonner";
 import Spinner from "../components/Spinner";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { useCheckoutStore } from "../context/CheckoutContext";
 
 export default function PaymentConfirmation() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const reference = searchParams.get("reference");
-  const trxref = searchParams.get("trxref");
+  const _trxref = searchParams.get("trxref");
   const [isLoading, setIsLoading] = useState(true);
   const [responseData, setResponseData] = useState<string>("");
   const [showModal, setShowModal] = useState(true);
@@ -126,6 +125,7 @@ export default function PaymentConfirmation() {
     if (reference) {
       verifyPayment();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reference]);
 
   const verifyPayment = async () => {

@@ -1,8 +1,7 @@
 import { getBearerToken } from "@/lib/api";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
-import axios from "axios";
 import { toast } from "sonner";
 
 interface RecentPurchase {
@@ -13,7 +12,7 @@ interface RecentPurchaseItem {
   qty: number;
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
-  const url = "https://ajempire-backend-production-b8ff.up.railway.app/api/reorder/";
+  const _url = "https://ajempire-backend-production-b8ff.up.railway.app/api/reorder/";
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {
@@ -44,6 +43,7 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
         quantity: purchase.qty,
         selectedVariants: [],
         selected: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any]);
       toast.success("Item added to cart successfully");
     }
@@ -61,6 +61,7 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
               className="w-full flex items-center gap-2  border border-gray-300 rounded-md  p-3 text-[14px] font-extralight"
             >
               <div className="w-[30%]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={purchase?.product.cover_image}
                   alt=""

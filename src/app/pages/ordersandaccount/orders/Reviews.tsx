@@ -116,7 +116,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
                   const req = await deleteReview(product);
                   if (req) {
                     setProducts((prev) =>
-                      prev.filter((item: any) => item.product._id !== product)
+                      prev.filter((item: unknown) => (item as { product: { _id: string } }).product._id !== product)
                     );
                   }
                 }} className="rounded-full text-sm text-brand_pink py-1 md:px-6 px-2 w-max border border-brand_pink flex items-center justify-center h-8">
@@ -131,6 +131,7 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
           showOverlay && (
             <LeaveReview showOverlay={showOverlay} handleHideOverlay={() => setShowOverlay(!showOverlay)} selectedProduct={selectedProduct!} setUpdatedReviews={(review) => {
               setProducts((prev) =>
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 prev.map((item: any) => item.product._id === (selectedProduct?.product as any)._id ? { ...item, product: { ...item.product, reviews: [review] } } : item)
               )
               setUpdatedReviews(review)

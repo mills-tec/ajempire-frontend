@@ -1,16 +1,19 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Users, TrendingUp, Package, MoreHorizontal, Mail, Phone, Calendar, CornerDownRight, Edit2, X } from 'lucide-react';
+import { Search, Filter, Eye, ChevronLeft, ChevronRight, Users, CornerDownRight, Edit2, X } from 'lucide-react';
 import { getAllReturns, getReturnById, updateReturn } from '@/lib/adminapi';
 import { useToast, ToastContainer } from '@/app/components/ui/Toast';
+import { filterByPeriod } from '@/lib/dashboard-utils';
 
 const ReturnsPage = () => {
   const toast = useToast();
-  const [selectedPeriod, setSelectedPeriod] = useState('This Week');
+  const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,6 +32,7 @@ const ReturnsPage = () => {
       
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedReturns = response.message.map((returnItem: any) => ({
           id: returnItem.order?.order_id || 'Unknown',
           customer: returnItem.phoneNumber || 'Unknown Customer',
@@ -51,30 +55,34 @@ const ReturnsPage = () => {
     }
   };
 
+  // Filter returns by selected period
+  const periodFilteredReturns = filterByPeriod(returns, selectedPeriod, (r) => r.fullReturn?.createdAt);
+
   // Calculate stats dynamically with safe defaults
-  const totalReturns = returns?.length || 0;
-  const processingReturns = returns?.filter(r => r.status === 'processing').length || 0;
-  const inTransitReturns = returns?.filter(r => r.status === 'approved').length || 0;
-  const declinedReturns = returns?.filter(r => r.status === 'rejected').length || 0;
+  const totalReturns = periodFilteredReturns?.length || 0;
+  const processingReturns = periodFilteredReturns?.filter(r => r.status?.toLowerCase() === 'processing').length || 0;
+  const inTransitReturns = periodFilteredReturns?.filter(r => r.status?.toLowerCase() === 'approved').length || 0;
+  const declinedReturns = periodFilteredReturns?.filter(r => r.status?.toLowerCase() === 'rejected').length || 0;
 
   // Filter returns based on search with safe checks
-  const filteredReturns = returns?.filter(returnItem => 
+  const filteredReturns = periodFilteredReturns?.filter(returnItem => 
     returnItem?.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem?.status?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'Pending': return 'bg-yellow-50 text-yellow-500 border-yellow-100';
-      case 'Approved': return 'bg-green-50 text-green-500 border-green-100';
-      case 'Processing': return 'bg-blue-50 text-blue-500 border-blue-100';
-      case 'Completed': return 'bg-green-50 text-green-500 border-green-100';
-      case 'Rejected': return 'bg-red-50 text-red-500 border-red-100';
+    switch (status?.toLowerCase()) {
+      case 'pending': return 'bg-yellow-50 text-yellow-500 border-yellow-100';
+      case 'approved': return 'bg-green-50 text-green-500 border-green-100';
+      case 'processing': return 'bg-blue-50 text-blue-500 border-blue-100';
+      case 'completed': return 'bg-green-50 text-green-500 border-green-100';
+      case 'rejected': return 'bg-red-50 text-red-500 border-red-100';
       default: return 'bg-gray-50 text-gray-500 border-gray-100';
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewReturn = async (returnItem: any) => {
     try {
       // Get detailed return data
@@ -93,11 +101,13 @@ const ReturnsPage = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditReturn = (returnItem: any) => {
     setSelectedReturn(returnItem.fullReturn);
     setShowEditModal(true);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdateReturn = async (updatedData: any) => {
     if (selectedReturn) {
       try {
@@ -112,9 +122,9 @@ const ReturnsPage = () => {
         } else {
           toast.error(response.error || 'Failed to update return');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error updating return:', error);
-        toast.error(error.message || 'Failed to update return');
+        toast.error((error instanceof Error ? error.message : null) || 'Failed to update return');
       } finally {
         setIsUpdating(false);
       }
@@ -169,6 +179,7 @@ const ReturnsPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -195,7 +206,7 @@ const ReturnsPage = () => {
 
               <div>
                 <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Completed</p>
-                <h3 className="text-2xl font-bold text-brand_gray_dark">{returns.filter(r => r.status === 'Completed').length}</h3>
+                <h3 className="text-2xl font-bold text-brand_gray_dark">{periodFilteredReturns.filter(r => r.status?.toLowerCase() === 'completed').length}</h3>
                 {/* <div className="flex items-center gap-2">
                   <p className="text-2xl font-bold">156</p>
                   <p className="text-green-500 text-xs">+0.00%</p>
@@ -218,6 +229,7 @@ const ReturnsPage = () => {
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="bg-transparent text-[10px] text-brand_gray border-none outline-none cursor-pointer"
               >
+                <option>All Time</option>
                 <option>This Week</option>
                 <option>This Month</option>
                 <option>This Year</option>
@@ -285,7 +297,11 @@ const ReturnsPage = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {paginatedReturns.map((returnItem, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr 
+                    key={idx} 
+                    onClick={() => handleViewReturn(returnItem)}
+                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{returnItem.id}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -306,14 +322,14 @@ const ReturnsPage = () => {
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-3">
                         <button 
-                          onClick={() => handleViewReturn(returnItem)}
+                          onClick={(e) => { e.stopPropagation(); handleViewReturn(returnItem); }}
                           className="text-brand_gray hover:text-brand_pink transition-colors" 
                           title="View Return"
                         >
                           <Eye size={16} />
                         </button>
                         <button 
-                          onClick={() => handleEditReturn(returnItem)}
+                          onClick={(e) => { e.stopPropagation(); handleEditReturn(returnItem); }}
                           className="text-brand_gray hover:text-blue-500 transition-colors" 
                           title="Edit Return"
                         >
@@ -431,6 +447,7 @@ const ReturnsPage = () => {
                 <h4 className="font-medium text-gray-900 mb-3">Product Information</h4>
                 {selectedReturn?.product && Array.isArray(selectedReturn.product) ? (
                   <div className="space-y-3">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {selectedReturn.product.map((item: any, index: number) => (
                       <div key={index} className="border border-gray-200 rounded-lg p-3">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

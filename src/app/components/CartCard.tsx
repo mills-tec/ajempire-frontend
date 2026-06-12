@@ -38,13 +38,14 @@ function CartCard({
   const cartItem = item;
 
   console.log(cartItem);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
 
   const { selectedOptions, selectOption, isValidOption, selectedCombination } =
     useProductVariants(item);
 
-  const [remove, setRemove] = useState(false);
+  const [_remove, setRemove] = useState(false);
 
   useEffect(() => {
     const unitPrice = Number(
@@ -63,6 +64,7 @@ function CartCard({
       discount: unitDiscount * cartItem!.quantity,
       _id: item._id,
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
   const formatPrice = (amount: number) => {
   return Number(amount).toLocaleString("en-ng", {

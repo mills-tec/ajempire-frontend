@@ -13,7 +13,7 @@ export default function VerifyEmailComp({
   canGoBack,
   setScreen,
 }: AuthStepProps) {
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
   const router = useRouter();
   let email = JSON.parse(localStorage.getItem("ajempire_signup_email")!);
   const [otp, setOtp] = useState("");

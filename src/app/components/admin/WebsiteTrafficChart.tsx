@@ -10,6 +10,7 @@ import {
     Filler
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { aggregateOrdersByDate } from '@/lib/dashboard-utils';
 
 ChartJS.register(
     CategoryScale,
@@ -22,33 +23,24 @@ ChartJS.register(
 );
 
 interface WebsiteTrafficChartProps {
-    data?: { date: string; sales: number }[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orders?: any[];
 }
 
-const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
-    // Use dynamic data if provided, otherwise use default data
-    const chartData = data.length > 0 ? data : [
-        { date: 'Jan', sales: 12 },
-        { date: 'Feb', sales: 18 },
-        { date: 'Mar', sales: 14 },
-        { date: 'Apr', sales: 25 },
-        { date: 'May', sales: 23 },
-        { date: 'Jun', sales: 18 },
-        { date: 'Jul', sales: 22 },
-        { date: 'Aug', sales: 19 },
-        { date: 'Sep', sales: 21 },
-        { date: 'Oct', sales: 28 },
-        { date: 'Nov', sales: 24 },
-        { date: 'Dec', sales: 20 },
-        { date: 'Jan', sales: 18 }
-    ];
+const WebsiteTrafficChart = ({ orders = [] }: WebsiteTrafficChartProps) => {
+    const chartData = aggregateOrdersByDate(orders);
+
+    const maxValue = Math.max(
+        ...chartData.flatMap((d) => [d.visitors, d.pageViews, d.sessions]),
+        10
+    );
 
     const trafficData = {
-        labels: chartData.map(item => item.date),
+        labels: chartData.map((item) => item.date),
         datasets: [
             {
                 label: 'unique visitors',
-                data: chartData.map(item => item.sales),
+                data: chartData.map((item) => item.visitors),
                 borderColor: '#1e88e5',
                 backgroundColor: 'transparent',
                 tension: 0.4,
@@ -57,7 +49,7 @@ const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
             },
             {
                 label: 'page views',
-                data: [15, 25, 20, 16, 28, 26, 20, 24, 30, 32, 28, 31, 30],
+                data: chartData.map((item) => item.pageViews),
                 borderColor: '#ffc107',
                 backgroundColor: 'transparent',
                 tension: 0.4,
@@ -66,7 +58,7 @@ const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
             },
             {
                 label: 'sessions',
-                data: [10, 12, 18, 14, 16, 22, 18, 20, 24, 26, 22, 21, 20],
+                data: chartData.map((item) => item.sessions),
                 borderColor: '#f44336',
                 backgroundColor: 'transparent',
                 tension: 0.4,
@@ -91,17 +83,13 @@ const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
                 borderColor: '#eee',
                 borderWidth: 1,
                 padding: 10,
-                displayColors: false,
-                callbacks: {
-                    title: () => '',
-                    label: (context: any) => `${context.parsed.y}`,
-                }
+                displayColors: true,
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
-                max: 50,
+                suggestedMax: maxValue + 5,
                 grid: {
                     color: '#f0f0f0',
                 },
@@ -109,7 +97,6 @@ const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
                     display: false,
                 },
                 ticks: {
-                    stepSize: 10,
                     color: '#999',
                     font: {
                         size: 10,
@@ -135,32 +122,54 @@ const WebsiteTrafficChart = ({ data = [] }: WebsiteTrafficChartProps) => {
         }
     };
 
+    const totalVisitors = chartData.reduce((sum, d) => sum + d.visitors, 0);
+    const totalPageViews = chartData.reduce((sum, d) => sum + d.pageViews, 0);
+    const totalSessions = chartData.reduce((sum, d) => sum + d.sessions, 0);
+
     return (
         <div className="bg-white border p-6 rounded-2xl flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-6">
-                <div>
+                <div className="w-full">
                     <h4 className="font-medium text-brand_gray_dark text-sm">Website Traffic</h4>
-                    <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-[#1e88e5]" />
-                            <span className="text-[10px] text-gray-500">unique visitors</span>
+                    <div className="flex flex-wrap items-center gap-6 mt-4 pb-2 border-b border-gray-50">
+                        <div className="flex flex-col min-w-[100px]">
+                            <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#1e88e5]" />
+                                unique visitors
+                            </span>
+                            <span className="text-lg font-bold text-brand_gray_dark mt-1">
+                                {totalVisitors.toLocaleString()}
+                            </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-[#ffc107]" />
-                            <span className="text-[10px] text-gray-500">page views</span>
+                        <div className="flex flex-col min-w-[100px]">
+                            <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#ffc107]" />
+                                page views
+                            </span>
+                            <span className="text-lg font-bold text-brand_gray_dark mt-1">
+                                {totalPageViews.toLocaleString()}
+                            </span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-[#f44336]" />
-                            <span className="text-[10px] text-gray-500">sessions</span>
+                        <div className="flex flex-col min-w-[100px]">
+                            <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#f44336]" />
+                                sessions
+                            </span>
+                            <span className="text-lg font-bold text-brand_gray_dark mt-1">
+                                {totalSessions.toLocaleString()}
+                            </span>
                         </div>
                     </div>
                 </div>
-                <select className="border border-gray-100 bg-gray-50/50 rounded-lg px-2 py-1.5 text-xs text-gray-500 outline-none">
-                    <option>2023 - 2024</option>
-                </select>
             </div>
             <div className="h-[250px] relative">
-                <Line data={trafficData} options={options as any} />
+                {chartData.length > 0 ? (
+                    <Line data={trafficData} options={options as unknown as object} />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                        No traffic data for this period
+                    </div>
+                )}
             </div>
         </div>
     );

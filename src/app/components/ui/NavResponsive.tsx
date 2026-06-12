@@ -1,11 +1,9 @@
 import { HomeIcon } from "@/components/svgs/HomeIcon";
 import Link from "next/link";
-import Categories from "./Categories";
 import { CategoryIcon } from "@/components/svgs/CategoryIcon";
 import { CustomImgLogo } from "@/components/svgs/CustomImgLogo";
 import { CartIcon } from "@/components/svgs/CartIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
-import AuthWrapper from "../auth-component/AuthWrapper";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useSearchStore } from "@/lib/search-store";
 import { useRef } from "react";
@@ -20,12 +18,12 @@ type NavResponsiveProps = {
 const NavResponsive = ({
   isLoggedIn,
   isActive,
-  showIntro,
-  setShowIntro,
+  showIntro: _showIntro,
+  setShowIntro: _setShowIntro,
 }: NavResponsiveProps) => {
   const { items } = useCartStore();
   const { clearSearch } = useSearchStore();
-  const cartRef = useRef<HTMLAnchorElement>(null);
+  const _cartRef = useRef<HTMLAnchorElement>(null);
   const openModal = useModalStore((s) => s.openModal);
   const clickzome = "transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"
   return (

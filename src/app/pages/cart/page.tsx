@@ -28,7 +28,7 @@ export default function CartPage() {
     selectedItem,
     cartLoaded,
   } = useCartStore();
-  const selectedCartItems = items.filter((item) => item.selected);
+  const _selectedCartItems = items.filter((item) => item.selected);
 
   const [expand, setExpand] = useState(false);
   const [signIn, setSingin] = useState(false);
@@ -88,6 +88,7 @@ export default function CartPage() {
         prev.filter((item) => items.some((i) => i._id === item._id)),
       );
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
   if (isLoading) {

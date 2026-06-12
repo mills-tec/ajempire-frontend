@@ -1,4 +1,3 @@
-import RecentPurchases from "@/app/components/ui/RecentPurchases";
 import { UseAgeComponent } from "@/app/components/UseAgeComponent";
 import Link from "next/link";
 

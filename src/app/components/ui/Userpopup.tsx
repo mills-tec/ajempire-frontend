@@ -1,12 +1,11 @@
 "use client";
 import Link from "next/link";
 import ProfileName from "./ProfileName";
-import { useNotificationStore } from "@/lib/stores/notification-store";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 
 export default function Userpopup() {
-    const { user } = useAuthStore();
+    const { user: _user } = useAuthStore();
     const openModal = useModalStore(s => s.openModal);
     return (
         <div className="">

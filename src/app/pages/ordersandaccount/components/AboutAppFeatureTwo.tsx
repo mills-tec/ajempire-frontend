@@ -2,6 +2,7 @@ export default function AboutAppFeaturTwo() {
     return (
         <div className="flex items-center justify-between border border-gray-300 gap-5 rounded-md p-4">
             <div className="bg-gray-400 w-[160px] h-[118px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="" alt="" />
             </div>
             <div>

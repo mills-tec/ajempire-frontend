@@ -15,7 +15,7 @@ const Footer = () => {
 
   const categories = data?.message?.slice(0, 5);
 
-  const handleCategoryClick = (category: any) => {
+  const handleCategoryClick = (category: unknown) => {
     setSelectedCategory(category);
 
     const section = document.getElementById("categories-section");

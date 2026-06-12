@@ -1,34 +1,33 @@
 "use client";
+import CommentCard from "@/app/components/CommentCard";
+import ProductDescription from "@/app/components/ProductDescription";
+import ProductReview from "@/app/components/ProductReview";
+import RefreshWrapper from "@/app/components/RefreshWrapper";
+import DraggableCartButton from "@/app/components/ui/DraggableCartButton";
+import ScrollToTop from "@/app/components/ui/ScrollToTop";
+import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
+import RelatedProducts from "@/components/RelatedProducts";
+import { Checkbox } from "@/components/ui/checkbox";
+import VideoPlayer from "@/components/VideoPlayer";
+import { animateToCart } from "@/lib/animateToCart";
+import { getBearerToken, getProduct } from "@/lib/api";
+import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { useProductVariants } from "@/lib/useProductVariants";
+import { calcDiscountPrice } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import React, {
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import ProductReview from "@/app/components/ProductReview";
-import CommentCard from "@/app/components/CommentCard";
-import ProductDescription from "@/app/components/ProductDescription";
-import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { getBearerToken, getProduct } from "@/lib/api";
-import { useCartStore, areVariantsEqual } from "@/lib/stores/cart-store";
-import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
-import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
 import { toast } from "sonner";
-import VideoPlayer from "@/components/VideoPlayer";
-import RelatedProducts from "@/components/RelatedProducts";
-import { useModalStore } from "@/lib/stores/modal-store";
-import { useProductVariants } from "@/lib/useProductVariants";
-import RefreshWrapper from "@/app/components/RefreshWrapper";
-import ScrollToTop from "@/app/components/ui/ScrollToTop";
-import { animateToCart } from "@/lib/animateToCart";
-import DraggableCartButton from "@/app/components/ui/DraggableCartButton";
-import { calcDiscountPrice } from "@/lib/utils";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { useExploreInterest } from "@/api/customHooks";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -45,13 +44,7 @@ export default function ProductDetailPage() {
       toast.success("Link copied to clipboard");
     }
   };
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const reshuffle = async () => {
-    setShuffleSeed(Math.random());
 
-    // optional: slight delay so user feels refresh
-    await new Promise((res) => setTimeout(res, 300));
-  };
 
   // ✅ All hooks must be at the top and unconditional
   const {
@@ -86,7 +79,6 @@ export default function ProductDetailPage() {
     if (item?._id && getBearerToken()) {
       // addProductToBrowsingHistory(item._id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?._id]);
   const {
     selectedVariantsArray,
@@ -249,6 +241,7 @@ export default function ProductDetailPage() {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity, cartItem, item]);
 
   useEffect(() => {
