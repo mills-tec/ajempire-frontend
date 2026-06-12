@@ -307,26 +307,26 @@ interface PWAInstallPromptProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FIRST_PROMPT_DELAY    = 5_000;    // ms before first prompt appears
-const REPROMPT_DELAY        = 45_000;   // ms user must wait before seeing prompt again
-const REPROMPT_INTERACTIONS = 3;        // interactions required before re-prompting after dismiss
-const SUCCESS_DURATION      = 3_500;    // ms success banner is visible
-const OPEN_APP_SNOOZE       = 24 * 60 * 60_000; // 24h before "Open in App" re-shows
+const FIRST_PROMPT_DELAY = 5_000; // ms before first prompt appears
+const REPROMPT_DELAY = 45_000; // ms user must wait before seeing prompt again
+const REPROMPT_INTERACTIONS = 3; // interactions required before re-prompting after dismiss
+const SUCCESS_DURATION = 3_500; // ms success banner is visible
+const OPEN_APP_SNOOZE = 24 * 60 * 60_000; // 24h before "Open in App" re-shows
 
 const STORAGE = {
-  DISMISSED_AT:    "pwa_prompt_dismissed_at",
-  PROMPT_COUNT:    "pwa_prompt_count",
-  INSTALLED:       "pwa_installed",
-  OPEN_APP_SNOOZED:"pwa_open_app_snoozed_at",
+  DISMISSED_AT: "pwa_prompt_dismissed_at",
+  PROMPT_COUNT: "pwa_prompt_count",
+  INSTALLED: "pwa_installed",
+  OPEN_APP_SNOOZED: "pwa_open_app_snoozed_at",
 } as const;
 
 const MESSAGES = [
   {
-    title:    "Shop Faster on AJ Empire 🛍️",
+    title: "Shop Faster on AJ Empire 🛍️",
     subtitle: "Add to your home screen for instant access & exclusive deals",
   },
   {
-    title:    "Never Miss a Deal Again ✨",
+    title: "Never Miss a Deal Again ✨",
     subtitle: "Lightning-fast access to AJ Empire right from your home screen",
   },
 ];
@@ -371,36 +371,41 @@ function getStoredNumber(key: string): number | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PWAInstallPrompt({
-  className    = "",
+  className = "",
   appStartUrl,
-  accentColor  = "#FF008C",
+  accentColor = "#FF008C",
 }: PWAInstallPromptProps) {
-  const [state,          setState]          = useState<PromptState>("idle");
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled,    setIsInstalled]    = useState(false);
-  const [platform,       setPlatform]       = useState<"android" | "ios" | "desktop">("desktop");
-  const [messageIndex,   setMessageIndex]   = useState(0);
+  const [state, setState] = useState<PromptState>("idle");
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [platform, setPlatform] = useState<"android" | "ios" | "desktop">(
+    "desktop",
+  );
+  const [messageIndex, setMessageIndex] = useState(0);
   // repromptGate flips true once the user hits REPROMPT_INTERACTIONS after a dismiss.
   // Using a gate state (instead of raw interaction count) means the countdown effect
   // only re-runs once when the threshold is crossed, not on every scroll/click.
-  const [repromptGate,   setRepromptGate]   = useState(false);
+  const [repromptGate, setRepromptGate] = useState(false);
 
-  const hasTriggeredRef  = useRef(false);
-  const dismissedAtRef   = useRef<number | null>(null);
-  const interactionsRef  = useRef(0);  // raw count — ref avoids re-renders on every event
-  const startUrl         = appStartUrl ?? (typeof window !== "undefined" ? `${window.location.origin}/` : "/");
+  const hasTriggeredRef = useRef(false);
+  const dismissedAtRef = useRef<number | null>(null);
+  const interactionsRef = useRef(0); // raw count — ref avoids re-renders on every event
+  const startUrl =
+    appStartUrl ??
+    (typeof window !== "undefined" ? `${window.location.origin}/` : "/");
 
   // ── Platform detection ──────────────────────────────────────────────────────
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(ua))  setPlatform("ios");
-    else if (/android/.test(ua))       setPlatform("android");
-    else                               setPlatform("desktop");
+    if (/iphone|ipad|ipod/.test(ua)) setPlatform("ios");
+    else if (/android/.test(ua)) setPlatform("android");
+    else setPlatform("desktop");
   }, []);
 
   // ── Installed state bootstrap ───────────────────────────────────────────────
   useEffect(() => {
-    const standalone      = isStandalone();
+    const standalone = isStandalone();
     const flaggedInstalled = localStorage.getItem(STORAGE.INSTALLED) === "true";
 
     if (standalone) {
@@ -410,8 +415,8 @@ export default function PWAInstallPrompt({
       if (!flaggedInstalled) {
         // Very first launch as a PWA → celebrate
         localStorage.setItem(STORAGE.INSTALLED, "true");
-        setTimeout(() => setState("success"),         800);
-        setTimeout(() => setState("idle"),  800 + SUCCESS_DURATION);
+        setTimeout(() => setState("success"), 800);
+        setTimeout(() => setState("idle"), 800 + SUCCESS_DURATION);
       }
       return;
     }
@@ -420,7 +425,9 @@ export default function PWAInstallPrompt({
     // If we know they previously installed, show the "Open in App" banner.
     if (flaggedInstalled) {
       const snoozedAt = getStoredNumber(STORAGE.OPEN_APP_SNOOZED);
-      const snoozed   = snoozedAt ? Date.now() - snoozedAt < OPEN_APP_SNOOZE : false;
+      const snoozed = snoozedAt
+        ? Date.now() - snoozedAt < OPEN_APP_SNOOZE
+        : false;
       if (!snoozed) {
         // Small delay so the page finishes rendering
         setTimeout(() => setState("open-app"), 1_200);
@@ -449,10 +456,10 @@ export default function PWAInstallPrompt({
         setRepromptGate(true);
       }
     };
-    window.addEventListener("click",  inc);
+    window.addEventListener("click", inc);
     window.addEventListener("scroll", inc);
     return () => {
-      window.removeEventListener("click",  inc);
+      window.removeEventListener("click", inc);
       window.removeEventListener("scroll", inc);
     };
   }, [repromptGate]);
@@ -481,10 +488,10 @@ export default function PWAInstallPrompt({
 
   // ── 5-second countdown ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (platform === "desktop")           return;
-    if (isInstalled)                      return;
-    if (state !== "idle")                 return;
-    if (hasTriggeredRef.current)          return;
+    if (platform === "desktop") return;
+    if (isInstalled) return;
+    if (state !== "idle") return;
+    if (hasTriggeredRef.current) return;
     if (platform === "android" && !deferredPrompt) return;
 
     const dismissedAt = dismissedAtRef.current;
@@ -496,7 +503,7 @@ export default function PWAInstallPrompt({
     const timer = setTimeout(() => {
       hasTriggeredRef.current = true;
       setState("prompt");
-    }, CHECK_INTERVAL);
+    }, FIRST_PROMPT_DELAY);
 
     return () => clearTimeout(timer);
   }, [platform, isInstalled, state, repromptGate, deferredPrompt]);
@@ -554,12 +561,12 @@ export default function PWAInstallPrompt({
   }, [deferredPrompt, platform, handleDismiss]);
 
   // ── Render guards ───────────────────────────────────────────────────────────
-  if (platform === "desktop")              return null;
-  if (isInstalled && state === "idle")     return null;
-  if (!isInstalled && state === "idle")    return null;
+  if (platform === "desktop") return null;
+  if (isInstalled && state === "idle") return null;
+  if (!isInstalled && state === "idle") return null;
 
-  const msg    = MESSAGES[messageIndex];
-  const isIOS  = platform === "ios";
+  const msg = MESSAGES[messageIndex];
+  const isIOS = platform === "ios";
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -676,8 +683,8 @@ export default function PWAInstallPrompt({
                       Tap{" "}
                       <span className="inline-flex items-center gap-0.5 font-medium text-gray-700">
                         <ShareArrow /> Share
-                      </span>
-                      {" "}then{" "}
+                      </span>{" "}
+                      then{" "}
                       <span className="font-medium text-gray-700">
                         &quot;Add to Home Screen&quot;
                       </span>
@@ -720,7 +727,10 @@ export default function PWAInstallPrompt({
                     <div key={i} className="flex flex-col items-center gap-1">
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                        style={{ background: `${accentColor}18`, color: accentColor }}
+                        style={{
+                          background: `${accentColor}18`,
+                          color: accentColor,
+                        }}
                       >
                         {step.icon}
                       </div>
@@ -729,8 +739,10 @@ export default function PWAInstallPrompt({
                       </span>
                     </div>
                   ) : (
-                    <span key={i} className="text-gray-300 text-xs mb-3">›</span>
-                  )
+                    <span key={i} className="text-gray-300 text-xs mb-3">
+                      ›
+                    </span>
+                  ),
                 )}
               </div>
             )}
