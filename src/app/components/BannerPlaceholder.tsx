@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { getBanner, BannerImage } from "@/lib/api";
+import { BannerImage, getBanner } from "@/lib/api";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 function BannerSkeleton({ className = "" }: { className?: string }) {
   return (
@@ -80,7 +81,7 @@ export default function BannerPlaceholder({
     <div
       className={`relative w-full overflow-hidden rounded-2xl h-[220px] lg:h-[379px]     ${className}`}
     >
-      <img
+      <Image
         src={image.url}
         alt="Banner"
         className="w-full h-full object-fill transition-opacity duration-500"

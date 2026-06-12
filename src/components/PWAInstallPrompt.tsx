@@ -499,7 +499,7 @@ export default function PWAInstallPrompt({
       const enoughTime = Date.now() - dismissedAt >= REPROMPT_DELAY;
       if (!enoughTime || !repromptGate) return;
     }
-    let CHECK_INTERVAL = 1000;
+    const CHECK_INTERVAL = 1000;
     const timer = setTimeout(() => {
       hasTriggeredRef.current = true;
       setState("prompt");

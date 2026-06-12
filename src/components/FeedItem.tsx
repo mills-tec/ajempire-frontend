@@ -585,7 +585,7 @@ function FeedContent({
        
 
 
-        let req = await addComments({
+        const req = await addComments({
           feedId: id as string,
           type: feedType as string,
           comment: newComment.text,

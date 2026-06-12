@@ -44,13 +44,7 @@ export default function ProductDetailPage() {
       toast.success("Link copied to clipboard");
     }
   };
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const reshuffle = async () => {
-    setShuffleSeed(Math.random());
 
-    // optional: slight delay so user feels refresh
-    await new Promise((res) => setTimeout(res, 300));
-  };
 
   // ✅ All hooks must be at the top and unconditional
   const {
