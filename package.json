@@ -19,6 +19,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-oauth/google": "^0.12.2",
     "@tanstack/react-query": "4",
+    "@tanstack/react-virtual": "^3.14.3",
     "@vercel/speed-insights": "^2.0.0",
     "apexcharts": "^5.3.6",
     "axios": "^1.12.2",
