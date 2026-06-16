@@ -10,20 +10,27 @@ import React, {
 } from "react";
 import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
-import SearchBar from "./components/ui/SearchBar";
-import CartPopup from "./components/CartPopup";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import ProductItem from "@/components/ProductItem";
+import Skeleton from "@/components/Skeleton";
 import { getProducts, getProductsByCategory } from "@/lib/api";
+import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
-import { useSearchStore } from "@/lib/search-store";
-import { PullToRefreshProvider } from "./components/pull-to-refresh/PullToRefreshProvider";
+import type { Product, ProductsResponse } from "@/lib/types";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
+import { useEffect, useMemo, useRef, useState } from "react";
+import useInfiniteScroll from "react-infinite-scroll-hook";
+import CartPopup from "./components/CartPopup";
+import HomeHeroSlider from "./components/HomeHeroSlider";
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
-import HomeHeroSlider from "./components/HomeHeroSlider";
-import { usePullToRefresh } from "./components/pull-to-refresh/PullToRefreshProvider";
-import useInfiniteScroll from "react-infinite-scroll-hook";
-import EndlessScrollLoading from "@/components/EndlessScrollLoading";
+import {
+  PullToRefreshProvider,
+  usePullToRefresh,
+} from "./components/pull-to-refresh/PullToRefreshProvider";
 import ScrollToTop from "./components/ui/ScrollToTop";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
@@ -32,50 +39,64 @@ import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
 
+const EMPTY_RESPONSE: ProductsResponse = {
+  message: {
+    products: [],
+    shippingFees: [],
+    nextCursor: undefined,
+    hasMore: false,
+  },
+};
+
 export default function Home() {
-  const { data, isLoading } = useQuery<ProductsResponse | null>({
-    queryKey: ["products"],
-    queryFn: () => getProducts(""),
-    staleTime: Infinity, // never background-refetch — accumulated pages would be overwritten by page-1 refetch
-  });
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useInfiniteQuery<ProductsResponse, Error>({
+    queryKey: ["products"],
+    queryFn: ({ pageParam = "" }: { pageParam?: string }) =>
+      getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${pageParam}`).then(
+        (res) => res ?? EMPTY_RESPONSE,
+      ),
+    getNextPageParam: (lastPage: ProductsResponse) =>
+      lastPage?.message?.nextCursor ?? undefined,
+    staleTime: Infinity,
+  });
+
+  // Flatten all pages into a single product array
+  const products = useMemo(() => {
+    return (
+      data?.pages.flatMap((page) => page.message?.products ?? []) ??
+      EMPTY_PRODUCTS
+    );
+  }, [data?.pages]);
 
   const handleRefresh = async () => {
     try {
       if (selectedCategory) {
-        // For categories, shuffle existing data instead of refetching
         const currentCategoryData = queryClient.getQueryData<Product[]>([
           "home-category-products",
           selectedCategory.name,
         ]);
-        if (currentCategoryData && currentCategoryData.length > 0) {
-          const shuffled = shuffleArray([...currentCategoryData]);
+        if (currentCategoryData?.length) {
           queryClient.setQueryData(
             ["home-category-products", selectedCategory.name],
-            shuffled,
+            shuffleArray([...currentCategoryData]),
           );
         }
         return;
       }
-
-      const freshData = await getProducts(
-        `limit=${ITEMS_TO_APPEND}&t=${Date.now()}`,
-      );
-
-      const newProducts = freshData?.message?.products ?? [];
-      if (newProducts.length === 0) return;
-
-      const shuffled = shuffleArray(newProducts);
-      queryClient.setQueryData(["products"], {
-        ...freshData,
-        message: {
-          ...freshData?.message,
-          products: shuffled,
-          nextCursor: freshData?.message?.nextCursor,
-          hasMore: freshData?.message?.hasMore,
-        },
-      });
+      // useInfiniteQuery refetch resets to page 1 automatically — no manual
+      // cache manipulation needed, no cursor/pagination state to reset manually
+      await refetch();
     } catch (error) {
       console.error("Pull-to-refresh error:", error);
     }
@@ -83,18 +104,35 @@ export default function Home() {
 
   return (
     <PullToRefreshProvider onRefresh={handleRefresh}>
-      <HomeContent data={data} isLoading={isLoading} />
+      <HomeContent
+        products={products}
+        isLoading={isLoading}
+        isRefetching={isFetching && !isFetchingNextPage}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={!!hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+      />
     </PullToRefreshProvider>
   );
 }
 
-function HomeContent({
-  data,
-  isLoading,
-}: {
-  data: ProductsResponse | null | undefined;
+interface HomeContentProps {
+  products: Product[];
   isLoading: boolean;
-}) {
+  isRefetching: boolean;
+  fetchNextPage: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+}
+
+function HomeContent({
+  products,
+  isLoading,
+  isRefetching,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+}: HomeContentProps) {
   const { pull, refreshing } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
@@ -102,34 +140,23 @@ function HomeContent({
     useCategoryStore();
   const { searchedQuery, resetToken } = useSearchStore();
   const queryClient = useQueryClient();
-  const [uiLoading, setUiLoading] = React.useState(false);
-  const searchActive = Boolean(searchedQuery);
-  const [searchLoading, _setSearchLoading] = React.useState(false);
-  const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<
-    Product[]
-  >([]);
-  const [hasNextPage, setHasNextPage] = useState(true);
-  const lastItemRef = useRef<HTMLDivElement | null>(null);
-  const cursorRef = useRef("");
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const scrollRestored = useRef(false);
-  const blockInfiniteLoadRef = useRef(false);
 
-  // Ensure component only uses store data after hydration
-  const [isMounted, setIsMounted] = React.useState(false);
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const searchActive = Boolean(searchedQuery);
+  const categoryFilterActive = Boolean(selectedCategory);
+
+  // ── Category query ──────────────────────────────────────────────────────────
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
 
   // Save scroll position when navigating away
   useEffect(() => {
-    return () => {
-      sessionStorage.setItem("home-scroll-y", String(window.scrollY));
-    };
-  }, []);
+    if (_hasHydrated && selectedCategory && isMounted) {
+      queryClient.invalidateQueries({
+        queryKey: ["home-category-products", selectedCategory.name],
+      });
+    }
+  }, [_hasHydrated, isMounted, selectedCategory, queryClient]);
 
-  // Block infinite scroll from firing during scroll-to-top animation
   useEffect(() => {
     const onScrollToTop = () => {
       blockInfiniteLoadRef.current = true;
@@ -141,147 +168,55 @@ function HomeContent({
     return () =>
       window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
-
-  // Restore scroll position once data is ready and DOM is painted
   useEffect(() => {
-    if (!isInitialized || scrollRestored.current) return;
+    if (isLoading || scrollRestored.current) return;
     const savedY = sessionStorage.getItem("home-scroll-y");
     if (!savedY) return;
     scrollRestored.current = true;
     sessionStorage.removeItem("home-scroll-y");
-    // Double rAF: first frame commits the render, second ensures layout is complete
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.scrollTo(0, parseInt(savedY, 10));
       });
     });
-  }, [isInitialized]);
+  }, [isLoading]);
 
-  const products = useMemo(
-    () => data?.message?.products ?? EMPTY_PRODUCTS,
-    [data?.message?.products],
-  );
-  const categoryFilterActive = Boolean(selectedCategory);
-
-  // Reflect pull-to-refresh loading and reset scroll state after refresh
+  // ── Block infinite scroll during scroll-to-top ───────────────────────────────
+  const blockInfiniteLoadRef = useRef(false);
   useEffect(() => {
-    if (refreshing) {
-      setUiLoading(true);
-      if (!categoryFilterActive) setIsInitialized(false);
-      return;
+    const onScrollToTop = () => {
+      blockInfiniteLoadRef.current = true;
+      setTimeout(() => { blockInfiniteLoadRef.current = false; }, 800);
+    };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
+  }, []);
+
+  // ── Recycle-append state (the "infinite mirage" when API is exhausted) ───────
+  // When hasNextPage is false, useInfiniteQuery has no more pages to fetch.
+  // We restore the old behaviour: watch the last product card with an
+  // IntersectionObserver, and when it enters the viewport we shuffle the already-
+  // fetched products and append them to a local recycled list, giving the
+  // appearance of endless scrolling.
+  //
+  // For categories we do the same but against categoryVisibleProducts instead.
+  //
+  // This is completely separate from fetchNextPage — it only activates when the
+  // API is exhausted OR a category filter is active (categories never paginate).
+  const [recycledProducts, setRecycledProducts] = useState<Product[]>([]);
+  const [isAppending, setIsAppending] = useState(false);
+  const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<Product[]>([]);
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
+  const recycleObserverActive = useRef(false);
+
+  // Seed recycledProducts with the initial fetched set once API is exhausted
+  useEffect(() => {
+    if (!hasNextPage && products.length > 0 && recycledProducts.length === 0) {
+      setRecycledProducts(products);
     }
+  }, [hasNextPage, products, recycledProducts.length]);
 
-    // Refresh complete, reset state for clean new view (but keep category selection)
-    setUiLoading(false);
-    if (!categoryFilterActive) {
-      cursorRef.current = "";
-      setHasNextPage(true);
-      setCategoryVisibleProducts([]);
-    }
-  }, [refreshing, categoryFilterActive]);
-  const [lastItemInview, setLastItemInView] = useState(false);
-  const [triggerManualLoad, setManualLoad] = useState(true);
-  const [isAppending, startAppendTransition] = useTransition();
-  const categoryQuery = useQuery<Product[]>({
-    queryKey: ["home-category-products", selectedCategory?.name],
-    queryFn: () => getProductsByCategory(selectedCategory!.name),
-    enabled: !!selectedCategory,
-    retry: false, // Don't retry on error to show "no products found" immediately
-    onError: (error) => {
-      console.error("Category query error:", error);
-      // Set empty array on error so "no products found" message shows
-      setCategoryVisibleProducts([]);
-    },
-  });
-  const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
-  const isCategoryLoading = categoryQuery.isLoading;
-  const categoryError = categoryQuery.error as Error | null;
-  const hasCategoryError = Boolean(categoryError);
-
-  React.useEffect(() => {
-    if (resetToken === 0) return;
-    setSelectedCategory(null);
-    setUiLoading(true);
-    const timer = setTimeout(() => setUiLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [resetToken, setSelectedCategory]);
-
-  // Force category products to refetch after hydration
-  React.useEffect(() => {
-    if (_hasHydrated && selectedCategory && isMounted) {
-      queryClient.invalidateQueries({
-        queryKey: ["home-category-products", selectedCategory.name],
-      });
-    }
-  }, [_hasHydrated, isMounted, selectedCategory, queryClient]);
-
-  const visibleProducts = categoryFilterActive
-    ? categoryVisibleProducts
-    : products;
-  const isProductGridLoading =
-    uiLoading ||
-    searchLoading ||
-    (categoryFilterActive ? isCategoryLoading && !categoryError : isLoading);
-
-  const appendProducts = useCallback(
-    (
-      newProducts: Product[],
-      pagination?: { nextCursor?: string; hasMore?: boolean },
-    ) => {
-      queryClient.setQueryData<ProductsResponse | null>(
-        ["products"],
-        (oldData) => {
-          if (!oldData) {
-            return {
-              message: {
-                products: [...newProducts],
-                shippingFees: [],
-                nextCursor: pagination?.nextCursor,
-                hasMore: pagination?.hasMore,
-              },
-            };
-          }
-
-          return {
-            ...oldData,
-            message: {
-              ...oldData.message,
-              products: [...(oldData.message?.products ?? []), ...newProducts],
-              nextCursor: pagination?.nextCursor ?? oldData.message.nextCursor,
-              hasMore: pagination?.hasMore ?? oldData.message.hasMore,
-            },
-          };
-        },
-      );
-    },
-    [queryClient],
-  );
-
-  const [infiniteRef] = useInfiniteScroll({
-    loading: isLoadingMore,
-    hasNextPage: isInitialized && !categoryFilterActive && hasNextPage,
-    onLoadMore: async () => {
-      if (isLoadingMore || blockInfiniteLoadRef.current) return;
-      setIsLoadingMore(true);
-      try {
-        const newData = await getProducts(
-          `limit=${ITEMS_TO_APPEND}&cursor=${cursorRef.current}`,
-        );
-        appendProducts(newData?.message?.products || [], {
-          nextCursor: newData?.message?.nextCursor,
-          hasMore: newData?.message?.hasMore,
-        });
-        cursorRef.current = newData?.message?.nextCursor ?? "";
-        setHasNextPage(newData?.message?.hasMore ?? false);
-      } catch (err) {
-        console.error("Error loading more products:", err);
-      } finally {
-        setIsLoadingMore(false);
-      }
-    },
-    disabled: !isInitialized || categoryFilterActive,
-  });
-
+  // Keep category visible products in sync
   useEffect(() => {
     if (!data?.message) return;
 
@@ -291,80 +226,70 @@ function HomeContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.message?.hasMore, data?.message?.nextCursor]);
 
+  // IntersectionObserver for recycle-append — only active when:
+  //   - API exhausted (!hasNextPage) and not in category mode, OR
+  //   - Category mode (categoryFilterActive)
   useEffect(() => {
-    if (!categoryFilterActive) {
-      if (hasNextPage === false || !triggerManualLoad) {
-        const observer = new IntersectionObserver(
-          ([entry]) => {
-            if (entry.isIntersecting) {
-              setLastItemInView(true);
-              observer.unobserve(entry.target);
-            }
-          },
-          {
-            root: null,
-            rootMargin: "300px",
-            threshold: 0,
-          },
-        );
+    // useInfiniteScroll hook handles scrolling while hasNextPage is true
+    const shouldObserve = categoryFilterActive
+      ? categoryVisibleProducts.length > 0
+      : !hasNextPage && recycledProducts.length > 0;
 
-        const ref = lastItemRef.current;
-        if (ref) {
-          observer.observe(ref);
+    if (!shouldObserve || recycleObserverActive.current) return;
+
+    const ref = lastItemRef.current;
+    if (!ref) return;
+
+    recycleObserverActive.current = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        recycleObserverActive.current = false;
+
+        if (categoryFilterActive) {
+          // Append a shuffled copy of category products
+          const next = shuffleArray([...categoryProducts]);
+          if (next.length === 0) return;
+          setIsAppending(true);
+          setCategoryVisibleProducts((prev) => [...prev, ...next]);
+          setTimeout(() => setIsAppending(false), 0);
+        } else {
+          // Append a shuffled copy of all fetched products
+          const next = shuffleArray([...recycledProducts]);
+          if (next.length === 0) return;
+          setIsAppending(true);
+          setRecycledProducts((prev) => [...prev, ...next]);
+          setTimeout(() => setIsAppending(false), 0);
         }
-        setManualLoad(true);
-        return () => {
-          if (ref) observer.unobserve(ref);
-        };
-      }
+      },
+      { rootMargin: "300px", threshold: 0 },
+    );
+    observer.observe(ref);
 
-      return;
-    }
-
-    if (categoryVisibleProducts.length > 0) {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setLastItemInView(true);
-            observer.unobserve(entry.target);
-          }
-        },
-        {
-          root: null,
-          rootMargin: "300px",
-          threshold: 0,
-        },
-      );
-
-      const ref = lastItemRef.current;
-      if (ref) {
-        observer.observe(ref);
-      }
-      return () => {
-        if (ref) observer.unobserve(ref);
-      };
-    }
+    return () => {
+      observer.unobserve(ref);
+      recycleObserverActive.current = false;
+    };
   }, [
     categoryFilterActive,
+    categoryProducts,
     categoryVisibleProducts.length,
     hasNextPage,
-    triggerManualLoad,
+    recycledProducts,
   ]);
 
-  // appends new data
-  useEffect(() => {
-    if (!lastItemInview) return;
-
-    if (categoryFilterActive) {
-      if (categoryProducts.length === 0) return;
-      const nextItems = shuffleArray(categoryProducts);
-      if (nextItems.length === 0) return;
-      startAppendTransition(() => {
-        setCategoryVisibleProducts((prev) => [...prev, ...nextItems]);
-      });
-      setLastItemInView(false);
-      return;
-    }
+  // ── useInfiniteScroll hook — real API pagination while hasNextPage is true ───
+  const [infiniteRef] = useInfiniteScroll({
+    loading: isFetchingNextPage,
+    hasNextPage: !categoryFilterActive && hasNextPage,
+    onLoadMore: () => {
+      if (blockInfiniteLoadRef.current || refreshing || isRefetching) return;
+      fetchNextPage();
+    },
+    disabled: categoryFilterActive || !hasNextPage || refreshing || isRefetching,
+    rootMargin: "300px 0px",
+  });
 
     if (products.length === 0) return;
     const nextItems = shuffleArray(products);
@@ -381,25 +306,20 @@ function HomeContent({
     products,
   ]);
 
-  useEffect(() => {
-    if (!categoryFilterActive) {
-      setCategoryVisibleProducts((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
+  const isProductGridLoading =
+    isLoading || (categoryFilterActive ? isCategoryLoading : false);
 
-    setCategoryVisibleProducts(categoryProducts);
-    setLastItemInView(false);
-    setManualLoad(true);
-  }, [categoryFilterActive, categoryProducts]);
+  const categoriesMarginClass = searchActive ? "mt-[1rem]" : "mt-8";
 
   return (
     <>
       <PullToRefreshHeader />
       <PullToRefreshContainer>
-        <div className="w-full ">
+        <div className="w-full">
           {selectedItem && <CartPopup />}
 
           <div
+            suppressHydrationWarning
             className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
             style={{
               transform: `translateY(-${pull * 0.7}px)`,
@@ -410,29 +330,25 @@ function HomeContent({
             <SearchBar />
           </div>
 
-          <div className="mt-[0re] lg:mt-0 px-[20px] lg:px-10">
-            {/* Banner */}
+          <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
             {!searchActive && (
               <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
-                {uiLoading || isLoading ? (
-                  <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse  rounded-xl lg:rounded-3xl" />
+                {isLoading ? (
+                  <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse rounded-xl lg:rounded-3xl" />
                 ) : (
-                  <HomeHeroSlider
-                    products={data?.message?.products ?? []}
-                    loading={uiLoading || isLoading}
-                  />
+                  <HomeHeroSlider products={products} loading={isLoading} />
                 )}
               </div>
             )}
 
-            {/* Categories — always mounted; handles its own skeleton internally */}
-            <div className={`mt-${searchActive ? "[1rem]" : "8"}`}>
+            <div className={categoriesMarginClass}>
               <Categories
-                cat={"categories"}
+                cat="categories"
                 onCategorySelect={setSelectedCategory}
                 selectedCategoryId={selectedCategory?._id ?? null}
               />
             </div>
+
             {categoryFilterActive && (
               <div className="mt-6 px-4 lg:px-[30px] flex flex-wrap items-center gap-3 font-poppins">
                 <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-4 py-2 text-sm">
@@ -455,6 +371,7 @@ function HomeContent({
                 </button>
               </div>
             )}
+
             {!isProductGridLoading &&
               (visibleProducts.length === 0 || hasCategoryError) && (
                 <div className="col-span-full">
@@ -465,7 +382,6 @@ function HomeContent({
                     height={150}
                     className="mx-auto mt-10"
                   />
-
                   <p className="text-center text-sm text-gray-500 mt-10">
                     {categoryFilterActive
                       ? hasCategoryError
@@ -476,46 +392,55 @@ function HomeContent({
                 </div>
               )}
 
-            {/* Products */}
             <div className="mt-8">
               {isProductGridLoading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
                   {[...Array(10)].map((_, i) => (
                     <div
-                      key={i}
+                      key={`skeleton-${i}`}
                       className="h-[300px] w-full bg-gray-200 rounded-xl animate-pulse"
                     />
                   ))}
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5  gap-x-2 lg:gap-6  ">
-                    {visibleProducts.map((product: Product, index: number) => (
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
+                    {visibleProducts.map((product, index) => (
                       <div
+                        key={`${product._id}-${index}`}
                         ref={
-                          (categoryFilterActive || !hasNextPage) &&
                           index === visibleProducts.length - 1
-                            ? lastItemRef
+                            ? // When API still has pages: useInfiniteScroll owns the ref
+                            // When exhausted or in category mode: our recycle observer owns it
+                            !categoryFilterActive && hasNextPage
+                              ? infiniteRef
+                              : lastItemRef
                             : null
                         }
-                        key={`${product._id}-${index}`}
                       >
-                        <ProductItem
-                          key={product._id}
-                          product={product}
-                          index={index}
-                        />
+                        <ProductItem product={product} index={index} />
                       </div>
                     ))}
 
+                    {/* Skeletons during real API pagination */}
+                    {isFetchingNextPage &&
+                      [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                        <div key={`fetch-skeleton-${i}`}>
+                          <Skeleton />
+                        </div>
+                      ))}
+
+                    {/* Skeletons during recycle-append */}
                     {isAppending &&
                       [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-                        <div key={i}>
+                        <div key={`append-skeleton-${i}`}>
                           <Skeleton />
                         </div>
                       ))}
                   </div>
-                  {!categoryFilterActive && (
+
+                  {/* EndlessScrollLoading spinner — only shown during real pagination */}
+                  {!categoryFilterActive && hasNextPage && (
                     <EndlessScrollLoading
                       infiniteRef={infiniteRef}
                       hasNextPage={hasNextPage}
