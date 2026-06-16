@@ -1,6 +1,14 @@
 "use client";
 export const dynamic = "force-dynamic";
-
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ProductItem from "@/components/ProductItem";
@@ -24,7 +32,10 @@ import {
   usePullToRefresh,
 } from "./components/pull-to-refresh/PullToRefreshProvider";
 import ScrollToTop from "./components/ui/ScrollToTop";
-import SearchBar from "./components/ui/SearchBar";
+import ProductItem from "@/components/ProductItem";
+import Skeleton from "@/components/Skeleton";
+import type { Product, ProductsResponse } from "@/lib/types";
+import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
 
@@ -137,17 +148,7 @@ function HomeContent({
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 
-  const categoryQuery = useQuery<Product[]>({
-    queryKey: ["home-category-products", selectedCategory?.name],
-    queryFn: () => getProductsByCategory(selectedCategory!.name),
-    enabled: !!selectedCategory && isMounted,
-    retry: false,
-  });
-  const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
-  const isCategoryLoading = categoryQuery.isLoading;
-  const categoryError = categoryQuery.error as Error | null;
-  const hasCategoryError = Boolean(categoryError);
-
+  // Save scroll position when navigating away
   useEffect(() => {
     if (_hasHydrated && selectedCategory && isMounted) {
       queryClient.invalidateQueries({
@@ -157,16 +158,15 @@ function HomeContent({
   }, [_hasHydrated, isMounted, selectedCategory, queryClient]);
 
   useEffect(() => {
-    if (resetToken === 0) return;
-    setSelectedCategory(null);
-  }, [resetToken, setSelectedCategory]);
-
-  // ── Scroll restoration ───────────────────────────────────────────────────────
-  const scrollRestored = useRef(false);
-  useEffect(() => {
-    return () => {
-      sessionStorage.setItem("home-scroll-y", String(window.scrollY));
+    const onScrollToTop = () => {
+      blockInfiniteLoadRef.current = true;
+      setTimeout(() => {
+        blockInfiniteLoadRef.current = false;
+      }, 800);
     };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () =>
+      window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
   useEffect(() => {
     if (isLoading || scrollRestored.current) return;
@@ -218,12 +218,13 @@ function HomeContent({
 
   // Keep category visible products in sync
   useEffect(() => {
-    if (categoryFilterActive) {
-      setCategoryVisibleProducts(categoryProducts);
-    } else {
-      setCategoryVisibleProducts([]);
-    }
-  }, [categoryFilterActive, categoryProducts]);
+    if (!data?.message) return;
+
+    cursorRef.current = data.message.nextCursor ?? "";
+    setHasNextPage(data.message.hasMore ?? false);
+    setIsInitialized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.message?.hasMore, data?.message?.nextCursor]);
 
   // IntersectionObserver for recycle-append — only active when:
   //   - API exhausted (!hasNextPage) and not in category mode, OR
@@ -290,15 +291,20 @@ function HomeContent({
     rootMargin: "300px 0px",
   });
 
-  // ── What to actually render ──────────────────────────────────────────────────
-  // - Category active  → categoryVisibleProducts (seeded from API, recycled on scroll)
-  // - API not exhausted → products (flat from useInfiniteQuery pages)
-  // - API exhausted     → recycledProducts (products + shuffled appends)
-  const visibleProducts = categoryFilterActive
-    ? categoryVisibleProducts
-    : hasNextPage
-      ? products
-      : recycledProducts;
+    if (products.length === 0) return;
+    const nextItems = shuffleArray(products);
+    startAppendTransition(() => {
+      appendProducts(nextItems);
+    });
+    setLastItemInView(false);
+    setManualLoad(false);
+  }, [
+    appendProducts,
+    categoryFilterActive,
+    categoryProducts,
+    lastItemInview,
+    products,
+  ]);
 
   const isProductGridLoading =
     isLoading || (categoryFilterActive ? isCategoryLoading : false);
