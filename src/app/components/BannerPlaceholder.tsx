@@ -84,7 +84,8 @@ export default function BannerPlaceholder({
       <Image
         src={image.url}
         alt="Banner"
-        className="w-full h-full object-fill transition-opacity duration-500"
+        className="w-full h-full object-fill transition-opacity duration-500 "
+        fill
       />
 
       {images.length > 1 && (
