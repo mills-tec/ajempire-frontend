@@ -10,6 +10,8 @@ import EndlessScrollLoading from "./EndlessScrollLoading";
 import ProductItem from "./ProductItem";
 import Skeleton from "./Skeleton";
 
+const MAX_ACCUMULATED = 300;
+
 export default function RelatedProducts({ category }: { category: string }) {
   const queryClient = useQueryClient();
 
@@ -26,51 +28,44 @@ export default function RelatedProducts({ category }: { category: string }) {
   useEffect(() => {
     const onScrollToTop = () => {
       blockLoadRef.current = true;
-      setTimeout(() => { blockLoadRef.current = false; }, 800);
+      setTimeout(() => {
+        blockLoadRef.current = false;
+      }, 800);
     };
     window.addEventListener("scroll-to-top-start", onScrollToTop);
-    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
+    return () =>
+      window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
-  /*
-   * INITIAL FETCH
-   */
-  const { data, isLoading } = useQuery(
-    ["relatedProducts", category],
-    () => getRelatedProducts(category, `limit=${ITEMS_TO_APPEND}`),
-    {
-      enabled: !!category,
-      onSuccess: (res) => {
-        setCursor(res?.nextCursor || "");
-        setHasNextPage(res?.hasMore ?? false);
-        originalProductsRef.current = res?.products ?? [];
-        prevProductCountRef.current = res?.products?.length ?? 0;
-      },
-    },
-  );
+  // v5 object syntax
+  const { data, isLoading } = useQuery({
+    queryKey: ["relatedProducts", category],
+    queryFn: () => getRelatedProducts(category, `limit=${ITEMS_TO_APPEND}`),
+    enabled: !!category,
+  });
 
-  // Detect when cache gets REPLACED by refresh (product count drops back to first page size)
-  // This is the key fix — when RefreshWrapper sets fresh data, reset scroll state
+  // onSuccess replacement — runs when data first arrives
   useEffect(() => {
     if (!data?.products) return;
-
     const currentCount = data.products.length;
     const prevCount = prevProductCountRef.current;
 
-    // If count dropped or stayed same as first page — cache was replaced by refresh
-    if (prevCount > ITEMS_TO_APPEND && currentCount <= ITEMS_TO_APPEND) {
+    if (prevCount === 0) {
+      // First load — initialise everything
+      setCursor(data.nextCursor || "");
+      setHasNextPage(data.hasMore ?? false);
+      originalProductsRef.current = data.products;
+    } else if (prevCount > ITEMS_TO_APPEND && currentCount <= ITEMS_TO_APPEND) {
+      // Cache was replaced by a refresh — reset scroll state
       setCursor(data.nextCursor ?? "");
       setHasNextPage(data.hasMore ?? true);
       originalProductsRef.current = data.products;
     }
 
     prevProductCountRef.current = currentCount;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.products?.length]);
 
-  /*
-   * APPEND HELPER
-   */
   const appendProducts = (newProducts: Product[]) => {
     queryClient.setQueryData(
       ["relatedProducts", category],
@@ -80,17 +75,21 @@ export default function RelatedProducts({ category }: { category: string }) {
           | undefined,
       ) => {
         if (!oldData) return oldData;
+        const combined = [...(oldData.products ?? []), ...newProducts];
+        // Hard cap — trim from the front so memory stays bounded
+        const trimmed =
+          combined.length > MAX_ACCUMULATED
+            ? combined.slice(combined.length - MAX_ACCUMULATED)
+            : combined;
         return {
           ...oldData,
-          products: [...(oldData.products ?? []), ...newProducts],
+          products: trimmed,
         };
       },
     );
   };
 
-  /*
-   * API INFINITE SCROLL
-   */
+  // API infinite scroll
   const [infiniteRef] = useInfiniteScroll({
     loading: false,
     hasNextPage,
@@ -102,7 +101,6 @@ export default function RelatedProducts({ category }: { category: string }) {
           category,
           `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`,
         );
-
         appendProducts(newData?.products || []);
         setCursor(newData?.nextCursor || "");
         setHasNextPage(newData?.hasMore ?? false);
@@ -112,9 +110,7 @@ export default function RelatedProducts({ category }: { category: string }) {
     },
   });
 
-  /*
-   * OBSERVE LAST ITEM — trigger duplication when API is exhausted
-   */
+  // Observe last item — trigger duplication only when API is exhausted
   useEffect(() => {
     if (hasNextPage) return;
     if (!lastItemRef.current) return;
@@ -132,51 +128,53 @@ export default function RelatedProducts({ category }: { category: string }) {
     return () => observer.disconnect();
   }, [hasNextPage, isDuplicating]);
 
-  /*
-   * DUPLICATION — shuffles original set and appends
-   */
+  // Duplication — shuffles a SLICE of the original set, not the full array
+  // This is the key fix: we only append ITEMS_TO_APPEND items at a time,
+  // and appendProducts() caps the total at MAX_ACCUMULATED anyway.
   useEffect(() => {
     if (!isDuplicating) return;
     if (!originalProductsRef.current.length) return;
 
+    const nextBatch = shuffleArray([...originalProductsRef.current]).slice(
+      0,
+      ITEMS_TO_APPEND,
+    );
+
     startDuplicateTransition(() => {
-      appendProducts(shuffleArray([...originalProductsRef.current]));
+      appendProducts(nextBatch);
     });
     setIsDuplicating(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDuplicating]);
 
   const products: Product[] = data?.products ?? [];
 
-  console.log("HI");
-
   return (
     <div className="space-y-6">
-      {/* Banner slot — swap this div for a real <Image> banner when ready */}
       <BannerPlaceholder />
 
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-      {products.map((product, index) => (
-        <div
-          key={`${product._id}-${index}`}
-          ref={
-            !hasNextPage && index === products.length - 1 ? lastItemRef : null
-          }
-        >
-          <ProductItem product={product} index={index} />
-        </div>
-      ))}
-
-      {isPending &&
-        [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-          <Skeleton key={`dup-skeleton-${i}`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
+        {products.map((product, index) => (
+          <div
+            key={`${product._id}-${index}`}
+            ref={
+              !hasNextPage && index === products.length - 1 ? lastItemRef : null
+            }
+          >
+            <ProductItem product={product} index={index} />
+          </div>
         ))}
 
-      <EndlessScrollLoading
-        infiniteRef={infiniteRef}
-        hasNextPage={hasNextPage}
-      />
-    </div>
+        {isPending &&
+          [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+            <Skeleton key={`dup-skeleton-${i}`} />
+          ))}
+
+        <EndlessScrollLoading
+          infiniteRef={infiniteRef}
+          hasNextPage={hasNextPage}
+        />
+      </div>
     </div>
   );
 }

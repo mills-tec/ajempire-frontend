@@ -20,13 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function ProductDetailPage() {
@@ -44,7 +38,6 @@ export default function ProductDetailPage() {
       toast.success("Link copied to clipboard");
     }
   };
-
 
   // ✅ All hooks must be at the top and unconditional
   const {
@@ -66,11 +59,12 @@ export default function ProductDetailPage() {
 
   // const { addProductToBrowsingHistory } = useExploreInterest();
 
-  const { data, isLoading, isError } = useQuery(
-    ["product", id],
-    () => getProduct(id),
-    { enabled: !!id, retry: false },
-  );
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["product", id],
+    queryFn: () => getProduct(id),
+    enabled: !!id,
+    retry: false,
+  });
 
   // 🌀 Base variables
   const item = data?.message?.product ?? null;
@@ -241,7 +235,7 @@ export default function ProductDetailPage() {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity, cartItem, item]);
 
   useEffect(() => {

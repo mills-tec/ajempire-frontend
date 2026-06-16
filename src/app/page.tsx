@@ -1,7 +1,13 @@
-
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Image from "next/image";
 import Categories from "@/app/components/ui/Categories";
 import SearchBar from "./components/ui/SearchBar";
@@ -21,7 +27,7 @@ import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ScrollToTop from "./components/ui/ScrollToTop";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
-import type {  Product, ProductsResponse } from "@/lib/types";
+import type { Product, ProductsResponse } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 
 const EMPTY_PRODUCTS: Product[] = [];
@@ -116,7 +122,6 @@ function HomeContent({
     setIsMounted(true);
   }, []);
 
-
   // Save scroll position when navigating away
   useEffect(() => {
     return () => {
@@ -128,10 +133,13 @@ function HomeContent({
   useEffect(() => {
     const onScrollToTop = () => {
       blockInfiniteLoadRef.current = true;
-      setTimeout(() => { blockInfiniteLoadRef.current = false; }, 800);
+      setTimeout(() => {
+        blockInfiniteLoadRef.current = false;
+      }, 800);
     };
     window.addEventListener("scroll-to-top-start", onScrollToTop);
-    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
+    return () =>
+      window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
   // Restore scroll position once data is ready and DOM is painted
@@ -280,7 +288,7 @@ function HomeContent({
     cursorRef.current = data.message.nextCursor ?? "";
     setHasNextPage(data.message.hasMore ?? false);
     setIsInitialized(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.message?.hasMore, data?.message?.nextCursor]);
 
   useEffect(() => {
@@ -365,7 +373,13 @@ function HomeContent({
     });
     setLastItemInView(false);
     setManualLoad(false);
-  }, [appendProducts, categoryFilterActive, categoryProducts, lastItemInview, products]);
+  }, [
+    appendProducts,
+    categoryFilterActive,
+    categoryProducts,
+    lastItemInview,
+    products,
+  ]);
 
   useEffect(() => {
     if (!categoryFilterActive) {
