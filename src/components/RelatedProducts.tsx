@@ -65,7 +65,7 @@ export default function RelatedProducts({ category }: { category: string }) {
     }
 
     prevProductCountRef.current = currentCount;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.products?.length]);
 
   /*
@@ -143,40 +143,39 @@ export default function RelatedProducts({ category }: { category: string }) {
       appendProducts(shuffleArray([...originalProductsRef.current]));
     });
     setIsDuplicating(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDuplicating]);
 
   const products: Product[] = data?.products ?? [];
 
-  console.log("HI");
 
   return (
     <div className="space-y-6">
       {/* Banner slot — swap this div for a real <Image> banner when ready */}
       <BannerPlaceholder />
 
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-      {products.map((product, index) => (
-        <div
-          key={`${product._id}-${index}`}
-          ref={
-            !hasNextPage && index === products.length - 1 ? lastItemRef : null
-          }
-        >
-          <ProductItem product={product} index={index} />
-        </div>
-      ))}
-
-      {isPending &&
-        [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-          <Skeleton key={`dup-skeleton-${i}`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
+        {products.map((product, index) => (
+          <div
+            key={`${product._id}-${index}`}
+            ref={
+              !hasNextPage && index === products.length - 1 ? lastItemRef : null
+            }
+          >
+            <ProductItem product={product} index={index} />
+          </div>
         ))}
 
-      <EndlessScrollLoading
-        infiniteRef={infiniteRef}
-        hasNextPage={hasNextPage}
-      />
-    </div>
+        {isPending &&
+          [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+            <Skeleton key={`dup-skeleton-${i}`} />
+          ))}
+
+        <EndlessScrollLoading
+          infiniteRef={infiniteRef}
+          hasNextPage={hasNextPage}
+        />
+      </div>
     </div>
   );
 }
