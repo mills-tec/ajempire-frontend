@@ -169,6 +169,7 @@ const SetupPasswordContent = () => {
                   Passwords do not match.
                 </p>
               )}
+              
               {confirmPassword && passwordsMatch && isValidPassword && (
                 <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
