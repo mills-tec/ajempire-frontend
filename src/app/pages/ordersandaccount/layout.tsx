@@ -41,7 +41,7 @@ export default function Layout({ children }: LayoutProps) {
       router.replace("/");
       return;
     }
-    setCheckingAuth(false);
+    // setCheckingAuth(false);
   }, [router]);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [pathname]);
 
   useEffect(() => {
-    if (checkingAuth) return;
+    // if (checkingAuth) return;
     (async () => {
       const req = await getNotifications();
       setNotifications(req)

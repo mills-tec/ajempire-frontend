@@ -2,80 +2,105 @@
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
-import BannerPlaceholder from "./BannerPlaceholder";
 import { getExploreInterest } from "@/lib/api";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
+import BannerPlaceholder from "./BannerPlaceholder";
 
-// const ITEMS_TO_APPEND = 10;
+const MAX_ACCUMULATED = 300;
 
 export default function ExploreInterest() {
   const queryClient = useQueryClient();
 
   const [cursor, setCursor] = useState("");
   const [hasNextPage, setHasNextPage] = useState(true);
-
-  const lastItemRef = useRef<HTMLDivElement>(null);
   const originalProductsRef = useRef<unknown[]>([]);
-  const [isDuplicating, setIsDuplicating] = useState(false);
-  const [isPending, startDuplicateTransition] = useTransition();
+  const prevProductCountRef = useRef<number>(0);
+  const recycleObserverActive = useRef(false);
+  const blockLoadRef = useRef(false);
+
+  const [isAppending, setIsAppending] = useState(false);
 
   /*
    * INITIAL FETCH
    */
-  const { data, isLoading } = useQuery(
-    ["exploreInterest"],
-    () => getExploreInterest(ITEMS_TO_APPEND, ""),
-    {
-      onSuccess: (res) => {
-        setCursor(res?.nextCursor || "");
-        setHasNextPage(res?.hasMore ?? false);
-      },
-    },
-  );
+  const { data, isLoading } = useQuery({
+    queryKey: ["exploreInterest"],
+    queryFn: () => getExploreInterest(ITEMS_TO_APPEND, ""),
+  });
 
   const products = useMemo(() => {
     return data?.products ?? [];
   }, [data]);
 
   /*
-   * STORE ORIGINAL DATASET ONCE
+   * Initialize / reset on data change
    */
   useEffect(() => {
-    if (data?.products && originalProductsRef.current.length === 0) {
+    if (!data?.products) return;
+    const currentCount = data.products.length;
+    const prevCount = prevProductCountRef.current;
+
+    if (prevCount === 0) {
+      setCursor(data.nextCursor || "");
+      setHasNextPage(data.hasMore ?? false);
+      originalProductsRef.current = data.products;
+    } else if (prevCount > ITEMS_TO_APPEND && currentCount <= ITEMS_TO_APPEND) {
+      setCursor(data.nextCursor ?? "");
+      setHasNextPage(data.hasMore ?? true);
       originalProductsRef.current = data.products;
     }
-  }, [data]);
+
+    prevProductCountRef.current = currentCount;
+  }, [data?.products?.length]);
+
+  /*
+   * Block infinite scroll during scroll-to-top
+   */
+  useEffect(() => {
+    const onScrollToTop = () => {
+      blockLoadRef.current = true;
+      setTimeout(() => {
+        blockLoadRef.current = false;
+      }, 800);
+    };
+    window.addEventListener("scroll-to-top-start", onScrollToTop);
+    return () =>
+      window.removeEventListener("scroll-to-top-start", onScrollToTop);
+  }, []);
 
   /*
    * Append helper
    */
-  const appendProducts = (newProducts: unknown[]) => {
-    queryClient.setQueryData(["exploreInterest"], (oldData: unknown) => {
+  const appendProducts = useCallback((newProducts: unknown[]) => {
+    queryClient.setQueryData(["exploreInterest"], (oldData: any) => {
       if (!oldData) return oldData;
-
+      const combined = [...(oldData.products ?? []), ...newProducts];
+      const trimmed =
+        combined.length > MAX_ACCUMULATED
+          ? combined.slice(combined.length - MAX_ACCUMULATED)
+          : combined;
       return {
         ...oldData,
-        products: [...(oldData.products ?? []), ...newProducts],
+        products: trimmed,
       };
     });
-  };
+  }, [queryClient]);
 
   /*
    * API infinite scroll
    */
   const [infiniteRef] = useInfiniteScroll({
-    loading: false,
+    loading: isLoading,
     hasNextPage,
     disabled: Boolean(isLoading),
     onLoadMore: async () => {
+      if (blockLoadRef.current) return;
       try {
         const newData = await getExploreInterest(ITEMS_TO_APPEND, cursor);
-
         appendProducts(newData?.products || []);
-
         setCursor(newData?.nextCursor || "");
         setHasNextPage(newData?.hasMore ?? false);
       } catch (err) {
@@ -85,43 +110,42 @@ export default function ExploreInterest() {
   });
 
   /*
-   * Observe last item (only after API finished)
+   * Recycle-append when API is exhausted — callback ref pattern
    */
-  useEffect(() => {
-    if (hasNextPage) return;
-    if (!lastItemRef.current) return;
+  const setLastItemRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (hasNextPage || !node || recycleObserverActive.current) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isDuplicating) {
-          setIsDuplicating(true);
-        }
-      },
-      {
-        root: null,
-        rootMargin: "300px",
-        threshold: 0,
-      },
-    );
+      recycleObserverActive.current = true;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          recycleObserverActive.current = false;
 
-    observer.observe(lastItemRef.current);
+          if (blockLoadRef.current) return;
+          if (!originalProductsRef.current.length) return;
 
-    return () => observer.disconnect();
-  }, [hasNextPage, isDuplicating]);
+          const nextBatch = shuffleArray([
+            ...originalProductsRef.current,
+          ]).slice(0, ITEMS_TO_APPEND);
+          if (nextBatch.length === 0) return;
 
-  /*
-   * Duplication logic (same as Gallery)
-   */
-  useEffect(() => {
-    if (!isDuplicating) return;
-    if (!originalProductsRef.current.length) return;
+          setIsAppending(true);
+          appendProducts(nextBatch);
+          setTimeout(() => setIsAppending(false), 0);
+        },
+        { rootMargin: "300px", threshold: 0 },
+      );
+      observer.observe(node);
 
-    startDuplicateTransition(() => {
-      appendProducts(shuffleArray(originalProductsRef.current));
-    });
-    setIsDuplicating(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDuplicating]);
+      return () => {
+        observer.unobserve(node);
+        recycleObserverActive.current = false;
+      };
+    },
+    [hasNextPage, appendProducts],
+  );
 
   return (
     <section className="px-6">
@@ -134,28 +158,37 @@ export default function ExploreInterest() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-        {products.map((product: unknown, index: number) => (
+        {products.map((product, index: number) => (
           <div
             key={`${product._id}-${index}`}
             ref={
-              !hasNextPage && index === products.length - 1 ? lastItemRef : null
+              !hasNextPage && index === products.length - 1
+                ? setLastItemRef
+                : null
             }
           >
             <ProductItem product={product} index={index} />
           </div>
         ))}
 
-        {/* Skeleton while duplicating */}
-        {isPending &&
+        {isAppending &&
           [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-            <Skeleton key={`dup-skeleton-${i}`} />
+            <Skeleton key={`append-skeleton-${i}`} />
           ))}
 
-        <EndlessScrollLoading
-          infiniteRef={infiniteRef}
-          hasNextPage={hasNextPage}
-        />
+        {hasNextPage && (
+          <EndlessScrollLoading
+            infiniteRef={infiniteRef}
+            hasNextPage={hasNextPage}
+          />
+        )}
       </div>
+
+      {!isLoading && !hasNextPage && products.length === 0 && (
+        <p className="text-center text-sm text-gray-500 mt-10">
+          No products available.
+        </p>
+      )}
     </section>
   );
 }
