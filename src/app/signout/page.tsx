@@ -14,6 +14,7 @@ export default function SignOut() {
     setIsLoggedIn(false);
     router.push("/");
     toast.success("Signout successful");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <></>;
 }

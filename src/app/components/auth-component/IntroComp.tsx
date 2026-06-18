@@ -32,7 +32,6 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { setIsLoggedIn, setUser } = useAuthStore();
   const { scriptLoadedSuccessfully } = useGoogleOAuth();
-  API_URL;
 
   const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
     const credential = credentialResponse.credential;

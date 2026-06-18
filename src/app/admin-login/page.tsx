@@ -1,4 +1,3 @@
-import AdminAuth from "../components/auth-component/AdminAuth";
 import AdminAuthStep from "../components/auth-component/AdminAuthStep";
 
 export default function AdminLogin() {

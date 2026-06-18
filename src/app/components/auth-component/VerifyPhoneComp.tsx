@@ -9,7 +9,7 @@ import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
 
 export default function VerifyPhoneComp({ onBack, canGoBack }: AuthStepProps) {
-  const searchParams = useSearchParams();
+  const _searchParams = useSearchParams();
   const router = useRouter();
   const phone = sessionStorage.getItem("phone");
   const [otp, setOtp] = useState("");

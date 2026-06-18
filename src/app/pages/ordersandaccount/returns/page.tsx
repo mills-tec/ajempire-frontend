@@ -1,10 +1,8 @@
 "use client";
 import { useIssueReturn } from "@/api/customHooks";
-import OrderCard from "@/app/components/OrderCard";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { useRouter } from "next/router";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import OrderTabs from "../components/OrderTabs";
 import { IReturnRequest } from "@/lib/types";
@@ -30,6 +28,7 @@ export default function Returns() {
 
     };
     fetchReturns();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // return;

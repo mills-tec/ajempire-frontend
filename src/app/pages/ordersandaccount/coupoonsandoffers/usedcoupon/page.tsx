@@ -1,5 +1,4 @@
 "use client";
-import { mapCouponToDeal } from "@/lib/couponMapper";
 import CouponsTab from "../../components/CouponsTab";
 import FlashDealCard from "../../components/FlashDealCard";
 import { useEffect, useState } from "react";
@@ -20,7 +19,7 @@ export default function UsedCouPon() {
                 if (!res) return;
 
                 setDeals(res.message.map(item => ({ ...item, status: "used" })));
-            } catch (err) {
+            } catch {
 
             } finally {
                 setLoading(false);

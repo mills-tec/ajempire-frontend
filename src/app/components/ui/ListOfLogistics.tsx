@@ -22,6 +22,7 @@ export default function ListOfLogistics() {
 
   useEffect(() => {
     fetchLogistics();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   const fetchLogistics = async () => {
@@ -72,8 +73,8 @@ export default function ListOfLogistics() {
       } else {
         console.log("⚠️ No 'message' property found in the response.");
       }
-    } catch (err: any) {
-      const apiMessage = err?.message || "Unknown error";
+    } catch (err: unknown) {
+      const apiMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("🔥 Error fetching logistics API", apiMessage, err);
       toast.error(`Logistics API failure: ${apiMessage}`);
     } finally {
@@ -110,6 +111,7 @@ export default function ListOfLogistics() {
               `}
             >
               <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={logistic.courier_image} alt={logistic.courier_name} className="w-[50px]" />
                 <div>
                   <p>{logistic.courier_name}</p>

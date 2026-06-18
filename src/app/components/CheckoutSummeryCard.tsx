@@ -1,7 +1,6 @@
 "use client";
-import { applyCouponCode, getBearerToken, getCoupons } from "@/lib/api";
+import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
 import ListOfLogistics from "./ui/ListOfLogistics";
@@ -12,13 +11,6 @@ interface CheckoutSummeryCardProps {
   initiateCheckout: (couponCode: string) => void;
   logisticsStatus: boolean;
 }
-interface SelectedLogistic {
-  courier_id: string;
-  courier_name: string;
-  total: number;
-  delivery_eta: string;
-  delivery_eta_time: string;
-}
 export default function CheckoutSummeryCard({
   initiateCheckout,
   logisticsStatus,
@@ -27,7 +19,7 @@ export default function CheckoutSummeryCard({
   const [mounted, setMounted] = useState(false);
   // const { selectedLogistic } = useCartStore();
   // const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
-  const { orderSummary, applyCoupon, removeCoupon, appliedCoupon } =
+  const { orderSummary, applyCoupon, removeCoupon: _removeCoupon, appliedCoupon: _appliedCoupon } =
     useCartStore();
   const [couponCode, setCouponCode] = useState("");
   const [loadingCoupon, setLoadingCoupon] = useState(false);
@@ -70,7 +62,7 @@ export default function CheckoutSummeryCard({
       toast.success("Coupon applied successfully", { position: "top-right" });
 
       // setCouponCode("");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err.response.data);
       toast.error(err.response.data.error, { position: "top-right" });
     } finally {

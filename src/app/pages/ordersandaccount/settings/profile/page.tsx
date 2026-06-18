@@ -24,9 +24,7 @@ interface UserProfile {
 
 export default function ProfileSettingsPage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  API_URL;
-
-  const styleadress = "font-semibold opacity-75";
+  const _styleadress = "font-semibold opacity-75";
   useEffect(() => {
     const token = getBearerToken();
     const profileSettingsPage = async () => {

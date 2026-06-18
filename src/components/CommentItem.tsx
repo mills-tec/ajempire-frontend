@@ -2,7 +2,6 @@
 import React, { useEffect } from "react";
 import { Heart, Trash } from "lucide-react";
 import { CommentData } from "@/lib/types";
-import { getUser } from "@/lib/api";
 import { FaHeart } from "react-icons/fa";
 import { timeAgo } from "@/lib/utils";
 
@@ -50,6 +49,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       setLabel(timeAgo(item.createdAt)!);
     }, 60000);
     setLabel(timeAgo(item.createdAt)!);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

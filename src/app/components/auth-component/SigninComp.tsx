@@ -80,7 +80,6 @@ export default function SigninComp({
      
     } catch (error) {
       console.error("❌ Login error:", error);
-      const errorMess = error
       const errorMessage = error instanceof Error ? error.message : "Login failed";
       toast(errorMessage);
       setIsLoading(false);

@@ -6,7 +6,6 @@ import ProductItem from "@/components/ProductItem";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import { Product } from "@/lib/types";
 import { TrashIcon } from "lucide-react";
-import EmptyNotification from "@/components/EmptyNotification";
 import EmptyList from "@/components/EmptyList";
 import { Elipsis } from "@/components/svgs/Icons";
 type BrowsingHistory = {
@@ -111,6 +110,7 @@ export default function BrowsingHistoryPage() {
       });
     };
     getData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

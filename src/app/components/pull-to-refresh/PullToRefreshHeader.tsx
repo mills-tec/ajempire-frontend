@@ -1,6 +1,5 @@
 "use client";
 
-import Butterflies from "@/components/svgs/Butterflies";
 import { usePullToRefresh } from "./PullToRefreshProvider";
 import CustomSvg from "@/components/svgs/CustomSvg";
 
@@ -10,7 +9,7 @@ export default function PullToRefreshHeader() {
     const progress = Math.min(pull / 180, 1);
 
     // Vertical translation based on pull distance: 0px at no pull, -15px at max pull
-    const translateY = -progress * 15;
+    const _translateY = -progress * 15;
 
     return (
         <div

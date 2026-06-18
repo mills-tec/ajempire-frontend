@@ -93,6 +93,7 @@ export default function OrderSummaryPage() {
     return () => {
       isMounted = false;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const initiateCheckout = async () => {
     setIsLoading(true);

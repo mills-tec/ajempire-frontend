@@ -20,7 +20,7 @@ const GetshippingAddress = () => {
   const [address, setAddress] = useState<Address | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const closeModal = useModalStore((s) => s.closeModal);
+  const _closeModal = useModalStore((s) => s.closeModal);
   const fetchAddress = async () => {
     const token = getBearerToken();
     try {

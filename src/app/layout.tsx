@@ -12,6 +12,7 @@ import NetworkStatus from "./components/NetworkStatus";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -94,6 +95,7 @@ export default function RootLayout({
             </CartIconProvider>
           </TooltipProvider>
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );

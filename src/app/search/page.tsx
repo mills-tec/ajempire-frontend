@@ -1,20 +1,19 @@
 "use client";
 export const dynamic = "force-dynamic";
-import React, { useMemo, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { searchProducts, getCategories, getProductsByCategory } from "@/lib/api";
-import { useSearchStore } from "@/lib/search-store";
 import ProductCard from "@/app/components/ProductCard";
 import SearchBar from "@/app/components/ui/SearchBar";
-import type { Product as CatalogProduct, Product } from "@/lib/types";
-import Image from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Suspense } from "react";
-import PriceFilter from "../components/PriceFilter";
+import { getCategories, getProductsByCategory, searchProducts } from "@/lib/api";
+import { useSearchStore } from "@/lib/search-store";
+import type { Product as CatalogProduct, Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Trash2, X, Clock } from "lucide-react";
+import { Clock, Trash2, X } from "lucide-react";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import PriceFilter from "../components/PriceFilter";
 
 type Category = { name: string; _id: string };
 
@@ -82,6 +81,7 @@ function SearchContent() {
     setSkeletonLoading(true);
     const timer = setTimeout(() => setSkeletonLoading(false), 500);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   const matchedCategoryNames = useMemo(() => {

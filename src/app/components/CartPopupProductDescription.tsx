@@ -128,6 +128,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity]); // intentionally omit cartItem — we only want this to fire when the user changes quantity
 
   // useEffect(() => {
