@@ -154,17 +154,6 @@ function HomeContent({
   const categoryError = categoryQuery.error as Error | null;
   const hasCategoryError = Boolean(categoryError);
 
-  const categoryQuery = useQuery<Product[]>({
-    queryKey: ["home-category-products", selectedCategory?.name],
-    queryFn: () => getProductsByCategory(selectedCategory!.name),
-    enabled: !!selectedCategory && isMounted,
-    retry: false,
-  });
-  const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
-  const isCategoryLoading = categoryQuery.isLoading;
-  const categoryError = categoryQuery.error as Error | null;
-  const hasCategoryError = Boolean(categoryError);
-
   useEffect(() => {
     if (_hasHydrated && selectedCategory && isMounted) {
       queryClient.invalidateQueries({
