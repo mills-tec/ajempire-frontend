@@ -11,7 +11,11 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import type { Product, ProductsResponse } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
@@ -135,7 +139,20 @@ function HomeContent({
 
   // ── Category query ──────────────────────────────────────────────────────────
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const categoryQuery = useQuery<Product[]>({
+    queryKey: ["home-category-products", selectedCategory?.name],
+    queryFn: () => getProductsByCategory(selectedCategory!.name),
+    enabled: !!selectedCategory && isMounted,
+    retry: false,
+  });
+  const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
+  const isCategoryLoading = categoryQuery.isLoading;
+  const categoryError = categoryQuery.error as Error | null;
+  const hasCategoryError = Boolean(categoryError);
 
   const categoryQuery = useQuery<Product[]>({
     queryKey: ["home-category-products", selectedCategory?.name],
@@ -186,10 +203,13 @@ function HomeContent({
   useEffect(() => {
     const onScrollToTop = () => {
       blockInfiniteLoadRef.current = true;
-      setTimeout(() => { blockInfiniteLoadRef.current = false; }, 800);
+      setTimeout(() => {
+        blockInfiniteLoadRef.current = false;
+      }, 800);
     };
     window.addEventListener("scroll-to-top-start", onScrollToTop);
-    return () => window.removeEventListener("scroll-to-top-start", onScrollToTop);
+    return () =>
+      window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
   // ── Recycle-append state (the "infinite mirage" when API is exhausted) ───────
@@ -205,7 +225,9 @@ function HomeContent({
   // API is exhausted OR a category filter is active (categories never paginate).
   const [recycledProducts, setRecycledProducts] = useState<Product[]>([]);
   const [isAppending, setIsAppending] = useState(false);
-  const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<Product[]>([]);
+  const [categoryVisibleProducts, setCategoryVisibleProducts] = useState<
+    Product[]
+  >([]);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
   const recycleObserverActive = useRef(false);
 
@@ -286,7 +308,8 @@ function HomeContent({
       if (blockInfiniteLoadRef.current || refreshing || isRefetching) return;
       fetchNextPage();
     },
-    disabled: categoryFilterActive || !hasNextPage || refreshing || isRefetching,
+    disabled:
+      categoryFilterActive || !hasNextPage || refreshing || isRefetching,
     rootMargin: "300px 0px",
   });
 
@@ -405,8 +428,8 @@ function HomeContent({
                         ref={
                           index === visibleProducts.length - 1
                             ? // When API still has pages: useInfiniteScroll owns the ref
-                            // When exhausted or in category mode: our recycle observer owns it
-                            !categoryFilterActive && hasNextPage
+                              // When exhausted or in category mode: our recycle observer owns it
+                              !categoryFilterActive && hasNextPage
                               ? infiniteRef
                               : lastItemRef
                             : null
