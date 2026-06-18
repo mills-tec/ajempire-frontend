@@ -659,7 +659,8 @@ export default function PWAInstallPrompt({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -72 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className={`fixed top-4 left-2 right-2 z-50 ${className}`}
+          className={`fixed top-4 left-2 right-2  ${className}`}
+          style={{zIndex: 100}}
         >
           <div className="backdrop-blur-md bg-white/95 shadow-xl rounded-2xl px-4 py-3 border border-white/40">
             {/* Main row */}

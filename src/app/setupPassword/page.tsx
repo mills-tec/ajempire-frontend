@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
-import Image from 'next/image';
 import { updateAdminSecuritySettings } from '@/lib/adminapi';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const SetupPasswordContent = () => {
   const router = useRouter();
@@ -52,10 +52,11 @@ const SetupPasswordContent = () => {
       // Ensure the token is set in localStorage before calling the API
       localStorage.setItem('adminToken', token);
 
+      // cast to any because AdminSecuritySettings type may differ across backend API defs
       const response = await updateAdminSecuritySettings({
         password,
         confirmPassword
-      });
+      } as any);
 
       // API returns status: true or success: true or a message containing successfully
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,6 +169,7 @@ const SetupPasswordContent = () => {
                   Passwords do not match.
                 </p>
               )}
+              
               {confirmPassword && passwordsMatch && isValidPassword && (
                 <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />

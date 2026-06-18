@@ -1,7 +1,7 @@
-import Link from "next/link";
-import Image from "next/image";
 import { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link";
 
 const RecentlyViewedMobile = ({
   products,
