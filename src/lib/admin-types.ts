@@ -440,24 +440,6 @@ export interface SystemNotification {
   sendPush?: boolean;
 }
 
-// Logistics interface
-export interface LogisticsSettings {
-  id: string;
-  mode: 'automatic' | 'manual';
-  automaticProvider?: string; // e.g., 'dhl', 'fedex', 'ups'
-  manualInstructions?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UpdateLogisticsData {
-  mode: 'automatic' | 'manual';
-  automaticProvider?: string;
-  manualInstructions?: string;
-  isActive?: boolean;
-}
-
 // Banner interfaces
 export interface BannerImage {
   url: string;
