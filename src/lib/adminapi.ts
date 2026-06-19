@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = "https://ajempire-backend-production-b8ff.up.railway.app/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 
 // Import all types from the types file
 import {

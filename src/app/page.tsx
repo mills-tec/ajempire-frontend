@@ -42,6 +42,7 @@ const EMPTY_RESPONSE: ProductsResponse = {
 };
 
 export default function Home() {
+  console.log(process.env.NEXT_PUBLIC_BACKEND_URL);
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
 
@@ -125,7 +126,7 @@ function HomeContent({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-}: HomeContentProps) {
+}: HomeContentProps) {  
   const { pull, refreshing } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
@@ -142,17 +143,6 @@ function HomeContent({
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const categoryQuery = useQuery<Product[]>({
-    queryKey: ["home-category-products", selectedCategory?.name],
-    queryFn: () => getProductsByCategory(selectedCategory!.name),
-    enabled: !!selectedCategory && isMounted,
-    retry: false,
-  });
-  const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
-  const isCategoryLoading = categoryQuery.isLoading;
-  const categoryError = categoryQuery.error as Error | null;
-  const hasCategoryError = Boolean(categoryError);
 
   const categoryQuery = useQuery<Product[]>({
     queryKey: ["home-category-products", selectedCategory?.name],

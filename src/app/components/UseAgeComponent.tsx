@@ -1,11 +1,11 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import UserUsageChart from "./UserUsageChart";
+import { getBearerToken } from "@/lib/api";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import ProfileName from "./ui/ProfileName";
 import RecentPurchases from "./ui/RecentPurchases";
 import UsageSkeleton from "./UsageSkeleton";
-import { getBearerToken } from "@/lib/api";
-import axios from "axios";
+import UserUsageChart from "./UserUsageChart";
 interface UsageStats {
   ordersThisMonth: number;
   totalSpentThisMonth: number;
@@ -24,7 +24,7 @@ export const UseAgeComponent = () => {
       const token = getBearerToken();
       try {
         const res = await axios.get(
-          "https://ajempire-backend-production-b8ff.up.railway.app/api/stats",
+          process.env.NEXT_PUBLIC_BACKEND_URL + "/api/stats",
           {
             headers: { Authorization: `Bearer ${token}` },
           },
