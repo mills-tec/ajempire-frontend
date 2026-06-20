@@ -1,6 +1,7 @@
 "use client";
 
 import { BannerImage, getBanner } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,12 +10,8 @@ function BannerSkeleton({ className = "" }: { className?: string }) {
     <div
       className={`relative w-full overflow-hidden rounded-2xl border-2 border-dashed border-pink-200 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 h-[200px] lg:h-[379px] animate-pulse ${className}`}
     >
-      {/* Shimmer sweep — a lighter stripe that rides across */}
       <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-
-      {/* Centre content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 select-none">
-        {/* Picture / image icon */}
         <div className="flex items-center justify-center w-9 h-9 rounded-full bg-pink-100">
           <svg
             className="w-5 h-5 text-pink-400"
@@ -35,8 +32,6 @@ function BannerSkeleton({ className = "" }: { className?: string }) {
         </p>
         <p className="text-[9px] text-pink-300">Your ad will appear here</p>
       </div>
-
-      {/* AD badge — top-right corner */}
       <span className="absolute right-3 top-3 rounded bg-pink-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-500">
         AD
       </span>
@@ -49,19 +44,18 @@ export default function BannerPlaceholder({
 }: {
   className?: string;
 }) {
-  const [images, setImages] = useState<BannerImage[]>([]);
   const [current, setCurrent] = useState(0);
-  const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    getBanner().then((data) => {
-      if (data?.message?.isActive && data.message.images.length > 0) {
-        setImages(data.message.images);
-      }
-      setLoading(false);
-    });
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ["home-banner"],
+    queryFn: () => getBanner(),
+  });
+
+  const images: BannerImage[] =
+    data?.message?.isActive && data.message.images.length > 0
+      ? data.message.images
+      : [];
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -73,21 +67,20 @@ export default function BannerPlaceholder({
     };
   }, [images]);
 
-  if (loading) return <BannerSkeleton className={className} />;
+  if (isLoading) return <BannerSkeleton className={className} />;
   if (images.length === 0) return <BannerSkeleton className={className} />;
 
   const image = images[current];
   const content = (
     <div
-      className={`relative w-full overflow-hidden rounded-2xl h-[220px] lg:h-[379px]     ${className}`}
+      className={`relative w-full overflow-hidden rounded-2xl h-[120px]  lg:h-[379px] ${className}`}
     >
       <Image
         src={image.url}
         alt="Banner"
-        className="w-full h-full object-fill transition-opacity duration-500 "
+        className="w-full lg:h-full object-cover transition-opacity duration-500"
         fill
       />
-
       {images.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
           {images.map((_, i) => (
@@ -97,7 +90,7 @@ export default function BannerPlaceholder({
                 e.preventDefault();
                 setCurrent(i);
               }}
-              className={`w-2 h-2  rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/50"}`}
+              className={`w-2 h-2 rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/50"}`}
             />
           ))}
         </div>
