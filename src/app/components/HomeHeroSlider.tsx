@@ -66,13 +66,13 @@ export default function HomeHeroSlider({
 
   if (loading) {
     return (
-      <div className="w-full h-[220px] lg:h-[379px] bg-gray-200 animate-pulse rounded-xl lg:rounded-3xl" />
+      <div className="w-full h-full lg:h-[379px] bg-gray-200 animate-pulse rounded-xl lg:rounded-3xl" />
     );
   }
 
   return (
     <div
-      className="relative z-0 w-full h-[220px] lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
+      className="relative z-0 w-full h-full lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

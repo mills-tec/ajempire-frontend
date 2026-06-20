@@ -26,21 +26,28 @@ export const viewport = {
 
 export const metadata: Metadata = {
   title: "AJ Empire - Premium Cosmetics & Beauty Products",
-  description: "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials. Quality beauty products with competitive prices, secure payments, and fast worldwide shipping.",
+  description:
+    "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials. Quality beauty products with competitive prices, secure payments, and fast worldwide shipping.",
   manifest: "/manifest.json",
   applicationName: "AJ Empire",
-  keywords: ["cosmetics", "makeup", "beauty products", "eyeshadow", "lipstick", "skincare", "online cosmetics store", "premium beauty", "AJ Empire"],
+  keywords: [
+    "cosmetics",
+    "makeup",
+    "beauty products",
+    "eyeshadow",
+    "lipstick",
+    "skincare",
+    "online cosmetics store",
+    "premium beauty",
+    "AJ Empire",
+  ],
   icons: {
     shortcut: "/favicon.png",
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [
-      { url: "/icon-192.png", sizes: "192x192" },
-      { url: "/icon-512.png", sizes: "512x512" },
-      { url: "/icon-192.png" },
-    ],
+    apple: [{ url: "/icon-180.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
@@ -54,12 +61,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "AJ Empire",
     title: "AJ Empire - Premium Cosmetics & Beauty Products",
-    description: "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials.",
+    description:
+      "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials.",
   },
   twitter: {
     card: "summary",
     title: "AJ Empire - Premium Cosmetics & Beauty Products",
-    description: "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials.",
+    description:
+      "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials.",
   },
 };
 
@@ -84,11 +93,9 @@ export default function RootLayout({
             <CartIconProvider>
               <NetworkStatus />
               {/* Splash Screen - Shows on app load */}
-              <SplashScreenWrapper >
+              <SplashScreenWrapper>
                 {/* App Layout */}
-                <LayoutWrapper>
-                  {children}
-                </LayoutWrapper>
+                <LayoutWrapper>{children}</LayoutWrapper>
               </SplashScreenWrapper>
               {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
               <ModalProvider />
