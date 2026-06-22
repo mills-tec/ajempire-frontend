@@ -1,6 +1,7 @@
 'use client'
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import EmptyTable from '@/components/EmptyTable';
 import { Education } from '@/lib/admin-types';
 import { createEducationWithFiles, deleteEducation, getEducation, updateEducation } from '@/lib/adminapi';
 import { AlertCircle, ChevronLeft, ChevronRight, Edit2, Eye, Filter, Loader2, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
@@ -417,11 +418,12 @@ const ContentManagementPage = () => {
                   </td>
                 </tr>
               ) : content.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-gray-500">
-                    No content found. Click &quot;Add Content; to create your first content item.
-                  </td>
-                </tr>
+                <EmptyTable colSpan={9} tableType='Content' searchTerm={searchTerm} />
+                // <tr>
+                //   <td colSpan={9} className="p-8 text-center text-gray-500">
+                //     No content found. Click &quot;Add Content; to create your first content item.
+                //   </td>
+                // </tr>
               ) : (
                 content.map((item, idx) => (
                   <tr

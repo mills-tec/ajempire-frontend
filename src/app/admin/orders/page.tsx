@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import EmptyTable from '@/components/EmptyTable';
 import { getUserOrders } from '@/lib/adminapi';
-import { useRouter } from 'next/navigation';
 import { filterByPeriod } from '@/lib/dashboard-utils';
+import { ChevronLeft, ChevronRight, Eye, Filter, Search, ShoppingBag } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const OrdersPage = () => {
   const router = useRouter();
@@ -296,6 +297,8 @@ const OrdersPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
+                {filteredOrders.length === 0 && <EmptyTable tableType='Orders' searchTerm={searchTerm} colSpan={8}/> }
+                
                 {filteredOrders.map((order, idx) => (
                   <tr
                     key={idx}

@@ -1,13 +1,13 @@
 'use client';
 
-import { HomeIcon } from '@/components/svgs/HomeIcon'
-import { Bell, LogOut, Menu, Package, RotateCcw, ShoppingBag } from 'lucide-react'
-import React, { useState, useEffect, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
-import { fetchAdminProfile, getUserOrders, getReturns, getProducts } from '@/lib/adminapi'
-import { buildAdminNotifications, AdminNotification } from '@/lib/admin-notifications'
+import { HomeIcon } from '@/components/svgs/HomeIcon';
+import { useAuth } from '@/contexts/AuthContext';
+import { AdminNotification, buildAdminNotifications } from '@/lib/admin-notifications';
+import { fetchAdminProfile, getProducts, getReturns, getUserOrders } from '@/lib/adminapi';
+import { Bell, LogOut, Menu, Package, RotateCcw, ShoppingBag, User } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface HeaderProps {
     onMenuClick?: () => void;
@@ -54,7 +54,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             try {
                 const response = await fetchAdminProfile();
                 const profile = response.data || response.message;
-                if (profile) {
+                if (profile && typeof profile !== 'string') {
                     const role = profile.role || profile.adminRole || user?.role || 'Administrator';
                     setAdminRole(role);
                 }
@@ -274,7 +274,9 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                 </div>
 
                 <div className='hidden sm:flex bg-gray-50 p-1.5 pr-12 rounded-2xl border gap-2 items-center'>
-                    <div className='rounded-full w-10 h-10 bg-black/10' />
+                    <div className='rounded-full w-10 h-10 bg-black/10 flex items-center justify-center text-white' >
+                    <User/>
+                    </div>
                     <div className='flex-col'>
                         <h2 className='font-semibold text-xs'>Administrator</h2>
                         <p className='text-gray-500 text-[10px] capitalize'>{adminRole}</p>

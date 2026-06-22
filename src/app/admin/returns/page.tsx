@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Users, CornerDownRight, Edit2, X } from 'lucide-react';
+import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import EmptyTable from '@/components/EmptyTable';
 import { getAllReturns, getReturnById, updateReturn } from '@/lib/adminapi';
-import { useToast, ToastContainer } from '@/app/components/ui/Toast';
 import { filterByPeriod } from '@/lib/dashboard-utils';
+import { ChevronLeft, ChevronRight, CornerDownRight, Edit2, Eye, Filter, Search, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const ReturnsPage = () => {
   const toast = useToast();
@@ -296,6 +297,9 @@ const ReturnsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
+                {
+                  paginatedReturns.length === 0 && <EmptyTable colSpan={6} searchTerm={searchTerm} tableType='Returns'/>
+                }
                 {paginatedReturns.map((returnItem, idx) => (
                   <tr 
                     key={idx} 

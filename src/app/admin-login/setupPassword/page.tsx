@@ -1,6 +1,6 @@
 'use client'
 
-import { updateAdminSecuritySettings } from '@/lib/adminapi';
+import { setupAdminPassword } from '@/lib/adminapi';
 import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -49,21 +49,20 @@ const SetupPasswordContent = () => {
 
     setLoading(true);
     try {
-      // Ensure the token is set in localStorage before calling the API
-      localStorage.setItem('adminToken', token);
+      // removing adminToken
+      localStorage.removeItem('adminToken');
 
       // cast to any because AdminSecuritySettings type may differ across backend API defs
-      const response = await updateAdminSecuritySettings({
+      const response = await setupAdminPassword({
         password,
-        confirmPassword
-      } as any);
+        token
+      });
 
       // API returns status: true or success: true or a message containing successfully
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (response.success || response.message?.includes('successfully') || (response as any).status === true) {
         toast.success('Password updated successfully! You can now log in.');
         // Clean up the temporary token
-        localStorage.removeItem('adminToken');
         // Redirect to login
         router.push('/admin-login');
       } else {
@@ -81,7 +80,7 @@ const SetupPasswordContent = () => {
     <div className="min-h-screen bg-gray-50/50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-poppins">
       <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
         <Image
-          src="/Asset 36 1.png"
+          src="/favicon.png"
           alt="AJ Empire Logo"
           width={80}
           height={67}
@@ -169,7 +168,7 @@ const SetupPasswordContent = () => {
                   Passwords do not match.
                 </p>
               )}
-              
+
               {confirmPassword && passwordsMatch && isValidPassword && (
                 <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />

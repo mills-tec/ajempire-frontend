@@ -1,5 +1,6 @@
 'use client'
 
+import EmptyTable from '@/components/EmptyTable';
 import { createPromotion, deletePromotion, getAllCategories, getProducts, getPromotions, updatePromotion } from '@/lib/adminapi';
 import { AlertCircle, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Megaphone, Plus, Search, SquarePen, Trash2, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -715,11 +716,8 @@ discountType: 'percent' as 'percent' | 'fixed',
                   </td>
                 </tr>
               ) : filteredPromotions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">
-                    {searchTerm || promotionFilter !== 'all' ? 'No promotions found matching your filters.' : 'No promotions found.'}
-                  </td>
-                </tr>
+                <EmptyTable colSpan={7} searchTerm={searchTerm || (promotionFilter !== 'all' ? promotionFilter : '')} tableType='Promotions'/>
+              
               ) : (
                 filteredPromotions.map((promotion, idx) => (
                   <tr 
