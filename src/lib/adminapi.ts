@@ -396,7 +396,7 @@ export const updateLogisticsShippingAddress = (data: LogisticsPickupAddress): Pr
   });
 
 export const getWalletBalance = (): Promise<ApiResponse<{ currency: string; balance: number }>> => apiCall('/admin/wallet');
-export const fundWallet = (data: { amount: number }): Promise<ApiResponse<{}>> => apiCall('/admin/wallet', {
+export const fundWallet = (data: { amount: number }): Promise<ApiResponse<void>> => apiCall('/admin/wallet', {
   method: 'POST',
   body: JSON.stringify(data),
 });
