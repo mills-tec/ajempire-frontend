@@ -45,13 +45,15 @@ const matchesSelections = (product: Product, selections: SelectedOptions) => {
     return true;
   }
 
-  return combinations.some((combo) =>
-    entries.every(([name, value]) =>
-      combo.options.some(
-        (option) =>
-          optionNameMatches(option.name, name) && option.value === value,
+  return combinations.some(
+    (combo) =>
+      combo.stock > 0 &&
+      entries.every(([name, value]) =>
+        combo.options.some(
+          (option) =>
+            optionNameMatches(option.name, name) && option.value === value,
+        ),
       ),
-    ),
   );
 };
 
