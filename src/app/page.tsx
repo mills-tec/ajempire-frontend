@@ -42,6 +42,7 @@ const EMPTY_RESPONSE: ProductsResponse = {
 };
 
 export default function Home() {
+  console.log(process.env.NEXT_PUBLIC_BACKEND_URL);
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
 
@@ -125,7 +126,7 @@ function HomeContent({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-}: HomeContentProps) {
+}: HomeContentProps) {  
   const { pull, refreshing } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);

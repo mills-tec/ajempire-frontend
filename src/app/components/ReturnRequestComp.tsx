@@ -52,7 +52,7 @@ export default function ReturnRequestComp() {
       console.log(debugFormData);
       const token = getBearerToken();
       const res = axios.post(
-        "https://ajempire-backend-production-b8ff.up.railway.app/api//return",
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/api/return",
         {
           formData,
           headers: {

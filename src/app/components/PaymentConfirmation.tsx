@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import axios from "axios";
-import { toast } from "sonner";
-import Spinner from "../components/Spinner";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
+import axios from "axios";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import Spinner from "../components/Spinner";
 
 export default function PaymentConfirmation() {
   const searchParams = useSearchParams();
@@ -31,7 +31,7 @@ export default function PaymentConfirmation() {
   //     console.log("Verifying payment with reference:", reference);
   //     try {
   //       const response = await axios.post(
-  //         `https://ajempire-backend-production-b8ff.up.railway.app/api/checkout/verify/${reference}`,
+  //         `process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout/verify/${reference}`,
   //         {
   //           paymentMethod: paymentMethod,
   //         },
@@ -51,7 +51,7 @@ export default function PaymentConfirmation() {
   //         const selectedItems = useCartStore.getState().getSelectedItems();
   //         if (selectedItems.length > 0) {
   //           await axios.delete(
-  //             "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
+  //             "process.env.NEXT_PUBLIC_BACKEND_URL/api/cart/",
   //             {
   //               headers: {
   //                 Authorization: `Bearer ${token}`,
@@ -86,7 +86,7 @@ export default function PaymentConfirmation() {
   //         const selectedItems = useCartStore.getState().getSelectedItems();
   //         if (selectedItems.length > 0) {
   //           await axios.delete(
-  //             "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
+  //             "process.env.NEXT_PUBLIC_BACKEND_URL/api/cart/",
   //             {
   //               headers: {
   //                 Authorization: `Bearer ${token}`,
@@ -151,7 +151,7 @@ export default function PaymentConfirmation() {
 
     try {
       const response = await axios.post(
-        `https://ajempire-backend-production-b8ff.up.railway.app/api/checkout/verify`,
+        `process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout/verify`,
         {},
         {
           headers: {

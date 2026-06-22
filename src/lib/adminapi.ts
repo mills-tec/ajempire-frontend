@@ -1,5 +1,5 @@
 // API Base URL
-const API_BASE_URL = "https://ajempire-backend-production-b8ff.up.railway.app/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 
 // Import all types from the types file
 import {
@@ -23,6 +23,7 @@ import {
   FlashSale,
   LoginCredentials,
   LoginResponse,
+  LogisticsPickupAddress,
   LogisticsSettings,
   Order,
   Product,
@@ -67,14 +68,14 @@ const apiCall = async <T>(
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     const data = await response.json();
-    console.log(data);
     if (!response.ok) {
       throw new Error(data.error || data.message || 'API request failed');
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    // console.error('API Error:', error);
+    //  throw new Error(error || data.message || 'API request failed');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -367,6 +368,10 @@ export const updateAdminSecuritySettings = (data: AdminSecuritySettings): Promis
     body: JSON.stringify(data),
   });
 
+export const setupAdminPassword = (data: { token: string, password: string }): Promise<ApiResponse<AdminSecuritySettings>> => apiCall("/admin/setupPassword", {
+  method: "POST",
+  body: JSON.stringify(data)
+})
 export const updateAdminNotificationSettings = (data: AdminNotificationSettings): Promise<ApiResponse<AdminNotificationSettings>> =>
   apiCall('/admin/settings/notifications', {
     method: 'PUT',
@@ -383,6 +388,19 @@ export const updateLogisticsSettings = (data: LogisticsSettings): Promise<ApiRes
     method: 'PATCH',
     body: JSON.stringify(data),
   });
+
+export const updateLogisticsShippingAddress = (data: LogisticsPickupAddress): Promise<ApiResponse<LogisticsPickupAddress>> =>
+  apiCall('/admin/validatePickupAddress', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+export const getWalletBalance = (): Promise<ApiResponse<{ currency: string; balance: number }>> => apiCall('/admin/wallet');
+export const fundWallet = (data: { amount: number }): Promise<ApiResponse<void>> => apiCall('/admin/wallet', {
+  method: 'POST',
+  body: JSON.stringify(data),
+});
+
 
 // Customer Management APIs
 export const getCustomers = (): Promise<ApiResponse<Customer[]>> =>
