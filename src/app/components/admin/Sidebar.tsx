@@ -1,10 +1,9 @@
 'use client'
-import { LayoutDashboard, LogOut, Settings, ShoppingBag, Package, Users, RotateCcw, Truck, FileText, Gift, X, ImagePlay } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { FileText, Gift, ImagePlay, LayoutDashboard, LogOut, Package, RotateCcw, Settings, ShoppingBag, Truck, Users, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
 
 interface SidebarProps {
     onClose?: () => void;

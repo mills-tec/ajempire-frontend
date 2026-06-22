@@ -108,7 +108,7 @@ export default function AdminLogin() {
             }
             <div className="flex flex-col items-center gap-6">
                 <Image
-                    src="/Asset 36 1.png"
+                    src="/favicon.png"
                     alt="Company Logo"
                     width={67}
                     height={56}

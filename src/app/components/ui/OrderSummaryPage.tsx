@@ -1,15 +1,15 @@
 "use client";
+import { globalUrl } from "@/api/api";
 import CheckoutSummeryCard from "@/app/components/CheckoutSummeryCard";
 import GetshippingAddress from "@/app/components/ui/GetshippingAddress";
-import { useEffect, useState } from "react";
+import { useCheckoutStore } from "@/app/context/CheckoutContext";
+import { getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
-import { useCartStore } from "@/lib/stores/cart-store";
-import { getBearerToken } from "@/lib/api";
-import Link from "next/link";
-import { useCheckoutStore } from "@/app/context/CheckoutContext";
-import { globalUrl } from "@/api/api";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +55,7 @@ export default function OrderSummaryPage() {
         }));
 
         await axios.delete(
-          "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
+          process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/cart/",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -66,7 +66,7 @@ export default function OrderSummaryPage() {
         );
 
         await axios.post(
-          "https://ajempire-backend-production-b8ff.up.railway.app/api/cart/",
+          "process.env.NEXT_PUBLIC_BACKEND_URL/api/cart/",
           { items: itemsPayload },
           {
             headers: {
@@ -132,7 +132,7 @@ export default function OrderSummaryPage() {
 
     try {
       const response = await axios.post(
-        "https://ajempire-backend-production-b8ff.up.railway.app/api/checkout",
+        "process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout",
         {
           paymentMethod,
           logistics: isLogisticsMode

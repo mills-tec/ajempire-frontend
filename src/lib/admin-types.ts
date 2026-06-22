@@ -310,6 +310,15 @@ export interface CreateAdminData {
 // FIX: added firstName, phoneNumber, profilePicture as optional alongside
 // the original name/email/phone/avatar so both the API response shape and
 // the local form shape are accepted
+export interface PickupAddress{
+    fullName: string;
+    phone: string;
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  }
 export interface AdminProfile {
   name?: string;
   firstName?: string;
@@ -318,6 +327,9 @@ export interface AdminProfile {
   phoneNumber?: string;
   avatar?: string;
   profilePicture?: string | null;
+  role?: string;
+  adminRole?: string;
+  pickupAddress?: PickupAddress
 }
 
 // ─── AdminSecuritySettings ────────────────────────────────────────────────────
@@ -371,6 +383,9 @@ export interface LogisticsSettings {
   freeShippingThreshold?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+export interface LogisticsPickupAddress {
+  shippingAddress: PickupAddress
 }
 
 export interface UpdateLogisticsData {

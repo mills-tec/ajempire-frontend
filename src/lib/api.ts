@@ -23,9 +23,9 @@ export type Coupon = {
 
 // lib/api.ts
 export const API_URL =
-  "https://ajempire-backend-production-b8ff.up.railway.app/api";
+  process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 export const BASE_URL =
-  "https://ajempire-backend-production-b8ff.up.railway.app";
+  process.env.NEXT_PUBLIC_BACKEND_URL;
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {

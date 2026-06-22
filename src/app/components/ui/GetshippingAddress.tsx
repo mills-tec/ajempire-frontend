@@ -1,9 +1,9 @@
 "use client";
+import { getBearerToken } from "@/lib/api";
+import { useModalStore } from "@/lib/stores/modal-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import ShippingAdressForm from "../ShippingAdressForm";
-import { getBearerToken } from "@/lib/api";
-import { useModalStore } from "@/lib/stores/modal-store";
 
 interface Address {
   fullName: string;
@@ -25,7 +25,7 @@ const GetshippingAddress = () => {
     const token = getBearerToken();
     try {
       const res = await axios.get(
-        "https://ajempire-backend-production-b8ff.up.railway.app/api/shipping-address",
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/api/shipping-address",
         {
           headers: { Authorization: `Bearer ${token}` },
         },

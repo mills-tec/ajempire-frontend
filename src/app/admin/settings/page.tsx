@@ -1,19 +1,23 @@
 'use client'
 
 import ProtectedRoute from '@/components/auth-component/ProtectedRoute';
+import { PickupAddress } from '@/lib/admin-types';
 import {
   addAdmin,
   deleteAdmin,
   fetchAdminProfile,
   fetchPermissions,
+  fundWallet,
   getAllAdmins,
   getLogisticsSettings,
+  getWalletBalance,
   updateAdminNotificationSettings,
   updateAdminProfile,
   updateAdminSecuritySettings,
-  updateLogisticsSettings
+  updateLogisticsSettings,
+  updateLogisticsShippingAddress
 } from '@/lib/adminapi';
-import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
+import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, RefreshCcw, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 // Toast component
@@ -45,7 +49,6 @@ const SettingsPage = () => {
   const [_selectedPeriod, _setSelectedPeriod] = useState('This Week');
   const [selectedTab, setSelectedTab] = useState('profile');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
   // Profile state
   const [profileData, setProfileData] = useState({
     firstName: '',
@@ -98,6 +101,18 @@ const SettingsPage = () => {
   const [logisticsSettings, setLogisticsSettings] = useState({
     logisticsMode: 'auto' as 'auto' | 'manual',
   });
+  const [pickupAddress, setPickUpAddress] = useState<PickupAddress
+  >({
+    fullName: "",
+    phone: "",
+    country: "",
+    postalCode: "",
+    state: "",
+    street: "",
+    city: "",
+  })
+
+
   const [isActive, setIsActive] = useState(() => {
     // Initialize from localStorage
     if (typeof window !== 'undefined') {
@@ -107,7 +122,17 @@ const SettingsPage = () => {
     return true;
   });
   const [logisticsLoading, setLogisticsLoading] = useState(false);
-
+  const [pickupAddressLoading, setPickupAddressLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<{
+    currency: string;
+    balance: number;
+    amount: number;
+  }>({
+    currency: "NGN",
+    balance: 0,
+    amount: 0
+  });
+  const [walletLoadingStates, setWalletLoadingStates] = useState({ get: false, post: false });
   // Toast helper function
   const showToast = (message: string, type: 'success' | 'error' | 'info') => {
     setToast({ message, type });
@@ -134,6 +159,10 @@ const SettingsPage = () => {
           phone: response.data.phone || response.data.phoneNumber || '',
           profilePicture: response.data.profilePicture || response.data.avatar || null
         });
+        if (response.data.pickupAddress) {
+          setPickUpAddress(response.data.pickupAddress)
+        }
+
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -143,6 +172,24 @@ const SettingsPage = () => {
       setProfileLoading(false);
     }
   };
+
+  const fetchWalletBalance = async () => {
+    setWalletLoadingStates(prev => ({ ...prev, get: true }))
+    try {
+      const req = await getWalletBalance();
+      setWalletBalance(prev => ({ ...prev, currency: (req.message as any).currency, balance: (req.message as any).balance, amount: 0 }))
+
+
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      // Show error message to user
+      alert('Failed to load balance data. Please try again.');
+    } finally {
+      setWalletLoadingStates(prev => ({ ...prev, get: false }))
+
+    }
+
+  }
 
   const fetchAdminsData = async () => {
     try {
@@ -201,11 +248,11 @@ const SettingsPage = () => {
   };
 
   const fetchLogisticsData = async () => {
+
     try {
       setLogisticsLoading(true);
       const response = await getLogisticsSettings();
-      console.log("Logistics Response: ", response)
-      
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mode = (response as any).logisticsMode || response.data?.logisticsMode || 'auto';
       setLogisticsSettings({
@@ -244,6 +291,8 @@ const SettingsPage = () => {
         break;
       case 'logistics':
         fetchLogisticsData();
+        fetchWalletBalance();
+
         break;
     }
   }, [selectedTab]);
@@ -828,6 +877,8 @@ const SettingsPage = () => {
   };
 
   const renderLogisticsTab = () => {
+
+
     const handleLogisticsUpdate = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
@@ -847,51 +898,182 @@ const SettingsPage = () => {
       }
     };
 
-    return (
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium text-brand_gray_dark mb-4">Logistics Settings</h3>
-          <p className='text-gray-600'>Manage your shipping and logistics preferences</p>
-        </div>
 
-        <form onSubmit={handleLogisticsUpdate} className="space-y-6">
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-            <div className="space-y-6">
+
+    const handlePickupAddress = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setPickupAddressLoading(true);
+      try {
+        const response = await updateLogisticsShippingAddress({ shippingAddress: pickupAddress });
+        if (response.message || response.data) {
+          showToast('Pickup address updated successfully!', 'success');
+        } else {
+          throw new Error('No success response');
+        }
+      } catch (err) {
+        console.error('Error updating pickup address:', err);
+        showToast('Failed to update pickup address. Please try again.', 'error');
+      } finally {
+        setPickupAddressLoading(false);
+      }
+    }
+
+    const updateInputs = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setPickUpAddress(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleFundWallet = async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      // Open the tab synchronously, right when the user clicks — before any await
+      const newTab = window.open("", "_blank", "noopener,noreferrer");
+
+      setWalletLoadingStates(prev => ({ ...prev, post: true }));
+      try {
+        const response = await fundWallet({ amount: walletBalance.amount });
+
+        if (response.message || response.data) {
+          const paymentUrl = (response.message as any).data.payment_url;
+
+          if (paymentUrl) {
+            if (newTab) {
+              newTab.location.href = paymentUrl;
+            } else {
+              // Popup was blocked — fallback to same-tab redirect
+              window.location.href = paymentUrl;
+            }
+            return;
+          }
+
+          throw new Error(response?.error || "Unable to initialize payment");
+        } else {
+          throw new Error(response.error);
+        }
+      } catch (err) {
+        newTab?.close(); // clean up the blank tab if something failed
+        console.error('Error updating pickup address:', err);
+        showToast(err instanceof Error ? err.message : String(err), "error");
+      } finally {
+        setWalletLoadingStates(prev => ({ ...prev, post: false }));
+      }
+    };
+
+    return (
+      <div className="space-y-6 h-[400px] overflow-auto">
+
+        {walletLoadingStates.get ? <WalletSkeleton /> : <div className="">
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 tracking-tight mb-1.5">
+              Wallet
+            </h3>
+            <p className="text-sm text-gray-500">
+              Fund your wallet to pay for shipping  fees
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200/70 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-6 pb-6 border-b border-gray-100">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Logistics Mode</label>
-                <div className="space-y-3">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="logisticsMode"
-                      value="auto"
-                      checked={logisticsSettings.logisticsMode === 'auto'}
-                      onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
-                      className="mr-3 text-brand_pink focus:ring-brand_pink"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">Automatic</span>
-                      <p className="text-sm text-gray-500">Use integrated shipping providers for automatic order processing</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="logisticsMode"
-                      value="manual"
-                      checked={logisticsSettings.logisticsMode === 'manual'}
-                      onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
-                      className="mr-3 text-brand_pink focus:ring-brand_pink"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">Manual</span>
-                      <p className="text-sm text-gray-500">Handle shipping arrangements manually for each order</p>
-                    </div>
-                  </label>
+                <p className="text-[13px] font-medium text-gray-500 mb-1.5">
+                  Available balance
+                </p>
+                <div className='flex items-center gap-3'>
+                  <p className="text-3xl font-semibold text-gray-900 tracking-tight">
+                    {walletBalance.balance.toLocaleString("en-NG", {
+                      style: "currency",
+                      currency: walletBalance.currency,
+                      maximumFractionDigits: 2,
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+
+                  <RefreshCcw size={16} className='cursor-pointer' onClick={()=>{
+                      fetchWalletBalance();
+                      
+                  }}/>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleFundWallet} className="space-y-4" autoComplete='off'>
+              <div>
+                <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                  Amount
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
+                    ₦
+                  </span>
+                  <input
+                    type="number"
+                    name="amount"
+                    min="0"
+                    value={walletBalance.amount === 0 ? "" : walletBalance.amount}
+                    onChange={(e) => setWalletBalance(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    placeholder="0.00"
+                    className="w-full h-11 pl-7 pr-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                    required
+                  />
                 </div>
               </div>
 
-              {/* {logisticsSettings.logisticsMode === 'auto' && (
+              <button
+                type="submit"
+                disabled={walletLoadingStates.post}
+                className="w-full sm:w-auto px-5 h-11 bg-brand_pink text-white text-sm font-medium rounded-xl shadow-sm hover:bg-brand_pink/90 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-all duration-150"
+              >
+                {walletLoadingStates.post ? "Processing…" : "Fund wallet"}
+              </button>
+            </form>
+          </div>
+        </div>}
+        <hr />
+
+        <div>
+          <div>
+            <h3 className="text-lg font-medium text-brand_gray_dark mb-4">Logistics Settings</h3>
+            <p className='text-gray-600'>Manage your shipping and logistics preferences</p>
+          </div>
+
+          <form onSubmit={handleLogisticsUpdate} className="space-y-6">
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Logistics Mode</label>
+                  <div className="space-y-3">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="logisticsMode"
+                        value="auto"
+                        checked={logisticsSettings.logisticsMode === 'auto'}
+                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        className="mr-3 text-brand_pink focus:ring-brand_pink"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900">Automatic</span>
+                        <p className="text-sm text-gray-500">Use integrated shipping providers for automatic order processing</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="logisticsMode"
+                        value="manual"
+                        checked={logisticsSettings.logisticsMode === 'manual'}
+                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        className="mr-3 text-brand_pink focus:ring-brand_pink"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900">Manual</span>
+                        <p className="text-sm text-gray-500">Handle shipping arrangements manually for each order</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* {logisticsSettings.logisticsMode === 'auto' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Shipping Provider</label>
                   <select
@@ -909,7 +1091,7 @@ const SettingsPage = () => {
                 </div>
               )} */}
 
-              {/* {logisticsSettings.logisticsMode === 'manual' && (
+                {/* {logisticsSettings.logisticsMode === 'manual' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Manual Shipping Instructions</label>
                   <textarea
@@ -923,30 +1105,155 @@ const SettingsPage = () => {
               )} */}
 
 
+              </div>
             </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setLogisticsSettings({
+                    logisticsMode: 'auto',
+                  });
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Reset
+              </button>
+              <button
+                type="submit"
+                disabled={logisticsLoading}
+                className="px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 disabled:opacity-50"
+              >
+                {logisticsLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <hr />
+        <div className="">
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-gray-900 tracking-tight mb-1.5">
+              Pickup Address
+            </h3>
+            <p className="text-sm text-gray-500">
+              Update and manage where your products get picked up
+            </p>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setLogisticsSettings({
-                  logisticsMode: 'auto',
-                });
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              disabled={logisticsLoading}
-              className="px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 disabled:opacity-50"
-            >
-              {logisticsLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+          <form onSubmit={handlePickupAddress} className="space-y-6">
+            <div className="bg-white border border-gray-200/70 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    Full name
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    placeholder="Enter your fullname"
+                    value={pickupAddress.fullName}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={pickupAddress.phone}
+                    onChange={updateInputs}
+                    placeholder="Enter your phone number"
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    Street
+                  </label>
+                  <input
+                    type="text"
+                    name="street"
+                    value={pickupAddress.street}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={pickupAddress.city}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={pickupAddress.state}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    name="country"
+                    value={pickupAddress.country}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
+                    Postal code
+                  </label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    value={pickupAddress.postalCode}
+                    onChange={updateInputs}
+                    className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={pickupAddressLoading}
+                className="px-5 h-11 bg-brand_pink text-white text-sm font-medium rounded-xl shadow-sm hover:bg-brand_pink/90 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 transition-all duration-150"
+              >
+                {pickupAddressLoading ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+
+
       </div>
     );
   };
@@ -1011,4 +1318,36 @@ const SettingsPage = () => {
   );
 };
 
+function WalletSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold text-gray-900 tracking-tight mb-1.5">
+          Wallet
+        </h3>
+        <p className="text-sm text-gray-500">
+          Fund your wallet to pay for shipping fees
+        </p>
+      </div>
+
+      <div className="bg-white border border-gray-200/70 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-6 pb-6 border-b border-gray-100">
+          <div>
+            <div className="h-[13px] w-28 bg-gray-200 rounded mb-2.5" />
+            <div className="h-9 w-40 bg-gray-200 rounded-lg" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="h-[13px] w-16 bg-gray-200 rounded mb-2.5" />
+            <div className="h-11 w-full bg-gray-200 rounded-xl" />
+          </div>
+
+          <div className="h-11 w-full sm:w-32 bg-gray-200 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
 export default SettingsPage;
