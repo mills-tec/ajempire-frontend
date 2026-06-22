@@ -1,4 +1,4 @@
-import Image from "next/image"
+import Image from "next/image";
 type AdminAuthProps = {
     onProceed: () => void;
 }
@@ -8,7 +8,7 @@ export default function AdminAuth({ onProceed }: AdminAuthProps) {
         <div className=" h-[50%] font-poppins bg-white text-center flex flex-col items-center gap-6 p-10 rounded-lg shadow-lg justify-between">
             <div className="flex flex-col items-center gap-6">
                 <Image
-                    src="/Asset 36 1.png"   // path from /public
+                    src="/favicon.png"   // path from /public
                     alt="Company Logo"
                     width={67}
                     height={56}

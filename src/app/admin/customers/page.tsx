@@ -1,6 +1,7 @@
 'use client'
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import EmptyTable from '@/components/EmptyTable';
 import { deleteCustomer, getCustomers, toggleCustomerStatus, updateCustomerStatus } from '@/lib/adminapi';
 import { getPeriodStartDate } from '@/lib/dashboard-utils';
 import { AlertCircle, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Search, Trash2, TrendingUp, UserCheck, Users, UserX, X } from 'lucide-react';
@@ -147,7 +148,7 @@ const CustomersPage = () => {
         if (response.message) {
           const isCurrentlyActive = customerToToggle.user?.active;
           toast.success(`Customer account successfully ${isCurrentlyActive ? 'deactivated' : 'activated'}`);
-          
+
           if (selectedCustomer && (selectedCustomer.user?._id === customerId || selectedCustomer._id === customerId)) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setSelectedCustomer((prev: any) => {
@@ -161,7 +162,7 @@ const CustomersPage = () => {
               };
             });
           }
-          
+
           fetchCustomers(); // Refresh list
         } else {
           toast.error(response.error || 'Failed to update customer status');
@@ -479,23 +480,19 @@ const CustomersPage = () => {
                   </td>
                 </tr>
               ) : filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-500">
-                    {searchTerm ? 'No customers found matching your search.' : 'No customers found.'}
-                  </td>
-                </tr>
+                <EmptyTable tableType='Customers' searchTerm={searchTerm} colSpan={10} />
               ) : (
                 filteredCustomers.map((customer, idx) => (
-                  <tr 
-                    key={customer.user?._id || idx} 
+                  <tr
+                    key={customer.user?._id || idx}
                     onClick={() => handleViewCustomer(customer)}
                     className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
                   >
                     <td className="p-4 text-center">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         onClick={(e) => e.stopPropagation()}
-                        className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer" 
+                        className="rounded-md border-gray-300 text-brand_pink focus:ring-brand_pink w-4 h-4 cursor-pointer"
                       />
                     </td>
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{customer.user?._id || 'N/A'}</td>
@@ -743,9 +740,8 @@ const CustomersPage = () => {
                 onClick={() => {
                   handleToggleStatusClick(selectedCustomer);
                 }}
-                className={`px-4 py-2 text-white rounded-lg font-medium transition-colors ${
-                  selectedCustomer.user?.active ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'
-                }`}
+                className={`px-4 py-2 text-white rounded-lg font-medium transition-colors ${selectedCustomer.user?.active ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'
+                  }`}
               >
                 {selectedCustomer.user?.active ? 'Deactivate Account' : 'Activate Account'}
               </button>
@@ -809,11 +805,10 @@ const CustomersPage = () => {
               <button
                 onClick={confirmToggleStatus}
                 disabled={isTogglingStatus}
-                className={`flex-1 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                  customerToToggle?.user?.active
+                className={`flex-1 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${customerToToggle?.user?.active
                     ? 'bg-red-500 hover:bg-red-600'
                     : 'bg-green-500 hover:bg-green-600'
-                }`}
+                  }`}
               >
                 {isTogglingStatus ? (
                   <>

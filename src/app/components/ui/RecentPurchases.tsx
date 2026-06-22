@@ -12,7 +12,7 @@ interface RecentPurchaseItem {
   qty: number;
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
-  const _url = "https://ajempire-backend-production-b8ff.up.railway.app/api/reorder/";
+  const _url = process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/reorder/";
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {
