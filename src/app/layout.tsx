@@ -1,18 +1,19 @@
-import type { Metadata } from "next";
-import React from "react";
-import { Poppins } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./provider";
-import { Toaster } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import LayoutWrapper from "./components/LayoutWrapper";
-import { CartIconProvider } from "./contextanimation/CartIconContext";
-import ModalProvider from "./components/providers/ModalProvider";
-import NetworkStatus from "./components/NetworkStatus";
 import NotificationWrapper from "@/components/NotificationWrapper";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+import React from "react";
+import { Toaster } from "sonner";
+import LayoutWrapper from "./components/LayoutWrapper";
+import NetworkStatus from "./components/NetworkStatus";
+import ModalProvider from "./components/providers/ModalProvider";
+import { CartIconProvider } from "./contextanimation/CartIconContext";
+import "./globals.css";
+import { Providers } from "./provider";
+export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ["latin"],
