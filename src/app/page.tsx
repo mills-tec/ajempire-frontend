@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import Categories from "@/app/components/ui/Categories";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
@@ -457,6 +456,8 @@ function HomeContent({
               )}
             </div>
           </div>
+
+          <h1>HIIIIIIII</h1>
         </div>
       </PullToRefreshContainer>
       <ScrollToTop />
