@@ -125,7 +125,7 @@ function HomeContent({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-}: HomeContentProps) {  
+}: HomeContentProps) {
   const { pull, refreshing } = usePullToRefresh();
 
   const selectedItem = useCartStore((state) => state.selectedItem);
@@ -457,7 +457,6 @@ function HomeContent({
               )}
             </div>
           </div>
-
         </div>
       </PullToRefreshContainer>
       <ScrollToTop />
