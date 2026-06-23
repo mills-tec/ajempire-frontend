@@ -72,7 +72,7 @@ export default function HomeHeroSlider({
 
   return (
     <div
-      className="relative z-0 w-full h-full lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
+      className="relative z-0 w-full h-[150px] lg:h-[379px] bg-blue-200 overflow-hidden rounded-xl lg:rounded-3xl group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
