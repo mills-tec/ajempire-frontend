@@ -20,6 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const image = product.cover_image || product.images?.[0] || "/icon-512.png";
+    console.log("Product cover img:", product.cover_image);
 
     return {
       title: `${product.name} - AJ Empire`,
