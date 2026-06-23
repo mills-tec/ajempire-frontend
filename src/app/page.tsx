@@ -149,6 +149,7 @@ function HomeContent({
     enabled: !!selectedCategory && isMounted,
     retry: false,
   });
+
   const categoryProducts = categoryQuery.data ?? EMPTY_PRODUCTS;
   const isCategoryLoading = categoryQuery.isLoading;
   const categoryError = categoryQuery.error as Error | null;
@@ -299,7 +300,7 @@ function HomeContent({
     },
     disabled:
       categoryFilterActive || !hasNextPage || refreshing || isRefetching,
-    rootMargin: "300px 0px",
+    rootMargin: "100px 0px",
   });
 
   // ── What to actually render ──────────────────────────────────────────────────

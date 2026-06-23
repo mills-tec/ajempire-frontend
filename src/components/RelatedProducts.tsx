@@ -3,42 +3,70 @@ import BannerPlaceholder from "@/app/components/BannerPlaceholder";
 import { getRelatedProducts } from "@/lib/api";
 import type { Product } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import ProductItem from "./ProductItem";
 import Skeleton from "./Skeleton";
 
-const MAX_ACCUMULATED = 300;
+interface RelatedProductsResponse {
+  products: Product[];
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+const EMPTY_PRODUCTS: Product[] = [];
+const EMPTY_RESPONSE: RelatedProductsResponse = {
+  products: [],
+  nextCursor: undefined,
+  hasMore: false,
+};
 
 export default function RelatedProducts({ category }: { category: string }) {
-  const queryClient = useQueryClient();
-
-  const [cursor, setCursor] = useState("");
-  const [hasNextPage, setHasNextPage] = useState(true);
-  const originalProductsRef = useRef<Product[]>([]);
-  const prevProductCountRef = useRef<number>(0);
-  const recycleObserverActive = useRef(false);
   const blockLoadRef = useRef(false);
+  const recycleObserverActive = useRef(false);
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
+  const scrollRestored = useRef(false);
 
+  const [recycledProducts, setRecycledProducts] = useState<Product[]>([]);
   const [isAppending, setIsAppending] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  // ── Infinite query (same pattern as Home) ────────────────────────────────────
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isFetching,
+  } = useInfiniteQuery<RelatedProductsResponse, Error>({
     queryKey: ["relatedProducts", category],
-    queryFn: () => getRelatedProducts(category, `limit=${ITEMS_TO_APPEND}`),
+    queryFn: ({ pageParam = "" }: { pageParam?: string }) =>
+      getRelatedProducts(
+        category,
+        `limit=${ITEMS_TO_APPEND}&cursor=${pageParam}`
+      ).then((res) => res ?? EMPTY_RESPONSE),
+    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
     enabled: !!category,
+    staleTime: Infinity,
   });
 
-  const products: Product[] = data?.products ?? [];
+  const products = useMemo(
+    () =>
+      data?.pages.flatMap((page) => page.products ?? []) ?? EMPTY_PRODUCTS,
+    [data?.pages]
+  );
+
+  const isRefetching = isFetching && !isFetchingNextPage;
 
   // ── Scroll restoration ───────────────────────────────────────────────────────
-  const scrollRestored = useRef(false);
   useEffect(() => {
     return () => {
       sessionStorage.setItem("related-scroll-y", String(window.scrollY));
     };
   }, []);
+
   useEffect(() => {
     if (isLoading || scrollRestored.current) return;
     const savedY = sessionStorage.getItem("related-scroll-y");
@@ -56,155 +84,121 @@ export default function RelatedProducts({ category }: { category: string }) {
   useEffect(() => {
     const onScrollToTop = () => {
       blockLoadRef.current = true;
-      setTimeout(() => {
-        blockLoadRef.current = false;
-      }, 800);
+      setTimeout(() => (blockLoadRef.current = false), 800);
     };
     window.addEventListener("scroll-to-top-start", onScrollToTop);
     return () =>
       window.removeEventListener("scroll-to-top-start", onScrollToTop);
   }, []);
 
-  // ── Initialize / reset on data change ────────────────────────────────────────
+  // ── Seed recycle list once API is exhausted ──────────────────────────────────
   useEffect(() => {
-    if (!data?.products) return;
-    const currentCount = data.products.length;
-    const prevCount = prevProductCountRef.current;
-
-    if (prevCount === 0) {
-      // First load
-      setCursor(data.nextCursor || "");
-      setHasNextPage(data.hasMore ?? false);
-      originalProductsRef.current = data.products;
-    } else if (prevCount > ITEMS_TO_APPEND && currentCount <= ITEMS_TO_APPEND) {
-      // Cache was replaced by a refresh — reset scroll state
-      setCursor(data.nextCursor ?? "");
-      setHasNextPage(data.hasMore ?? true);
-      originalProductsRef.current = data.products;
-      scrollRestored.current = false;
+    if (!hasNextPage && products.length > 0 && recycledProducts.length === 0) {
+      setRecycledProducts(products);
     }
+  }, [hasNextPage, products, recycledProducts.length]);
 
-    prevProductCountRef.current = currentCount;
-  }, [data?.products?.length]);
+  // ── Recycle-append IntersectionObserver ──────────────────────────────────────
+  useEffect(() => {
+    const shouldObserve = !hasNextPage && recycledProducts.length > 0;
+    if (!shouldObserve || recycleObserverActive.current) return;
 
-  const appendProducts = useCallback((newProducts: Product[]) => {
-    queryClient.setQueryData(
-      ["relatedProducts", category],
-      (
-        oldData:
-          | { products?: Product[]; nextCursor?: string; hasMore?: boolean }
-          | undefined,
-      ) => {
-        if (!oldData) return oldData;
-        const combined = [...(oldData.products ?? []), ...newProducts];
-        const trimmed =
-          combined.length > MAX_ACCUMULATED
-            ? combined.slice(combined.length - MAX_ACCUMULATED)
-            : combined;
-        return {
-          ...oldData,
-          products: trimmed,
-        };
+    const ref = lastItemRef.current;
+    if (!ref) return;
+
+    recycleObserverActive.current = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        recycleObserverActive.current = false;
+
+        if (blockLoadRef.current) return;
+
+        const next = shuffleArray([...recycledProducts]);
+        if (next.length === 0) return;
+
+        setIsAppending(true);
+        setRecycledProducts((prev) => [...prev, ...next]);
+        setTimeout(() => setIsAppending(false), 0);
       },
+      { rootMargin: "300px", threshold: 0 }
     );
-  }, [queryClient, category]);
+    observer.observe(ref);
 
-  // ── Real API pagination ──────────────────────────────────────────────────────
+    return () => {
+      observer.unobserve(ref);
+      recycleObserverActive.current = false;
+    };
+  }, [hasNextPage, recycledProducts]);
+
+  // ── useInfiniteScroll hook — real API pagination ─────────────────────────────
   const [infiniteRef] = useInfiniteScroll({
-    loading: isLoading,
-    hasNextPage,
-    disabled: Boolean(isLoading),
-    onLoadMore: async () => {
-      if (blockLoadRef.current) return;
-      try {
-        const newData = await getRelatedProducts(
-          category,
-          `limit=${ITEMS_TO_APPEND}&cursor=${cursor}`,
-        );
-        appendProducts(newData?.products || []);
-        setCursor(newData?.nextCursor || "");
-        setHasNextPage(newData?.hasMore ?? false);
-      } catch (err) {
-        console.error("Error loading related products:", err);
-      }
+    loading: isFetchingNextPage,
+    hasNextPage: !!hasNextPage,
+    onLoadMore: () => {
+      if (blockLoadRef.current || isRefetching) return;
+      fetchNextPage();
     },
+    disabled: !hasNextPage || isRefetching,
+    rootMargin: "100px 0px",
   });
 
-  // ── Recycle-append when API is exhausted ─────────────────────────────────────
-  // Use a callback ref so we always observe the CURRENT last element
-  const setLastItemRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (hasNextPage || !node || recycleObserverActive.current) return;
-
-      recycleObserverActive.current = true;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (!entry.isIntersecting) return;
-          observer.unobserve(entry.target);
-          recycleObserverActive.current = false;
-
-          if (blockLoadRef.current) return;
-          if (!originalProductsRef.current.length) return;
-
-          const nextBatch = shuffleArray([
-            ...originalProductsRef.current,
-          ]).slice(0, ITEMS_TO_APPEND);
-          if (nextBatch.length === 0) return;
-
-          setIsAppending(true);
-          appendProducts(nextBatch);
-          setTimeout(() => setIsAppending(false), 0);
-        },
-        { rootMargin: "300px", threshold: 0 },
-      );
-      observer.observe(node);
-
-      // Cleanup previous observer on this node when ref changes
-      return () => {
-        observer.unobserve(node);
-        recycleObserverActive.current = false;
-      };
-    },
-    [hasNextPage, appendProducts],
-  );
+  // ── What to render ───────────────────────────────────────────────────────────
+  const visibleProducts = hasNextPage ? products : recycledProducts;
 
   return (
     <div className="space-y-6">
       <BannerPlaceholder />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
-        {products.map((product, index) => (
-          <div
-            key={`${product._id}-${index}`}
-            ref={
-              !hasNextPage && index === products.length - 1
-                ? setLastItemRef
-                : null
-            }
-          >
-            <ProductItem product={product} index={index} />
-          </div>
-        ))}
-
-        {isAppending &&
-          [...Array(ITEMS_TO_APPEND)].map((_, i) => (
-            <Skeleton key={`append-skeleton-${i}`} />
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
+          {[...Array(ITEMS_TO_APPEND)].map((_, i) => (
+            <Skeleton key={`skeleton-${i}`} />
           ))}
+        </div>
+      ) : (
+        <>
+          {visibleProducts.length === 0 && (
+            <p className="text-center text-sm text-gray-500 mt-10">
+              No related products available.
+            </p>
+          )}
 
-        {/* Only show EndlessScrollLoading during real API pagination */}
-        {hasNextPage && (
-          <EndlessScrollLoading
-            infiniteRef={infiniteRef}
-            hasNextPage={hasNextPage}
-          />
-        )}
-      </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6">
+            {visibleProducts.map((product, index) => (
+              <div
+                key={`${product._id}-${index}`}
+                ref={
+                  index === visibleProducts.length - 1
+                    ? hasNextPage
+                      ? infiniteRef
+                      : lastItemRef
+                    : null
+                }
+              >
+                <ProductItem product={product} index={index} />
+              </div>
+            ))}
 
-      {/* Empty state when truly exhausted and nothing to show */}
-      {!isLoading && !hasNextPage && products.length === 0 && (
-        <p className="text-center text-sm text-gray-500 mt-10">
-          No related products available.
-        </p>
+            {isFetchingNextPage &&
+              [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                <Skeleton key={`fetch-skeleton-${i}`} />
+              ))}
+
+            {isAppending &&
+              [...Array(ITEMS_TO_APPEND)].map((_, i) => (
+                <Skeleton key={`append-skeleton-${i}`} />
+              ))}
+          </div>
+
+          {hasNextPage && (
+            <EndlessScrollLoading
+              infiniteRef={infiniteRef}
+              hasNextPage={!!hasNextPage}
+            />
+          )}
+        </>
       )}
     </div>
   );
