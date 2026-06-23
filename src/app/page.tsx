@@ -456,8 +456,6 @@ function HomeContent({
               )}
             </div>
           </div>
-
-          <h1>HIIIIIIII</h1>
         </div>
       </PullToRefreshContainer>
       <ScrollToTop />
