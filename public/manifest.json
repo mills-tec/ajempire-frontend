@@ -3,6 +3,7 @@
   "name": "AJ Empire ",
   "short_name": "AJ Empire",
   "display": "standalone",
+  "start_url": "/",
   "theme_color": "#FF008C",
   "background_color": "#FF008C",
   "description": "Discover premium cosmetics, makeup, and beauty products at AJ Empire. Shop our curated collection of eye-catching eyeshadows, long-lasting lipsticks, and skincare essentials. Quality beauty products with competitive prices, secure payments, and fast shipping.",

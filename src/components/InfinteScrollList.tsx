@@ -1,72 +1,145 @@
-// components/InfiniteScrollList.tsx
 "use client";
 
-import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
-import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import Image from "next/image";
 import {
-    PullToRefreshProvider,
-    usePullToRefresh,
-} from "@/app/components/pull-to-refresh/PullToRefreshProvider";
-import ScrollToTop from "@/app/components/ui/ScrollToTop";
-import EndlessScrollLoading from "@/components/EndlessScrollLoading";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
-import useInfiniteScroll from "react-infinite-scroll-hook";
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface PageResponse<T> {
-  message: {
-    products: T[]; // same key your existing APIs use
-    nextCursor?: string;
-    hasMore: boolean;
-  };
+export interface FeedPage<T> {
+  items: T[];
+  nextCursor: string | null | undefined;
+  hasMore: boolean;
 }
 
-const EMPTY_ITEMS = [] as never[];
-const makeEmptyResponse = <T,>(): PageResponse<T> => ({
-  message: { products: [], nextCursor: undefined, hasMore: false },
-});
-
-interface InfiniteScrollListProps<T> {
-  /** Unique key used for React Query cache — must be different per usage */
-  queryKey: string;
-  /** Base API URL — cursor and limit are appended automatically */
-  apiUrl: string;
-  /** How to fetch a single page. Receives the full query string, returns the page. */
-  fetcher: (query: string) => Promise<PageResponse<T>>;
-  /** Render a single item. Receives the item and its flat list index. */
+export interface InfiniteFeedProps<T> {
+  queryKey: string[];
+  queryFn: (cursor: string) => Promise<FeedPage<T>>;
+  staleTime?: number;
   renderItem: (item: T, index: number) => React.ReactNode;
-  /** Optional skeleton to show while loading. Defaults to built-in <Skeleton /> */
-  renderSkeleton?: () => React.ReactNode;
-  /** Number of skeleton placeholders to show. Defaults to ITEMS_TO_APPEND */
-  skeletonCount?: number;
-  /** Extra className on the grid wrapper */
+  getItemId: (item: T) => string;
+  emptyComponent?: React.ReactNode;
+  errorComponent?: React.ReactNode;
+  skeletonComponent?: React.ReactNode;
+  /** Backward-compatible: accepts ref callback (ignored) or ReactNode */
+  endlessLoaderComponent?:
+    | React.ReactNode
+    | ((ref: (node: HTMLElement | null) => void) => React.ReactNode);
+  className?: string;
   gridClassName?: string;
-  /** Shown when the list is empty and not loading */
-  emptyState?: React.ReactNode;
-  /** Scroll restoration session key — must differ per page that uses this */
-  scrollKey?: string;
+  skeletonCount?: number;
+  maxRecycled?: number;
+  shuffle?: <U>(arr: U[]) => U[];
+  recycleRootMargin?: string;
+  scrollRestorationKey?: string;
+  disabled?: boolean;
+  blockLoadMoreRef?: React.RefObject<boolean>;
+  onRefresh?: () => Promise<void>;
+  children?: React.ReactNode;
+  /** Responsive column map. Must match your gridClassName breakpoints. */
+  columns?: { default: number; sm?: number; md?: number; lg?: number; xl?: number };
+  /** Estimated px height of one grid row. Used for initial virtualizer measurement. */
+  estimatedItemHeight?: number;
+  /** Virtualizer overscan in rows (extra rows rendered above/below viewport). */
+  overscan?: number;
 }
 
-// ── Inner content (needs PullToRefreshProvider above it) ──────────────────────
+// ── Defaults ──────────────────────────────────────────────────────────────────
 
-function InfiniteScrollContent<T>({
+const DEFAULT_SKELETON = (
+  <div className="h-[300px] w-full bg-gray-200 rounded-xl animate-pulse" />
+);
+
+const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+const DEFAULT_COLUMNS: NonNullable<InfiniteFeedProps<any>["columns"]> = {
+  default: 2,
+  sm: 3,
+  md: 4,
+  lg: 5,
+};
+
+// ── Hook: responsive column count ─────────────────────────────────────────────
+
+function useColumnCount(
+  columns: InfiniteFeedProps<any>["columns"]
+): number {
+  const cfg = columns ?? DEFAULT_COLUMNS;
+  const [count, setCount] = useState(cfg.default);
+
+  useEffect(() => {
+    const update = () => {
+      if (typeof window === "undefined") return;
+      let c = cfg.default;
+      if (cfg.xl && window.matchMedia("(min-width: 1280px)").matches) c = cfg.xl;
+      else if (cfg.lg && window.matchMedia("(min-width: 1024px)").matches)
+        c = cfg.lg;
+      else if (cfg.md && window.matchMedia("(min-width: 768px)").matches)
+        c = cfg.md;
+      else if (cfg.sm && window.matchMedia("(min-width: 640px)").matches)
+        c = cfg.sm;
+      setCount(c);
+    };
+    update();
+
+    const mqs = [
+      window.matchMedia("(min-width: 640px)"),
+      window.matchMedia("(min-width: 768px)"),
+      window.matchMedia("(min-width: 1024px)"),
+      window.matchMedia("(min-width: 1280px)"),
+    ];
+    mqs.forEach((mq) => mq.addEventListener("change", update));
+    return () => mqs.forEach((mq) => mq.removeEventListener("change", update));
+  }, [cfg.default, cfg.sm, cfg.md, cfg.lg, cfg.xl]);
+
+  return count;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function InfiniteFeed<T>({
   queryKey,
-  apiUrl,
-  fetcher,
+  queryFn,
+  staleTime = Infinity,
   renderItem,
-  renderSkeleton,
-  skeletonCount = ITEMS_TO_APPEND,
-  gridClassName = "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6",
-  emptyState,
-  scrollKey = "infinite-scroll-y",
-}: InfiniteScrollListProps<T>) {
-  const { pull, refreshing } = usePullToRefresh();
-  const queryClient = useQueryClient();
+  getItemId,
+  emptyComponent,
+  errorComponent,
+  skeletonComponent = DEFAULT_SKELETON,
+  endlessLoaderComponent,
+  className = "",
+  gridClassName = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6",
+  skeletonCount = 10,
+  maxRecycled = 120,
+  shuffle = DEFAULT_SHUFFLE,
+  scrollRestorationKey = "feed-scroll-y",
+  disabled = false,
+  blockLoadMoreRef,
+  onRefresh,
+  children,
+  columns,
+  estimatedItemHeight = 320,
+  overscan = 3,
+}: InfiniteFeedProps<T>) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(columns);
 
-  // ── Infinite query ───────────────────────────────────────────────────────────
+  // ── Infinite Query ─────────────────────────────────────────────────────────
   const {
     data,
     fetchNextPage,
@@ -75,209 +148,316 @@ function InfiniteScrollContent<T>({
     isLoading,
     isFetching,
     refetch,
-  } = useInfiniteQuery<PageResponse<T>, Error>({
-    queryKey: [queryKey],
-    queryFn: ({ pageParam = "" }: { pageParam?: string }) =>
-      fetcher(`limit=${ITEMS_TO_APPEND}&cursor=${pageParam}&url=${apiUrl}`).then(
-        (res) => res ?? makeEmptyResponse<T>()
-      ),
-    getNextPageParam: (lastPage) =>
-      lastPage?.message?.nextCursor ?? undefined,
-    staleTime: Infinity,
+    error,
+  } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>({
+    queryKey,
+    queryFn: ({ pageParam = "" }) => queryFn(pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime,
   });
 
-  const products = useMemo(
-    () =>
-      data?.pages.flatMap((page) => page.message?.products ?? []) ??
-      (EMPTY_ITEMS as T[]),
+  const sourceItems = useMemo<T[]>(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
     [data?.pages]
   );
 
   const isRefetching = isFetching && !isFetchingNextPage;
 
-  // ── Scroll restoration ───────────────────────────────────────────────────────
-  const scrollRestored = useRef(false);
-  useEffect(() => {
-    return () => {
-      sessionStorage.setItem(scrollKey, String(window.scrollY));
-    };
-  }, [scrollKey]);
-
-  useEffect(() => {
-    if (isLoading || scrollRestored.current) return;
-    const savedY = sessionStorage.getItem(scrollKey);
-    if (!savedY) return;
-    scrollRestored.current = true;
-    sessionStorage.removeItem(scrollKey);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, parseInt(savedY, 10));
-      });
-    });
-  }, [isLoading, scrollKey]);
-
-  // ── Block infinite scroll during scroll-to-top ───────────────────────────────
-  const blockInfiniteLoadRef = useRef(false);
-  useEffect(() => {
-    const onScrollToTop = () => {
-      blockInfiniteLoadRef.current = true;
-      setTimeout(() => {
-        blockInfiniteLoadRef.current = false;
-      }, 800);
-    };
-    window.addEventListener("scroll-to-top-start", onScrollToTop);
-    return () =>
-      window.removeEventListener("scroll-to-top-start", onScrollToTop);
-  }, []);
-
-  // ── Recycle-append (infinite mirage when API is exhausted) ───────────────────
-  const [recycledProducts, setRecycledProducts] = useState<T[]>([]);
+  // ── Recycle State ──────────────────────────────────────────────────────────
+  const [recycledItems, setRecycledItems] = useState<T[]>([]);
   const [isAppending, setIsAppending] = useState(false);
-  const lastItemRef = useRef<HTMLDivElement | null>(null);
-  const recycleObserverActive = useRef(false);
+  const recycleAppendLock = useRef(false);
 
+  const isRecycleMode = !hasNextPage && sourceItems.length > 0;
+
+  // FIX: Seed recycled pool immediately when API is exhausted.
+  // Use useMemo so visibleData never briefly becomes empty during transition.
+  const visibleData = useMemo(() => {
+    if (!isRecycleMode) return sourceItems;
+    // During the first render after API exhaustion, recycledItems might be empty.
+    // Fall back to sourceItems until recycledItems is seeded.
+    return recycledItems.length > 0 ? recycledItems : sourceItems;
+  }, [isRecycleMode, sourceItems, recycledItems]);
+
+  const rowCount = Math.ceil(visibleData.length / columnCount);
+
+  // Seed recycled pool once API is exhausted
   useEffect(() => {
-    if (!hasNextPage && products.length > 0 && recycledProducts.length === 0) {
-      setRecycledProducts(products);
+    if (isRecycleMode && recycledItems.length === 0 && sourceItems.length > 0) {
+      setRecycledItems([...sourceItems]);
     }
-  }, [hasNextPage, products, recycledProducts.length]);
+  }, [isRecycleMode, sourceItems, recycledItems.length]);
 
-  useEffect(() => {
-    const shouldObserve = !hasNextPage && recycledProducts.length > 0;
-    if (!shouldObserve || recycleObserverActive.current) return;
+  // Reset recycle on explicit refresh
+  const handleRefresh = useCallback(async () => {
+    setRecycledItems([]);
+    await refetch();
+    await onRefresh?.();
+  }, [refetch, onRefresh]);
 
-    const ref = lastItemRef.current;
-    if (!ref) return;
+  // ── Window Virtualizer ─────────────────────────────────────────────────────
+  // FIX #1: Use useWindowVirtualizer instead of useVirtualizer.
+  // useVirtualizer with getScrollElement returning document.documentElement
+  // causes the virtualizer to observe the <html> element with ResizeObserver.
+  // document.documentElement's height is the FULL page height, not viewport.
+  // This breaks viewport calculations, causing only 1-2 rows to render.
+  //
+  // useWindowVirtualizer is designed for window scrolling and uses:
+  // - window.innerHeight for viewport size
+  // - window.scrollY for scroll offset
+  // - observeWindowRect (no ResizeObserver on window)
+  //
+  // FIX #2: Remove custom measureElement.
+  // The default measureElement uses ResizeObserver internally, which:
+  // - Measures each row when it mounts
+  // - Re-measures when row height changes (e.g., images loading)
+  // - Updates virtualizer state automatically
+  // A custom (el) => el.getBoundingClientRect().height only measures once
+  // per render and misses async image load size changes.
+  //
+  // FIX #3: Add scrollMargin.
+  // The virtualizer needs to know the offset of the list from the document top
+  // so it can correctly calculate which rows are in the viewport.
+  //
+  // FIX #4: Add useFlushSync: false for React 19 / Next.js 15 compatibility.
 
-    recycleObserverActive.current = true;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.unobserve(entry.target);
-        recycleObserverActive.current = false;
-
-        const next = shuffleArray([...recycledProducts]);
-        if (next.length === 0) return;
-        setIsAppending(true);
-        setRecycledProducts((prev) => [...prev, ...next]);
-        setTimeout(() => setIsAppending(false), 0);
-      },
-      { rootMargin: "300px", threshold: 0 }
-    );
-    observer.observe(ref);
-
-    return () => {
-      observer.unobserve(ref);
-      recycleObserverActive.current = false;
-    };
-  }, [hasNextPage, recycledProducts]);
-
-  // ── useInfiniteScroll hook ───────────────────────────────────────────────────
-  const [infiniteRef] = useInfiniteScroll({
-    loading: isFetchingNextPage,
-    hasNextPage: !!hasNextPage,
-    onLoadMore: () => {
-      if (blockInfiniteLoadRef.current || refreshing || isRefetching) return;
-      fetchNextPage();
-    },
-    disabled: !hasNextPage || refreshing || isRefetching,
-    rootMargin: "100px 0px",
+  const virtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => estimatedItemHeight,
+    overscan,
+    scrollMargin: parentRef.current?.offsetTop ?? 0,
+    useFlushSync: false,
   });
 
-  // ── Pull to refresh ──────────────────────────────────────────────────────────
-  // (PullToRefreshProvider wires up the gesture; refetch() resets to page 1)
-  // We expose a handleRefresh via the provider's onRefresh prop (see wrapper below)
-  // so nothing extra is needed here — refetch is passed to the outer wrapper.
+  const virtualItems = virtualizer.getVirtualItems();
+  const lastVirtualItem = virtualItems[virtualItems.length - 1];
+  const isNearEnd = lastVirtualItem
+    ? lastVirtualItem.index >= rowCount - Math.max(overscan, 2)
+    : false;
 
-  const visibleProducts = hasNextPage ? products : recycledProducts;
+  // ── API pagination trigger ───────────────────────────────────────────────
+  useEffect(() => {
+    if (isRecycleMode) return;
+    if (!isNearEnd || !hasNextPage || isFetchingNextPage) return;
+    if (disabled) return;
+    if (blockLoadMoreRef?.current) return;
+    fetchNextPage();
+  }, [
+    isRecycleMode,
+    isNearEnd,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    disabled,
+    blockLoadMoreRef,
+  ]);
 
-  const skeletons = Array.from({ length: skeletonCount });
-  const defaultSkeleton = () => (
-    <div className="h-[300px] w-full bg-gray-200 rounded-xl animate-pulse" />
-  );
-  const skeleton = renderSkeleton ?? defaultSkeleton;
+  // ── Recycle append trigger ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isRecycleMode || !isNearEnd || recycleAppendLock.current) return;
+    if (disabled) return;
+    if (blockLoadMoreRef?.current) return;
+    recycleAppendLock.current = true;
 
-  return (
-    <>
-      <PullToRefreshHeader />
-      <PullToRefreshContainer>
-        <div className="w-full">
-          <div className="mt-8">
-            {isLoading ? (
-              <div className={gridClassName}>
-                {skeletons.map((_, i) => (
-                  <div key={`skeleton-${i}`}>{skeleton()}</div>
-                ))}
-              </div>
-            ) : (
-              <>
-                {!isLoading && visibleProducts.length === 0 && (
-                  <div className="col-span-full">
-                    {emptyState ?? (
-                      <p className="text-center text-sm text-gray-500 mt-10">
-                        No items available right now.
-                      </p>
-                    )}
-                  </div>
-                )}
+    setIsAppending(true);
+    startTransition(() => {
+      setRecycledItems((prev) => {
+        if (prev.length >= maxRecycled) return prev;
+        const next = shuffle([...sourceItems]);
+        const combined = [...prev, ...next];
+        return combined.length > maxRecycled
+          ? combined.slice(combined.length - maxRecycled)
+          : combined;
+      });
+    });
 
-                <div className={gridClassName}>
-                  {visibleProducts.map((item, index) => (
-                    <div
-                      key={index}
-                      ref={
-                        index === visibleProducts.length - 1
-                          ? hasNextPage
-                            ? infiniteRef
-                            : lastItemRef
-                          : null
-                      }
-                    >
-                      {renderItem(item, index)}
-                    </div>
-                  ))}
+    const unlock = setTimeout(() => {
+      recycleAppendLock.current = false;
+      setIsAppending(false);
+    }, 250);
+    return () => clearTimeout(unlock);
+  }, [isRecycleMode, isNearEnd, shuffle, sourceItems, maxRecycled, disabled, blockLoadMoreRef]);
 
-                  {isFetchingNextPage &&
-                    skeletons.map((_, i) => (
-                      <div key={`fetch-skeleton-${i}`}>{skeleton()}</div>
-                    ))}
+  // ── Scroll Restoration ──────────────────────────────────────────────────────
+  const scrollRestored = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-                  {isAppending &&
-                    skeletons.map((_, i) => (
-                      <div key={`append-skeleton-${i}`}>{skeleton()}</div>
-                    ))}
-                </div>
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-                {hasNextPage && (
-                  <EndlessScrollLoading
-                    infiniteRef={infiniteRef}
-                    hasNextPage={!!hasNextPage}
-                  />
-                )}
-              </>
-            )}
+  useEffect(() => {
+    if (!scrollRestorationKey) return;
+    return () => {
+      if (typeof window === "undefined") return;
+      sessionStorage.setItem(scrollRestorationKey, String(window.scrollY));
+    };
+  }, [scrollRestorationKey]);
+
+  useEffect(() => {
+    if (!scrollRestorationKey || !isMounted || isLoading || scrollRestored.current) return;
+    if (typeof window === "undefined") return;
+
+    const savedY = sessionStorage.getItem(scrollRestorationKey);
+    if (!savedY) return;
+
+    const y = parseInt(savedY, 10);
+    if (isNaN(y)) {
+      sessionStorage.removeItem(scrollRestorationKey);
+      return;
+    }
+
+    scrollRestored.current = true;
+    sessionStorage.removeItem(scrollRestorationKey);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, y);
+      });
+    });
+  }, [isMounted, isLoading, scrollRestorationKey]);
+
+  // ── Derived State ──────────────────────────────────────────────────────────
+  const isEmpty = !isLoading && visibleData.length === 0 && !error;
+  const hasError = !!error;
+
+  // ── Render Helpers ─────────────────────────────────────────────────────────
+  const renderSkeletons = (prefix: string) =>
+    Array.from({ length: skeletonCount }).map((_, i) => (
+      <div key={`${prefix}-${i}`}>{skeletonComponent}</div>
+    ));
+
+  // ── Loading State ──────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className={className}>
+        {children}
+        <div className={gridClassName}>{renderSkeletons("skeleton")}</div>
+      </div>
+    );
+  }
+
+  // ── Error State ────────────────────────────────────────────────────────────
+  if (hasError) {
+    return (
+      <div className={className}>
+        {children}
+        {errorComponent ?? (
+          <div className="text-center mt-10">
+            <Image
+              src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
+              alt="Error"
+              width={150}
+              height={150}
+              className="mx-auto"
+            />
+            <p className="text-sm text-gray-500 mt-4">Failed to load items.</p>
           </div>
-        </div>
-      </PullToRefreshContainer>
-      <ScrollToTop />
-    </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Empty State ────────────────────────────────────────────────────────────
+  if (isEmpty) {
+    return (
+      <div className={className}>
+        {children}
+        {emptyComponent ?? (
+          <div className="text-center mt-10">
+            <Image
+              src="https://i.pinimg.com/1200x/b4/00/f1/b400f13f56058fc7cd35b778d1953d83.jpg"
+              alt="No results"
+              width={150}
+              height={150}
+              className="mx-auto"
+            />
+            <p className="text-sm text-gray-500 mt-4">No items available.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Main Render (Virtualized) ──────────────────────────────────────────────
+  return (
+    <div ref={parentRef} className={className}>
+      {children}
+
+      <div
+        style={{
+          position: "relative",
+          height: `${virtualizer.getTotalSize()}px`,
+          width: "100%",
+        }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const rowIndex = virtualRow.index;
+          const startIdx = rowIndex * columnCount;
+          const endIdx = Math.min(startIdx + columnCount, visibleData.length);
+          const rowItems = visibleData.slice(startIdx, endIdx);
+
+          return (
+            <div
+              key={virtualRow.key}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
+              className={gridClassName}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
+                minHeight: `${virtualRow.size}px`,
+                willChange: "transform",
+              }}
+            >
+              {rowItems.map((item, colIndex) => {
+                const globalIndex = startIdx + colIndex;
+                return (
+                  <div key={`${getItemId(item)}-${globalIndex}`}>
+                    {renderItem(item, globalIndex)}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Fetch skeletons */}
+      {isFetchingNextPage && (
+        <div className={gridClassName}>{renderSkeletons("fetch")}</div>
+      )}
+
+      {/* Recycle append skeletons */}
+      {isAppending && (
+        <div className={gridClassName}>{renderSkeletons("append")}</div>
+      )}
+
+      {/* Bottom loader — backward compat with function signature */}
+      {hasNextPage &&
+        (typeof endlessLoaderComponent === "function"
+          ? endlessLoaderComponent(() => {})
+          : endlessLoaderComponent)}
+    </div>
   );
 }
 
-// ── Public wrapper (wires pull-to-refresh + exposes the component) ────────────
-
-export default function InfiniteScrollList<T>(
-  props: InfiniteScrollListProps<T>
+// ── Hook Export ──────────────────────────────────────────────────────────────
+export function useInfiniteFeed<T>(
+  options: Omit<
+    InfiniteFeedProps<T>,
+    | "renderItem"
+    | "getItemId"
+    | "className"
+    | "gridClassName"
+    | "children"
+    | "emptyComponent"
+    | "errorComponent"
+    | "skeletonComponent"
+    | "endlessLoaderComponent"
+  >
 ) {
-  const queryClient = useQueryClient();
-
-  const handleRefresh = async () => {
-    await queryClient.resetQueries({ queryKey: [props.queryKey] });
-  };
-
-  return (
-    <PullToRefreshProvider onRefresh={handleRefresh}>
-      <InfiniteScrollContent {...props} />
-    </PullToRefreshProvider>
-  );
+  return options;
 }
