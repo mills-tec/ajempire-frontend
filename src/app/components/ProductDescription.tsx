@@ -219,7 +219,6 @@ export default function ProductDescription({
 
   const formatVariantValue = (value: string) =>
     value.replace(/[_-]+/g, " ").trim();
-  console.log("product: ", product);
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>

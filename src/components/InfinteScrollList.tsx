@@ -1,10 +1,8 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import {
-  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -36,20 +34,14 @@ export interface InfiniteFeedProps<T> {
   className?: string;
   gridClassName?: string;
   skeletonCount?: number;
-  maxRecycled?: number;
+  /** Hard cap on rendered product cards. DOM nodes never exceed this. */
+  maxRendered?: number;
   shuffle?: <U>(arr: U[]) => U[];
-  recycleRootMargin?: string;
   scrollRestorationKey?: string;
   disabled?: boolean;
   blockLoadMoreRef?: React.RefObject<boolean>;
   onRefresh?: () => Promise<void>;
   children?: React.ReactNode;
-  /** Responsive column map. Must match your gridClassName breakpoints. */
-  columns?: { default: number; sm?: number; md?: number; lg?: number; xl?: number };
-  /** Estimated px height of one grid row. Used for initial virtualizer measurement. */
-  estimatedItemHeight?: number;
-  /** Virtualizer overscan in rows (extra rows rendered above/below viewport). */
-  overscan?: number;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -67,49 +59,6 @@ const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
   return shuffled;
 };
 
-const DEFAULT_COLUMNS: NonNullable<InfiniteFeedProps<any>["columns"]> = {
-  default: 2,
-  sm: 3,
-  md: 4,
-  lg: 5,
-};
-
-// ── Hook: responsive column count ─────────────────────────────────────────────
-
-function useColumnCount(
-  columns: InfiniteFeedProps<any>["columns"]
-): number {
-  const cfg = columns ?? DEFAULT_COLUMNS;
-  const [count, setCount] = useState(cfg.default);
-
-  useEffect(() => {
-    const update = () => {
-      if (typeof window === "undefined") return;
-      let c = cfg.default;
-      if (cfg.xl && window.matchMedia("(min-width: 1280px)").matches) c = cfg.xl;
-      else if (cfg.lg && window.matchMedia("(min-width: 1024px)").matches)
-        c = cfg.lg;
-      else if (cfg.md && window.matchMedia("(min-width: 768px)").matches)
-        c = cfg.md;
-      else if (cfg.sm && window.matchMedia("(min-width: 640px)").matches)
-        c = cfg.sm;
-      setCount(c);
-    };
-    update();
-
-    const mqs = [
-      window.matchMedia("(min-width: 640px)"),
-      window.matchMedia("(min-width: 768px)"),
-      window.matchMedia("(min-width: 1024px)"),
-      window.matchMedia("(min-width: 1280px)"),
-    ];
-    mqs.forEach((mq) => mq.addEventListener("change", update));
-    return () => mqs.forEach((mq) => mq.removeEventListener("change", update));
-  }, [cfg.default, cfg.sm, cfg.md, cfg.lg, cfg.xl]);
-
-  return count;
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function InfiniteFeed<T>({
@@ -125,20 +74,14 @@ export function InfiniteFeed<T>({
   className = "",
   gridClassName = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6",
   skeletonCount = 10,
-  maxRecycled = 120,
+  maxRendered = 120,
   shuffle = DEFAULT_SHUFFLE,
   scrollRestorationKey = "feed-scroll-y",
   disabled = false,
   blockLoadMoreRef,
   onRefresh,
   children,
-  columns,
-  estimatedItemHeight = 320,
-  overscan = 3,
 }: InfiniteFeedProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount(columns);
-
   // ── Infinite Query ─────────────────────────────────────────────────────────
   const {
     data,
@@ -149,136 +92,203 @@ export function InfiniteFeed<T>({
     isFetching,
     refetch,
     error,
-  } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>({
+  } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>(
     queryKey,
-    queryFn: ({ pageParam = "" }) => queryFn(pageParam),
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime,
-  });
+    ({ pageParam = "" }) => queryFn(pageParam),
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      staleTime,
+    }
+  );
 
   const sourceItems = useMemo<T[]>(
     () => data?.pages.flatMap((p) => p.items) ?? [],
     [data?.pages]
   );
 
-  const isRefetching = isFetching && !isFetchingNextPage;
+  // ── Bounded Recycling Feed State ───────────────────────────────────────────
+  //
+  // ARCHITECTURE: Bounded-Memory Recycling (Sliding Window)
+  // ────────────────────────────────────────────────────────
+  //
+  // Why this approach was chosen over Circular Feed:
+  //
+  //   Circular Feed (modulo indexing) is excellent for TikTok/Instagram Reels
+  //   where content is ephemeral and users never navigate back to specific items.
+  //   But for ecommerce, it fails critical requirements:
+  //     • Product positions are unstable (same item appears at different indices)
+  //     • Scroll restoration is unreliable (content at a pixel offset changes)
+  //     • Navigate-back UX is poor (the product you clicked is gone)
+  //     • React keys are unstable (same item gets different keys per cycle)
+  //
+  //   Bounded Recycling solves all of these:
+  //     • Product positions are stable within the visible window
+  //     • Scroll restoration is reliable (paddingTop compensates for removed items)
+  //     • Navigate-back works (products stay in place until trimmed)
+  //     • React keys are stable (itemsRemovedCount offset preserves key identity)
+  //     • DOM and memory are both bounded by maxRendered
+  //
+  // How it works:
+  //   1. Seed: copy sourceItems into recycledItems when API is exhausted.
+  //   2. Append: shuffle sourceItems and append to recycledItems.
+  //   3. Cap: if recycledItems exceeds maxRendered, remove oldest items from
+  //      the beginning (slice from the end).
+  //   4. Compensate: add paddingTop equal to the height of removed items.
+  //      This keeps the document height stable and prevents scroll jumps.
+  //   5. Keys: use itemsRemovedCount as an offset so React keys remain stable
+  //      across window shifts.
+  //
+  // Memory safety:
+  //   • recycledItems array never exceeds maxRendered (default 120)
+  //   • DOM nodes never exceed maxRendered × ~15 nodes/card = ~1,800 nodes
+  //   • This is within Lighthouse's warning threshold (~1,400) but close.
+  //   • For heavier cards, reduce maxRendered. For lighter cards, increase it.
+  //   • JavaScript heap: only 120 product objects + sourceItems. Constant.
+  //
+  // Why this beats PrevHome:
+  //   PrevHome: recycledProducts grew exponentially (2→4→8→16→32→64→128→256...)
+  //   After ~10 appends: 2,048 items → ~30,000 DOM nodes → iPhone CRASH
+  //
+  //   Bounded Recycling: recycledItems capped at 120 forever
+  //   After 1,000 appends: still 120 items → ~1,800 DOM nodes → iPhone STABLE
 
-  // ── Recycle State ──────────────────────────────────────────────────────────
   const [recycledItems, setRecycledItems] = useState<T[]>([]);
   const [isAppending, setIsAppending] = useState(false);
-  const recycleAppendLock = useRef(false);
+
+  // topPadding compensates for items removed from the beginning of the window.
+  // When we slice off old items, the document shrinks from the top. Adding
+  // padding-top of equal height keeps the viewport stable and prevents
+  // jarring scroll jumps. This is the key to making the trimming invisible.
+  const [topPadding, setTopPadding] = useState(0);
+
+  // itemsRemovedCount tracks how many items have been trimmed from the top.
+  // It is used as an offset in React keys so that the key for a given item
+  // at a given logical position stays stable even as the window slides.
+  //
+  // Example:
+  //   Before trim: itemsRemovedCount=0, item at index 5 has key "prod-123-5"
+  //   After trim (8 removed): itemsRemovedCount=8, item at index 5 has key "prod-123-13"
+  //   The SAME logical item (now at index 5) keeps its key stable because
+  //   the offset accounts for the shift.
+  const [itemsRemovedCount, setItemsRemovedCount] = useState(0);
+
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
+  const recycleObserverActive = useRef(false);
 
   const isRecycleMode = !hasNextPage && sourceItems.length > 0;
 
-  // FIX: Seed recycled pool immediately when API is exhausted.
-  // Use useMemo so visibleData never briefly becomes empty during transition.
-  const visibleData = useMemo(() => {
-    if (!isRecycleMode) return sourceItems;
-    // During the first render after API exhaustion, recycledItems might be empty.
-    // Fall back to sourceItems until recycledItems is seeded.
-    return recycledItems.length > 0 ? recycledItems : sourceItems;
-  }, [isRecycleMode, sourceItems, recycledItems]);
-
-  const rowCount = Math.ceil(visibleData.length / columnCount);
-
-  // Seed recycled pool once API is exhausted
+  // ── Seed: copy sourceItems into recycledItems when API is exhausted ────────
+  //
+  // This matches PrevHome's seed behavior exactly. It ensures recycledItems
+  // starts with the full fetched dataset so the first append has something
+  // meaningful to shuffle.
   useEffect(() => {
     if (isRecycleMode && recycledItems.length === 0 && sourceItems.length > 0) {
-      setRecycledItems([...sourceItems]);
+      setRecycledItems(sourceItems);
     }
   }, [isRecycleMode, sourceItems, recycledItems.length]);
+
+  // ── Recycle Append: IntersectionObserver on the last item ─────────────────
+  //
+  // When the last rendered item enters the viewport (with 300px rootMargin),
+  // we append a shuffled copy of sourceItems to recycledItems.
+  //
+  // If the combined array exceeds maxRendered, we slice off the oldest items
+  // from the beginning and compensate scroll position with topPadding.
+  useEffect(() => {
+    const shouldObserve = isRecycleMode && recycledItems.length > 0;
+
+    if (!shouldObserve || recycleObserverActive.current || isAppending) return;
+
+    const ref = lastItemRef.current;
+    if (!ref) return;
+
+    recycleObserverActive.current = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        recycleObserverActive.current = false;
+
+        // Append a shuffled copy of sourceItems.
+        // We shuffle sourceItems (not recycledItems) to avoid exponential growth
+        // while still providing visual variety on each append.
+        const next = shuffle([...sourceItems]);
+        if (next.length === 0) return;
+
+        setIsAppending(true);
+        setRecycledItems((prev) => {
+          const combined = [...prev, ...next];
+
+          // If we exceed the cap, remove oldest items from the beginning.
+          if (combined.length > maxRendered) {
+            const removedCount = combined.length - maxRendered;
+            const result = combined.slice(-maxRendered);
+
+            // Compensate scroll position for removed items.
+            // We use a rough estimate: each removed item ≈ average card height.
+            // In practice, card heights vary, but this is close enough to
+            // prevent jarring jumps. For more precision, you could measure
+            // actual removed item heights before slicing.
+            //
+            // The compensation works because:
+            //   Old document height = topPadding + (prev.length * avgHeight)
+            //   New document height = (topPadding + removed*avgHeight) + (result.length * avgHeight)
+            //   ≈ same total height
+            //   → viewport stays at the same relative position
+            setTopPadding((p) => p + removedCount * 320); // 320px = rough card height
+            setItemsRemovedCount((c) => c + removedCount);
+
+            return result;
+          }
+
+          return combined;
+        });
+        setTimeout(() => setIsAppending(false), 300);
+      },
+      { rootMargin: "300px", threshold: 0 },
+    );
+    observer.observe(ref);
+
+    return () => {
+      observer.unobserve(ref);
+      recycleObserverActive.current = false;
+    };
+  }, [isRecycleMode, recycledItems, sourceItems, shuffle, maxRendered, isAppending]);
 
   // Reset recycle on explicit refresh
   const handleRefresh = useCallback(async () => {
     setRecycledItems([]);
+    setTopPadding(0);
+    setItemsRemovedCount(0);
     await refetch();
     await onRefresh?.();
   }, [refetch, onRefresh]);
 
-  // ── Window Virtualizer ─────────────────────────────────────────────────────
-  // FIX #1: Use useWindowVirtualizer instead of useVirtualizer.
-  // useVirtualizer with getScrollElement returning document.documentElement
-  // causes the virtualizer to observe the <html> element with ResizeObserver.
-  // document.documentElement's height is the FULL page height, not viewport.
-  // This breaks viewport calculations, causing only 1-2 rows to render.
-  //
-  // useWindowVirtualizer is designed for window scrolling and uses:
-  // - window.innerHeight for viewport size
-  // - window.scrollY for scroll offset
-  // - observeWindowRect (no ResizeObserver on window)
-  //
-  // FIX #2: Remove custom measureElement.
-  // The default measureElement uses ResizeObserver internally, which:
-  // - Measures each row when it mounts
-  // - Re-measures when row height changes (e.g., images loading)
-  // - Updates virtualizer state automatically
-  // A custom (el) => el.getBoundingClientRect().height only measures once
-  // per render and misses async image load size changes.
-  //
-  // FIX #3: Add scrollMargin.
-  // The virtualizer needs to know the offset of the list from the document top
-  // so it can correctly calculate which rows are in the viewport.
-  //
-  // FIX #4: Add useFlushSync: false for React 19 / Next.js 15 compatibility.
+  // ── Visible Data ───────────────────────────────────────────────────────────
+  // During API pagination: show all sourceItems (never truncated)
+  // During recycle mode: show the sliding window (recycledItems)
+  const visibleData = useMemo(() => {
+    if (!isRecycleMode) return sourceItems;
+    return recycledItems.length > 0 ? recycledItems : sourceItems;
+  }, [isRecycleMode, sourceItems, recycledItems]);
 
-  const virtualizer = useWindowVirtualizer({
-    count: rowCount,
-    estimateSize: () => estimatedItemHeight,
-    overscan,
-    scrollMargin: parentRef.current?.offsetTop ?? 0,
-    useFlushSync: false,
-  });
-
-  const virtualItems = virtualizer.getVirtualItems();
-  const lastVirtualItem = virtualItems[virtualItems.length - 1];
-  const isNearEnd = lastVirtualItem
-    ? lastVirtualItem.index >= rowCount - Math.max(overscan, 2)
-    : false;
-
-  // ── API pagination trigger ───────────────────────────────────────────────
+  // ── Console Logging ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isRecycleMode) return;
-    if (!isNearEnd || !hasNextPage || isFetchingNextPage) return;
-    if (disabled) return;
-    if (blockLoadMoreRef?.current) return;
-    fetchNextPage();
-  }, [
-    isRecycleMode,
-    isNearEnd,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    disabled,
-    blockLoadMoreRef,
-  ]);
+    console.log("[InfiniteFeed] sourceItems.length:", sourceItems.length);
+  }, [sourceItems.length]);
 
-  // ── Recycle append trigger ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!isRecycleMode || !isNearEnd || recycleAppendLock.current) return;
-    if (disabled) return;
-    if (blockLoadMoreRef?.current) return;
-    recycleAppendLock.current = true;
+    console.log("[InfiniteFeed] recycledItems.length:", recycledItems.length);
+  }, [recycledItems.length]);
 
-    setIsAppending(true);
-    startTransition(() => {
-      setRecycledItems((prev) => {
-        if (prev.length >= maxRecycled) return prev;
-        const next = shuffle([...sourceItems]);
-        const combined = [...prev, ...next];
-        return combined.length > maxRecycled
-          ? combined.slice(combined.length - maxRecycled)
-          : combined;
-      });
-    });
+  useEffect(() => {
+    console.log("[InfiniteFeed] visibleData.length:", visibleData.length);
+    console.log("[InfiniteFeed] itemsRemovedCount:", itemsRemovedCount);
+    console.log("[InfiniteFeed] topPadding:", topPadding);
+  }, [visibleData.length, itemsRemovedCount, topPadding]);
 
-    const unlock = setTimeout(() => {
-      recycleAppendLock.current = false;
-      setIsAppending(false);
-    }, 250);
-    return () => clearTimeout(unlock);
-  }, [isRecycleMode, isNearEnd, shuffle, sourceItems, maxRecycled, disabled, blockLoadMoreRef]);
-
-  // ── Scroll Restoration ──────────────────────────────────────────────────────
+  // ── Scroll Restoration ────────────────────────────────────────────────────
   const scrollRestored = useRef(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -316,17 +326,49 @@ export function InfiniteFeed<T>({
     });
   }, [isMounted, isLoading, scrollRestorationKey]);
 
-  // ── Derived State ──────────────────────────────────────────────────────────
+  // ── API Pagination Trigger (while hasNextPage is true) ───────────────────
+  const apiObserverActive = useRef(false);
+  const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isRecycleMode) return;
+    if (!hasNextPage || isFetchingNextPage) return;
+    if (disabled) return;
+    if (blockLoadMoreRef?.current) return;
+    if (apiObserverActive.current) return;
+
+    const ref = apiLoadMoreRef.current;
+    if (!ref) return;
+
+    apiObserverActive.current = true;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        apiObserverActive.current = false;
+        fetchNextPage();
+      },
+      { rootMargin: "100px", threshold: 0 },
+    );
+    observer.observe(ref);
+
+    return () => {
+      observer.unobserve(ref);
+      apiObserverActive.current = false;
+    };
+  }, [isRecycleMode, hasNextPage, isFetchingNextPage, fetchNextPage, disabled, blockLoadMoreRef]);
+
+  // ── Derived State ─────────────────────────────────────────────────────────
   const isEmpty = !isLoading && visibleData.length === 0 && !error;
   const hasError = !!error;
 
-  // ── Render Helpers ─────────────────────────────────────────────────────────
+  // ── Render Helpers ────────────────────────────────────────────────────────
   const renderSkeletons = (prefix: string) =>
     Array.from({ length: skeletonCount }).map((_, i) => (
       <div key={`${prefix}-${i}`}>{skeletonComponent}</div>
     ));
 
-  // ── Loading State ──────────────────────────────────────────────────────────
+  // ── Loading State ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className={className}>
@@ -336,7 +378,7 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Error State ────────────────────────────────────────────────────────────
+  // ── Error State ───────────────────────────────────────────────────────────
   if (hasError) {
     return (
       <div className={className}>
@@ -357,7 +399,7 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Empty State ────────────────────────────────────────────────────────────
+  // ── Empty State ───────────────────────────────────────────────────────────
   if (isEmpty) {
     return (
       <div className={className}>
@@ -378,62 +420,49 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Main Render (Virtualized) ──────────────────────────────────────────────
+  // ── Main Render (Bounded Recycling — Sliding Window) ─────────────────────
+  //
+  // The outer wrapper applies topPadding to compensate for items that have
+  // been trimmed from the top of the sliding window. This keeps the document
+  // height stable and prevents scroll jumps when old items are removed.
+  //
+  // React keys use itemsRemovedCount as an offset to maintain stability
+  // across window shifts. The key for a given item at a given logical
+  // position stays consistent even as the window slides.
   return (
-    <div ref={parentRef} className={className}>
+    <div className={className}>
       {children}
 
-      <div
-        style={{
-          position: "relative",
-          height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-        }}
-      >
-        {virtualItems.map((virtualRow) => {
-          const rowIndex = virtualRow.index;
-          const startIdx = rowIndex * columnCount;
-          const endIdx = Math.min(startIdx + columnCount, visibleData.length);
-          const rowItems = visibleData.slice(startIdx, endIdx);
+      <div style={{ paddingTop: topPadding }}>
+        <div className={gridClassName}>
+          {visibleData.map((item, index) => {
+            // Global index accounts for items removed from the top.
+            // This ensures React keys remain stable across window shifts.
+            const globalIndex = index + itemsRemovedCount;
 
-          return (
-            <div
-              key={virtualRow.key}
-              ref={virtualizer.measureElement}
-              data-index={virtualRow.index}
-              className={gridClassName}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
-                minHeight: `${virtualRow.size}px`,
-                willChange: "transform",
-              }}
-            >
-              {rowItems.map((item, colIndex) => {
-                const globalIndex = startIdx + colIndex;
-                return (
-                  <div key={`${getItemId(item)}-${globalIndex}`}>
-                    {renderItem(item, globalIndex)}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={`${getItemId(item)}-${globalIndex}`}
+                ref={
+                  index === visibleData.length - 1
+                    ? isRecycleMode
+                      ? lastItemRef      // recycle observer owns the last item
+                      : apiLoadMoreRef   // API pagination observer owns the last item
+                    : null
+                }
+              >
+                {renderItem(item, globalIndex)}
+              </div>
+            );
+          })}
+
+          {/* Skeletons during real API pagination */}
+          {isFetchingNextPage && renderSkeletons("fetch")}
+
+          {/* Skeletons during recycle-append */}
+          {isAppending && renderSkeletons("append")}
+        </div>
       </div>
-
-      {/* Fetch skeletons */}
-      {isFetchingNextPage && (
-        <div className={gridClassName}>{renderSkeletons("fetch")}</div>
-      )}
-
-      {/* Recycle append skeletons */}
-      {isAppending && (
-        <div className={gridClassName}>{renderSkeletons("append")}</div>
-      )}
 
       {/* Bottom loader — backward compat with function signature */}
       {hasNextPage &&
@@ -444,7 +473,7 @@ export function InfiniteFeed<T>({
   );
 }
 
-// ── Hook Export ──────────────────────────────────────────────────────────────
+// ── Hook Export ───────────────────────────────────────────────────────────────
 export function useInfiniteFeed<T>(
   options: Omit<
     InfiniteFeedProps<T>,

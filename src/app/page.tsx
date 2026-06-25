@@ -47,6 +47,7 @@ const productQueryFn = async (cursor: string) => {
 // which shuffles and re-appends the category products for endless scroll.
 const makeCategoryQueryFn = (categoryName: string) => async (_cursor: string) => {
   const res = await getProductsByCategory(categoryName);
+
   return {
     items: res ?? EMPTY_PRODUCTS,
     nextCursor: null,
@@ -57,10 +58,7 @@ const makeCategoryQueryFn = (categoryName: string) => async (_cursor: string) =>
 // ── Root component ────────────────────────────────────────────────────────────
 
 export default function Home() {
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.log("[dev] BACKEND_URL:", process.env.NEXT_PUBLIC_BACKEND_URL);
-  }
+
 
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
@@ -274,11 +272,9 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
                 <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
               )}
               shuffle={shuffleArray}
-              maxRecycled={300}
               staleTime={Infinity}
               scrollRestorationKey="home-scroll-y"
               gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"
-              overscan={3}
               className="mt-8"
             />
           </div>

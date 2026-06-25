@@ -1,12 +1,12 @@
 "use client";
-import { memo, useCallback, useMemo, useRef } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
-import { getCategories } from "@/lib/api";
-import { Category } from "@/lib/types";
 import ArrowRightIcon from "@/components/svgs/ArrowRightIcon";
+import { getCategories } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
+import { Category } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
+import Link from "next/link";
+import { memo, useCallback, useMemo, useRef } from "react";
 
 interface CategoriesProps {
   cat?: string;
@@ -110,6 +110,7 @@ const Categories = memo(function Categories({
       behavior: "smooth",
     });
   }, []);
+
 
   return (
     <div id="categories-section" className="lg:pt-4">
