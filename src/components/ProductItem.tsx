@@ -1,9 +1,9 @@
+import ProductCard from "@/app/components/ProductCard";
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import ProductCard from "@/app/components/ProductCard";
 import { Product } from "@/lib/types";
 
 export default function ProductItem({ product, index }: { product: Product, index: number }) {

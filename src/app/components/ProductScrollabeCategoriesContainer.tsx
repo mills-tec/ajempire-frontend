@@ -1,6 +1,6 @@
 "use client";
-import React, { useRef, useState } from "react";
 import clsx from "clsx";
+import { useRef, useState } from "react";
 
 export default function ProductScrollabeCategoriesContainer() {
   const filter_categories = [
