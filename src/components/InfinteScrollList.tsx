@@ -308,7 +308,7 @@ export function InfiniteFeed<T>({
     const saved = sessionStorage.getItem(scrollRestorationKey);
     if (!saved) return;
 
-    let { productId, offset } = JSON.parse(saved);
+    const { productId, offset } = JSON.parse(saved);
     sessionStorage.removeItem(scrollRestorationKey);
 
     const el = document.querySelector(`[data-product-id="${productId}"]`);
