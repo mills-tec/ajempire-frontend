@@ -2,6 +2,7 @@
   "id": "/",
   "name": "AJ Empire ",
   "short_name": "AJ Empire",
+  "start_url": "/",
   "display": "standalone",
   "start_url": "/",
   "theme_color": "#FF008C",
@@ -12,7 +13,6 @@
   "lang": "en",
   "dir": "ltr",
   "icons": [
-  
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
