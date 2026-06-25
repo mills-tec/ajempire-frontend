@@ -7,17 +7,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getProductsByCategory } from "@/lib/api";
+import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
+import type { Product } from "@/lib/types";
 import { calcDiscountPrice, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
-import { useParams } from "next/navigation";
-import { useSearchStore } from "@/lib/search-store";
+import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Skeleton from "@/components/Skeleton";
-import type { Product } from "@/lib/types";
 
 const EMPTY: Product[] = [];
 
