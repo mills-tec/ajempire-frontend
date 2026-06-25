@@ -53,7 +53,6 @@ export default function RelatedProducts({ category }: { category: string }) {
           <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
         )}
         shuffle={shuffleArray}
-        maxRecycled={300}
         staleTime={Infinity}
         scrollRestorationKey="related-scroll-y"
         gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"

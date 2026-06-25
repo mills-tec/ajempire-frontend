@@ -56,7 +56,6 @@ export default function ExploreInterest() {
           <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
         )}
         shuffle={shuffleArray}
-        maxRecycled={300}
         staleTime={Infinity}
         scrollRestorationKey="explore-interest-scroll-y"
         gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"
