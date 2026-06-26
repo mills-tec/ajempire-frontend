@@ -1,6 +1,6 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
-import { FileText, Gift, ImagePlay, LayoutDashboard, LogOut, Package, RotateCcw, Settings, ShoppingBag, Truck, Users, X } from 'lucide-react'
+import { FileText, Folder, Gift, ImagePlay, LayoutDashboard, LogOut, Package, RotateCcw, Settings, ShoppingBag, Truck, Users, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -42,6 +42,11 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             href: "/admin/orders",
             icon: <ShoppingBag size={18} color={currentPath("/admin/orders") ? "white" : "black"} />,
             label: "Orders"
+        },
+        {
+            href: "/admin/categories",
+            icon: <Folder size={18} color={currentPath("/admin/categories") ? "white" : "black"} />,
+            label: "Categories"
         },
         {
             href: "/admin/inventory",
