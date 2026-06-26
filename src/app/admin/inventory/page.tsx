@@ -393,6 +393,7 @@ const InventoryPage = () => {
         }
     };
 
+    console.log(filteredProducts);
     return (
         <div className="min-h-screen bg-gray-50/30 font-poppins pr-5 pb-10">
             {!mounted ? (
@@ -575,6 +576,10 @@ const InventoryPage = () => {
                                                             <Eye size={16} />
                                                         </button>
                                                     </div>
+                                                </td>
+
+                                                <td className='p-4'>
+                                                   
                                                 </td>
                                             </tr>
                                         ))}

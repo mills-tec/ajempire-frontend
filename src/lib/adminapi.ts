@@ -129,6 +129,12 @@ export const updateCategory = (id: string, data: UpdateCategoryData): Promise<Ap
     body: JSON.stringify(data),
   });
 
+export const updateCategoryWithFiles = (id: string, data: FormData): Promise<ApiResponse<Category>> =>
+  apiCall(`/admin/category/${id}`, {
+    method: 'PUT',
+    body: data,
+  });
+
 export const deleteCategory = (id: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/category/${id}`, {
     method: 'DELETE',

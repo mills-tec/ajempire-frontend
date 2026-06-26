@@ -11,20 +11,12 @@ import {
   useState,
 } from "react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface FeedPage<T> {
   items: T[];
   nextCursor: string | null | undefined;
   hasMore: boolean;
-}
-
-interface RecycledItem<T> {
-  item: T;
-  /** Permanent unique ID – used as React key; never changes after creation */
-  instanceId: number;
-  /** Permanent creation order – suitable for animations / display index */
-  logicalIndex: number;
 }
 
 export interface InfiniteFeedProps<T> {
@@ -42,7 +34,10 @@ export interface InfiniteFeedProps<T> {
   className?: string;
   gridClassName?: string;
   skeletonCount?: number;
-  /** Hard cap on rendered product cards. DOM nodes never exceed this. */
+  /**
+   * Number of DOM slots in the recycle pool. DOM node count never exceeds this.
+   * Lower = less GPU memory on iOS Safari. 60 covers ~6 mobile screens at 2 cols.
+   */
   maxRendered?: number;
   shuffle?: <U>(arr: U[]) => U[];
   scrollRestorationKey?: string;
@@ -52,40 +47,28 @@ export interface InfiniteFeedProps<T> {
   children?: React.ReactNode;
 }
 
-// ── Defaults & Constants ─────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_SKELETON = (
   <div className="h-[300px] w-full bg-gray-200 rounded-xl animate-pulse" />
 );
 
 const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
-  const shuffled = [...arr];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
   }
-  return shuffled;
+  return out;
 };
 
-const MIN_RECYCLE_BATCH = 20; // always append at least this many items
-const TRIM_HYSTERESIS = 30;   // only trim when length > maxRendered + this
+// Items rotated into the pool on each trigger. Must be ≤ maxRendered / 2
+// so the bottom half of the pool stays visible while the top half is replaced.
+const RECYCLE_BATCH = 20;
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Build a batch of `size` items by repeatedly shuffling copies of `source`. */
-function buildBatch<T>(
-  source: T[],
-  size: number,
-  shuffle: (arr: T[]) => T[]
-): T[] {
-  const batch: T[] = [];
-  while (batch.length < size) {
-    batch.push(...shuffle([...source]));
-  }
-  return batch.slice(0, size);
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export function InfiniteFeed<T>({
   queryKey,
@@ -100,7 +83,7 @@ export function InfiniteFeed<T>({
   className = "",
   gridClassName = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6",
   skeletonCount = 10,
-  maxRendered = 120,
+  maxRendered = 60,
   shuffle = DEFAULT_SHUFFLE,
   scrollRestorationKey = "feed-scroll-y",
   disabled = false,
@@ -108,7 +91,8 @@ export function InfiniteFeed<T>({
   onRefresh,
   children,
 }: InfiniteFeedProps<T>) {
-  // ── Infinite Query ─────────────────────────────────────────────────────────
+
+  // ── Infinite Query ───────────────────────────────────────────────────────────
   const {
     data,
     fetchNextPage,
@@ -131,247 +115,164 @@ export function InfiniteFeed<T>({
     [data?.pages]
   );
 
-  // ── Bounded Recycling State ────────────────────────────────────────────────
-
-  const [recycledItems, setRecycledItems] = useState<RecycledItem<T>[]>([]);
-  const [isAppending, setIsAppending] = useState(false);
-
-  // Permanent counters – never reset during recycle sessions
-  const nextInstanceIdRef = useRef(0);
-  const nextLogicalIndexRef = useRef(0);
-
-  // Map of instanceId → DOM element for sentinel measurement
-  const itemRefs = useRef<Map<number, HTMLElement>>(new Map());
-
-  const lastItemRef = useRef<HTMLDivElement | null>(null);
-  const recycleObserverActive = useRef(false);
-
   const isRecycleMode = !hasNextPage && sourceItems.length > 0;
 
-  // ── Sentinel‑based scroll compensation ─────────────────────────────────────
-  const sentinelBeforeRef = useRef<number | null>(null);
-  const sentinelInstanceIdRef = useRef<number | null>(null);
+  // ── Recycle Pool ─────────────────────────────────────────────────────────────
+  //
+  // Architecture: ring-buffer via slot-based React keys.
+  //
+  // Keys are "slot-0" … "slot-N" (stable per position, not per item).
+  // React reconciles slot-0 → slot-0, updating props in-place instead of
+  // mounting new DOM nodes. This keeps the DOM node count exactly constant.
+  //
+  // On each recycle trigger we drop the first RECYCLE_BATCH items from the
+  // front of the pool and append RECYCLE_BATCH new items from the circular
+  // cursor. DOM nodes at the top of the grid (off-screen, behind the user)
+  // silently receive new content. Scroll position is unaffected because no
+  // DOM node changes its physical position.
+  //
+  // Result: zero new component mounts, zero growing Maps, zero new Image
+  // elements, constant DOM node count, constant memory footprint.
 
-  useLayoutEffect(() => {
-    const sentinelInstanceId = sentinelInstanceIdRef.current;
-    if (sentinelBeforeRef.current !== null && sentinelInstanceId !== null) {
-      const sentinelEl = itemRefs.current.get(sentinelInstanceId);
-      if (sentinelEl) {
-        const sentinelTopAfter = sentinelEl.getBoundingClientRect().top;
-        const delta = sentinelTopAfter - sentinelBeforeRef.current;
-        window.scrollBy(0, delta);
+  const [pool, setPool] = useState<T[]>([]);
+  const [isSeeded, setIsSeeded] = useState(false);
+
+  // Circular read cursor into sourceItems — only pointer arithmetic, no array copy.
+  const sourceCursorRef = useRef(0);
+
+  // Latest values available inside stable callbacks without re-creating them.
+  const sourceItemsRef = useRef(sourceItems);
+  sourceItemsRef.current = sourceItems;
+  const shuffleRef = useRef(shuffle);
+  shuffleRef.current = shuffle;
+  const maxRenderedRef = useRef(maxRendered);
+  maxRenderedRef.current = maxRendered;
+
+  // ── Seed ─────────────────────────────────────────────────────────────────────
+  // Runs once when recycle mode activates. Shuffles source items and fills the
+  // pool up to maxRendered. Cursor starts after the seeded window.
+  useEffect(() => {
+    if (!isRecycleMode || isSeeded) return;
+    const src = sourceItemsRef.current;
+    const cap = Math.min(src.length, maxRenderedRef.current);
+    const shuffled = shuffleRef.current([...src]);
+    sourceCursorRef.current = cap % src.length;
+    setPool(shuffled.slice(0, cap));
+    setIsSeeded(true);
+  }, [isRecycleMode, isSeeded]);
+
+  // ── Append ───────────────────────────────────────────────────────────────────
+  // Stable callback: advances circular cursor, replaces the oldest RECYCLE_BATCH
+  // slots at the top of the pool with new source items.
+  // Cost per call: O(pool.length) for one array copy — bounded and constant.
+  const appendRecycleBatch = useCallback(() => {
+    const src = sourceItemsRef.current;
+    if (!src.length) return;
+    const batchSize = Math.min(RECYCLE_BATCH, maxRenderedRef.current);
+    let cursor = sourceCursorRef.current;
+
+    setPool((prev) => {
+      // Drop oldest batchSize items from top; append new items at bottom.
+      const next = prev.slice(batchSize);
+      for (let i = 0; i < batchSize; i++) {
+        next.push(src[cursor]);
+        cursor = (cursor + 1) % src.length;
       }
-      sentinelBeforeRef.current = null;
-      sentinelInstanceIdRef.current = null;
-    }
-  }, [recycledItems]);
+      sourceCursorRef.current = cursor;
+      return next;
+    });
+  }, []);
 
-  // ── Seed with sourceItems when recycle mode activates ──────────────────────
+  // ── Recycle Observer ─────────────────────────────────────────────────────────
+  // Created ONCE when the pool is seeded. Never recreated on each append because
+  // the last slot's DOM node is stable (same slot-based key = same DOM node).
+  const lastSlotRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    if (isRecycleMode && recycledItems.length === 0 && sourceItems.length > 0) {
-      const seeded = sourceItems.map((item) => ({
-        item,
-        instanceId: nextInstanceIdRef.current++,
-        logicalIndex: nextLogicalIndexRef.current++,
-      }));
-      setRecycledItems(seeded);
-    }
-  }, [isRecycleMode, sourceItems, recycledItems.length]);
+    if (!isRecycleMode || !isSeeded) return;
+    const el = lastSlotRef.current;
+    if (!el) return;
 
-  // ── Recycle Append Observer (early trigger + bulk batches) ─────────────────
-  useEffect(() => {
-    const shouldObserve = isRecycleMode && recycledItems.length > 0;
-    if (!shouldObserve || recycleObserverActive.current || isAppending) return;
-
-    const ref = lastItemRef.current;
-    if (!ref) return;
-
-    recycleObserverActive.current = true;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        observer.unobserve(entry.target);
-        recycleObserverActive.current = false;
-
-        // Build a batch of at least MIN_RECYCLE_BATCH items
-        const batch = buildBatch(sourceItems, MIN_RECYCLE_BATCH, shuffle);
-        const nextBatch = batch.map((item) => ({
-          item,
-          instanceId: nextInstanceIdRef.current++,
-          logicalIndex: nextLogicalIndexRef.current++,
-        }));
-
-        setIsAppending(true);
-
-        // ── Sentinel capture BEFORE state update ─────────────────────────────
-        let sentinelBefore: number | null = null;
-        let sentinelId: number | null = null;
-
-        const newCombined = [...recycledItems, ...nextBatch];
-
-        // Only trim if we exceed maxRendered + hysteresis
-        if (newCombined.length > maxRendered + TRIM_HYSTERESIS) {
-          const removeCount = newCombined.length - maxRendered;
-          const firstRemaining = newCombined[removeCount];
-          sentinelId = firstRemaining.instanceId;
-          const sentinelEl = itemRefs.current.get(sentinelId);
-          if (sentinelEl) {
-            sentinelBefore = sentinelEl.getBoundingClientRect().top;
-          }
-        }
-
-        sentinelBeforeRef.current = sentinelBefore;
-        sentinelInstanceIdRef.current = sentinelId;
-
-        setRecycledItems(
-          newCombined.length > maxRendered + TRIM_HYSTERESIS
-            ? newCombined.slice(-maxRendered)
-            : newCombined
-        );
-
-        setTimeout(() => setIsAppending(false), 300);
+        appendRecycleBatch();
       },
-      {
-        // Fire when last card is 400px away from entering the viewport
-        rootMargin: "400px 0px",
-        threshold: 0,
-      }
+      { rootMargin: "400px 0px", threshold: 0 }
     );
-    observer.observe(ref);
+    observer.observe(el);
+    return () => observer.disconnect();
+    // appendRecycleBatch is stable (no deps). isSeeded only flips true once.
+  }, [isRecycleMode, isSeeded, appendRecycleBatch]);
 
-    return () => {
-      observer.unobserve(ref);
-      recycleObserverActive.current = false;
-    };
-  }, [isRecycleMode, recycledItems, sourceItems, shuffle, maxRendered, isAppending]);
-
-  // ── Explicit refresh ──────────────────────────────────────────────────────
-  const handleRefresh = useCallback(async () => {
-    setRecycledItems([]);
-    sentinelBeforeRef.current = null;
-    sentinelInstanceIdRef.current = null;
-    await refetch();
-    await onRefresh?.();
-  }, [refetch, onRefresh]);
-
-  // ── Visible data ──────────────────────────────────────────────────────────
-  const visibleData = useMemo(() => {
-    if (!isRecycleMode) return sourceItems;
-    return recycledItems.length > 0 ? recycledItems : sourceItems.map((item) => ({
-      item,
-      instanceId: nextInstanceIdRef.current++,
-      logicalIndex: nextLogicalIndexRef.current++,
-    }));
-  }, [isRecycleMode, sourceItems, recycledItems]);
-
-  // ── Scroll Restoration (product‑id based, pre‑paint) ───────────────────────
-  const isMounted = useRef(false);
-  useEffect(() => { isMounted.current = true; }, []);
-
-  // Persist topmost visible product + offset on every scroll
-  useEffect(() => {
-    if (!scrollRestorationKey) return;
-    let timer: NodeJS.Timeout;
-
-    const savePosition = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const cards = document.querySelectorAll("[data-product-id]");
-        for (const card of cards) {
-          const rect = card.getBoundingClientRect();
-          if (rect.bottom > 0) {
-            const productId = card.getAttribute("data-product-id")!;
-            const offset = rect.top;
-            sessionStorage.setItem(
-              scrollRestorationKey,
-              JSON.stringify({ productId, offset })
-            );
-            break;
-          }
-        }
-      }, 200);
-    };
-
-    window.addEventListener("scroll", savePosition, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", savePosition);
-      clearTimeout(timer);
-    };
-  }, [scrollRestorationKey]);
-
-  // Restore scroll before paint using useLayoutEffect
-  const [isLoaded, setIsLoaded] = useState(false);
-  useEffect(() => { setIsLoaded(isMounted.current && !isLoading); }, [isLoading]);
-
-  useLayoutEffect(() => {
-    if (!scrollRestorationKey || !isLoaded) return;
-    const saved = sessionStorage.getItem(scrollRestorationKey);
-    if (!saved) return;
-
-    const { productId, offset } = JSON.parse(saved);
-    sessionStorage.removeItem(scrollRestorationKey);
-
-    const el = document.querySelector(`[data-product-id="${productId}"]`);
-    if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "auto" });
-    } else {
-      // fallback: try again after a short paint (rare edge case)
-      const checkExist = setInterval(() => {
-        const el = document.querySelector(`[data-product-id="${productId}"]`);
-        if (el) {
-          clearInterval(checkExist);
-          const top = el.getBoundingClientRect().top + window.scrollY - offset;
-          window.scrollTo({ top, behavior: "auto" });
-        }
-      }, 50);
-      setTimeout(() => clearInterval(checkExist), 3000);
-    }
-  }, [scrollRestorationKey, isLoaded]);
-
-  // ── API Pagination Trigger (only while API has more pages) ─────────────────
-  const apiObserverActive = useRef(false);
+  // ── API Pagination Observer ──────────────────────────────────────────────────
   const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (isRecycleMode) return;
-    if (!hasNextPage || isFetchingNextPage) return;
-    if (disabled) return;
+    if (isRecycleMode || !hasNextPage || isFetchingNextPage || disabled) return;
     if (blockLoadMoreRef?.current) return;
-    if (apiObserverActive.current) return;
+    const el = apiLoadMoreRef.current;
+    if (!el) return;
 
-    const ref = apiLoadMoreRef.current;
-    if (!ref) return;
-
-    apiObserverActive.current = true;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        observer.unobserve(entry.target);
-        apiObserverActive.current = false;
+        observer.disconnect();
         fetchNextPage();
       },
       { rootMargin: "100px", threshold: 0 }
     );
-    observer.observe(ref);
-
-    return () => {
-      observer.unobserve(ref);
-      apiObserverActive.current = false;
-    };
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [isRecycleMode, hasNextPage, isFetchingNextPage, fetchNextPage, disabled, blockLoadMoreRef]);
 
-  // ── Derived State ─────────────────────────────────────────────────────────
-  const isEmpty = !isLoading && visibleData.length === 0 && !error;
-  const hasError = !!error;
+  // ── Refresh ──────────────────────────────────────────────────────────────────
+  const handleRefresh = useCallback(async () => {
+    setPool([]);
+    setIsSeeded(false);
+    sourceCursorRef.current = 0;
+    await refetch();
+    await onRefresh?.();
+  }, [refetch, onRefresh]);
+  void handleRefresh; // consumed externally via prop if needed
 
-  // ── Render Helpers ────────────────────────────────────────────────────────
+  // ── Scroll Restoration ───────────────────────────────────────────────────────
+  // Save raw scrollY on scroll (rAF-throttled, no DOM queries).
+  // Restore before first paint once data is loaded.
+  useEffect(() => {
+    if (!scrollRestorationKey) return;
+    let raf = 0;
+    const save = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        sessionStorage.setItem(scrollRestorationKey, String(window.scrollY));
+      });
+    };
+    window.addEventListener("scroll", save, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", save);
+      cancelAnimationFrame(raf);
+    };
+  }, [scrollRestorationKey]);
+
+  useLayoutEffect(() => {
+    if (!scrollRestorationKey || isLoading) return;
+    const saved = sessionStorage.getItem(scrollRestorationKey);
+    if (!saved) return;
+    sessionStorage.removeItem(scrollRestorationKey);
+    window.scrollTo({ top: parseFloat(saved), behavior: "auto" });
+  }, [scrollRestorationKey, isLoading]);
+
+  // ── Visible Items ────────────────────────────────────────────────────────────
+  const visibleItems = isRecycleMode ? pool : sourceItems;
+
+  // ── Render Helpers ───────────────────────────────────────────────────────────
   const renderSkeletons = (prefix: string) =>
-    Array.from({ length: skeletonCount }).map((_, i) => (
+    Array.from({ length: skeletonCount }, (_, i) => (
       <div key={`${prefix}-${i}`}>{skeletonComponent}</div>
     ));
 
-  // ── Loading State ─────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className={className}>
@@ -381,8 +282,8 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Error State ───────────────────────────────────────────────────────────
-  if (hasError) {
+  // ── Error ─────────────────────────────────────────────────────────────────────
+  if (error) {
     return (
       <div className={className}>
         {children}
@@ -402,8 +303,8 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Empty State ───────────────────────────────────────────────────────────
-  if (isEmpty) {
+  // ── Empty ─────────────────────────────────────────────────────────────────────
+  if (visibleItems.length === 0) {
     return (
       <div className={className}>
         {children}
@@ -423,48 +324,36 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Main Render ───────────────────────────────────────────────────────────
+  // ── Main Render ───────────────────────────────────────────────────────────────
   return (
     <div className={className}>
       {children}
 
       <div className={gridClassName}>
-        {visibleData.map((ri, index) => {
-          const item = isRecycleMode ? (ri as RecycledItem<T>).item : (ri as T);
-          const instanceId = isRecycleMode ? (ri as RecycledItem<T>).instanceId : undefined;
-          const logicalIndex = isRecycleMode ? (ri as RecycledItem<T>).logicalIndex : index;
-
-          const key = isRecycleMode ? `ri-${instanceId!}` : `api-${getItemId(item)}-${index}`;
+        {visibleItems.map((item, index) => {
+          const isLast = index === visibleItems.length - 1;
 
           return (
             <div
-              key={key}
+              // Slot-based key in recycle mode: React reuses this DOM node instead
+              // of mounting a new one. Prop changes are applied in-place.
+              // API mode: item-based key so React tracks products correctly.
+              key={isRecycleMode ? `slot-${index}` : `api-${getItemId(item)}-${index}`}
               data-product-id={getItemId(item)}
-              ref={(node) => {
-                if (isRecycleMode && instanceId !== undefined) {
-                  if (node) {
-                    itemRefs.current.set(instanceId, node);
-                  } else {
-                    itemRefs.current.delete(instanceId);
-                  }
-                }
-                // Assign the last‑item ref for the appropriate observer
-                if (index === visibleData.length - 1) {
-                  if (isRecycleMode) {
-                    lastItemRef.current = node;
-                  } else {
-                    apiLoadMoreRef.current = node;
-                  }
-                }
-              }}
+              ref={
+                isLast
+                  ? isRecycleMode
+                    ? lastSlotRef
+                    : apiLoadMoreRef
+                  : undefined
+              }
             >
-              {renderItem(item, logicalIndex)}
+              {renderItem(item, index)}
             </div>
           );
         })}
 
         {isFetchingNextPage && renderSkeletons("fetch")}
-        {isAppending && renderSkeletons("append")}
       </div>
 
       {hasNextPage &&
@@ -475,7 +364,7 @@ export function InfiniteFeed<T>({
   );
 }
 
-// ── Hook Export ───────────────────────────────────────────────────────────────
+// ── Hook Export ────────────────────────────────────────────────────────────────
 export function useInfiniteFeed<T>(
   options: Omit<
     InfiniteFeedProps<T>,
