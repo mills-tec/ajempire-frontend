@@ -24,13 +24,16 @@ export interface LoginResponse {
 
 // Review interfaces
 export interface Review {
-  id: string;
-  userId: string;
-  productId: string;
+
+  user: {
+    fullname: string;
+    email: string;
+    _id: string;
+  }
+
   rating: number;
   comment: string;
-  createdAt: string;
-  updatedAt: string;
+
 }
 
 // Category interfaces
@@ -58,18 +61,32 @@ export interface UpdateCategoryData {
 
 // Product interfaces
 export interface Product {
-  id: string;
+  id?: string;
+  _id?: string;
   name: string;
   description: string;
   price: number;
-  categoryId: string;
-  images: string[];
+  categoryId?: string;
+  category?: { _id: string; name: string } | string;
+  images?: string[];
+  cover_image?: string;
   stock: number;
-  weight: number;
-  status: 'active' | 'inactive' | 'draft';
+  weight?: number;
+  sku?: string;
+  barcode?: string;
+  status?: 'active' | 'inactive' | 'draft';
+  productStatus?: string;
+  discountedPrice?: number;
+  averageRating?: number;
+  itemsSold?: number;
+  isFeatured?: boolean;
   isReturnable?: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isTimedSpecialOffer?: boolean;
+  specialOfferDate?: string;
+  specialOfferTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reviews: Review[];
 }
 
 export interface CreateProductData {
@@ -310,15 +327,15 @@ export interface CreateAdminData {
 // FIX: added firstName, phoneNumber, profilePicture as optional alongside
 // the original name/email/phone/avatar so both the API response shape and
 // the local form shape are accepted
-export interface PickupAddress{
-    fullName: string;
-    phone: string;
-    street: string;
-    city: string;
-    state: string;
-    country: string;
-    postalCode: string;
-  }
+export interface PickupAddress {
+  fullName: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
 export interface AdminProfile {
   name?: string;
   firstName?: string;

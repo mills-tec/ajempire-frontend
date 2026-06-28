@@ -34,9 +34,9 @@ const CategoriesPage = () => {
     try {
       setCategoriesLoading(true);
       const response = await getAllCategories();
-
       if (response.message && Array.isArray(response.message)) {
-        setCategories(response.message as unknown as Category[]);
+        console.log();
+        setCategories(response.message.map(item => ({ ...item, id: item._id })) as Category[]);
       } else if (response.data && Array.isArray(response.data)) {
         setCategories(response.data);
       } else if (Array.isArray(response)) {
@@ -205,6 +205,9 @@ const CategoriesPage = () => {
       setLoading(false);
     }
   };
+
+
+  console.log(loading);
 
   return (
     <main className="w-full min-h-screen bg-gray-50/30 font-poppins pr-5 lg:overflow-y-auto">
