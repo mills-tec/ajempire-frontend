@@ -3,7 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 interface InventoryAlertProps {
-    products?: unknown[];
+    products?: { stock: number; name?: string; _id?: string }[];
 }
 
 const InventoryAlert = ({ products = [] }: InventoryAlertProps) => {
