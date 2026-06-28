@@ -1,4 +1,5 @@
 // API Base URL
+//AdminAPI
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 
 // Import all types from the types file
@@ -76,6 +77,7 @@ const apiCall = async <T>(
   } catch (error) {
     // console.error('API Error:', error);
     //  throw new Error(error || data.message || 'API request failed');
+    console.log(error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -93,11 +95,12 @@ export async function adminLogin(credentials: LoginCredentials): Promise<ApiResp
 
 // Review endpoints
 export const getAllReviews = (): Promise<ApiResponse<Review[]>> =>
-  apiCall('/review/');
+  apiCall('/reviews/');
 
-export const deleteReview = (id: string): Promise<ApiResponse<void>> =>
-  apiCall(`/admin/review/${id}`, {
+export const deleteReview = (product: string, user: string): Promise<ApiResponse<void>> =>
+  apiCall(`/admin/reviews/${product}`, {
     method: 'DELETE',
+    body: JSON.stringify({user})
   });
 
 // Category endpoints
@@ -131,7 +134,7 @@ export const updateCategory = (id: string, data: UpdateCategoryData): Promise<Ap
 
 export const updateCategoryWithFiles = (id: string, data: FormData): Promise<ApiResponse<Category>> =>
   apiCall(`/admin/category/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: data,
   });
 

@@ -35,8 +35,10 @@ export interface InfiniteFeedProps<T> {
   gridClassName?: string;
   skeletonCount?: number;
   /**
-   * Number of DOM slots in the recycle pool. DOM node count never exceeds this.
-   * Lower = less GPU memory on iOS Safari. 60 covers ~6 mobile screens at 2 cols.
+   * Maximum number of items kept in the DOM during recycle mode.
+   * When exceeded, the oldest items are trimmed from the top.
+   * CSS Scroll Anchoring keeps the visible viewport stable during trims.
+   * Lower = less memory on iOS Safari. 60 ≈ 6 mobile screens at 2 cols.
    */
   maxRendered?: number;
   shuffle?: <U>(arr: U[]) => U[];
@@ -64,11 +66,41 @@ const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
   return out;
 };
 
-// Items rotated into the pool on each trigger. Must be ≤ maxRendered / 2
-// so the bottom half of the pool stays visible while the top half is replaced.
-const RECYCLE_BATCH = 20;
+// Items appended to the bottom of displayItems on each recycle trigger.
+const APPEND_BATCH = 20;
+
+// ── Internal item shape ────────────────────────────────────────────────────────
+
+interface SlottedItem<T> {
+  item: T;
+  // Globally monotonic key — guarantees React never confuses two different
+  // items even when the same source product recurs in a later loop.
+  key: string;
+}
 
 // ── Component ──────────────────────────────────────────────────────────────────
+//
+// Recycle-mode architecture — sliding window with CSS Scroll Anchoring
+// ────────────────────────────────────────────────────────────────────
+// displayItems is a bounded array that slides forward through an infinite
+// circular source:
+//
+//   1. A sentinel element lives BELOW the grid.
+//   2. When the sentinel enters the viewport (with a 600px rootMargin buffer),
+//      appendBatch() fires:
+//        a. Pulls APPEND_BATCH items from the circular source (mod wrap).
+//        b. Pushes them onto the END of displayItems.
+//        c. If displayItems now exceeds maxRendered, trims the FRONT.
+//   3. CSS Scroll Anchoring (on by default in Chrome 56+, Firefox 66+,
+//      Safari 16+) automatically adjusts scrollTop when items are removed
+//      above the viewport — the visible area never jumps.
+//   4. Each item carries a monotonically increasing key. React treats
+//      append as "create new DOM at bottom" and trim as "destroy old DOM
+//      at top". Browser reclaims image bitmap memory for destroyed nodes.
+//
+// Memory bound: max(maxRendered, source.length) DOM nodes. Constant.
+// No absolute positioning. No measurement. No fixed-height containers.
+// Normal CSS grid layout controlled entirely by gridClassName.
 
 export function InfiniteFeed<T>({
   queryKey,
@@ -117,97 +149,101 @@ export function InfiniteFeed<T>({
 
   const isRecycleMode = !hasNextPage && sourceItems.length > 0;
 
-  // ── Recycle Pool ─────────────────────────────────────────────────────────────
-  //
-  // Architecture: ring-buffer via slot-based React keys.
-  //
-  // Keys are "slot-0" … "slot-N" (stable per position, not per item).
-  // React reconciles slot-0 → slot-0, updating props in-place instead of
-  // mounting new DOM nodes. This keeps the DOM node count exactly constant.
-  //
-  // On each recycle trigger we drop the first RECYCLE_BATCH items from the
-  // front of the pool and append RECYCLE_BATCH new items from the circular
-  // cursor. DOM nodes at the top of the grid (off-screen, behind the user)
-  // silently receive new content. Scroll position is unaffected because no
-  // DOM node changes its physical position.
-  //
-  // Result: zero new component mounts, zero growing Maps, zero new Image
-  // elements, constant DOM node count, constant memory footprint.
-
-  const [pool, setPool] = useState<T[]>([]);
-  const [isSeeded, setIsSeeded] = useState(false);
-
-  // Circular read cursor into sourceItems — only pointer arithmetic, no array copy.
-  const sourceCursorRef = useRef(0);
-
-  // Latest values available inside stable callbacks without re-creating them.
-  const sourceItemsRef = useRef(sourceItems);
-  sourceItemsRef.current = sourceItems;
+  // ── Stable refs ──────────────────────────────────────────────────────────────
   const shuffleRef = useRef(shuffle);
   shuffleRef.current = shuffle;
   const maxRenderedRef = useRef(maxRendered);
   maxRenderedRef.current = maxRendered;
 
+  // ── Recycle state ─────────────────────────────────────────────────────────────
+  const [displayItems, setDisplayItems] = useState<SlottedItem<T>[]>([]);
+  const [isSeeded, setIsSeeded] = useState(false);
+
+  // Circular cursor into the shuffled source array.
+  const cursorRef = useRef(0);
+  // Global counter — appended to keys for permanent uniqueness.
+  const counterRef = useRef(0);
+  // Shuffled snapshot of sourceItems, fixed at seed time.
+  const shuffledSrcRef = useRef<T[]>([]);
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
+
   // ── Seed ─────────────────────────────────────────────────────────────────────
-  // Runs once when recycle mode activates. Shuffles source items and fills the
-  // pool up to maxRendered. Cursor starts after the seeded window.
+  // Fires once when the API has no more pages.
+  // Shuffles source items, fills displayItems up to maxRendered.
   useEffect(() => {
     if (!isRecycleMode || isSeeded) return;
-    const src = sourceItemsRef.current;
-    const cap = Math.min(src.length, maxRenderedRef.current);
-    const shuffled = shuffleRef.current([...src]);
-    sourceCursorRef.current = cap % src.length;
-    setPool(shuffled.slice(0, cap));
+
+    const shuffled = shuffleRef.current([...sourceItems]);
+    shuffledSrcRef.current = shuffled;
+    cursorRef.current = 0;
+    counterRef.current = 0;
+
+    const cap = Math.min(shuffled.length, maxRenderedRef.current);
+    const initial: SlottedItem<T>[] = [];
+    for (let i = 0; i < cap; i++) {
+      initial.push({ item: shuffled[i], key: `feed-${counterRef.current++}` });
+    }
+    cursorRef.current = cap % shuffled.length;
+
+    setDisplayItems(initial);
     setIsSeeded(true);
+  // sourceItems is stable by this point (hasNextPage just became false).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecycleMode, isSeeded]);
 
-  // ── Append ───────────────────────────────────────────────────────────────────
-  // Stable callback: advances circular cursor, replaces the oldest RECYCLE_BATCH
-  // slots at the top of the pool with new source items.
-  // Cost per call: O(pool.length) for one array copy — bounded and constant.
-  const appendRecycleBatch = useCallback(() => {
-    const src = sourceItemsRef.current;
+  // ── Append batch ──────────────────────────────────────────────────────────────
+  // Pulls APPEND_BATCH items from the circular source, pushes them onto the end
+  // of displayItems, then trims the front to stay within maxRendered.
+  //
+  // Front-trimming is safe because CSS Scroll Anchoring compensates scrollTop
+  // automatically — the browser selects a visible element as its anchor point
+  // and preserves its viewport position when content above it is removed.
+  const appendBatch = useCallback(() => {
+    const src = shuffledSrcRef.current;
     if (!src.length) return;
-    const batchSize = Math.min(RECYCLE_BATCH, maxRenderedRef.current);
-    let cursor = sourceCursorRef.current;
 
-    setPool((prev) => {
-      // Drop oldest batchSize items from top; append new items at bottom.
-      const next = prev.slice(batchSize);
-      for (let i = 0; i < batchSize; i++) {
-        next.push(src[cursor]);
-        cursor = (cursor + 1) % src.length;
+    const newItems: SlottedItem<T>[] = [];
+    for (let i = 0; i < APPEND_BATCH; i++) {
+      newItems.push({
+        item: src[cursorRef.current],
+        key: `feed-${counterRef.current++}`,
+      });
+      cursorRef.current = (cursorRef.current + 1) % src.length;
+    }
+
+    setDisplayItems((prev) => {
+      const combined = [...prev, ...newItems];
+      const cap = maxRenderedRef.current;
+      // Keep only the most-recent `cap` items. The front (oldest, above the
+      // viewport) is discarded. Scroll Anchoring keeps the screen stable.
+      if (combined.length > cap) {
+        return combined.slice(combined.length - cap);
       }
-      sourceCursorRef.current = cursor;
-      return next;
+      return combined;
     });
   }, []);
 
-  // ── Recycle Observer ─────────────────────────────────────────────────────────
-  // Created ONCE when the pool is seeded. Never recreated on each append because
-  // the last slot's DOM node is stable (same slot-based key = same DOM node).
-  const lastSlotRef = useRef<HTMLDivElement | null>(null);
-
+  // ── Sentinel observer ─────────────────────────────────────────────────────────
+  // Observes a 1px sentinel placed after the grid. The 600px rootMargin fires
+  // appendBatch while the user is still ~2 screens above the true bottom,
+  // giving React time to commit new items before they scroll into view.
   useEffect(() => {
-    if (!isRecycleMode || !isSeeded) return;
-    const el = lastSlotRef.current;
+    if (!isSeeded) return;
+    const el = sentinelRef.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        appendRecycleBatch();
-      },
-      { rootMargin: "400px 0px", threshold: 0 }
+      ([entry]) => { if (entry.isIntersecting) appendBatch(); },
+      { rootMargin: "600px 0px", threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-    // appendRecycleBatch is stable (no deps). isSeeded only flips true once.
-  }, [isRecycleMode, isSeeded, appendRecycleBatch]);
+    // appendBatch is stable (no deps). isSeeded flips true once and stays.
+  }, [isSeeded, appendBatch]);
 
-  // ── API Pagination Observer ──────────────────────────────────────────────────
-  const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
-
+  // ── API pagination observer ───────────────────────────────────────────────────
   useEffect(() => {
     if (isRecycleMode || !hasNextPage || isFetchingNextPage || disabled) return;
     if (blockLoadMoreRef?.current) return;
@@ -226,19 +262,19 @@ export function InfiniteFeed<T>({
     return () => observer.disconnect();
   }, [isRecycleMode, hasNextPage, isFetchingNextPage, fetchNextPage, disabled, blockLoadMoreRef]);
 
-  // ── Refresh ──────────────────────────────────────────────────────────────────
+  // ── Refresh ───────────────────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
-    setPool([]);
+    setDisplayItems([]);
     setIsSeeded(false);
-    sourceCursorRef.current = 0;
+    cursorRef.current = 0;
+    counterRef.current = 0;
+    shuffledSrcRef.current = [];
     await refetch();
     await onRefresh?.();
   }, [refetch, onRefresh]);
-  void handleRefresh; // consumed externally via prop if needed
+  void handleRefresh;
 
-  // ── Scroll Restoration ───────────────────────────────────────────────────────
-  // Save raw scrollY on scroll (rAF-throttled, no DOM queries).
-  // Restore before first paint once data is loaded.
+  // ── Scroll restoration ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!scrollRestorationKey) return;
     let raf = 0;
@@ -263,10 +299,7 @@ export function InfiniteFeed<T>({
     window.scrollTo({ top: parseFloat(saved), behavior: "auto" });
   }, [scrollRestorationKey, isLoading]);
 
-  // ── Visible Items ────────────────────────────────────────────────────────────
-  const visibleItems = isRecycleMode ? pool : sourceItems;
-
-  // ── Render Helpers ───────────────────────────────────────────────────────────
+  // ── Render helpers ────────────────────────────────────────────────────────────
   const renderSkeletons = (prefix: string) =>
     Array.from({ length: skeletonCount }, (_, i) => (
       <div key={`${prefix}-${i}`}>{skeletonComponent}</div>
@@ -303,8 +336,30 @@ export function InfiniteFeed<T>({
     );
   }
 
+  // ── Recycle mode ──────────────────────────────────────────────────────────────
+  if (isRecycleMode && isSeeded) {
+    return (
+      <div className={className}>
+        {children}
+        <div className={gridClassName}>
+          {displayItems.map(({ item, key }, index) => (
+            <div key={key} data-product-id={getItemId(item)}>
+              {renderItem(item, index)}
+            </div>
+          ))}
+        </div>
+        {/*
+          Sentinel: a 1px element below the grid.
+          IntersectionObserver fires when it comes within 600px of the viewport,
+          triggering appendBatch() before the user actually reaches the bottom.
+        */}
+        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+      </div>
+    );
+  }
+
   // ── Empty ─────────────────────────────────────────────────────────────────────
-  if (visibleItems.length === 0) {
+  if (sourceItems.length === 0) {
     return (
       <div className={className}>
         {children}
@@ -324,35 +379,24 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Main Render ───────────────────────────────────────────────────────────────
+  // ── API pagination mode ───────────────────────────────────────────────────────
   return (
     <div className={className}>
       {children}
 
       <div className={gridClassName}>
-        {visibleItems.map((item, index) => {
-          const isLast = index === visibleItems.length - 1;
-
+        {sourceItems.map((item, index) => {
+          const isLast = index === sourceItems.length - 1;
           return (
             <div
-              // Slot-based key in recycle mode: React reuses this DOM node instead
-              // of mounting a new one. Prop changes are applied in-place.
-              // API mode: item-based key so React tracks products correctly.
-              key={isRecycleMode ? `slot-${index}` : `api-${getItemId(item)}-${index}`}
+              key={`api-${getItemId(item)}-${index}`}
               data-product-id={getItemId(item)}
-              ref={
-                isLast
-                  ? isRecycleMode
-                    ? lastSlotRef
-                    : apiLoadMoreRef
-                  : undefined
-              }
+              ref={isLast ? apiLoadMoreRef : undefined}
             >
               {renderItem(item, index)}
             </div>
           );
         })}
-
         {isFetchingNextPage && renderSkeletons("fetch")}
       </div>
 

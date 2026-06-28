@@ -1,51 +1,159 @@
 "use client";
 
 import { createCategory, createProduct, getAllCategories } from '@/lib/adminapi';
-import { AlertCircle, CheckCircle, Info, Plus, PlusIcon, Trash2, Upload, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Film, Info, Plus, PlusIcon, Trash2, Upload, UploadCloud, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
-// Toast component
-const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
-    const icons = {
-        success: <CheckCircle className="w-5 h-5 text-green-500" />,
-        error: <AlertCircle className="w-5 h-5 text-red-500" />,
-        info: <Info className="w-5 h-5 text-blue-500" />
-    };
+// ─── Toast ────────────────────────────────────────────────────────────────────
 
-    const bgColors = {
-        success: 'bg-green-50 border-green-200',
-        error: 'bg-red-50 border-red-200',
-        info: 'bg-blue-50 border-blue-200'
-    };
+type ToastType = 'success' | 'error' | 'info';
 
-    return (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 p-4 rounded-lg border ${bgColors[type]} shadow-lg max-w-md`}>
-            {icons[type]}
-            <span className="text-sm text-gray-800">{message}</span>
-            <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600">
-                <X className="w-4 h-4" />
-            </button>
-        </div>
-    );
+const TOAST_ICONS: Record<ToastType, React.ReactNode> = {
+    success: <CheckCircle className="w-5 h-5 text-green-500" />,
+    error: <AlertCircle className="w-5 h-5 text-red-500" />,
+    info: <Info className="w-5 h-5 text-blue-500" />,
 };
+
+const TOAST_BG: Record<ToastType, string> = {
+    success: 'bg-green-50 border-green-200',
+    error: 'bg-red-50 border-red-200',
+    info: 'bg-blue-50 border-blue-200',
+};
+
+const Toast = ({ message, type, onClose }: { message: string; type: ToastType; onClose: () => void }) => (
+    <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 p-4 rounded-lg border ${TOAST_BG[type]} shadow-lg max-w-md`}>
+        {TOAST_ICONS[type]}
+        <span className="text-sm text-gray-800">{message}</span>
+        <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600">
+            <X className="w-4 h-4" />
+        </button>
+    </div>
+);
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
+
+const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+    <label className="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" className="sr-only peer" checked={checked} onChange={e => onChange(e.target.checked)} />
+        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600" />
+    </label>
+);
+
+// ─── Section card ─────────────────────────────────────────────────────────────
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        {title && <h2 className="text-sm font-semibold text-gray-900">{title}</h2>}
+        {children}
+    </div>
+);
+
+// ─── Media preview card ───────────────────────────────────────────────────────
+
+interface PreviewCardProps {
+    src: string;
+    name: string;
+    onRemove: () => void;
+}
+
+const PreviewCard = ({ src, name, onRemove }: PreviewCardProps) => (
+    <div className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0">
+        <Image src={src} alt={name} fill className="object-cover" />
+        <button
+            type="button"
+            onClick={onRemove}
+            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            title={`Remove ${name}`}
+        >
+            <X size={16} className="text-white" />
+        </button>
+        <span className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[9px] truncate px-1 py-0.5">
+            {name}
+        </span>
+    </div>
+);
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 const AddProductPage = () => {
     const router = useRouter();
+
+    // ── UI state ──────────────────────────────────────────────────────────────
     const [loading, setLoading] = useState(false);
     const [showVariants, setShowVariants] = useState(false);
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+    // ── Category state ────────────────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [categories, setCategories] = useState<any[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryImage, setNewCategoryImage] = useState<File | null>(null);
     const [newCategoryImagePreview, setNewCategoryImagePreview] = useState('');
-    const [loadingCategories, setLoadingCategories] = useState(true);
     const [creatingCategory, setCreatingCategory] = useState(false);
 
-    // Check authentication on component mount
+    // ── Product fields ────────────────────────────────────────────────────────
+    const [productName, setProductName] = useState('');
+    const [productDescription, setProductDescription] = useState('');
+    const [productCategory, setProductCategory] = useState('');
+    const [productPrice, setProductPrice] = useState('');
+    const [stock, setStock] = useState('');
+    const [weight, setWeight] = useState('');
+    const [sku, setSku] = useState('');
+    const [barcode, setBarcode] = useState('');
+    const [isReturnable, setIsReturnable] = useState(true);
+    const [isTimedSpecialOffer, setIsTimedSpecialOffer] = useState(false);
+    const [specialOfferDate, setSpecialOfferDate] = useState('');
+    const [specialOfferTime, setSpecialOfferTime] = useState('');
+    const [whatsInside, setWhatsInside] = useState(['']);
+
+    // ── Media state ───────────────────────────────────────────────────────────
+    // Cover image
+    const [coverImage, setCoverImage] = useState<File | null>(null);
+    const [coverImagePreview, setCoverImagePreview] = useState('');
+
+    // Additional images — each entry holds the File and its data-URL preview
+    const [additionalImages, setAdditionalImages] = useState<{ file: File; preview: string }[]>([]);
+
+    // Video
+    const [productVideo, setProductVideo] = useState<File | null>(null);
+
+    // ── Variants ──────────────────────────────────────────────────────────────
+    const [variants, setVariants] = useState([
+        { name: 'color', values: [''] },
+        { name: 'size', values: [''] },
+    ]);
+    const [selectedCombinationIndex, setSelectedCombinationIndex] = useState(0);
+    const [variantCombinations, setVariantCombinations] = useState([
+        { options: [{ name: 'color', value: '' }, { name: 'size', value: '' }], stock: 0, additionalPrice: 0 },
+    ]);
+
+    // ── Toast helper ──────────────────────────────────────────────────────────
+    const showToast = useCallback((message: string, type: ToastType) => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    }, []);
+
+    // ── Data fetching ─────────────────────────────────────────────────────────
+    const fetchCategories = useCallback(async () => {
+        try {
+            const response = await getAllCategories();
+            const data = response.data ?? (Array.isArray(response.message) ? response.message : null);
+            if (data) {
+                setCategories(data);
+            } else {
+                showToast('Failed to load categories', 'error');
+            }
+        } catch {
+            showToast('Error loading categories', 'error');
+        } finally {
+            setLoadingCategories(false);
+        }
+    }, [showToast]);
+
     React.useEffect(() => {
         const token = localStorage.getItem('adminToken');
         if (!token) {
@@ -53,1135 +161,593 @@ const AddProductPage = () => {
             router.push('/admin/login');
             return;
         }
-
-        // Fetch categories from database
         fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [fetchCategories, router, showToast]);
 
-    // Fetch categories from database
-    const fetchCategories = async () => {
-        try {
-            const response = await getAllCategories();
-            
-            // Check if categories are in response.message (array) or response.data
-            const categoriesData = Array.isArray(response.message) ? response.message : response.data;
-            
-            if (response.message && categoriesData) {
-                setCategories(categoriesData);
-            } else {
-                console.error('Failed to fetch categories:', response.error);
-                showToast('Failed to load categories', 'error');
-            }
-        } catch (error) {
-            console.error('Error fetching categories:', error);
-            showToast('Error loading categories', 'error');
-        } finally {
-            setLoadingCategories(false);
-        }
-    };
-
-    // Create new category
+    // ── Category creation ─────────────────────────────────────────────────────
     const handleCreateCategory = async () => {
-        if (!newCategoryName.trim()) {
-            showToast('Please enter a category name', 'error');
-            return;
-        }
-
+        if (!newCategoryName.trim()) { showToast('Please enter a category name', 'error'); return; }
         setCreatingCategory(true);
         try {
-            const formData = new FormData();
-            formData.append('name', newCategoryName.trim());
-            
-            if (newCategoryImage) {
-                formData.append('image', newCategoryImage);
-            } else {
-                // If no image provided, use a default
-                formData.append('image', 'default-category.jpg');
-            }
+            const fd = new FormData();
+            fd.append('name', newCategoryName.trim());
+            if (newCategoryImage) fd.append('image', newCategoryImage);
 
-            console.log('Creating category with FormData:');
-            for (const [key, value] of formData.entries()) {
-                console.log(`${key}:`, value);
-            }
-
-            const response = await createCategory(formData);
-            
-            console.log('Category creation response:', response);
-            console.log('Response success:', response.success);
-            console.log('Response data:', response.data);
-            console.log('Response message:', response.message);
-            console.log('Response error:', response.error);
-
-            // Check multiple possible success indicators
-            if (response.success || response.data || response.message) {
+            const response = await createCategory(fd);
+            if (response.success || response.data) {
                 showToast('Category created successfully!', 'success');
-                
-                // Refresh categories list
-                fetchCategories();
-                
-                // Reset form
+                await fetchCategories();
                 setNewCategoryName('');
                 setNewCategoryImage(null);
                 setNewCategoryImagePreview('');
                 setShowCategoryModal(false);
             } else {
-                console.log('Category creation considered failed - no success indicators');
-                showToast(response.error || 'Failed to create category', 'error');
+                showToast(response.error ?? 'Failed to create category', 'error');
             }
-        } catch (error) {
-            console.error('Error creating category:', error);
+        } catch {
             showToast('Error creating category', 'error');
         } finally {
             setCreatingCategory(false);
         }
     };
 
-    // Handle category image change
     const handleCategoryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setNewCategoryImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setNewCategoryImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+        setNewCategoryImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setNewCategoryImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
     };
 
-    // Toast helper function
-    const showToast = (message: string, type: 'success' | 'error' | 'info') => {
-        setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
-    };
-
-    // Basic product information
-    const [productName, setProductName] = useState('');
-    const [productDescription, setProductDescription] = useState('');
-    const [productCategory, setProductCategory] = useState('');
-    const [productPrice, setProductPrice] = useState('');
-    const [stock, setStock] = useState('');
-    const [weight, setWeight] = useState('');
-    const [_productStatus, setProductStatus] = useState('in stock');
-    const [_isFeatured, setIsFeatured] = useState(false);
-    const [sku, setSku] = useState('');
-    const [barcode, setBarcode] = useState('');
-    const [isReturnable, setIsReturnable] = useState(true);
-
-    // Special Offer states
-    const [_isSpecialOffer, setIsSpecialOffer] = useState(false);
-    const [isTimedSpecialOffer, setIsTimedSpecialOffer] = useState(false);
-    const [specialOfferDate, setSpecialOfferDate] = useState<string>('');
-    const [specialOfferTime, setSpecialOfferTime] = useState<string>('');
-
-    // Variations states
-    const [_showVariations, _setShowVariations] = useState(false);
-    const [variations, setVariations] = useState([
-        { type: '', values: [''], images: [null as File | null] }
-    ]);
-
-    // Media
-    const [coverImage, setCoverImage] = useState<File | null>(null);
-    const [coverImagePreview, setCoverImagePreview] = useState('');
-    const [additionalImages, setAdditionalImages] = useState<File[]>([]);
-    const [_additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([]);
-    const [productVideo, setProductVideo] = useState<File | null>(null);
-
-    // Variants
-    const [variants, setVariants] = useState([
-        { name: 'color', values: [''] },
-        { name: 'size', values: [''] }
-    ]);
-
-    // Selected combination for editing
-    const [selectedCombinationIndex, setSelectedCombinationIndex] = useState<number>(0);
-    const [variantCombinations, setVariantCombinations] = useState([
-        {
-            options: [{ name: 'color', value: '' }, { name: 'size', value: '' }],
-            stock: 0,
-            additionalPrice: 0
-        }
-    ]);
-
-    const _addVariantCombination = () => {
-        // This function is no longer needed as combinations are auto-generated
-        // Keeping it to prevent errors, but it won't be used
-    };
-
-    const _removeVariantCombination = (_index: number) => {
-        // This function is no longer needed as combinations are auto-generated
-        // Keeping it to prevent errors, but it won't be used
-    };
-
-    const _updateCombinationOption = (comboIndex: number, variantName: string, value: string) => {
-        const newCombinations = [...variantCombinations];
-        const optionIndex = newCombinations[comboIndex].options.findIndex(opt => opt.name === variantName);
-        if (optionIndex !== -1) {
-            newCombinations[comboIndex].options[optionIndex].value = value;
-        }
-        setVariantCombinations(newCombinations);
-    };
-
-    // What's Inside
-    const [whatsInside, setWhatsInside] = useState(['']);
-
+    // ── Cover image ───────────────────────────────────────────────────────────
     const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setCoverImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCoverImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
+        if (!file) return;
+        setCoverImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setCoverImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
     };
 
-    const _handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        setAdditionalImages(prev => [...prev, ...files]);
+    // ── Additional images ─────────────────────────────────────────────────────
+    //
+    // Accepts multiple files. Previews are generated via FileReader so the user
+    // sees thumbnails immediately. Files are stored alongside their previews so
+    // they can be individually removed before submission.
+    const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
 
         files.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setAdditionalImagePreviews(prev => [...prev, reader.result as string]);
+                setAdditionalImages(prev => [...prev, { file, preview: reader.result as string }]);
             };
             reader.readAsDataURL(file);
         });
+
+        // Reset the input so the same file can be re-selected if removed and re-added
+        e.target.value = '';
     };
 
-    const _handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setProductVideo(file);
-        }
-    };
-
-    const _removeAdditionalImage = (index: number) => {
+    const removeAdditionalImage = (index: number) => {
         setAdditionalImages(prev => prev.filter((_, i) => i !== index));
-        setAdditionalImagePreviews(prev => prev.filter((_, i) => i !== index));
     };
 
-    const updateVariant = (variantIndex: number, field: 'name' | 'values', value: string | string[]) => {
-        const newVariants = [...variants];
-        if (field === 'name') {
-            newVariants[variantIndex].name = value as string;
-        } else {
-            newVariants[variantIndex].values = value as string[];
-        }
-        setVariants(newVariants);
-        updateVariantCombinationsStructure(newVariants);
+    // ── Video ─────────────────────────────────────────────────────────────────
+    const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) setProductVideo(file);
+        e.target.value = '';
     };
 
-    const addVariantValue = (variantIndex: number) => {
-        const newVariants = [...variants];
-        newVariants[variantIndex].values.push('');
-        setVariants(newVariants);
-        updateVariantCombinationsStructure(newVariants);
-    };
+    const removeVideo = () => setProductVideo(null);
 
-    const removeVariantValue = (variantIndex: number, valueIndex: number) => {
-        const newVariants = [...variants];
-        newVariants[variantIndex].values = newVariants[variantIndex].values.filter((_, i) => i !== valueIndex);
-        setVariants(newVariants);
-        updateVariantCombinationsStructure(newVariants);
-    };
-
+    // ── Variant helpers ───────────────────────────────────────────────────────
     const updateVariantCombinationsStructure = (currentVariants: typeof variants) => {
-        const validVariants = currentVariants.filter(v => v.name && v.values.some(val => val));
-        
-        if (validVariants.length === 0) {
-            setVariantCombinations([]);
-            return;
-        }
+        const valid = currentVariants.filter(v => v.name && v.values.some(val => val));
+        if (!valid.length) { setVariantCombinations([]); return; }
 
-        // Generate combinations based on all variant values
-        const combinations: typeof variantCombinations = [];
-        
-        // For single variant, create combinations for each value
-        if (validVariants.length === 1) {
-            const variant = validVariants[0];
-            variant.values.filter(val => val).forEach(value => {
-                combinations.push({
-                    options: [{ name: variant.name, value }],
-                    stock: 0,
-                    additionalPrice: 0
-                });
-            });
-        } else {
-            // For multiple variants, create all possible combinations
-            const generateCombinations = (variantIndex: number, currentCombo: { name: string; value: string }[]) => {
-                if (variantIndex >= validVariants.length) {
-                    combinations.push({
-                        options: [...currentCombo],
-                        stock: 0,
-                        additionalPrice: 0
-                    });
-                    return;
-                }
+        const combos: typeof variantCombinations = [];
+        const gen = (idx: number, current: { name: string; value: string }[]) => {
+            if (idx >= valid.length) { combos.push({ options: [...current], stock: 0, additionalPrice: 0 }); return; }
+            valid[idx].values.filter(v => v).forEach(v => gen(idx + 1, [...current, { name: valid[idx].name, value: v }]));
+        };
+        gen(0, []);
 
-                const variant = validVariants[variantIndex];
-                variant.values.filter(value => value).forEach(value => {
-                    generateCombinations(variantIndex + 1, [...currentCombo, { name: variant.name, value }]);
-                });
-            };
-
-            generateCombinations(0, []);
-        }
-        
-        // Preserve existing stock and price data if combinations already exist
-        const updatedCombinations = combinations.map(newCombo => {
-            const existingCombo = variantCombinations.find(existing => 
-                JSON.stringify(existing.options.sort((a, b) => a.name.localeCompare(b.name))) === 
-                JSON.stringify(newCombo.options.sort((a, b) => a.name.localeCompare(b.name)))
+        setVariantCombinations(combos.map(nc => {
+            const existing = variantCombinations.find(ex =>
+                JSON.stringify(ex.options.sort((a, b) => a.name.localeCompare(b.name))) ===
+                JSON.stringify(nc.options.sort((a, b) => a.name.localeCompare(b.name)))
             );
-            
-            return existingCombo || newCombo;
-        });
-        
-        setVariantCombinations(updatedCombinations);
+            return existing ?? nc;
+        }));
     };
 
-    const updateVariantCombination = (comboIndex: number, field: 'stock' | 'additionalPrice', value: number) => {
-        const newCombinations = [...variantCombinations];
-        newCombinations[comboIndex][field] = value;
-        setVariantCombinations(newCombinations);
+    const updateVariant = (vi: number, field: 'name' | 'values', value: string | string[]) => {
+        const nv = [...variants];
+        if (field === 'name') nv[vi].name = value as string;
+        else nv[vi].values = value as string[];
+        setVariants(nv);
+        updateVariantCombinationsStructure(nv);
     };
 
-    const addVariant = () => {
-        const newVariants = [...variants, { name: '', values: [''] }];
-        setVariants(newVariants);
+    const addVariantValue = (vi: number) => {
+        const nv = [...variants];
+        nv[vi].values.push('');
+        setVariants(nv);
+        updateVariantCombinationsStructure(nv);
     };
 
-    const removeVariant = (variantIndex: number) => {
-        const newVariants = variants.filter((_, i) => i !== variantIndex);
-        setVariants(newVariants);
-        updateVariantCombinationsStructure(newVariants);
+    const removeVariantValue = (vi: number, vali: number) => {
+        const nv = [...variants];
+        nv[vi].values = nv[vi].values.filter((_, i) => i !== vali);
+        setVariants(nv);
+        updateVariantCombinationsStructure(nv);
     };
 
-    const _updateWhatsInside = (index: number, value: string) => {
-        const newWhatsInside = [...whatsInside];
-        newWhatsInside[index] = value;
-        setWhatsInside(newWhatsInside);
+    const addVariant = () => setVariants(prev => { const nv = [...prev, { name: '', values: [''] }]; updateVariantCombinationsStructure(nv); return nv; });
+
+    const removeVariant = (vi: number) => {
+        const nv = variants.filter((_, i) => i !== vi);
+        setVariants(nv);
+        updateVariantCombinationsStructure(nv);
     };
 
-    const _addWhatsInside = () => {
-        setWhatsInside(prev => [...prev, '']);
+    const updateVariantCombination = (ci: number, field: 'stock' | 'additionalPrice', value: number) => {
+        const nc = [...variantCombinations];
+        nc[ci][field] = value;
+        setVariantCombinations(nc);
     };
 
-    const _removeWhatsInside = (index: number) => {
-        setWhatsInside(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Variation handlers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const _updateVariation = (variationIndex: number, field: 'type' | 'values' | 'images', value: any) => {
-        const newVariations = [...variations];
-        if (field === 'type') {
-            newVariations[variationIndex].type = value;
-        } else if (field === 'values') {
-            newVariations[variationIndex].values = value;
-        } else if (field === 'images') {
-            newVariations[variationIndex].images = value;
-        }
-        setVariations(newVariations);
-    };
-
-    // const addVariationValue = (variationIndex: number) => {
-    //     const newVariations = [...variations];
-    //     newVariations[variationIndex].values.push('');
-    //     newVariations[variationIndex].images.push(null as File | null);
-    //     setVariations(newVariations);
-    // };
-
-    // const removeVariationValue = (variationIndex: number, valueIndex: number) => {
-    //     const newVariations = [...variations];
-    //     newVariations[variationIndex].values = newVariations[variationIndex].values.filter((_, i) => i !== valueIndex);
-    //     newVariations[variationIndex].images = newVariations[variationIndex].images.filter((_, i) => i !== valueIndex);
-    //     setVariations(newVariations);
-    // };
-
-    // const handleVariationImageUpload = (variationIndex: number, valueIndex: number, file: File) => {
-    //     const newVariations = [...variations];
-    //     newVariations[variationIndex].images[valueIndex] = file;
-    //     setVariations(newVariations);
-    // };
-
-    // const addNewVariation = () => {
-    //     setVariations(prev => [...prev, { type: '', values: [''], images: [null as File | null] }]);
-    // };
-
-    // const removeVariation = (variationIndex: number) => {
-    //     setVariations(prev => prev.filter((_, i) => i !== variationIndex));
-    // };
-
+    // ── Form submission ───────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Validation
-            if (!productName || !productDescription || !productCategory || !productPrice || !stock || !weight || !coverImage) {
-                const missingFields = [];
-                if (!productName) missingFields.push('Product Name');
-                if (!productDescription) missingFields.push('Product Description');
-                if (!productCategory) missingFields.push('Category');
-                if (!productPrice) missingFields.push('Price');
-                if (!stock) missingFields.push('Stock');
-                if (!weight) missingFields.push('Weight');
-                if (!coverImage) missingFields.push('Cover Image');
-                
-                showToast(`Please fill in all required fields: ${missingFields.join(', ')}`, 'error');
-                setLoading(false);
+            const missing: string[] = [];
+            if (!productName) missing.push('Product Name');
+            if (!productDescription) missing.push('Description');
+            if (!productCategory) missing.push('Category');
+            if (!productPrice) missing.push('Price');
+            if (!showVariants && !stock) missing.push('Stock');
+            if (!weight) missing.push('Weight');
+            if (!coverImage) missing.push('Cover Image');
+
+            if (missing.length) {
+                showToast(`Please fill in: ${missing.join(', ')}`, 'error');
                 return;
             }
 
-            const formData = new FormData();
-
-            // Basic info
-            formData.append('name', productName);
-            formData.append('description', productDescription);
-            formData.append('category', productCategory);
-            formData.append('price', productPrice);
-            formData.append('stock', stock);
-            formData.append('weight', weight);
-            formData.append('isReturnable', String(isReturnable));
-            formData.append('isTimedSpecialOffer', String(isTimedSpecialOffer));
+            const fd = new FormData();
+            fd.append('name', productName);
+            fd.append('description', productDescription);
+            fd.append('category', productCategory);
+            fd.append('price', productPrice);
+            fd.append('stock', stock);
+            fd.append('weight', weight);
+            fd.append('isReturnable', String(isReturnable));
+            fd.append('isTimedSpecialOffer', String(isTimedSpecialOffer));
             if (isTimedSpecialOffer) {
-                if (specialOfferDate) formData.append('specialOfferDate', specialOfferDate);
-                if (specialOfferTime) formData.append('specialOfferTime', specialOfferTime);
+                if (specialOfferDate) fd.append('specialOfferDate', specialOfferDate);
+                if (specialOfferTime) fd.append('specialOfferTime', specialOfferTime);
             }
-            
-            // Optional fields
-            if (sku) formData.append('sku', sku);
-            if (barcode) formData.append('barcode', barcode);
+            if (sku) fd.append('sku', sku);
+            if (barcode) fd.append('barcode', barcode);
 
-            // Media
-            if (coverImage) formData.append('cover_image', coverImage);
-            additionalImages.forEach((image) => {
-                formData.append(`images`, image);
-            });
-            if (productVideo) formData.append('video', productVideo);
+            // Cover image
+            fd.append('cover_image', coverImage!);
 
-            // What's Inside (only include non-empty items)
-            const validWhatsInside = whatsInside.filter(item => item.trim() !== '');
-            if (validWhatsInside.length > 0) {
-                formData.append('whatsInside', JSON.stringify(validWhatsInside));
-            }
+            // Additional images — each appended under the same key "images"
+            additionalImages.forEach(({ file }) => fd.append('images', file));
 
-            // Variants (only include if variants have data)
+            // Video
+            if (productVideo) fd.append('video', productVideo);
+
+            // What's inside
+            const validInside = whatsInside.filter(i => i.trim());
+            if (validInside.length) fd.append('whatsInside', JSON.stringify(validInside));
+
+            // Variants
             const validVariants = variants.filter(v => v.name && v.values.some(val => val));
-            if (validVariants.length > 0) {
-                formData.append('variants', JSON.stringify(validVariants));
-                
-                // Variant combinations
-                const validCombinations = variantCombinations.filter(combo => 
-                    combo.options.length > 0 && combo.options.every(opt => opt.value)
-                );
-                if (validCombinations.length > 0) {
-                    formData.append('variantCombinations', JSON.stringify(validCombinations));
-                }
+            if (validVariants.length) {
+                fd.append('variants', JSON.stringify(validVariants));
+                const validCombos = variantCombinations.filter(c => c.options.every(o => o.value));
+                if (validCombos.length) fd.append('variantCombinations', JSON.stringify(validCombos));
             }
 
-            console.log('Submitting product with FormData:');
-            
-            // Check authentication token
-            const token = localStorage.getItem('adminToken');
-            console.log('Auth token exists:', !!token);
-            console.log('Auth token length:', token?.length || 0);
-            console.log('Auth token value:', token ? `${token.substring(0, 20)}...` : 'null');
-            
-            if (!token) {
-                showToast('Please login to add products', 'error');
-                setLoading(false);
-                router.push('/admin/login');
-                return;
-            }
-            
-            // Log all FormData entries for debugging
-            for (const [key, value] of formData.entries()) {
-                console.log(`${key}:`, value);
-            }
+            const response = await createProduct(fd);
 
-            const response = await createProduct(formData);
-
-            console.log('API Response:', response);
-            console.log('Response success:', response.success);
-            console.log('Response data:', response.data);
-            console.log('Response message:', response.message);
-            console.log('Response error:', response.error);
-
-            // Check multiple possible success indicators
-            if (response.success || response.data || response.message) {
+            if (response.success || response.data) {
                 showToast('Product created successfully!', 'success');
-                
-                // Clear form after successful creation
-                setProductName('');
-                setProductDescription('');
-                setProductCategory('');
-                setProductPrice('');
-                setStock('');
-                setWeight('');
-                setSku('');
-                setBarcode('');
-                setCoverImage(null);
-                setCoverImagePreview('');
+                // Reset all fields
+                setProductName(''); setProductDescription(''); setProductCategory('');
+                setProductPrice(''); setStock(''); setWeight(''); setSku(''); setBarcode('');
+                setCoverImage(null); setCoverImagePreview('');
                 setAdditionalImages([]);
-                setAdditionalImagePreviews([]);
                 setProductVideo(null);
-                setProductStatus('in stock');
-                setIsFeatured(false);
-                setIsReturnable(true);
-                setIsSpecialOffer(false);
-                setIsTimedSpecialOffer(false);
-                setSpecialOfferDate('');
-                setSpecialOfferTime('');
+                setIsReturnable(true); setIsTimedSpecialOffer(false);
+                setSpecialOfferDate(''); setSpecialOfferTime('');
                 setWhatsInside(['']);
-                setVariants([
-                    { name: 'Color', values: [''] },
-                    { name: 'Size', values: [''] }
-                ]);
+                setVariants([{ name: 'color', values: [''] }, { name: 'size', values: [''] }]);
                 setVariantCombinations([]);
                 setSelectedCombinationIndex(0);
             } else {
-                console.log('Product creation considered failed - no success indicators');
-                showToast(response.error || 'Failed to create product', 'error');
+                showToast(response.error ?? 'Failed to create product', 'error');
             }
         } catch (error) {
-            console.error('Error creating product:', error);
-            showToast(`Error creating product: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            showToast(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         } finally {
             setLoading(false);
         }
     };
 
+    // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-gray-50/30 font-poppins pr-5 pb-10">
             <div className="mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-end mb-8">
-                    {/* <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1> */}
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={loading}
-                            className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Adding...
-                                </>
-                            ) : (
-                                'Publish Inventory'
-                            )}
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="px-6 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {loading ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Adding...
+                            </>
+                        ) : 'Publish Inventory'}
+                    </button>
                 </div>
 
-                <form className='grid grid-cols-1 md:grid-cols-2 gap-6' onSubmit={handleSubmit}>
-                <div className="space-y-8 bg-white rounded-xl border border-gray-200 p-6">
-                    {/* Upload image */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-2">
-                            Product Image
-                        </label>
-                        <div className="flex items-center gap-6">
-                            {coverImagePreview ? (
-                                <div className="relative w-32 h-32">
-                                    <Image
-                                        src={coverImagePreview}
-                                        alt="Cover preview"
-                                        fill
-                                        className="object-cover rounded-lg"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setCoverImage(null);
-                                            setCoverImagePreview('');
-                                        }}
-                                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <label className="rounded-lg flex flex-col items-center justify-center cursor-pointer bg-gray-100 p-6 py-10 w-max gap-2">
-                                    <Image src="/images/image.svg" alt="Upload" width={30} height={30} />
-                                    <div className='flex items-center gap-1 text-brand_pink'>
-                                        <UploadCloud size={18} />
-                                        <span className="text-[10px] text-brand_pink">Upload Image (1 -5)</span>
+                <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={handleSubmit}>
+
+                    {/* ── Left column ─────────────────────────────────────── */}
+                    <div className="space-y-6">
+                        <Section title="">
+                            {/* Cover image */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-2">
+                                    Cover Image <span className="text-red-500">*</span>
+                                </label>
+                                {coverImagePreview ? (
+                                    <div className="relative w-32 h-32">
+                                        <Image src={coverImagePreview} alt="Cover preview" fill className="object-cover rounded-lg" />
+                                        <button
+                                            type="button"
+                                            onClick={() => { setCoverImage(null); setCoverImagePreview(''); }}
+                                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                        >
+                                            <X size={14} />
+                                        </button>
                                     </div>
+                                ) : (
+                                    <label className="rounded-lg flex flex-col items-center justify-center cursor-pointer bg-gray-100 p-6 py-10 w-max gap-2">
+                                        <Image src="/images/image.svg" alt="Upload" width={30} height={30} />
+                                        <div className="flex items-center gap-1 text-brand_pink">
+                                            <UploadCloud size={18} />
+                                            <span className="text-[10px]">Upload Cover Image</span>
+                                        </div>
+                                        <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* ── Additional images ──────────────────────── */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-2">
+                                    Additional Images
+                                    <span className="ml-1 text-gray-400 font-normal">(up to 10)</span>
+                                </label>
+
+                                {/* Scrollable preview strip */}
+                                {additionalImages.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 mb-3">
+                                        {additionalImages.map(({ file, preview }, idx) => (
+                                            <PreviewCard
+                                                key={`${file.name}-${idx}`}
+                                                src={preview}
+                                                name={file.name}
+                                                onRemove={() => removeAdditionalImage(idx)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Upload button — always visible so user can keep adding */}
+                                <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600 ${additionalImages.length >= 10 ? 'opacity-40 pointer-events-none' : ''}`}>
+                                    <Plus size={16} className="text-brand_pink" />
+                                    {additionalImages.length === 0 ? 'Add images' : 'Add more'}
                                     <input
                                         type="file"
                                         accept="image/*"
-                                        onChange={handleCoverImageChange}
+                                        multiple
+                                        onChange={handleAdditionalImagesChange}
                                         className="hidden"
+                                        disabled={additionalImages.length >= 10}
                                     />
                                 </label>
-                            )}
-                        </div>
-                    </div>
 
-                    <div className="">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className='col-span-2'>
-                                <label className="block text-xs font-medium text-gray-700 mb-2">
-                                    Product Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={productName}
-                                    onChange={(e) => setProductName(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Enter product name"
-                                    required
-                                />
+                                {additionalImages.length > 0 && (
+                                    <p className="mt-1 text-xs text-gray-400">
+                                        {additionalImages.length} / 10 image{additionalImages.length !== 1 ? 's' : ''} selected
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="md:col-span-2">
+                            {/* ── Video ──────────────────────────────────── */}
+                            <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-2">
-                                    Description
+                                    Product Video
+                                    <span className="ml-1 text-gray-400 font-normal">(optional)</span>
                                 </label>
-                                <textarea
-                                    value={productDescription}
-                                    onChange={(e) => setProductDescription(e.target.value)}
-                                    rows={4}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Enter product description"
-                                    required
-                                />
-                            </div>
 
-                            <div className=''>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Category
-                                    </label>
-                                    <select
-                                        value={productCategory}
-                                        onChange={(e) => setProductCategory(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        required
-                                    >
-                                        <option value="">Select category</option>
-                                        {!loadingCategories && categories.map(category => (
-                                            <option key={category._id} value={category._id}>{category.name}</option>
-                                        ))}
-                                        <option value="CREATE_NEW">+ Create New Category</option>
-                                        {loadingCategories && (
-                                            <option disabled>Loading categories...</option>
-                                        )}
-                                    </select>
-                                </div>
-                                
-                                {/* Show category creation modal when "Create New Category" is selected */}
-                                {productCategory === 'CREATE_NEW' && (
-                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <p className="text-sm text-blue-800 mb-2">
-                                            Click &quot;Add new category&quot; below to create a new category
-                                        </p>
-                                        <button 
-                                            type='button' 
-                                            className='flex items-center text-sm text-brand_pink bg-white px-3 py-2 rounded border border-brand_pink hover:bg-brand_pink hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed' 
-                                            onClick={() => {
-                                                setShowCategoryModal(true);
-                                                setProductCategory(''); // Reset selection
-                                            }}
-                                            disabled={creatingCategory}
+                                {productVideo ? (
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                        <div className="shrink-0 w-10 h-10 rounded-lg bg-brand_pink/10 flex items-center justify-center">
+                                            <Film size={18} className="text-brand_pink" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-gray-800 truncate">{productVideo.name}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {(productVideo.size / (1024 * 1024)).toFixed(1)} MB
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={removeVideo}
+                                            className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                            title="Remove video"
                                         >
-                                            {creatingCategory ? (
-                                                <>
-                                                    <div className="w-3 h-3 border-2 border-brand_pink border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="ml-1">Creating...</p>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <PlusIcon size={16} />
-                                                    <p className="ml-1">Create Category</p>
-                                                </>
-                                            )}
+                                            <X size={16} />
                                         </button>
                                     </div>
-                                )}
-                                
-                                {/* Regular add category button */}
-                                {productCategory !== 'CREATE_NEW' && (
-                                    <button type='button' className='flex items-center mt-2 text-sm text-brand_pink' onClick={() => setShowCategoryModal(true)}>
-                                        <PlusIcon size={20} />
-                                        <p>Add new category</p>
-                                    </button>
-                                )}
-                            </div>
-
-                                {/* Category Creation Modal */}
-                                {showCategoryModal && (
-                                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                        <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h3 className="text-lg font-medium">Create New Category</h3>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowCategoryModal(false)}
-                                                    className="text-gray-400 hover:text-gray-600"
-                                                >
-                                                    <X className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                            
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Category Name
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={newCategoryName}
-                                                        onChange={(e) => setNewCategoryName(e.target.value)}
-                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="Enter category name"
-                                                        autoFocus
-                                                    />
-                                                </div>
-                                                
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Category Image (optional)
-                                                    </label>
-                                                    <div className="flex items-center gap-4">
-                                                        {newCategoryImagePreview ? (
-                                                            <div className="relative">
-                                                                <Image
-                                                                    src={newCategoryImagePreview}
-                                                                    alt="Category preview"
-                                                                    width={80}
-                                                                    height={80}
-                                                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setNewCategoryImage(null);
-                                                                        setNewCategoryImagePreview('');
-                                                                    }}
-                                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                                                                <Upload className="w-6 h-6 text-gray-400" />
-                                                            </div>
-                                                        )}
-                                                        
-                                                        <div className="flex-1">
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                onChange={handleCategoryImageChange}
-                                                                className="hidden"
-                                                                id="category-image-upload"
-                                                            />
-                                                            <label
-                                                                htmlFor="category-image-upload"
-                                                                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-                                                            >
-                                                                <Upload className="w-4 h-4" />
-                                                                Choose Image
-                                                            </label>
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                JPG, PNG, GIF up to 10MB
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex gap-3 pt-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setShowCategoryModal(false);
-                                                            setNewCategoryName('');
-                                                            setNewCategoryImage(null);
-                                                            setNewCategoryImagePreview('');
-                                                        }}
-                                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleCreateCategory}
-                                                        disabled={creatingCategory}
-                                                        className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                                    >
-                                                        {creatingCategory ? (
-                                                            <>
-                                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                                Creating...
-                                                            </>
-                                                        ) : (
-                                                            'Create Category'
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className=''>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        SKU (optional)
+                                ) : (
+                                    <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600">
+                                        <Film size={16} className="text-brand_pink" />
+                                        Upload video
+                                        <input
+                                            type="file"
+                                            accept="video/*"
+                                            onChange={handleVideoChange}
+                                            className="hidden"
+                                        />
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={sku}
-                                        onChange={(e) => setSku(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter SKU"
-                                    />
+                                )}
+
+                                <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM · max 100 MB</p>
+                            </div>
+                        </Section>
+
+                        {/* Product fields */}
+                        <Section title="">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Product Name <span className="text-red-500">*</span></label>
+                                    <input type="text" value={productName} onChange={e => setProductName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter product name" required />
                                 </div>
 
-                                <div className=''>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Barcode (optional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={barcode}
-                                        onChange={(e) => setBarcode(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Enter barcode"
-                                    />
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Description <span className="text-red-500">*</span></label>
+                                    <textarea value={productDescription} onChange={e => setProductDescription(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter product description" required />
+                                </div>
+
+                                {/* Category */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Category <span className="text-red-500">*</span></label>
+                                    <select value={productCategory} onChange={e => setProductCategory(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                        <option value="">Select category</option>
+                                        {!loadingCategories && categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                        <option value="CREATE_NEW">+ Create New Category</option>
+                                        {loadingCategories && <option disabled>Loading…</option>}
+                                    </select>
+
+                                    {productCategory === 'CREATE_NEW' ? (
+                                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p className="text-sm text-blue-800 mb-2">Click below to create a new category</p>
+                                            <button type="button" className="flex items-center text-sm text-brand_pink bg-white px-3 py-2 rounded border border-brand_pink hover:bg-brand_pink hover:text-white transition-colors" onClick={() => { setShowCategoryModal(true); setProductCategory(''); }}>
+                                                <PlusIcon size={16} /><span className="ml-1">Create Category</span>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button type="button" className="flex items-center mt-2 text-sm text-brand_pink" onClick={() => setShowCategoryModal(true)}>
+                                            <PlusIcon size={20} /><span>Add new category</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Base Price (₦)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={productPrice}
-                                        onChange={(e) => setProductPrice(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="0.00"
-                                        required
-                                    />
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">SKU (optional)</label>
+                                    <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter SKU" />
                                 </div>
 
-
-
-                                <div className='col-span-2'>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Product Quantity
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={stock}
-                                        onChange={(e) => setStock(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="0"
-                                        required
-                                    />
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Barcode (optional)</label>
+                                    <input type="text" value={barcode} onChange={e => setBarcode(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter barcode" />
                                 </div>
 
-                                <div className='col-span-2'>
-                                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                                        Weight (kg) *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={weight}
-                                        onChange={(e) => setWeight(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="0.00"
-                                        required
-                                    />
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Base Price (₦) <span className="text-red-500">*</span></label>
+                                    <input type="number" value={productPrice} onChange={e => setProductPrice(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" required />
+                                </div>
+
+                                {!showVariants && (
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-medium text-gray-700 mb-2">Product Quantity <span className="text-red-500">*</span></label>
+                                        <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0" required />
+                                    </div>
+                                )}
+
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
+                                    <input type="number" step="0.01" min="0" value={weight} onChange={e => setWeight(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" required />
                                 </div>
                             </div>
-                        </div>
+                        </Section>
                     </div>
 
-                    <div className="space-y-8">
+                    {/* ── Right column ─────────────────────────────────────── */}
+                    <div className="space-y-6">
                         {/* Product Policy */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h2 className="text-sm text-gray-900 mb-6 font-semibold">Product Policy</h2>
+                        <Section title="Product Policy">
                             <div className="flex items-center justify-between gap-6">
-                                <label className="text-xs font-medium text-gray-700">
-                                    Is this product returnable?
-                                </label>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={isReturnable}
-                                        onChange={(e) => setIsReturnable(e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
-                                </label>
+                                <label className="text-xs font-medium text-gray-700">Is this product returnable?</label>
+                                <Toggle checked={isReturnable} onChange={setIsReturnable} />
                             </div>
-                        </div>
+                        </Section>
 
-                        {/* Basic Information */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h2 className="text-sm text-gray-900 mb-6">Special Offer</h2>
-
+                        {/* Special Offer + Variants */}
+                        <Section title="Special Offer">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className='col-span-2 flex items-center gap-2'>
-                                    <div className="flex items-center justify-between mb-2 gap-6">
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={isTimedSpecialOffer}
-                                                onChange={(e) => setIsTimedSpecialOffer(e.target.checked)}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
-                                        </label>
-
-                                        <label className="text-xs font-medium text-gray-700">
-                                            Timed Special Offer
-                                        </label>
-                                    </div>
+                                <div className="col-span-2 flex items-center gap-4">
+                                    <Toggle checked={isTimedSpecialOffer} onChange={setIsTimedSpecialOffer} />
+                                    <label className="text-xs font-medium text-gray-700">Timed Special Offer</label>
                                 </div>
 
                                 {isTimedSpecialOffer && (
-                                    <div className='col-span-2 grid grid-cols-2 gap-4'>
+                                    <div className="col-span-2 grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-2">
-                                                Special Offer Expiry Date
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={specialOfferDate}
-                                                onChange={(e) => setSpecialOfferDate(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                required
-                                            />
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">Expiry Date</label>
+                                            <input type="date" value={specialOfferDate} onChange={e => setSpecialOfferDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-2">
-                                                Special Offer Expiry Time
-                                            </label>
-                                            <input
-                                                type="time"
-                                                value={specialOfferTime}
-                                                onChange={(e) => setSpecialOfferTime(e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">Expiry Time</label>
+                                            <input type="time" value={specialOfferTime} onChange={e => setSpecialOfferTime(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                                         </div>
                                     </div>
                                 )}
 
-                                <div className='col-span-2 flex items-center gap-2'>
-                                    <div className="flex items-center justify-between mb-2 gap-6">
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={showVariants}
-                                                onChange={(e) => setShowVariants(e.target.checked)}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-600"></div>
-                                        </label>
-
-                                        <label className="text-xs font-medium text-gray-700">
-                                            Does this product have variations (Color, Size, etc.)?
-                                        </label>
-                                    </div>
+                                <div className="col-span-2 flex items-center gap-4">
+                                    <Toggle checked={showVariants} onChange={setShowVariants} />
+                                    <label className="text-xs font-medium text-gray-700">Does this product have variations (Color, Size, etc.)?</label>
                                 </div>
 
                                 {showVariants && (
                                     <>
-                                        {variants.map((variant, variantIndex) => (
-                                            <div key={variantIndex} className="col-span-2 space-y-4 p-4 border border-gray-200 rounded-lg">
-                                                <div className="flex items-center justify-between">
-                                                    <input
-                                                        type="text"
-                                                        value={variant.name}
-                                                        onChange={(e) => updateVariant(variantIndex, 'name', e.target.value)}
-                                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mr-2"
-                                                        placeholder="Variant name (e.g., Color, Size)"
-                                                    />
+                                        {variants.map((variant, vi) => (
+                                            <div key={vi} className="col-span-2 space-y-4 p-4 border border-gray-200 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <input type="text" value={variant.name} onChange={e => updateVariant(vi, 'name', e.target.value)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Variant name (e.g., Color, Size)" />
                                                     {variants.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeVariant(variantIndex)}
-                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <button type="button" onClick={() => removeVariant(vi)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                                                     )}
                                                 </div>
-                                                
                                                 <div className="space-y-2">
                                                     <label className="text-xs font-medium text-gray-700">Values</label>
-                                                    {variant.values.map((value, valueIndex) => (
-                                                        <div key={valueIndex} className="flex items-center gap-2">
-                                                            <input
-                                                                type="text"
-                                                                value={value}
-                                                                onChange={(e) => {
-                                                                    const newValues = [...variant.values];
-                                                                    newValues[valueIndex] = e.target.value;
-                                                                    updateVariant(variantIndex, 'values', newValues);
-                                                                }}
-                                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                                placeholder={`Value ${valueIndex + 1}`}
-                                                            />
+                                                    {variant.values.map((val, vali) => (
+                                                        <div key={vali} className="flex items-center gap-2">
+                                                            <input type="text" value={val} onChange={e => { const nv = [...variant.values]; nv[vali] = e.target.value; updateVariant(vi, 'values', nv); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder={`Value ${vali + 1}`} />
                                                             {variant.values.length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeVariantValue(variantIndex, valueIndex)}
-                                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                                                >
-                                                                    <X size={16} />
-                                                                </button>
+                                                                <button type="button" onClick={() => removeVariantValue(vi, vali)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><X size={16} /></button>
                                                             )}
                                                         </div>
                                                     ))}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addVariantValue(variantIndex)}
-                                                        className="flex items-center gap-2 text-brand_pink text-sm hover:text-brand_pink/80"
-                                                    >
-                                                        <Plus size={16} />
-                                                        Add value
-                                                    </button>
+                                                    <button type="button" onClick={() => addVariantValue(vi)} className="flex items-center gap-2 text-brand_pink text-sm hover:text-brand_pink/80"><Plus size={16} />Add value</button>
                                                 </div>
                                             </div>
                                         ))}
-                                        
-                                        <button
-                                            type="button"
-                                            onClick={addVariant}
-                                            className="flex items-center gap-2 text-brand_pink text-sm hover:text-brand_pink/80 col-span-2"
-                                        >
-                                            <Plus size={20} />
-                                            Add new variant
-                                        </button>
 
-                                        {/* Variant Combinations - Dropdown Selection */}
-                                        {variants.filter(v => v.name && v.values.some(val => val)).length > 0 && (
+                                        <button type="button" onClick={addVariant} className="col-span-2 flex items-center gap-2 text-brand_pink text-sm hover:text-brand_pink/80"><Plus size={20} />Add new variant</button>
+
+                                        {variantCombinations.length > 0 && (
                                             <div className="col-span-2 space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                                                 <h3 className="text-sm font-medium text-gray-900">Variant Combinations</h3>
-                                                
-                                                {/* Combination Selector */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="text-xs font-medium text-gray-700 mb-2 block">
-                                                            Select Variant Combination
-                                                        </label>
-                                                        <select
-                                                            value={selectedCombinationIndex}
-                                                            onChange={(e) => setSelectedCombinationIndex(parseInt(e.target.value))}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                        >
-                                                            {variantCombinations.map((combination, index) => (
-                                                                <option key={index} value={index}>
-                                                                    {combination.options.map(opt => `${opt.name}: ${opt.value}`).join(', ')}
-                                                                </option>
-                                                            ))}
+                                                        <label className="text-xs font-medium text-gray-700 mb-2 block">Select Combination</label>
+                                                        <select value={selectedCombinationIndex} onChange={e => setSelectedCombinationIndex(parseInt(e.target.value))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                            {variantCombinations.map((c, i) => <option key={i} value={i}>{c.options.map(o => `${o.name}: ${o.value}`).join(', ')}</option>)}
                                                         </select>
                                                     </div>
-                                                    
-                                                    <div className="text-xs text-gray-500 flex items-end">
-                                                        {variantCombinations.length} combination{variantCombinations.length !== 1 ? 's' : ''} available
-                                                    </div>
+                                                    <div className="text-xs text-gray-500 flex items-end">{variantCombinations.length} combination{variantCombinations.length !== 1 ? 's' : ''}</div>
                                                 </div>
-                                                
-                                                {/* Selected Combination Details */}
+
                                                 {variantCombinations[selectedCombinationIndex] && (
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-gray-200">
-                                                        {/* Variant Display */}
-                                                        <div className="md:col-span-1">
-                                                            <label className="text-xs font-medium text-gray-700 mb-2 block">
-                                                                Current Selection
-                                                            </label>
-                                                            <div className="text-sm text-gray-900 font-medium bg-gray-50 p-3 rounded border">
-                                                                {variantCombinations[selectedCombinationIndex].options.map(opt => `${opt.name}: ${opt.value}`).join(', ')}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {/* Stock */}
                                                         <div>
-                                                            <label className="text-xs font-medium text-gray-700 mb-1 block">
-                                                                Stock
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                value={variantCombinations[selectedCombinationIndex].stock}
-                                                                onChange={(e) => updateVariantCombination(selectedCombinationIndex, 'stock', parseInt(e.target.value) || 0)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                                placeholder="0"
-                                                                min="0"
-                                                            />
+                                                            <label className="text-xs font-medium text-gray-700 mb-2 block">Selection</label>
+                                                            <div className="text-sm text-gray-900 font-medium bg-gray-50 p-3 rounded border">{variantCombinations[selectedCombinationIndex].options.map(o => `${o.name}: ${o.value}`).join(', ')}</div>
                                                         </div>
-                                                        
-                                                        {/* Additional Price */}
                                                         <div>
-                                                            <label className="text-xs font-medium text-gray-700 mb-1 block">
-                                                                Additional Price (₦)
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                value={variantCombinations[selectedCombinationIndex].additionalPrice}
-                                                                onChange={(e) => updateVariantCombination(selectedCombinationIndex, 'additionalPrice', parseInt(e.target.value) || 0)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                                placeholder="0"
-                                                                min="0"
-                                                            />
+                                                            <label className="text-xs font-medium text-gray-700 mb-1 block">Stock</label>
+                                                            <input type="number" value={variantCombinations[selectedCombinationIndex].stock || ''} onChange={e => updateVariantCombination(selectedCombinationIndex, 'stock', parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" min="0" placeholder="0" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs font-medium text-gray-700 mb-1 block">Additional Price (₦)</label>
+                                                            <input type="number" value={variantCombinations[selectedCombinationIndex].additionalPrice || ''} onChange={e => updateVariantCombination(selectedCombinationIndex, 'additionalPrice', parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" min="0" placeholder="0" />
                                                         </div>
                                                     </div>
                                                 )}
-                                                
-                                                {/* Summary of all combinations */}
-                                                <div className="mt-4">
-                                                    <details className="text-xs text-gray-600">
-                                                        <summary className="cursor-pointer hover:text-gray-800 font-medium">
-                                                            View all combinations summary
-                                                        </summary>
-                                                        <div className="mt-2 space-y-1">
-                                                            {variantCombinations.map((combination, index) => (
-                                                                <div key={index} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
-                                                                    <span>{combination.options.map(opt => `${opt.name}: ${opt.value}`).join(', ')}</span>
-                                                                    <span className="font-medium">
-                                                                        Stock: {combination.stock} | Price: +₦{combination.additionalPrice}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </details>
-                                                </div>
-                                                
-                                                <div className="text-xs text-gray-500 mt-2">
-                                                    Select a combination from the dropdown to set its stock and additional price.
-                                                </div>
+
+                                                <details className="text-xs text-gray-600">
+                                                    <summary className="cursor-pointer hover:text-gray-800 font-medium">View all combinations</summary>
+                                                    <div className="mt-2 space-y-1">
+                                                        {variantCombinations.map((c, i) => (
+                                                            <div key={i} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
+                                                                <span>{c.options.map(o => `${o.name}: ${o.value}`).join(', ')}</span>
+                                                                <span className="font-medium">Stock: {c.stock} | +₦{c.additionalPrice}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </details>
                                             </div>
                                         )}
                                     </>
                                 )}
                             </div>
-                        </div>
+                        </Section>
                     </div>
                 </form>
             </div>
-            
-            {/* Toast Notification */}
-            {toast && (
-                <Toast 
-                    message={toast.message} 
-                    type={toast.type} 
-                    onClose={() => setToast(null)} 
-                />
+
+            {/* ── Category creation modal ──────────────────────────────────── */}
+            {showCategoryModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium">Create New Category</h3>
+                            <button type="button" onClick={() => setShowCategoryModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name</label>
+                                <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter category name" autoFocus />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Category Image (optional)</label>
+                                <div className="flex items-center gap-4">
+                                    {newCategoryImagePreview ? (
+                                        <div className="relative">
+                                            <Image src={newCategoryImagePreview} alt="Preview" width={80} height={80} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                                            <button type="button" onClick={() => { setNewCategoryImage(null); setNewCategoryImagePreview(''); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"><X className="w-3 h-3" /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center"><Upload className="w-6 h-6 text-gray-400" /></div>
+                                    )}
+                                    <div className="flex-1">
+                                        <input type="file" accept="image/*" onChange={handleCategoryImageChange} className="hidden" id="cat-img" />
+                                        <label htmlFor="cat-img" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"><Upload className="w-4 h-4" />Choose Image</label>
+                                        <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF up to 10 MB</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => { setShowCategoryModal(false); setNewCategoryName(''); setNewCategoryImage(null); setNewCategoryImagePreview(''); }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="button" onClick={handleCreateCategory} disabled={creatingCategory} className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                    {creatingCategory ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Creating…</>) : 'Create Category'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
+
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
     );
 };
