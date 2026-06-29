@@ -359,8 +359,7 @@ const AddProductPage = () => {
             }
 
             const response = await createProduct(fd);
-
-            if (response.success || response.data) {
+            if (response.status) {
                 showToast('Product created successfully!', 'success');
                 // Reset all fields
                 setProductName(''); setProductDescription(''); setProductCategory('');
@@ -375,8 +374,9 @@ const AddProductPage = () => {
                 setVariantCombinations([]);
                 setSelectedCombinationIndex(0);
             } else {
-                showToast(response.error ?? 'Failed to create product', 'error');
+                   showToast(response.error ?? 'Failed to create product', 'error');
             }
+            
         } catch (error) {
             showToast(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         } finally {
