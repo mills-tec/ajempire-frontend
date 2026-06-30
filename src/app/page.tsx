@@ -35,6 +35,7 @@ const EMPTY_PRODUCTS: Product[] = Object.freeze([]) as unknown as Product[];
 
 const productQueryFn = async (cursor: string) => {
   const res = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
+  console.log(res?.message.products);
   return {
     items: res?.message?.products ?? EMPTY_PRODUCTS,
     nextCursor: res?.message?.nextCursor ?? null,

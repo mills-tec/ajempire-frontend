@@ -1,14 +1,14 @@
 "use client";
-import Image from "next/image";
-import React, { useEffect, useState } from "react";
-import { Product } from "@/lib/types";
-import { useCartStore } from "@/lib/stores/cart-store";
-import { calcDiscountPrice } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import CountdownTimer from "@/components/CountDownTimer";
+import { getBearerToken, getUsersWishlist } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { Product } from "@/lib/types";
+import { calcDiscountPrice } from "@/lib/utils";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ProductCard({
   product,
@@ -83,6 +83,7 @@ export default function ProductCard({
       >
         <Image
           src={product.cover_image ?? ""}
+          
           alt="product image"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           fill

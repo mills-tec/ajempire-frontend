@@ -81,6 +81,7 @@ const apiCall = async <T>(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
+      status: false
     };
   }
 };

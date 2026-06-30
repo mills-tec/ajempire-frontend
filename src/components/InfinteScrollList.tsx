@@ -175,7 +175,18 @@ export function InfiniteFeed<T>({
   useEffect(() => {
     if (!isRecycleMode || isSeeded) return;
 
-    const shuffled = shuffleRef.current([...sourceItems]);
+    // --- FIX: Validate the shuffle result ---
+    let shuffled = shuffleRef.current([...sourceItems]);
+    // If the shuffle function does not preserve the input length, fall back to
+    // the built‑in DEFAULT_SHUFFLE which is known to work.
+    if (!Array.isArray(shuffled) || shuffled.length !== sourceItems.length) {
+      console.warn(
+        "[InfiniteFeed] Custom shuffle returned invalid array (length mismatch). Falling back to default shuffle."
+      );
+      shuffled = DEFAULT_SHUFFLE([...sourceItems]);
+    }
+    // ---------------------------------------
+
     shuffledSrcRef.current = shuffled;
     cursorRef.current = 0;
     counterRef.current = 0;
@@ -379,6 +390,7 @@ export function InfiniteFeed<T>({
     );
   }
 
+
   // ── API pagination mode ───────────────────────────────────────────────────────
   return (
     <div className={className}>
@@ -387,6 +399,7 @@ export function InfiniteFeed<T>({
       <div className={gridClassName}>
         {sourceItems.map((item, index) => {
           const isLast = index === sourceItems.length - 1;
+          
           return (
             <div
               key={`api-${getItemId(item)}-${index}`}
