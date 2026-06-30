@@ -133,17 +133,15 @@ export function InfiniteFeed<T>({
     isLoading,
     refetch,
     error,
-  } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>(
+  } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>({
     queryKey,
-    ({ pageParam = "" }) => queryFn(pageParam),
-    {
-      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-      staleTime,
-    }
-  );
+    queryFn: ({ pageParam = "" }) => queryFn(pageParam as string),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime,
+  });
 
   const sourceItems = useMemo<T[]>(
-    () => data?.pages.flatMap((p) => p.items) ?? [],
+    () => data?.pages?.flatMap((p) => p.items ?? []) ?? [],
     [data?.pages]
   );
 
