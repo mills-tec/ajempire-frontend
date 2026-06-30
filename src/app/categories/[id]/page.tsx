@@ -10,22 +10,13 @@ import { getProductsByCategory } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import type { Product } from "@/lib/types";
-import { calcDiscountPrice, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { calcDiscountPrice } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 
 const EMPTY: Product[] = [];
-
-// Hard ceiling on accumulated items so the underlying array can't grow
-// forever even on an "endless" feed. Rows beyond this just recycle via
-// shuffle, but we never keep more than this many Product objects in memory.
-const MAX_ACCUMULATED = 400;
-
-// How many extra rows to render above/below the viewport for smoothness
-const OVERSCAN = 4;
 
 const filledStar = (
   <svg
@@ -59,35 +50,6 @@ const unfilledStar = (
   </svg>
 );
 
-// Tailwind breakpoints used by the existing grid classes
-// (grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5)
-function useColumnCount(isMobileLayout: boolean) {
-  const [cols, setCols] = useState(isMobileLayout ? 1 : 5);
-
-  useEffect(() => {
-    if (isMobileLayout) {
-      setCols(1); // mobile layout is a single-column stacked list
-      return;
-    }
-
-    const calc = () => {
-      const w = window.innerWidth;
-      if (w >= 1024)
-        setCols(5); // lg
-      else if (w >= 768)
-        setCols(4); // md
-      else if (w >= 640)
-        setCols(3); // sm
-      else setCols(2);
-    };
-
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, [isMobileLayout]);
-
-  return cols;
-}
 
 export default function CategoryPage() {
   const params = useParams();
@@ -113,122 +75,6 @@ export default function CategoryPage() {
     );
   }, [data, searchedQuery]);
 
-  const [visibleProducts, setVisibleProducts] = useState<Product[]>(EMPTY);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const scrollRestoredRef = useRef(false);
-  const filteredRef = useRef(filteredProducts);
-  filteredRef.current = filteredProducts;
-  const visibleCountRef = useRef(0);
-  const scrollKey = `category-scroll-${slug}`;
-
-  // Reset visible slice when filtered list changes (data load or search)
-  useEffect(() => {
-    const initial = filteredProducts.slice(0, ITEMS_TO_APPEND);
-    visibleCountRef.current = initial.length;
-    setVisibleProducts(initial);
-    scrollRestoredRef.current = false;
-  }, [filteredProducts]);
-
-  // Save scroll position on unmount
-  useEffect(() => {
-    return () => {
-      sessionStorage.setItem(scrollKey, String(window.scrollY));
-    };
-  }, [scrollKey]);
-
-  // Restore scroll once initial products are painted
-  useEffect(() => {
-    if (visibleProducts.length === 0 || scrollRestoredRef.current) return;
-    const savedY = sessionStorage.getItem(scrollKey);
-    if (!savedY) return;
-    scrollRestoredRef.current = true;
-    sessionStorage.removeItem(scrollKey);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, parseInt(savedY, 10));
-      });
-    });
-  }, [visibleProducts.length, scrollKey]);
-
-  // ----- Mobile (single column) virtualizer -----
-  const mobileRowVirtualizer = useWindowVirtualizer({
-    count: visibleProducts.length,
-    estimateSize: () => 116, // approx height of one mobile row (px), incl. gap
-    overscan: OVERSCAN,
-    enabled: visibleProducts.length > 0,
-  });
-
-  // ----- Desktop (grid) virtualizer -----
-  const desktopCols = useColumnCount(false);
-  const desktopRowCount = Math.ceil(visibleProducts.length / desktopCols);
-  const desktopRowVirtualizer = useWindowVirtualizer({
-    count: desktopRowCount,
-    estimateSize: () => 340, // approx height of one desktop card row (px), incl. gap
-    overscan: OVERSCAN,
-    enabled: visibleProducts.length > 0,
-  });
-
-  const loadMore = React.useCallback(async () => {
-    if (isLoadingMore) return;
-    setIsLoadingMore(true);
-
-    const allProducts = filteredRef.current;
-    if (allProducts.length === 0) {
-      setIsLoadingMore(false);
-      return;
-    }
-
-    const currentCount = visibleCountRef.current;
-    const nextBatch =
-      currentCount < allProducts.length
-        ? allProducts.slice(currentCount, currentCount + ITEMS_TO_APPEND)
-        : shuffleArray(allProducts).slice(0, ITEMS_TO_APPEND);
-
-    visibleCountRef.current = currentCount + nextBatch.length;
-
-    setVisibleProducts((prev) => {
-      const combined = [...prev, ...nextBatch];
-      // Hard cap so the array itself never grows unbounded, even on an
-      // "endless" feed that's just cycling through a small product set.
-      if (combined.length > MAX_ACCUMULATED) {
-        const trimmed = combined.slice(combined.length - MAX_ACCUMULATED);
-        // Keep visibleCountRef roughly in sync with what's been trimmed so
-        // the next "slice past the end" math stays sane.
-        visibleCountRef.current = Math.min(
-          visibleCountRef.current,
-          allProducts.length + MAX_ACCUMULATED,
-        );
-        return trimmed;
-      }
-      return combined;
-    });
-
-    setIsLoadingMore(false);
-  }, [isLoadingMore]);
-
-  // Trigger loadMore when the virtualizer's rendered range nears the end of
-  // what we currently have buffered.
-  const maybeLoadMore = (lastVisibleIndex: number) => {
-    if (isLoading || visibleProducts.length === 0) return;
-    if (lastVisibleIndex >= visibleProducts.length - ITEMS_TO_APPEND) {
-      loadMore();
-    }
-  };
-
-  const mobileItems = mobileRowVirtualizer.getVirtualItems();
-  const desktopItems = desktopRowVirtualizer.getVirtualItems();
-
-  useEffect(() => {
-    const last = mobileItems[mobileItems.length - 1];
-    if (last) maybeLoadMore(last.index);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mobileItems]);
-
-  useEffect(() => {
-    const last = desktopItems[desktopItems.length - 1];
-    if (last) maybeLoadMore(last.index * desktopCols);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [desktopItems]);
 
   if (isError) return <p>Error loading products.</p>;
 
@@ -255,30 +101,10 @@ export default function CategoryPage() {
         {isLoading ? (
           <CategoryCardSkeleton />
         ) : (
-          <div
-            style={{
-              position: "relative",
-              height: `${mobileRowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-            }}
-          >
-            {mobileItems.map((virtualRow) => {
-              const product = visibleProducts[virtualRow.index];
-              if (!product) return null;
-              const index = virtualRow.index;
-              return (
+          <div className="flex flex-col gap-3">
+            {filteredProducts.map((product, index) => (
                 <div
                   key={`mobile-${product._id}-${index}`}
-                  data-index={virtualRow.index}
-                  ref={mobileRowVirtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                    paddingBottom: "12px", // preserves the gap-3 spacing
-                  }}
                 >
                   <div
                     onClick={(e) => {
@@ -383,8 +209,7 @@ export default function CategoryPage() {
                     </div>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </div>
         )}
       </div>
@@ -417,59 +242,21 @@ export default function CategoryPage() {
               </p>
             </div>
           )}
-          <div
-            style={{
-              position: "relative",
-              height: `${desktopRowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-            }}
-          >
-            {desktopItems.map((virtualRow) => {
-              const rowStart = virtualRow.index * desktopCols;
-              const rowProducts = visibleProducts.slice(
-                rowStart,
-                rowStart + desktopCols,
-              );
-              if (rowProducts.length === 0) return null;
-              return (
-                <div
-                  key={`desktop-row-${virtualRow.index}`}
-                  data-index={virtualRow.index}
-                  ref={desktopRowVirtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                    paddingBottom: "1.5rem", // preserves gap-6
-                  }}
-                >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
-                    {rowProducts.map((product, i) => {
-                      const index = rowStart + i;
-                      return (
-                        <div
-                          key={`desktop-${product._id}-${index}`}
-                          className="relative"
-                        >
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <ProductCard index={index} product={product} />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" align="center">
-                              <p>{product.name}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
+            {filteredProducts.map((product, index) => (
+              <div key={`desktop-${product._id}-${index}`} className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ProductCard index={index} product={product} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    <p>{product.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            ))}
           </div>
         </div>
       )}
