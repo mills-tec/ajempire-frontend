@@ -35,6 +35,7 @@ const EMPTY_PRODUCTS: Product[] = Object.freeze([]) as unknown as Product[];
 
 const productQueryFn = async (cursor: string) => {
   const res = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
+  console.log(res?.message.products);
   return {
     items: res?.message?.products ?? EMPTY_PRODUCTS,
     nextCursor: res?.message?.nextCursor ?? null,
@@ -82,6 +83,9 @@ export default function Home() {
       if (selectedCategory) {
         await queryClient.invalidateQueries({
           queryKey: ["category-products", selectedCategory.name],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["infinite-category-products", selectedCategory.name],
         });
         return;
       }
@@ -157,7 +161,7 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
   // InfiniteFeed re-initializing on every render. We memoize it with
   // selectedCategory?.name as the dependency.
   const infiniteQueryKey: string[] = categoryFilterActive
-    ? ["category-products", selectedCategory!.name]
+    ? ["infinite-category-products", selectedCategory!.name]
     : ["infinite-products"];
 
   // This produces a new function only when the category name actually changes.
