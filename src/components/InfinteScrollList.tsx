@@ -105,7 +105,7 @@ interface SlottedItem<T> {
 export function InfiniteFeed<T>({
   queryKey,
   queryFn,
-  staleTime = Infinity,
+  staleTime = 0,
   renderItem,
   getItemId,
   emptyComponent,
@@ -127,6 +127,7 @@ export function InfiniteFeed<T>({
   // ── Infinite Query ───────────────────────────────────────────────────────────
   const {
     data,
+    dataUpdatedAt,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -146,6 +147,7 @@ export function InfiniteFeed<T>({
     () => data?.pages.flatMap((p) => p.items) ?? [],
     [data?.pages]
   );
+
 
   const isRecycleMode = !hasNextPage && sourceItems.length > 0;
 
@@ -168,6 +170,21 @@ export function InfiniteFeed<T>({
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // ── Reseed on fresh data ───────────────────────────────────────────────────────
+  // A completed refetch (e.g. the automatic staleTime:0 mount refetch, or a
+  // pull-to-refresh) replaces `data`, but once recycle mode has already seeded
+  // once it otherwise never looks at `data` again — so a product deleted after
+  // seeding would stay visible forever. Un-seed whenever the query resolves with
+  // a newer `dataUpdatedAt`, which lets the seed effect below rebuild the
+  // recycle pool from the fresh source items.
+  const seededAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isRecycleMode) return;
+    if (seededAtRef.current === dataUpdatedAt) return;
+    seededAtRef.current = dataUpdatedAt;
+    setIsSeeded(false);
+  }, [isRecycleMode, dataUpdatedAt]);
 
   // ── Seed ─────────────────────────────────────────────────────────────────────
   // Fires once when the API has no more pages.

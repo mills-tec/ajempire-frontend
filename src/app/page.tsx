@@ -35,7 +35,6 @@ const EMPTY_PRODUCTS: Product[] = Object.freeze([]) as unknown as Product[];
 
 const productQueryFn = async (cursor: string) => {
   const res = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
-  console.log(res?.message.products);
   return {
     items: res?.message?.products ?? EMPTY_PRODUCTS,
     nextCursor: res?.message?.nextCursor ?? null,
@@ -273,7 +272,6 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
                 <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
               )}
               shuffle={shuffleArray}
-              staleTime={Infinity}
               scrollRestorationKey="home-scroll-y"
               gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"
               className="mt-8"
