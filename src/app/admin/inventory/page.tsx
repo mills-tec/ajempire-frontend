@@ -7,6 +7,7 @@ import { AlertCircle, Edit2, Eye, Filter, Folder, LayoutGrid, Loader2, Package, 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface MappedProduct {
     id: string;
@@ -27,6 +28,7 @@ interface MappedProduct {
 const InventoryPage = () => {
     const searchParams = useSearchParams();
     const toast = useToast();
+    const queryClient = useQueryClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [products, setProducts] = useState<any[]>([]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -262,6 +264,12 @@ const InventoryPage = () => {
                 setNextCursor(null);
                 setHasMore(true);
                 fetchInventoryData();
+
+                // Storefront's InfiniteFeed reads through React Query, which this
+                // admin page never touches otherwise — without this, a storefront
+                // tab open in the same session keeps showing the deleted product.
+                queryClient.invalidateQueries({ queryKey: ["infinite-products"] });
+                queryClient.invalidateQueries({ queryKey: ["category-products"] });
             } catch (error) {
                 console.error('Error deleting product:', error);
                 // Show error toast
