@@ -66,7 +66,7 @@ export default function OrderSummaryPage() {
         );
 
         await axios.post(
-          "process.env.NEXT_PUBLIC_BACKEND_URL/api/cart/",
+          process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
           { items: itemsPayload },
           {
             headers: {
