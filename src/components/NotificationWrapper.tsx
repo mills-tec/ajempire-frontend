@@ -1,6 +1,5 @@
 "use client";
 
-import { globalUrl } from "@/api/api";
 import { useNotification } from "@/api/customHooks";
 import { Product } from "@/lib/admin-types";
 import { updateAdminPushNotification } from "@/lib/adminapi";
@@ -89,11 +88,12 @@ export default function NotificationWrapper() {
     registerPushToken();
   }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet, updatePushToken]);
 
+  console.log("HI");
   // Socket.IO — user notifications (non-admin routes only)
   useEffect(() => {
     if (isAdminRoute || !user) return;
 
-    const backendUrl = globalUrl.replace("/api", "");
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ;
     if (!backendUrl) return;
 
     const token = getBearerToken();
