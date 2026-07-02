@@ -201,15 +201,15 @@ export default function ShippingAdressForm({
         return;
       }
 
-
       if (onContinue) onContinue();
       if (onAddressUpdated) onAddressUpdated();
     } catch (error: unknown) {
       console.error("❌ Error updating address:", error);
 
-      if (error.response) {
-        console.log("🧾 Server says:", error.response.data);
-        toast.error(error.response.data?.message || "Something went wrong!", {
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      if (axiosError.response) {
+        console.log("🧾 Server says:", axiosError.response.data);
+        toast.error(axiosError.response.data?.message || "Something went wrong!", {
           position: "top-right",
         });
       } else {
@@ -429,7 +429,7 @@ export default function ShippingAdressForm({
                 <option value="" className="text-[#292929]" disabled>
                   Select State
                 </option>
-                {states.map((state) => (
+                {nigeriaStates.map((state) => (
                   <option key={state} value={state} className="text-[#292929]">
                     {state}
                   </option>
@@ -472,16 +472,17 @@ export default function ShippingAdressForm({
             </div>
           </div>
           <button
-            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${!fullName ||
-                !phone ||
-                !street ||
-                !city ||
-                !selectedState ||
-                !selectedCountry ||
-                !postalCode
+            className={`w-full bg-primaryhover text-white rounded-sm h-[40px] ${
+              !fullName ||
+              !phone ||
+              !street ||
+              !city ||
+              !selectedState ||
+              !selectedCountry ||
+              !postalCode
                 ? "opacity-50 cursor-not-allowed"
                 : ""
-              }`}
+            }`}
             disabled={
               !fullName ||
               !phone ||

@@ -215,6 +215,9 @@ export const useCartStore = create<CartStore>()(
 
         set({ items: current });
 
+        console.log("🛒 [Cart] Items added:", validItems.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity, selectedVariants: i.selectedVariants })));
+        console.log("🛒 [Cart] Full cart state:", current.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity })));
+
         if (!getBearerToken()) return;
 
         addToCart(validItems).catch((err) => {
@@ -242,7 +245,6 @@ export const useCartStore = create<CartStore>()(
 
         // Update local state first
         set({ items: updatedItems });
-        set({ items: updatedItems });
 
         if (!getBearerToken() || !updatedItem) return;
 
@@ -250,7 +252,6 @@ export const useCartStore = create<CartStore>()(
         pendingSyncTimeouts.set(
           `variant:${id}`,
           setTimeout(() => {
-            addToCart([updatedItem]);
             pendingSyncTimeouts.delete(`variant:${id}`);
             addToCart([updatedItem])
               .then(() => {

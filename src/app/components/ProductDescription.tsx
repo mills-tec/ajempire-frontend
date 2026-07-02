@@ -122,16 +122,15 @@ export default function ProductDescription({
   );
 
   useEffect(() => {
-    // If the item no longer exists, do nothing
     if (!item) return;
 
-    // Remove item if quantity is 0
     if (quantity === 0) {
       removeItem(item._id);
       return;
     }
 
-    // Update cart store with the new quantity
+    if (item.quantity === quantity) return;
+
     setCartItemQty(item._id, quantity);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity, item?._id]);

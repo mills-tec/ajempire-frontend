@@ -149,6 +149,9 @@ export default function NotificationWrapper() {
           return;
         }
 
+        const localItems = useCartStore.getState().items;
+        const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+
         const items: CartItem[] = res.message.items.map(
           (item: {
             product: Product;
@@ -159,16 +162,24 @@ export default function NotificationWrapper() {
             variants?: {
               options: { name: string; value: string }[];
             };
-          }) => ({
-            ...item.product,
-            quantity: item.qty,
-            selected: true,
-            name: item.product.name,
-            basePrice: item.price,
-            discount: item.discount,
-            finalPrice: item.finalPrice,
-            selectedVariants: item.variants?.options ?? [],
-          }),
+          }) => {
+            const localItem = localItems.find((i) => i._id === item.product._id);
+            const coverImage = item.product.cover_image?.startsWith("/")
+              ? `${backendBase}${item.product.cover_image}`
+              : item.product.cover_image;
+            return {
+              ...(localItem ?? {}),
+              ...item.product,
+              cover_image: coverImage,
+              quantity: item.qty,
+              selected: localItem?.selected ?? true,
+              name: item.product.name,
+              basePrice: item.price,
+              discount: item.discount,
+              finalPrice: item.finalPrice,
+              selectedVariants: item.variants?.options ?? [],
+            };
+          },
         );
 
         setCartItems(items);
