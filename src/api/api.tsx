@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
-export const globalUrl =
-  "https://ajempire-backend-production-b8ff.up.railway.app/api";
+export const globalUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+   + "/api";
 export const getData = async (url: string, config?: AxiosRequestConfig) =>
   axios.get(`${globalUrl}${url}`, config);
 export const postData = async (
