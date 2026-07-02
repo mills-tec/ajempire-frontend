@@ -44,6 +44,8 @@ export default function CartPage() {
     const token = getBearerToken();
     const seletedItem = items.filter((item) => item.selected);
 
+    console.log("✅ [Checkout] Selected items:", seletedItem.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, basePrice: i.basePrice, discount: i.discount, finalPrice: i.finalPrice, quantity: i.quantity, selectedVariants: i.selectedVariants })));
+
     if (!token) {
       toast.error("Please log in to checkout", { position: "top-right" });
       setIsLoading(false);
