@@ -132,7 +132,7 @@ export default function OrderSummaryPage() {
 
     try {
       const response = await axios.post(
-        "process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout",
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/api/checkout",
         {
           paymentMethod,
           logistics: isLogisticsMode
