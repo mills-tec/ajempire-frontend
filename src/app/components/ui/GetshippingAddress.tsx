@@ -31,7 +31,6 @@ const GetshippingAddress = () => {
         },
       );
       setAddress(res.data.message);
-      console.log("Fetched address:", res.data.message);
     } catch (err) {
       console.error("Error fetching address:", err);
     }

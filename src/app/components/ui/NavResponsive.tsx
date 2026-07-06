@@ -21,8 +21,10 @@ const NavResponsive = ({
   showIntro: _showIntro,
   setShowIntro: _setShowIntro,
 }: NavResponsiveProps) => {
-  const { items } = useCartStore();
-  const { clearSearch } = useSearchStore();
+  // Selectors — the whole-store destructures re-rendered the always-mounted
+  // nav on every cart/search store mutation (e.g. clicking any product card).
+  const items = useCartStore((s) => s.items);
+  const clearSearch = useSearchStore((s) => s.clearSearch);
   const _cartRef = useRef<HTMLAnchorElement>(null);
   const openModal = useModalStore((s) => s.openModal);
   const clickzome = "transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1"

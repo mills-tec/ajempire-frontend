@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import OrderSummaryPage from "../components/ui/OrderSummaryPage";
 
 import Spinner from "@/app/components/Spinner";
-import { useCartStore } from "@/lib/stores/cart-store"; // adjust path
 import { getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store"; // adjust path
 
 export default function CheckoutRoute() {
   const router = useRouter();

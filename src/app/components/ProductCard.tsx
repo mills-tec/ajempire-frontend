@@ -1,6 +1,5 @@
 "use client";
 import CountdownTimer from "@/components/CountDownTimer";
-import { getBearerToken, getUsersWishlist } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
@@ -8,9 +7,43 @@ import { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { memo, useState } from "react";
 
-export default function ProductCard({
+// Static SVGs hoisted to module scope — created once, not on every render of
+// every card in the feed.
+const filledStar = (
+  <svg
+    width="16"
+    height="16"
+    className="size-4"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M8.16382 0.828125L9.99671 6.46919H15.9281L11.1295 9.95557L12.9624 15.5966L8.16382 12.1103L3.36525 15.5966L5.19814 9.95557L0.399566 6.46919H6.33092L8.16382 0.828125Z"
+      fill="#403C39"
+    />
+  </svg>
+);
+const unfilledStar = (
+  <svg
+    width="16"
+    height="16"
+    className="size-4 "
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M9.40625 6.55859L9.4707 6.75781H14.7236L10.6436 9.72168L10.4736 9.8457L10.5381 10.0449L12.0967 14.8408L8.0166 11.877L7.84766 11.7539L7.67773 11.877L3.59668 14.8408L5.15625 10.0449L5.2207 9.8457L5.05176 9.72168L0.97168 6.75781H6.22461L6.28906 6.55859L7.84766 1.76074L9.40625 6.55859Z"
+      stroke="#403C39"
+      strokeWidth="0.57732"
+    />
+  </svg>
+);
+
+function ProductCard({
   product,
   index,
 }: {
@@ -19,59 +52,24 @@ export default function ProductCard({
 }) {
   const router = useRouter();
 
-  // const [rating, setRating] = React.useState(3);
   const setSelectedItem = useCartStore((state) => state.setSelectedItem);
-  const { getItem } = useCartStore();
-  const { addItem, isInWishlist, removeItem } = useWishlistStore();
+  // Subscribe to just this product's cart quantity (a primitive) instead of
+  // the whole store — the card re-renders only when ITS quantity changes,
+  // not on every cart mutation anywhere in the app.
+  const cartQuantity = useCartStore(
+    (state) => state.items.find((i) => i._id === product._id)?.quantity,
+  );
+  const addItem = useWishlistStore((s) => s.addItem);
+  const removeItem = useWishlistStore((s) => s.removeItem);
+  const isInWishlist = useWishlistStore((s) => s.isInWishlist);
   const openModal = useModalStore((s) => s.openModal);
 
   const [imgLoading, setLoading] = useState(true);
   const [userToken] = useState(null);
 
-  useEffect(() => {
-    const token = getBearerToken();
-    if (!token) return;
-    const fetchWishlist = async () => {
-      await getUsersWishlist();
-    };
-    fetchWishlist();
-  }, []);
-
-  const filledStar = (
-    <svg
-      width="16"
-      height="16"
-      className="size-4"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M8.16382 0.828125L9.99671 6.46919H15.9281L11.1295 9.95557L12.9624 15.5966L8.16382 12.1103L3.36525 15.5966L5.19814 9.95557L0.399566 6.46919H6.33092L8.16382 0.828125Z"
-        fill="#403C39"
-      />
-    </svg>
-  );
-  const unfilledStar = (
-    <svg
-      width="16"
-      height="16"
-      className="size-4 "
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M9.40625 6.55859L9.4707 6.75781H14.7236L10.6436 9.72168L10.4736 9.8457L10.5381 10.0449L12.0967 14.8408L8.0166 11.877L7.84766 11.7539L7.67773 11.877L3.59668 14.8408L5.15625 10.0449L5.2207 9.8457L5.05176 9.72168L0.97168 6.75781H6.22461L6.28906 6.55859L7.84766 1.76074L9.40625 6.55859Z"
-        stroke="#403C39"
-        strokeWidth="0.57732"
-      />
-    </svg>
-  );
   return (
     <section
       onClick={() => {
-        console.log("clicked");
         router.push(`/product/${product._id}`);
       }}
       className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${
@@ -219,9 +217,9 @@ export default function ProductCard({
             )}
 
             <div className="relative">
-              {getItem(product._id) && (
+              {cartQuantity !== undefined && (
                 <div className="absolute size-4 rounded-full left-7 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
-                  <p>{getItem(product._id)?.quantity}</p>
+                  <p>{cartQuantity}</p>
                 </div>
               )}
               <svg
@@ -258,3 +256,8 @@ export default function ProductCard({
     </section>
   );
 }
+
+// Memoized: during recycle-mode scrolling the feed appends/trims items and
+// re-renders the grid — memo lets the ~60 cards whose props are unchanged
+// skip their render entirely.
+export default memo(ProductCard);
