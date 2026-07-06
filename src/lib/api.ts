@@ -29,8 +29,6 @@ export const BASE_URL =
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 export async function loginBackend(email: string, password: string) {
-  console.log("🔑 Login request:", { email, password: "***" });
-
   const res = await fetch(API_URL + "/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -139,8 +137,6 @@ export async function signupBackend(
   password: string,
   fullname: string,
 ) {
-  console.log("📡 Making signup request:", { email, password: "***" });
-
   const res = await fetch(API_URL + "/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -148,22 +144,12 @@ export async function signupBackend(
     // credentials: "include", // so cookies (session) are set
   });
 
-  console.log("📊 Response status:", res.status);
-  console.log("📊 Response headers:", [...res.headers.entries()]);
-
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    console.error("❌ API Error Response:", errorData);
-    console.error("📊 Error structure:", JSON.stringify(errorData, null, 2));
     throw new Error(errorData.error || errorData.message || "Signup failed");
   }
 
-  const data = await res.json();
-  console.log("✅ API Success Response:", data);
-  console.log("📊 Response structure:", JSON.stringify(data, null, 2));
-  console.log("📊 Response type:", typeof data);
-  console.log("📊 Response keys:", Object.keys(data));
-  return data;
+  return res.json();
 }
 
 export async function logoutBackend() {
@@ -344,14 +330,6 @@ export async function addToCart(products: CartItem[]) {
     }
   }
 
-  console.log("🛒 RAW products going into addToCart:", JSON.stringify(products.map(p => ({
-    id: p._id,
-    name: p.name,
-    variants: p.variants,
-    variantCombinations: p.variantCombinations,
-    selectedVariants: p.selectedVariants,
-  })), null, 2));
-
   const items = products.map((product) => ({
     productId: product._id,
     qty: product.quantity,
@@ -363,10 +341,6 @@ export async function addToCart(products: CartItem[]) {
       : [],
   }));
 
-  console.log("📦 Transformed items being sent to backend:", JSON.stringify(items, null, 2));
-
-  // 🔥 Log payload here to check
-  // console.log("Sending cart payload:", items);
   const res = await fetch(API_URL + "/cart", {
     method: "POST",
     headers: {
@@ -547,21 +521,17 @@ export async function getProductsByCategory(
   if (!res.ok) return [];
 
   const data = await res.json();
-  console.log("Products by category response data:", data);
   return data.message.products;
 }
 
 // SEARCH API
 export async function searchProducts(searchQuery: string): Promise<Product[]> {
-  console.log("📡 calling searchProducts with query:", searchQuery);
   const res = await fetch(
     `${API_URL}/product/search?name=${encodeURIComponent(searchQuery)}`,
   );
   if (!res.ok) return [];
 
   const data = await res.json();
-  console.log("Search response data:", data);
-  console.log("Message structure:", data.message);
 
   // The API returns { message: { items: [...], pagination: {...} } }
   if (Array.isArray(data.message?.items)) {

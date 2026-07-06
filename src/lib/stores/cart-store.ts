@@ -215,13 +215,9 @@ export const useCartStore = create<CartStore>()(
 
         set({ items: current });
 
-        console.log("🛒 [Cart] Items added:", validItems.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity, selectedVariants: i.selectedVariants })));
-        console.log("🛒 [Cart] Full cart state:", current.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity })));
-
         if (!getBearerToken()) return;
 
-        addToCart(validItems).catch((err) => {
-          console.log(err);
+        addToCart(validItems).catch(() => {
           toast.error("Couldn't sync cart. Will retry.");
         });
       },
