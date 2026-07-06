@@ -5,8 +5,9 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Product } from "@/lib/types";
+import { memo } from "react";
 
-export default function ProductItem({ product, index }: { product: Product, index: number }) {
+function ProductItem({ product, index }: { product: Product, index: number }) {
     return (
         <Tooltip key={product._id}>
             <TooltipTrigger asChild>
@@ -18,3 +19,5 @@ export default function ProductItem({ product, index }: { product: Product, inde
         </Tooltip>
     )
 }
+
+export default memo(ProductItem);

@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -31,26 +32,43 @@ export function PullToRefreshProvider({
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const triggerRefresh = async () => {
-    setRefreshing(true);
-    setPull(MAX_PULL);
-    await onRefresh();
-    setRefreshing(false);
-    setPull(0);
-  };
+  // Handlers read these refs instead of state so the window listeners can be
+  // attached exactly once — re-subscribing on every pull frame (the old
+  // behavior) removed/added three listeners dozens of times per second.
+  const pullRef = useRef(0);
+  const refreshingRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   useEffect(() => {
     // Touch only — no mouse events so desktop is unaffected
 
+    // Coalesce touchmove updates to one state commit per frame.
+    let rafId = 0;
+    const commitPull = (value: number) => {
+      pullRef.current = value;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setPull(value));
+    };
+
+    const triggerRefresh = async () => {
+      refreshingRef.current = true;
+      setRefreshing(true);
+      commitPull(MAX_PULL);
+      await onRefreshRef.current();
+      refreshingRef.current = false;
+      setRefreshing(false);
+      commitPull(0);
+    };
+
     const onTouchStart = (e: TouchEvent) => {
-      if (window.scrollY !== 0 || refreshing) return;
+      if (window.scrollY !== 0 || refreshingRef.current) return;
       pulling.current = true;
       startY.current = e.touches[0].clientY;
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!pulling.current || refreshing) return;
+      if (!pulling.current || refreshingRef.current) return;
 
       const delta = e.touches[0].clientY - startY.current;
 
@@ -59,7 +77,7 @@ export function PullToRefreshProvider({
         const resistance = 0.8;
         const damped = delta * resistance;
 
-        setPull(
+        commitPull(
           delta < MAX_PULL ? damped : MAX_PULL + (delta - MAX_PULL) * 0.2,
         );
       }
@@ -69,10 +87,10 @@ export function PullToRefreshProvider({
       if (!pulling.current) return;
       pulling.current = false;
 
-      if (pull >= TRIGGER_PULL) {
+      if (pullRef.current >= TRIGGER_PULL) {
         await triggerRefresh();
       } else {
-        setPull(0);
+        commitPull(0);
       }
     };
 
@@ -81,17 +99,16 @@ export function PullToRefreshProvider({
     window.addEventListener("touchend", onTouchEnd);
 
     return () => {
+      cancelAnimationFrame(rafId);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [pull, refreshing, triggerRefresh]);
+  }, []);
 
-  return (
-    <PullContext.Provider value={{ pull, refreshing }}>
-      {children}
-    </PullContext.Provider>
-  );
+  const value = useMemo(() => ({ pull, refreshing }), [pull, refreshing]);
+
+  return <PullContext.Provider value={value}>{children}</PullContext.Provider>;
 }
 
 export function usePullToRefresh() {

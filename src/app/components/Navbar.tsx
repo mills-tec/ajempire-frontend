@@ -1,7 +1,7 @@
 "use client";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useState } from "react";
-import { usePathname } from "../../../node_modules/next/navigation";
+import { usePathname } from "next/navigation";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
 
@@ -22,7 +22,7 @@ const Navbar = () => {
       : "opacity-70";
   };
 
-  const { isLoggedIn } = useAuthStore();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   return (
     <div className=" w-full text-[14px] font-poppins">

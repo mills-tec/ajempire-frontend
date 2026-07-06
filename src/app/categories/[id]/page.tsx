@@ -62,10 +62,20 @@ export default function CategoryPage() {
     staleTime: Infinity,
   });
 
-  const { getItem } = useCartStore();
+  // Subscribe only to `items` — the old whole-store subscription re-rendered
+  // this entire list whenever ANY cart-store field changed (e.g. opening the
+  // cart popup sets `selectedItem`).
+  const cartItems = useCartStore((state) => state.items);
   const setSelectedItem = useCartStore((state) => state.setSelectedItem);
   const router = useRouter();
   const searchedQuery = useSearchStore((state) => state.searchedQuery);
+
+  // O(1) quantity lookups instead of an O(items) find per product per render.
+  const cartQuantities = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of cartItems) map.set(item._id, item.quantity);
+    return map;
+  }, [cartItems]);
 
   const filteredProducts = React.useMemo(() => {
     const products = data ?? EMPTY;
@@ -176,9 +186,9 @@ export default function CategoryPage() {
                           setSelectedItem(product);
                         }}
                       >
-                        {getItem(product._id) && (
+                        {cartQuantities.has(product._id) && (
                           <div className="absolute size-4 rounded-full left-5 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
-                            <p>{getItem(product._id)?.quantity}</p>
+                            <p>{cartQuantities.get(product._id)}</p>
                           </div>
                         )}
                         <svg

@@ -45,10 +45,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [label, setLabel] = React.useState("");
 
   useEffect(() => {
-    setInterval(() => {
+    const interval = setInterval(() => {
       setLabel(timeAgo(item.createdAt)!);
     }, 60000);
     setLabel(timeAgo(item.createdAt)!);
+    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

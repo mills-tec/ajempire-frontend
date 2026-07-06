@@ -17,7 +17,7 @@ export default function PaymentConfirmation() {
   const [responseData, setResponseData] = useState<string>("");
   const [showModal, setShowModal] = useState(true);
 
-  // useEffect(() => {
+ 
   //   const verifyPayment = async () => {
   //     setIsLoading(true);
   //     const token = getBearerToken();
@@ -151,7 +151,7 @@ export default function PaymentConfirmation() {
 
     try {
       const response = await axios.post(
-        `process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout/verify`,
+        process.env.NEXT_PUBLIC_BACKEND_URL + '/api/checkout/verify',
         {},
         {
           headers: {
