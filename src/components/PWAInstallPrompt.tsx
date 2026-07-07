@@ -37,12 +37,15 @@ const REPROMPT_DELAY = 45_000; // ms user must wait before seeing prompt again
 const REPROMPT_INTERACTIONS = 3; // interactions required before re-prompting after dismiss
 const SUCCESS_DURATION = 3_500; // ms success banner is visible
 const OPEN_APP_SNOOZE = 24 * 60 * 60_000; // 24h before "Open in App" re-shows
+const MAX_DAILY_PROMPTS = 2; // maximum times to show per calendar day
 
 const STORAGE = {
   DISMISSED_AT: "pwa_prompt_dismissed_at",
   PROMPT_COUNT: "pwa_prompt_count",
   INSTALLED: "pwa_installed",
   OPEN_APP_SNOOZED: "pwa_open_app_snoozed_at",
+  DAILY_DATE: "pwa_daily_date",
+  DAILY_COUNT: "pwa_daily_count",
 } as const;
 
 const MESSAGES = [
@@ -91,6 +94,23 @@ function getStoredNumber(key: string): number | null {
   if (typeof window === "undefined") return null;
   const v = localStorage.getItem(key);
   return v ? parseInt(v, 10) : null;
+}
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function getDailyCount(): number {
+  if (typeof window === "undefined") return 0;
+  const storedDate = localStorage.getItem(STORAGE.DAILY_DATE);
+  if (storedDate !== getTodayStr()) return 0; // new day → treat as zero
+  return parseInt(localStorage.getItem(STORAGE.DAILY_COUNT) || "0", 10);
+}
+
+function bumpDailyCount(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE.DAILY_DATE, getTodayStr());
+  localStorage.setItem(STORAGE.DAILY_COUNT, (getDailyCount() + 1).toString());
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -218,14 +238,18 @@ export default function PWAInstallPrompt({
     if (state !== "idle") return;
     if (hasTriggeredRef.current) return;
     if (platform === "android" && !deferredPrompt) return;
+    if (getDailyCount() >= MAX_DAILY_PROMPTS) return; // already shown twice today
 
     const dismissedAt = dismissedAtRef.current;
     if (dismissedAt) {
       const enoughTime = Date.now() - dismissedAt >= REPROMPT_DELAY;
       if (!enoughTime || !repromptGate) return;
     }
-    const CHECK_INTERVAL = 1000;
+
     const timer = setTimeout(() => {
+      // Re-check inside the timer in case the day rolled over while waiting
+      if (getDailyCount() >= MAX_DAILY_PROMPTS) return;
+      bumpDailyCount();
       hasTriggeredRef.current = true;
       setState("prompt");
     }, FIRST_PROMPT_DELAY);
@@ -264,8 +288,9 @@ export default function PWAInstallPrompt({
   // ── Android install tap ─────────────────────────────────────────────────────
   const handleInstall = useCallback(async () => {
     if (platform === "ios") {
-      hasTriggeredRef.current = false;
-      setState("idle");
+      // Treat "Got it" the same as dismiss so the timestamp is saved
+      // and the prompt doesn't re-appear 5 seconds later
+      handleDismiss();
       return;
     }
 
