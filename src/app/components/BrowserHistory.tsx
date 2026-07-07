@@ -40,9 +40,9 @@ const RecentlyViewedMobile = ({
                   Only {product.stock} left
                 </div>
 
-                <div className="relative h-32 w-full">
+                <div className="relative h-32 w-full overflow-hidden">
                   <Image
-                    src={product.cover_image || "/placeholder.png"}
+                    src={product.cover_image || product.images?.[0] || "/icon-512.png"}
                     alt={product.name}
                     fill
                     className="rounded-t-lg object-cover"

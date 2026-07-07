@@ -44,7 +44,6 @@ export default function Orders({ params }: OrdersProps) {
         setOrders(fetchedOrders ?? []);
         setOrderStatus(resolvedParams.type);
         setIsLoading(false);
-
       }
     })();
 
@@ -89,16 +88,16 @@ export default function Orders({ params }: OrdersProps) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (item.product as any)._id === product
             ? {
-              ...item,
-              product: {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ...(item.product as any),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reviews: (item.product as any).reviews.map((rev: any) =>
-                  rev._id === review._id ? { product, ...rest } : rev,
-                ),
-              },
-            }
+                ...item,
+                product: {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ...(item.product as any),
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  reviews: (item.product as any).reviews.map((rev: any) =>
+                    rev._id === review._id ? { product, ...rest } : rev,
+                  ),
+                },
+              }
             : item,
         ),
       })),
@@ -164,7 +163,6 @@ export default function Orders({ params }: OrdersProps) {
             ),
         );
 
-
       return (
         <Reviews items={reviewItems} setUpdatedReviews={setUpdatedReviews} />
       );
@@ -178,8 +176,12 @@ export default function Orders({ params }: OrdersProps) {
     if (statusMatched.length > 0) return renderOrders(statusMatched);
 
     return (
-      <EmptyList message={`You do not have any ${orderStatus} order yet.`} writeup="Purchase an item to place order" btnText="" href="" />
-    
+      <EmptyList
+        message={`You do not have any ${orderStatus} order yet.`}
+        writeup="Purchase an item to place order"
+        btnText=""
+        href=""
+      />
     );
   };
 
@@ -222,7 +224,7 @@ export default function Orders({ params }: OrdersProps) {
         handleSearchInputChange={handleSearchInputChange}
         text="Your Orders"
       />
-      <div className="h-screen overflow-auto">{renderContent()}</div>
+      <div className="lg:h-screen lg:overflow-auto  ">{renderContent()}</div>
     </div>
   );
 }

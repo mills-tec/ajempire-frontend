@@ -4,7 +4,7 @@ import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
 import BreadCrumb from "./components/BreadCrumb";
 import SideNav from "./components/SideNav";
 import { SideBarItem, sidebarItems } from "./data/sidebarData";
@@ -30,7 +30,6 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [_isLoading, setIsLoading] = useState(false);
   const activeItem = findActiveTitle(sidebarItems, pathname);
   const { setNotifications } = useNotificationStore();
   const { getNotifications } = useNotification();
@@ -43,26 +42,6 @@ export default function Layout({ children }: LayoutProps) {
     }
     // setCheckingAuth(false);
   }, [router]);
-
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => setIsLoading(false);
-
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("a")) handleStart();
-    };
-
-    document.addEventListener("click", handleClick);
-
-    handleComplete();
-    const timeout = setTimeout(() => setIsLoading(false), 50);
-
-    return () => {
-      document.removeEventListener("click", handleClick);
-      clearTimeout(timeout);
-    };
-  }, [pathname]);
 
   useEffect(() => {
     // if (checkingAuth) return;
