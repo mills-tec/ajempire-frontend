@@ -43,7 +43,6 @@ export default function OrdersAndAccountPage() {
         setHistoryLoading(false);
         return;
       }
-
       const browsingHistory = res.browsingHistory.flatMap(
         (item: { products: { product: Product }[] }) =>
           (item.products ?? []).map(
