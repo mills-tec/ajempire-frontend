@@ -1,8 +1,10 @@
-// Generic API response interface
-export interface ApiResponse<T> {
+// Generic API response interface.
+// The backend returns the payload in `message` for most endpoints;
+// M overrides the message type where it differs from the data type T.
+export interface ApiResponse<T, M = T> {
   success: boolean;
   data?: T;
-  message?: string;
+  message?: M;
   error?: string;
   status: boolean;
 }
@@ -40,6 +42,7 @@ export interface Review {
 // Category interfaces
 export interface Category {
   id: string;
+  _id?: string;
   name: string;
   description?: string;
   image?: string;

@@ -109,7 +109,7 @@ export default function Status() {
 
       try {
         const data = await getOrder(orderId);
-        if (data.status) setOrder(data.message);
+        // if (data.status) setOrder(data.message);
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load order");

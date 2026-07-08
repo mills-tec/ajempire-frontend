@@ -1,10 +1,12 @@
 "use client";
 
 import { getOrderById, updateOrder } from '@/lib/adminapi';
-import { Copy, CreditCardIcon, ListFilter, MapPin, Package, X } from 'lucide-react';
+import { IItem, IOrder } from '@/lib/types';
+import { Copy, CreditCardIcon, ListFilter, MapPin, X } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const SingleOrderPage = () => {
   const params = useParams();
@@ -12,8 +14,7 @@ const SingleOrderPage = () => {
   const orderId = params.orderId as string;
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<IOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
@@ -42,11 +43,8 @@ const SingleOrderPage = () => {
       setLoading(true);
       const response = await getOrderById(orderId);
 
-      console.log("response", response)
-
       if (response.message) {
         setOrder(response.message);
-        console.log(response.message);
       } else {
         console.error("Order not found");
         router.push("/admin/orders");
@@ -99,8 +97,8 @@ const SingleOrderPage = () => {
   }
 
   const handleCopyTrackingId = () => {
-    if (order?.trackingId) {
-      navigator.clipboard.writeText(order.trackingId);
+    if (order?.order_id) {
+      navigator.clipboard.writeText(order.order_id);
     }
   };
 
@@ -108,28 +106,33 @@ const SingleOrderPage = () => {
     setShowCancelConfirm(true);
   };
 
-  const handleUpdateStatus = async (newStatus: string) => {
+  const handleUpdateStatus = async (
+    newStatus: 'processing' | 'shipping' | 'delivered' | 'canceled',
+  ) => {
     setShowActionsDropdown(false);
     try {
       setLoading(true);
-      let apiStatus = newStatus;
+      let apiStatus: 'processing' | 'shipped' | 'delivered' | 'cancelled';
       if (newStatus === 'canceled') {
         apiStatus = 'cancelled';
       } else if (newStatus === 'shipping') {
         apiStatus = 'shipped';
-      }
-      const response = await updateOrder(orderId, { 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      orderStatus: apiStatus as any
-      });
-      if (response.success) {
-        await fetchOrderDetails();
       } else {
-        alert(response.error || 'Failed to update order status');
+        apiStatus = newStatus;
       }
+      const response = await updateOrder(order._id, { orderStatus: apiStatus });
+      if (response.status) {
+        await fetchOrderDetails();
+      }
+      console.log(response.status);
+      // if (response.success) {
+      //   await fetchOrderDetails();
+      // } else {
+      //   toast.error(response.error || 'Failed to update order status');
+      // }
     } catch (error) {
       console.error('Error updating order status:', error);
-      alert('An error occurred while updating order status');
+      toast.error('An error occurred while updating order status');
     } finally {
       setLoading(false);
     }
@@ -376,54 +379,62 @@ const SingleOrderPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {order.items?.map((item: any, index: number) => (
-                <tr
-                  key={index}
-                  className="hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Package size={20} className="text-brand_gray/40" />
+              {order.items?.length ? (
+                order.items.map((item: IItem, index: number) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-50/50 transition-colors"
+                  >
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
+                          <Image src={item.image} alt='' fill className='object-cover' />
+                          {/* <Package size={20} className="text-brand_gray/40" /> */}
+                        </div>
+                        <span className="font-medium text-sm text-brand_gray_dark">
+                          {item.name || "Unknown Product"}
+                        </span>
                       </div>
-                      <span className="font-medium text-sm text-brand_gray_dark">
-                        {item.productName || item.name || "Unknown Product"}
+                    </td>
+
+                    <td className="p-4 text-center text-sm text-brand_gray_dark">
+                      {item.qty || 1}
+                    </td>
+                    <td className="p-4 text-sm text-brand_gray_dark">
+                      {item.variants?.options?.length
+                        ? item.variants.options
+                          .map((option) => `${option.name}: ${option.value}`)
+                          .join(", ")
+                        : "N/A"}
+                    </td>
+                    <td className="p-4 text-right text-sm text-brand_gray_dark">
+                      {formatCurrency(item.price)}
+                    </td>
+                    <td className="p-4 text-right text-sm text-brand_gray_dark">
+                      {formatCurrency(item.discountedPrice || 0)}
+                    </td>
+                    <td className="p-4 text-right text-sm font-bold text-brand_gray_dark">
+                      {formatCurrency(
+                        (item.price - (item.discountedPrice || 0)) *
+                        (item.qty || 1),
+                      )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(order.orderStatus)}`}
+                      >
+                        {order.orderStatus}
                       </span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center text-sm text-brand_gray_dark">
-                    {item.quantity || 1}
-                  </td>
-                  <td className="p-4 text-sm text-brand_gray_dark">
-                    {item.color || item.size || "N/A"}
-                  </td>
-                  <td className="p-4 text-right text-sm text-brand_gray_dark">
-                    {formatCurrency(item.price || item.unitPrice)}
-                  </td>
-                  <td className="p-4 text-right text-sm text-brand_gray_dark">
-                    {formatCurrency(item.discount || 0)}
-                  </td>
-                  <td className="p-4 text-right text-sm font-bold text-brand_gray_dark">
-                    {formatCurrency(
-                      (item.price || item.unitPrice) * (item.quantity || 1),
-                    )}
-                  </td>
-                  <td className="p-4 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(order.orderStatus)}`}
-                    >
-                      {order.orderStatus}
-                    </span>
-                  </td>
-                </tr>
-              )) || (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-gray-500">
-                      No items found in this order
                     </td>
                   </tr>
-                )}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
+                    No items found in this order
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -436,19 +447,19 @@ const SingleOrderPage = () => {
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-600">Subtotal</span>
               <span className="text-sm font-medium text-gray-900">
-                {formatCurrency(order.subtotal || order.totalPrice)}
+                {formatCurrency(order.totalPrice)}
               </span>
             </div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm text-gray-600">Shipping</span>
               <span className="text-sm font-medium text-gray-900">
-                {formatCurrency(order.shippingFee || 0)}
+                {formatCurrency(order.deliveryFee || 0)}
               </span>
             </div>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm text-gray-600">Tax</span>
+              <span className="text-sm text-gray-600">Discount</span>
               <span className="text-sm font-medium text-gray-900">
-                {formatCurrency(order.tax || 0)}
+                {formatCurrency(order.discountedPrice || 0)}
               </span>
             </div>
             <div className="border-t pt-4">
@@ -457,7 +468,7 @@ const SingleOrderPage = () => {
                   Total
                 </span>
                 <span className="text-base font-bold text-brand_pink">
-                  {formatCurrency(order.totalPrice)}
+                  {formatCurrency(order.amountPaid ?? order.totalPrice)}
                 </span>
               </div>
             </div>
