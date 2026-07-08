@@ -57,6 +57,7 @@ export default function OrderSummaryPage() {
               }))
             : [],
         }));
+        
 
         // await axios.delete(
         //   process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/cart/",
@@ -69,16 +70,16 @@ export default function OrderSummaryPage() {
         //   },
         // );
 
-        await axios.post(
-          process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
-          { items: itemsPayload },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+        // await axios.post(
+        //   process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
+        //   { items: itemsPayload },
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${token}`,
+        //       "Content-Type": "application/json",
+        //     },
+        //   },
+        // );
 
       } catch (error) {
         console.error("Error syncing cart:", error);
@@ -98,7 +99,7 @@ export default function OrderSummaryPage() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const initiateCheckout = useCallback(async () => {
+  const initiateCheckout = useCallback(async (couponCode: string) => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
@@ -145,6 +146,7 @@ export default function OrderSummaryPage() {
                 service_code: selectedLogistic?.courier_id,
               }
             : null,
+            couponCode
         },
         {
           headers: {
@@ -350,7 +352,7 @@ export default function OrderSummaryPage() {
         </div>
         {isCartSynced ? (
           <CheckoutSummeryCard
-            initiateCheckout={initiateCheckout}
+            initiateCheckout={(couponCode)=> initiateCheckout(couponCode)}
             logisticsStatus={isLogisticsMode}
           />
         ) : (
