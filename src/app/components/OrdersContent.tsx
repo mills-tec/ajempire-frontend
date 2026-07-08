@@ -1,19 +1,19 @@
 "use client";
-import React, { useState } from "react";
-import OrderCard from "./OrderCard";
-import Link from "next/link";
 import { useOrders } from "@/api/customHooks";
-import { ImSpinner8 } from "react-icons/im";
-import { usePathname } from "next/navigation";
 import IssueReturn from "@/components/IssueReturn";
 import LeaveReview from "@/components/LeaveReview";
-import { IItem } from "@/lib/types";
-import {  Ellipsis } from "lucide-react";
 import Modal from "@/components/Modal";
-import Image from "next/image";
 import { getUser } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { IItem } from "@/lib/types";
+import { Ellipsis } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { ImSpinner8 } from "react-icons/im";
 import { toast } from "sonner";
+import OrderCard from "./OrderCard";
 
 export default function OrdersContent({
   title,
