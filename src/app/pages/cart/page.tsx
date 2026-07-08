@@ -28,7 +28,6 @@ export default function CartPage() {
     selectedItem,
     cartLoaded,
   } = useCartStore();
-  const _selectedCartItems = items.filter((item) => item.selected);
 
   const [expand, setExpand] = useState(false);
   const [signIn, setSingin] = useState(false);
