@@ -12,7 +12,7 @@ interface RecentPurchaseItem {
   qty: number;
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
-  const _url = process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/reorder/";
+  // const _url = process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/reorder/";
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {
@@ -30,7 +30,6 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
       setQuantity(product._id, cartItem.quantity + purchase.qty);
       toast.success("Item quantity incremented");
     } else {
-      console.log(product);
       // Item not in cart → add fresh
       // addItem({ quantity: purchase.qty, ...product! });
       addItem([{

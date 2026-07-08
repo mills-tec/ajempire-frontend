@@ -25,9 +25,6 @@ const OrdersPage = () => {
       setLoading(true);
       const response = await getUserOrders();
 
-      console.log("order:::", response);
-
-
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +32,7 @@ const OrdersPage = () => {
           id: order.order_id || 'Unknown',
           customer: order.shippingAddress?.fullName || 'Unknown Customer',
           products: order.items?.length || 0,
-          total: `N${order.totalPrice?.toLocaleString?.() || '0'}.00`,
+          total: `N${order.amountPaid?.toLocaleString?.() || '0'}.00`,
           status: order.orderStatus || 'Unknown',
           date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',

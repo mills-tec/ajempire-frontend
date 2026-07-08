@@ -1,3 +1,4 @@
+
 export interface ProductsResponse {
   message: {
     products: Product[];
@@ -95,7 +96,10 @@ export interface Order {
   createdAt: string;
 }
 
+
+
 export interface IItem {
+
   product: Product;
   name: string;
   variants: { options: { name: string; value: string }[] };
@@ -112,9 +116,30 @@ export interface IOrder {
   orderStatus: string;
   order_id: string;
   createdAt: string;
-  discountedPrice: number;
   price: number;
   qty: number;
+  amountPaid: number;
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    email?: string;
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+    addressCode: string;
+  };
+  paymentMethod: string;
+  paymentStatus: string;
+  deliveryMethod?: string;
+  totalPrice: number;
+  discountedPrice: number;
+  deliveryFee: number;
+  processedAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  logistics?: { trackingUrl?: string };
 }
 
 export interface Comment {

@@ -26,7 +26,6 @@ import {
   LoginResponse,
   LogisticsPickupAddress,
   LogisticsSettings,
-  Order,
   Product,
   Promotion,
   ReturnRequest,
@@ -40,12 +39,13 @@ import {
   UpdateReturnData,
   UpdateShippingFeeData
 } from './admin-types';
+import { IOrder } from './types';
 
 // Helper function for API calls
-const apiCall = async <T>(
+const apiCall = async <T, M = T>(
   endpoint: string,
   options: RequestInit = {}
-): Promise<ApiResponse<T>> => {
+): Promise<ApiResponse<T, M>> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : null;
 
   // Don't set Content-Type for FormData - let browser set it with boundary
@@ -72,7 +72,7 @@ const apiCall = async <T>(
     if (!response.ok) {
       throw new Error(data.error || data.message || 'API request failed');
     }
-
+    
     return data;
   } catch (error) {
     // console.error('API Error:', error);
@@ -87,7 +87,8 @@ const apiCall = async <T>(
 };
 
 // Authentication endpoints
-export async function adminLogin(credentials: LoginCredentials): Promise<ApiResponse<LoginResponse>> {
+// The backend returns the auth token as a string in `message`
+export async function adminLogin(credentials: LoginCredentials): Promise<ApiResponse<LoginResponse, string>> {
   return apiCall('/admin/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
@@ -179,13 +180,13 @@ export const deleteProduct = (id: string): Promise<ApiResponse<void>> =>
   });
 
 // Order endpoints
-export const getUserOrders = (): Promise<ApiResponse<Order[]>> =>
+export const getUserOrders = (): Promise<ApiResponse<IOrder[]>> =>
   apiCall('/admin/order');
 
-export const getOrderById = (id: string): Promise<ApiResponse<Order>> =>
+export const getOrderById = (id: string): Promise<ApiResponse<IOrder>> =>
   apiCall(`/admin/order/${id}`);
 
-export const updateOrder = (id: string, data: UpdateOrderData): Promise<ApiResponse<Order>> =>
+export const updateOrder = (id: string, data: UpdateOrderData): Promise<ApiResponse<IOrder>> =>
   apiCall(`/admin/order/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -388,7 +389,7 @@ export const updateAdminSecuritySettings = (data: AdminSecuritySettings): Promis
     body: JSON.stringify(data),
   });
 
-export const setupAdminPassword = (data: { token: string, password: string }): Promise<ApiResponse<AdminSecuritySettings>> => apiCall("/admin/setupPassword", {
+export const setupAdminPassword = (data: { token: string, password: string }): Promise<ApiResponse<AdminSecuritySettings, string>> => apiCall("/admin/setupPassword", {
   method: "POST",
   body: JSON.stringify(data)
 })
@@ -416,7 +417,7 @@ export const updateLogisticsShippingAddress = (data: LogisticsPickupAddress): Pr
   });
 
 export const getWalletBalance = (): Promise<ApiResponse<{ currency: string; balance: number }>> => apiCall('/admin/wallet');
-export const fundWallet = (data: { amount: number }): Promise<ApiResponse<void>> => apiCall('/admin/wallet', {
+export const fundWallet = (data: { amount: number }): Promise<ApiResponse<void, { data?: { payment_url?: string } }>> => apiCall('/admin/wallet', {
   method: 'POST',
   body: JSON.stringify(data),
 });
@@ -440,7 +441,7 @@ export const deleteCustomer = (id: string): Promise<ApiResponse<void>> =>
     method: 'DELETE',
   });
 
-export const getCustomerOrders = (id: string): Promise<ApiResponse<Order[]>> =>
+export const getCustomerOrders = (id: string): Promise<ApiResponse<IOrder[]>> =>
   apiCall(`/admin/customers/${id}/orders`);
 
 export const updateCustomerStatus = (id: string, status: string): Promise<ApiResponse<Customer>> =>
