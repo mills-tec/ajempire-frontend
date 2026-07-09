@@ -209,11 +209,16 @@ export default function ProductDescription({
   };
 
   const ensureVariantSelection = () => {
-    if (!hasVariants || !missingVariantName) return true;
-
-    triggerVariantError(missingVariantName);
-    toast.error(`Please select ${missingVariantName}`);
-    return false;
+    if (hasVariants && missingVariantName) {
+      triggerVariantError(missingVariantName);
+      toast.error(`Please select ${missingVariantName}`);
+      return false;
+    }
+    if (currentStock === 0) {
+      toast.error("This item is out of stock");
+      return false;
+    }
+    return true;
   };
 
   const formatVariantValue = (value: string) =>
