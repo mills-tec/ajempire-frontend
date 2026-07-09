@@ -2,17 +2,17 @@
 "use client";
 
 
-import { ReactNode } from "react";
-import { DocumentIcon } from "@/components/svgs/DocumentIcon";
 import { AddressIcon } from "@/components/svgs/AddressIcon";
 import { ChatStarIcon } from "@/components/svgs/ChatStarIcon";
 import { CouponsIcon } from "@/components/svgs/CouponsIcon";
+import { DocumentIcon } from "@/components/svgs/DocumentIcon";
 import MyUsageIcon from "@/components/svgs/MyUsageIcon";
 import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
+import { ReactNode } from "react";
 
 
-import SettingsIcon from "@/components/svgs/SettingIcon";
 import HelpIcon from "@/components/svgs/HelpIcon";
+import SettingsIcon from "@/components/svgs/SettingIcon";
 import WishListIcon from "@/components/svgs/WishListIcon";
 import { toast } from "sonner";
 
