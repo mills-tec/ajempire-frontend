@@ -138,8 +138,6 @@ const SingleOrderPage = () => {
     }
   };
 
-
-  
   const confirmCancelOrder = async () => {
     setShowCancelConfirm(false);
     await handleUpdateStatus('canceled');
