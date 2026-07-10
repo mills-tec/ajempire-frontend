@@ -223,6 +223,7 @@ export default function ProductDescription({
 
   const formatVariantValue = (value: string) =>
     value.replace(/[_-]+/g, " ").trim();
+
   return (
     <div className="space-y-4">
       <h1 className="font-medium text-sm lg:text-base">{product.name}</h1>
@@ -257,7 +258,7 @@ export default function ProductDescription({
         </div>
 
         <div className="grid gap-2">
-          {product.flashSales && (
+          {product.flashSales ? (
             <div className="space-y-2">
               <div className="flex items-center">
                 <h3 className="text-xl lg:text-2xl text-brand_pink font-medium">
@@ -292,16 +293,33 @@ export default function ProductDescription({
                 </p>
               </div>
             </div>
+          ) : (
+            <h3 className="text-xl lg:text-2xl text-brand_pink font-medium">
+              {Number(
+                product.price + (selectedCombination?.additionalPrice ?? 0),
+              ).toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}
+            </h3>
           )}
           <div>
-            {currentStock < 10 && (
+            {(!hasVariants || selectedCombination) && (
               <p
                 className={
                   "text-[0.65rem] font-semibold " +
-                  (currentStock < 10 ? "text-red-500" : "text-brand_purple")
+                  (currentStock === 0
+                    ? "text-red-500"
+                    : currentStock < 10
+                      ? "text-red-500"
+                      : "text-green-600")
                 }
               >
-                {currentStock} left in stock
+                {currentStock === 0
+                  ? "Out of stock"
+                  : currentStock < 10
+                    ? `Only ${currentStock} left in stock!`
+                    : `${currentStock} in stock`}
               </p>
             )}
           </div>
