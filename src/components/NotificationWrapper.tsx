@@ -15,10 +15,20 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 export default function NotificationWrapper() {
-  const { user, isPushTokenSet, setIsPushTokenSet } = useAuthStore();
+  // Selector subscriptions — the old whole-store destructures re-rendered this
+  // wrapper on every auth/cart/notification store mutation anywhere in the app.
+  const user = useAuthStore((s) => s.user);
+  const isPushTokenSet = useAuthStore((s) => s.isPushTokenSet);
+  const setIsPushTokenSet = useAuthStore((s) => s.setIsPushTokenSet);
   const { updatePushToken } = useNotification();
-  const { setCartItems, setCartLoaded } = useCartStore();
-  const { setNotifications, updateNotifications } = useNotificationStore();
+  // useNotification returns a new function reference on every render; going
+  // through a ref keeps the push-token effect from re-running per render.
+  const updatePushTokenRef = useRef(updatePushToken);
+  updatePushTokenRef.current = updatePushToken;
+  const setCartItems = useCartStore((s) => s.setCartItems);
+  const setCartLoaded = useCartStore((s) => s.setCartLoaded);
+  const setNotifications = useNotificationStore((s) => s.setNotifications);
+  const updateNotifications = useNotificationStore((s) => s.updateNotifications);
   const socketRef = useRef<Socket | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const isUpdatingToken = useRef(false);
@@ -64,7 +74,7 @@ export default function NotificationWrapper() {
         }
 
         if (!isAdminRoute) {
-          const success = await updatePushToken(token);
+          const success = await updatePushTokenRef.current(token);
           if (success) {
             setIsPushTokenSet(true);
           } else {
@@ -86,9 +96,8 @@ export default function NotificationWrapper() {
     };
 
     registerPushToken();
-  }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet, updatePushToken]);
+  }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet]);
 
-  console.log("HI");
   // Socket.IO — user notifications (non-admin routes only)
   useEffect(() => {
     if (isAdminRoute || !user) return;

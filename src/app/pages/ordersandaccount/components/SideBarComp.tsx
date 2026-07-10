@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useNotificationStore } from "@/lib/stores/notification-store";
 import { getUser } from "@/lib/api";
 import { useModalStore } from "@/lib/stores/modal-store";
+import { useNotificationStore } from "@/lib/stores/notification-store";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type SideBarItem = {
   title: string;
@@ -160,11 +160,13 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                           <Link
                             href={child.route || "#"}
                             className={`block text-[13px] p-2 px-6 rounded-md transition-all duration-300 ${
-                              pathname === child.route
+                              pathname.includes(child.route!)
                                 ? "bg-[#FFD9EE] text-[#525252]"
                                 : "hover:bg-pink-50 text-[#525252]"
                             }`}
                           >
+                            {/* {pathname} */}
+                            {/* {child.route} */}
                             {child.title}
                           </Link>
                         )}

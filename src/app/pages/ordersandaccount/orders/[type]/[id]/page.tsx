@@ -87,7 +87,7 @@ export default function Status() {
 
   const [returnModal, setReturnModal] = useState(false);
   const [inputs, setInputs] = useState<ReturnInputs>(INITIAL_RETURN_INPUTS);
-
+  console.log(orderId);
   const {
     addItem,
 
@@ -109,7 +109,8 @@ export default function Status() {
 
       try {
         const data = await getOrder(orderId);
-        if (data.status) setOrder(data.message);
+        setOrder(data.message as any)
+   
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load order");
@@ -229,7 +230,7 @@ export default function Status() {
               title={item.name}
               variant={
                 item.variants.options.length > 0
-                  ? item.variants.options.map(item => `${item.name}: ${item.value}`).join("")
+                  ? item.variants.options.map(item => `${item.name}: ${item.value}`).join(", ")
                   : undefined
               }
               price={item.price}

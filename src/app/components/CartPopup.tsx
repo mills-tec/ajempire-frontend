@@ -66,19 +66,7 @@ export default function CartPopup() {
     setPlayingMap({});
   }, [selectedItem]);
 
-  // 2️⃣ debug effect — MUST be before return
-  useEffect(() => {
-    if (selectedItem) {
-      console.log("🧠 CartPopup sees selectedItem:", selectedItem);
-    }
-  }, [selectedItem]);
-
-  // // 3️⃣ conditional render AFTER hooks
-  // if (!selectedItem) return null
   if (!shouldRender) return null;
-
-  console.log("🧠 selectedItem:", selectedItem);
-  console.log("🧠 items:", items);
 
   const openSelectedProduct = () => {
     if (!selectedItem?._id) return;

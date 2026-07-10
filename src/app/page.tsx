@@ -7,13 +7,11 @@ import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
 import { getProducts, getProductsByCategory } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
-import { useCartStore } from "@/lib/stores/cart-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import type { Product } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import CartPopup from "./components/CartPopup";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import HomeHeroSlider from "./components/HomeHeroSlider";
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
@@ -77,14 +75,15 @@ export default function Home() {
   // For all-products mode: invalidate the infinite feed query.
   // For category mode: invalidate the category query.
   // InfiniteFeed's internal refetch resets the recycle pool automatically.
-  const handleRefresh = async () => {
+  const selectedCategoryName = selectedCategory?.name ?? null;
+  const handleRefresh = useCallback(async () => {
     try {
-      if (selectedCategory) {
+      if (selectedCategoryName) {
         await queryClient.invalidateQueries({
-          queryKey: ["category-products", selectedCategory.name],
+          queryKey: ["category-products", selectedCategoryName],
         });
         await queryClient.invalidateQueries({
-          queryKey: ["infinite-category-products", selectedCategory.name],
+          queryKey: ["infinite-category-products", selectedCategoryName],
         });
         return;
       }
@@ -94,7 +93,7 @@ export default function Home() {
     } catch (error) {
       console.error("Pull-to-refresh error:", error);
     }
-  };
+  }, [queryClient, selectedCategoryName]);
 
   return (
     <PullToRefreshProvider onRefresh={handleRefresh}>
@@ -106,6 +105,33 @@ export default function Home() {
   );
 }
 
+// ── Mobile search bar ─────────────────────────────────────────────────────────
+// The ONLY component on this page that consumes the per-frame `pull` value.
+// Keeping it isolated means a pull gesture re-renders this ~small bar instead
+// of the entire home page (hero, categories, and the whole product feed).
+
+function MobileSearchBar({ isMounted }: { isMounted: boolean }) {
+  const { pull } = usePullToRefresh();
+
+  return (
+    <div
+      suppressHydrationWarning
+      className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
+      style={
+        isMounted
+          ? {
+              transform: `translateY(-${pull * 0.7}px)`,
+              opacity: 1 - Math.min(pull / 150, 1),
+              transition: pull === 0 ? "all 0.25s ease" : "none",
+            }
+          : undefined
+      }
+    >
+      <SearchBar />
+    </div>
+  );
+}
+
 // ── Inner content component ───────────────────────────────────────────────────
 
 interface HomeContentProps {
@@ -114,9 +140,6 @@ interface HomeContentProps {
 }
 
 function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
-  const { pull } = usePullToRefresh();
-
-  const selectedItem = useCartStore((state) => state.selectedItem);
   const { selectedCategory, setSelectedCategory } = useCategoryStore();
   const { searchedQuery, resetToken } = useSearchStore();
 
@@ -155,19 +178,26 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
   // separate feed — it gets its own cache entry, its own recycle pool, and
   // its own pagination state. Switching back to all-products restores the
   // previous cached state (no re-fetch if still within staleTime).
-  //
-  // IMPORTANT: `infiniteQueryFn` must be stable per category to avoid
-  // InfiniteFeed re-initializing on every render. We memoize it with
-  // selectedCategory?.name as the dependency.
-  const infiniteQueryKey: string[] = categoryFilterActive
-    ? ["infinite-category-products", selectedCategory!.name]
-    : ["infinite-products"];
+  const selectedCategoryName = selectedCategory?.name ?? null;
 
-  // This produces a new function only when the category name actually changes.
-  // For all-products mode, productQueryFn is defined at module level (stable).
-  const infiniteQueryFn = categoryFilterActive
-    ? makeCategoryQueryFn(selectedCategory!.name)
-    : productQueryFn;
+  const infiniteQueryKey: string[] = useMemo(
+    () =>
+      selectedCategoryName
+        ? ["infinite-category-products", selectedCategoryName]
+        : ["infinite-products"],
+    [selectedCategoryName],
+  );
+
+  // Stable per category — a new function is produced only when the category
+  // name actually changes. For all-products mode, productQueryFn is defined
+  // at module level (stable).
+  const infiniteQueryFn = useMemo(
+    () =>
+      selectedCategoryName
+        ? makeCategoryQueryFn(selectedCategoryName)
+        : productQueryFn,
+    [selectedCategoryName],
+  );
 
   // ── Scroll restoration ──────────────────────────────────────────────────────
   //
@@ -183,24 +213,10 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
       <PullToRefreshHeader />
       <PullToRefreshContainer>
         <div className="w-full">
-          {selectedItem && <CartPopup />}
-
-          {/* Mobile search bar — animates with pull gesture */}
-          <div
-            suppressHydrationWarning
-            className="lg:hidden w-full bg-white z-[9999] shadow-sm px-[20px] h-[90px] flex items-center"
-            style={
-              isMounted
-                ? {
-                  transform: `translateY(-${pull * 0.7}px)`,
-                  opacity: 1 - Math.min(pull / 150, 1),
-                  transition: pull === 0 ? "all 0.25s ease" : "none",
-                }
-                : undefined
-            }
-          >
-            <SearchBar />
-          </div>
+          {/* Mobile search bar — animates with pull gesture.
+              Isolated in its own component so pull-frame context updates
+              re-render only this small bar, not the whole page. */}
+          <MobileSearchBar isMounted={isMounted} />
 
           <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
 

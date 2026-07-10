@@ -1,11 +1,19 @@
 "use client";
+import { postData } from "@/api/api";
 import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { useEffect, useState } from "react";
-import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
-import ListOfLogistics from "./ui/ListOfLogistics";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { postData } from "@/api/api";
+import ListOfLogistics from "./ui/ListOfLogistics";
+import SelectedpaymentMethod from "./ui/SelectedpaymentMethod";
+
+// Single shared formatter — constructing Intl.NumberFormat is expensive, and
+// the old per-call construction created ~5 instances on every render.
+const priceFormatter = new Intl.NumberFormat("en-NG", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const formatPrice = (amount: number) => priceFormatter.format(Math.round(amount));
 
 interface CheckoutSummeryCardProps {
   initiateCheckout: (couponCode: string) => void;
@@ -17,13 +25,22 @@ export default function CheckoutSummeryCard({
 }: CheckoutSummeryCardProps) {
   const styleadress = "font-semibold opacity-75";
   const [mounted, setMounted] = useState(false);
-  // const { selectedLogistic } = useCartStore();
-  // const [totals, setTotals] = useState({ subtotal: 0, discount: 0, total: 0 });
-  const { orderSummary, applyCoupon, removeCoupon: _removeCoupon, appliedCoupon: _appliedCoupon } =
-    useCartStore();
+  const applyCoupon = useCartStore((s) => s.applyCoupon);
+  const orderSummary = useCartStore((s) => s.orderSummary);
   const [couponCode, setCouponCode] = useState("");
   const [loadingCoupon, setLoadingCoupon] = useState(false);
-  const { selectedLogistic } = useCartStore();
+  const selectedLogistic = useCartStore((s) => s.selectedLogistic);
+
+  // Subscribe to the summary's actual inputs so it stays live, and compute it
+  // ONCE per change — the old code called orderSummary() six times per render
+  // (each call filters the cart and does variant-combination matching), and it
+  // re-ran on every keystroke in the coupon input.
+  const items = useCartStore((s) => s.items);
+  const appliedCoupon = useCartStore((s) => s.appliedCoupon);
+  const summary = useMemo(
+    () => orderSummary(),
+    [orderSummary, items, appliedCoupon, selectedLogistic],
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -62,19 +79,12 @@ export default function CheckoutSummeryCard({
       toast.success("Coupon applied successfully", { position: "top-right" });
 
       // setCouponCode("");
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err.response.data);
       toast.error(err.response.data.error, { position: "top-right" });
     } finally {
       setLoadingCoupon(false);
     }
-  };
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
   };
 
   if (!mounted) {
@@ -151,26 +161,26 @@ export default function CheckoutSummeryCard({
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Subtotal</p>
             <p className={`${styleadress}`}>
-              ₦{formatPrice(orderSummary().total)}
+              ₦{formatPrice(summary.total)}
             </p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Shipping Charge</p>
             <p className={`${styleadress}`}>
               {" "}
-              ₦{formatPrice(orderSummary().deliveryFee)}
+              ₦{formatPrice(summary.deliveryFee)}
             </p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-[#999999]">Discount</p>
             <p className={`${styleadress}`}>
-              ₦{formatPrice(orderSummary().discount)}
+              ₦{formatPrice(summary.discount)}
             </p>
           </div>
-          {orderSummary().coupon > 0 && (
+          {summary.coupon > 0 && (
             <div className="flex items-center justify-between text-[#999999]">
               <p>Coupon</p>
-              <p>-₦{formatPrice(orderSummary().coupon)}</p>
+              <p>-₦{formatPrice(summary.coupon)}</p>
             </div>
           )}
 
@@ -178,7 +188,7 @@ export default function CheckoutSummeryCard({
           <div className="flex items-center justify-between">
             <p className={`${styleadress}`}>Total</p>
             <p className={`${styleadress}`}>
-              ₦{formatPrice(orderSummary().finalTotal)}
+              ₦{formatPrice(summary.finalTotal)}
             </p>
           </div>
         </div>

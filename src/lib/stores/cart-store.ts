@@ -215,13 +215,9 @@ export const useCartStore = create<CartStore>()(
 
         set({ items: current });
 
-        console.log("🛒 [Cart] Items added:", validItems.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity, selectedVariants: i.selectedVariants })));
-        console.log("🛒 [Cart] Full cart state:", current.map(i => ({ _id: i._id, name: i.name, cover_image: i.cover_image, price: i.price, quantity: i.quantity })));
-
         if (!getBearerToken()) return;
 
-        addToCart(validItems).catch((err) => {
-          console.log(err);
+        addToCart(validItems).catch(() => {
           toast.error("Couldn't sync cart. Will retry.");
         });
       },
@@ -362,24 +358,7 @@ export const useCartStore = create<CartStore>()(
       },
       orderSummary: () => {
         const items = get().items.filter((i) => i.selected);
-
-        const itemEffectivePrice = (item: CartItem) => {
-          if (!item.variantCombinations || !item.selectedVariants?.length) {
-            return item.price;
-          }
-
-          const matchedCombo = item.variantCombinations.find((combo) =>
-            combo.options.every((option) =>
-              item.selectedVariants.some(
-                (selected) =>
-                  selected.name === option.name &&
-                  selected.value === option.value,
-              ),
-            ),
-          );
-
-          return item.price + (matchedCombo?.additionalPrice ?? 0);
-        };
+        const itemEffectivePrice = (item: CartItem) => item.basePrice;
 
         const total = items.reduce(
           (sum, i) => sum + itemEffectivePrice(i) * i.quantity,
@@ -489,12 +468,14 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "cart-storage",
+      // checkoutStep is deliberately NOT persisted: the modal flow always
+      // starts from the address step, and rehydrating a stale ORDER_SUMMARY
+      // step caused an instant redirect the moment the modal opened.
       partialize: (state) => ({
         items: state.items,
         syncQueue: state.syncQueue,
         selectedLogistic: state.selectedLogistic,
         requestToken: state.requestToken,
-        checkoutStep: state.checkoutStep,
       }),
     },
   ),

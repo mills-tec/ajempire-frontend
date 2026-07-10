@@ -7,14 +7,18 @@ import { getBearerToken } from "@/lib/api";
 import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 
 export default function OrderSummaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCartSynced, setIsCartSynced] = useState(false);
-  const { getSelectedItems, selectedLogistic, requestToken } = useCartStore();
+  // Selectors — the whole-store destructure re-rendered this page on every
+  // cart-store mutation (item sync flags, checkout step, selected item, ...).
+  const getSelectedItems = useCartStore((s) => s.getSelectedItems);
+  const selectedLogistic = useCartStore((s) => s.selectedLogistic);
+  const requestToken = useCartStore((s) => s.requestToken);
   const [isLogisticsMode, setIsLogisticsMode] = useState(false);
 
   useEffect(() => {
@@ -53,30 +57,30 @@ export default function OrderSummaryPage() {
               }))
             : [],
         }));
+        
 
-        await axios.delete(
-          process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/cart/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            data: { items: itemsPayload },
-          },
-        );
+        // await axios.delete(
+        //   process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/cart/",
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${token}`,
+        //       "Content-Type": "application/json",
+        //     },
+        //     data: { items: itemsPayload },
+        //   },
+        // );
 
-        await axios.post(
-          process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
-          { items: itemsPayload },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
+        // await axios.post(
+        //   process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
+        //   { items: itemsPayload },
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${token}`,
+        //       "Content-Type": "application/json",
+        //     },
+        //   },
+        // );
 
-        console.log("Cart synced to backend successfully!");
       } catch (error) {
         console.error("Error syncing cart:", error);
         toast.error("Failed to sync cart session.");
@@ -95,7 +99,7 @@ export default function OrderSummaryPage() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const initiateCheckout = async () => {
+  const initiateCheckout = useCallback(async (couponCode: string) => {
     setIsLoading(true);
     const token = getBearerToken();
     const paymentMethod = useCheckoutStore.getState().selectedPaymentMethod;
@@ -132,7 +136,7 @@ export default function OrderSummaryPage() {
 
     try {
       const response = await axios.post(
-        "process.env.NEXT_PUBLIC_BACKEND_URL/api/checkout",
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/api/checkout",
         {
           paymentMethod,
           logistics: isLogisticsMode
@@ -142,6 +146,7 @@ export default function OrderSummaryPage() {
                 service_code: selectedLogistic?.courier_id,
               }
             : null,
+            couponCode
         },
         {
           headers: {
@@ -167,17 +172,21 @@ export default function OrderSummaryPage() {
       toast.error("An error occurred during checkout. Please try again.", {
         position: "top-right",
       });
-      console.log("order summary error", error);
+      console.error("order summary error", error);
       setIsLoading(false);
     }
-  };
+  }, [getSelectedItems, isLogisticsMode, requestToken, selectedLogistic]);
 
   useEffect(() => {
+    let isMounted = true;
     const checkLogistics = async () => {
       const req = await axios.get(`${globalUrl}/logisticsStatus`);
-      setIsLogisticsMode(req.data.logisticsMode === "auto");
+      if (isMounted) setIsLogisticsMode(req.data.logisticsMode === "auto");
     };
     checkLogistics();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -343,7 +352,7 @@ export default function OrderSummaryPage() {
         </div>
         {isCartSynced ? (
           <CheckoutSummeryCard
-            initiateCheckout={initiateCheckout}
+            initiateCheckout={(couponCode)=> initiateCheckout(couponCode)}
             logisticsStatus={isLogisticsMode}
           />
         ) : (

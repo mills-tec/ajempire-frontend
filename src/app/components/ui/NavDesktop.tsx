@@ -30,7 +30,9 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   showIntro,
   setShowIntro,
 }) => {
-  const { items } = useCartStore();
+  // Selector — whole-store destructure re-rendered the nav on every cart
+  // store mutation (selectedItem, checkout step, logistics, ...).
+  const items = useCartStore((s) => s.items);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const { cartRef } = useCartIcon();
