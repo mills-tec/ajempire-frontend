@@ -1,11 +1,12 @@
 'use client'
+import { filterByPeriod } from '@/lib/dashboard-utils';
+import { IOrder } from '@/lib/types';
 import Image from "next/image";
 import Link from "next/link";
-import { filterByPeriod } from '@/lib/dashboard-utils';
 
 interface TopSellingProductsProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    orders?: any[];
+    orders?: IOrder[];
     period?: string;
 }
 
@@ -14,13 +15,13 @@ const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingPro
 
     const productSales = filteredOrders.reduce((acc: Record<string, { id: string; name: string; sales: number; price: number; image: string }>, order) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        order.items?.forEach((item: any) => {
-            const productId = item.productId || item.product || item._id;
+        order.items?.forEach((item) => {
+            const productId = item.product._id;
             if (!productId || productId === 'unknown') return;
 
-            const productName = item.name || item.productName || (typeof productId === 'string' ? `Product ${productId.slice(-6)}` : 'Unknown Product');
-            const productPrice = item.price || item.unitPrice || 0;
-            const productImage = item.image || item.cover_image || "https://via.placeholder.com/100";
+            const productName = item.product.name || (typeof productId === 'string' ? `Product ${productId.slice(-6)}` : 'Unknown Product');
+            const productPrice = item.price;
+            const productImage = item.image || "https://via.placeholder.com/100";
 
             if (!acc[productId]) {
                 acc[productId] = {
@@ -32,7 +33,7 @@ const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingPro
                 };
             }
 
-            acc[productId].sales += (item.quantity || item.qty || 1);
+            acc[productId].sales += (item.qty || 1);
         });
         return acc;
     }, {});
@@ -62,7 +63,7 @@ const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingPro
                             className="flex items-center justify-between hover:bg-gray-50 rounded-xl p-2 -mx-2 transition-colors cursor-pointer"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden relative">
+                                <div className="w-9 h-9 bg-gray-50 rounded-full overflow-hidden relative">
                                     <Image
                                         src={product.image}
                                         alt={product.name}

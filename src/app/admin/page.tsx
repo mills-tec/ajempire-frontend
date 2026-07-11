@@ -42,12 +42,12 @@ export default function AdminPage() {
                 getAllCategories(),
                 getReturns()
             ]);
-
             // Transform orders data
             if (ordersResponse.message && Array.isArray(ordersResponse.message)) {
                 setOrders(ordersResponse.message);
             }
 
+            console.log(ordersResponse.message);
             // Transform products data
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const productsData = productsResponse.message as any;
@@ -131,6 +131,10 @@ export default function AdminPage() {
 
     const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0;
     const outOfStockProducts = products?.filter(p => p.stock === 0).length || 0;
+
+    if (loading) {
+        return <AdminDashboardSkeleton />;
+    }
 
     return (
         <div className="w-full pb-10">
@@ -359,11 +363,7 @@ export default function AdminPage() {
                     <div className="bg-white p-4 rounded-xl flex flex-col gap-4 border h-full">
                         <h4 className="font-medium text-brand_gray_dark text-sm">Recent Orders</h4>
                         <div className="flex flex-col gap-y-4 overflow-y-auto max-h-[400px]">
-                            {loading ? (
-                                <div className="flex justify-center items-center py-8">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand_pink"></div>
-                                </div>
-                            ) : orders?.slice(0, 6).map((order, idx) => (
+                            {orders?.slice(0, 6).map((order, idx) => (
                                 <div key={idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0">
                                     <div className="flex w-full gap-x-3">
                                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden">
@@ -413,4 +413,124 @@ export default function AdminPage() {
             </section>
         </div>
     )
+}
+
+function AdminDashboardSkeleton() {
+    return (
+        <div className="w-full pb-10 animate-pulse">
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="bg-white border p-4 rounded-xl flex-1">
+                        <div className="flex items-center justify-between">
+                            <div className="w-8 h-8 rounded-xl bg-gray-200" />
+                            <div className="h-4 w-16 bg-gray-200 rounded" />
+                        </div>
+                        <div className="h-3 w-14 bg-gray-200 rounded mt-6" />
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="h-5 w-20 bg-gray-200 rounded" />
+                            <div className="h-3 w-8 bg-gray-200 rounded" />
+                        </div>
+                    </div>
+                ))}
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+                <div className="flex flex-col gap-y-3 lg:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {[0, 1].map((i) => (
+                            <div key={i} className="bg-white border p-4 rounded-xl">
+                                <div className="w-8 h-8 rounded-xl bg-gray-200" />
+                                <div className="h-3 w-16 bg-gray-200 rounded mt-6" />
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className="h-5 w-12 bg-gray-200 rounded" />
+                                    <div className="h-3 w-16 bg-gray-200 rounded" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-white border p-4 rounded-xl flex-1 flex flex-col h-full">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="h-4 w-40 bg-gray-200 rounded" />
+                            <div className="h-4 w-20 bg-gray-200 rounded" />
+                        </div>
+                        <div className="mt-8 flex-1 h-[180px] bg-gray-100 rounded-lg" />
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-5">
+                    <div className="bg-white p-4 rounded-xl border h-full">
+                        <div className="flex items-center justify-between">
+                            <div className="h-4 w-28 bg-gray-200 rounded" />
+                            <div className="h-4 w-16 bg-gray-200 rounded" />
+                        </div>
+                        <div className="flex flex-col gap-3 mt-5">
+                            {[0, 1, 2].map((i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <div className="h-3 w-16 bg-gray-200 rounded" />
+                                    <div className="h-3 w-6 bg-gray-200 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex justify-center items-center mt-10">
+                            <div className="w-32 h-32 rounded-full bg-gray-100" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl flex flex-col gap-4 border h-full">
+                        <div className="h-4 w-24 bg-gray-200 rounded" />
+                        <div className="flex flex-col gap-y-4">
+                            {[0, 1, 2, 3].map((i) => (
+                                <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0">
+                                    <div className="flex w-full gap-x-3">
+                                        <div className="w-8 h-8 bg-gray-200 rounded-lg flex-shrink-0" />
+                                        <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                                            <div className="h-2.5 w-20 bg-gray-200 rounded" />
+                                            <div className="h-2.5 w-14 bg-gray-200 rounded" />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-2">
+                                        <div className="h-2 w-10 bg-gray-200 rounded" />
+                                        <div className="h-3 w-12 bg-gray-200 rounded-full" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="mt-8 flex flex-col gap-8">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    <div className="bg-white border p-4 rounded-xl flex-1 h-[260px]">
+                        <div className="h-4 w-40 bg-gray-200 rounded" />
+                        <div className="mt-6 h-[180px] bg-gray-100 rounded-lg" />
+                    </div>
+                    <div className="bg-white border p-4 rounded-xl w-full lg:w-[320px] h-[260px]">
+                        <div className="h-4 w-32 bg-gray-200 rounded" />
+                        <div className="mt-6 h-[180px] bg-gray-100 rounded-lg" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                    {[0, 1, 2].map((i) => (
+                        <div key={i} className="bg-white border p-4 rounded-xl h-[220px]">
+                            <div className="h-4 w-32 bg-gray-200 rounded" />
+                            <div className="flex flex-col gap-4 mt-6">
+                                {[0, 1, 2].map((j) => (
+                                    <div key={j} className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-gray-200 rounded-lg flex-shrink-0" />
+                                        <div className="flex-1 flex flex-col gap-1.5">
+                                            <div className="h-2.5 w-3/4 bg-gray-200 rounded" />
+                                            <div className="h-2.5 w-1/2 bg-gray-200 rounded" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
 }

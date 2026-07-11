@@ -44,10 +44,10 @@ const StepDash = () => (
 );
 
 const STATUS_STEPS = [
-    { key: "processing", label: "Return Processing", desc: "Your request is under review",    Icon: ClockIcon,       activeColor: "text-[#0085FF]" },
-    { key: "approved",   label: "Return Approved",   desc: "Your return has been approved",   Icon: CheckCircleIcon, activeColor: "text-green-500"  },
-    { key: "delivered",  label: "Return Delivered",  desc: "Items are being shipped back",    Icon: TruckIcon,       activeColor: "text-purple-600" },
-    { key: "refunded",   label: "Return Completed",  desc: "Return successfully received",    Icon: CheckCircleIcon, activeColor: "text-green-500"  },
+    { key: "processing", label: "Return Processing", desc: "Your request is under review", Icon: ClockIcon, activeColor: "text-[#0085FF]" },
+    { key: "approved", label: "Return Approved", desc: "Your return has been approved", Icon: CheckCircleIcon, activeColor: "text-green-500" },
+    { key: "delivered", label: "Return Delivered", desc: "Items are being shipped back", Icon: TruckIcon, activeColor: "text-purple-600" },
+    { key: "refunded", label: "Return Completed", desc: "Return successfully received", Icon: CheckCircleIcon, activeColor: "text-green-500" },
 ];
 const _STATUS_ORDER = ["processing", "approved", "delivered", "refunded"];
 
@@ -77,28 +77,28 @@ export default function Status() {
     const [imageOpen, setImageOpen] = useState(false);
 
 
-   
+
     useEffect(() => {
         (async () => {
             const req = await getReturnRequest(params?.id as string);
             if (req.status) {
-                setData(req.message);
+                setData(req.message as IReturnRequest);
                 console.log(req.message);
             }
             setLoading(false);
         })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const isRejected = data.status === "rejected";
+    const isdeclined = data.status === "declined";
 
     const statusBadgeClass =
         data.status === "processing" ? "bg-blue-50 text-[#0085FF] border border-blue-200" :
-        data.status === "approved"   ? "bg-green-50 text-green-500 border border-green-200" :
-        data.status === "delivered"  ? "bg-purple-50 text-purple-600 border border-purple-200" :
-        data.status === "refunded"   ? "bg-green-50 text-green-500 border border-green-200" :
-        data.status === "rejected"   ? "bg-red-50 text-red-700 border border-red-200" :
-                                       "bg-gray-100 text-gray-600 border border-gray-200";
+            data.status === "approved" ? "bg-green-50 text-green-500 border border-green-200" :
+                data.status === "delivered" ? "bg-purple-50 text-purple-600 border border-purple-200" :
+                    data.status === "refunded" ? "bg-green-50 text-green-500 border border-green-200" :
+                        data.status === "declined" ? "bg-red-50 text-red-700 border border-red-200" :
+                            "bg-gray-100 text-gray-600 border border-gray-200";
 
     const fmtDate = (iso: string) =>
         iso ? new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "";
@@ -187,7 +187,7 @@ export default function Status() {
                     </div>
 
                     {/* Rejection alert */}
-                    {isRejected && (
+                    {isdeclined && (
                         <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 font-poppins">
                             <p className="text-red-700 text-sm font-medium">
                                 Your return request was not approved. Please contact support if you have any questions.
@@ -248,7 +248,7 @@ export default function Status() {
                                                     : ""
                                             }
                                             price={item.price - item.discountedPrice}
-                                            discount={ 0 }
+                                            discount={0}
                                             qty={item.qty}
                                         />
                                     ))}
@@ -269,7 +269,7 @@ export default function Status() {
                                 <div className="flex flex-col">
                                     {STATUS_STEPS.map((step, i) => {
                                         const stepDate = getStepDate(step.key);
-                                        const isCompleted = !isRejected && stepDate !== null;
+                                        const isCompleted = !isdeclined && stepDate !== null;
                                         const isLast = i === STATUS_STEPS.length - 1;
                                         return (
                                             <div key={step.key} className="flex gap-6">
