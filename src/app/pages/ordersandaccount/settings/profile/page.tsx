@@ -68,10 +68,10 @@ export default function ProfileSettingsPage() {
         </div>
       </div>
 
-      <div className="lg:flex gap-3  flex-col lg:flex-row ">
+      <div className="flex flex-col gap-3 lg:flex-row">
         {/* LEFT – PROFILE SUMMARY */}
         {profileData && (
-          <div className=" w-full lg:w-[45%] bg-white p-5 rounded-md border">
+          <div className="w-full lg:w-[45%] bg-white p-5 rounded-md border">
             <ProfileName email={profileData.email} />
             <p className="text-[13px] text-gray-500 mt-2">
               Manage your personal information and delivery details. Your data
@@ -85,29 +85,42 @@ export default function ProfileSettingsPage() {
         )}
 
         {/* RIGHT – DETAILS */}
-        {profileData?.shippingAddress && (
+        {profileData && (
           <div className="lg:w-[55%] w-full bg-white p-5 rounded-md border">
             <h3 className="text-[15px] font-semibold mb-4">
               Personal Information
             </h3>
 
-            <div className="flex flex-col gap-3 text-[14px]">
-              {[
-                ["Full Name", profileData.shippingAddress.fullName],
-                ["Phone", profileData.shippingAddress.phone],
-                ["Email", profileData.email],
-                ["Street", profileData.shippingAddress.street],
-                ["City / Town", profileData.shippingAddress.city],
-                ["State", profileData.shippingAddress.state],
-                ["Country", profileData.shippingAddress.country],
-                ["Postal Code", profileData.shippingAddress.postalCode],
-              ].map(([label, value]) => (
-                <div key={label} className="flex justify-between border-b pb-2">
-                  <p className="text-gray-500">{label}</p>
-                  <p className="font-medium text-gray-800">{value}</p>
-                </div>
-              ))}
-            </div>
+            {profileData.shippingAddress ? (
+              <div className="flex flex-col gap-3 text-[14px]">
+                {[
+                  ["Full Name", profileData.shippingAddress.fullName],
+                  ["Phone", profileData.shippingAddress.phone],
+                  ["Email", profileData.email],
+                  ["Street", profileData.shippingAddress.street],
+                  ["City / Town", profileData.shippingAddress.city],
+                  ["State", profileData.shippingAddress.state],
+                  ["Country", profileData.shippingAddress.country],
+                  ["Postal Code", profileData.shippingAddress.postalCode],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between border-b pb-2">
+                    <p className="text-gray-500">{label}</p>
+                    <p className="font-medium text-gray-800">{value || "—"}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-gray-400">
+                No delivery address saved yet. Add one from the{" "}
+                <Link
+                  href="/pages/ordersandaccount/address"
+                  className="text-pink-600 underline"
+                >
+                  address page
+                </Link>
+                .
+              </p>
+            )}
           </div>
         )}
       </div>
