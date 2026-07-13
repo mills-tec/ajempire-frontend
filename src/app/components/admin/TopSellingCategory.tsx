@@ -4,7 +4,6 @@ import { IOrder } from "@/lib/types";
 import Image from "next/image";
 
 interface TopSellingCategoryProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: IOrder[];
     period?: string;
 }
@@ -12,13 +11,12 @@ interface TopSellingCategoryProps {
 const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCategoryProps) => {
     // Calculate category sales from orders
     const categorySales = orders?.reduce((acc: Record<string, { name: string; sales: number; value: number; image: string; }>, order) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         order.items?.forEach((item) => {
             const category = item.product.category?.name || 'Unknown Category';
             if (!acc[category]) {
                 acc[category] = {
                     name: category,
-                    image: item.product.category?.image!,
+                    image: item.product.category?.image || '',
                     sales: 0,
                     value: 0
                 };
