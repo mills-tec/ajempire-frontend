@@ -74,7 +74,6 @@ export default function ProfileSettingsPage() {
         const res = await axios.get(`${API_URL}/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log(res.data);
         setProfileData(res.data.message);
 
       } catch (err) {
@@ -85,7 +84,6 @@ export default function ProfileSettingsPage() {
     };
     profileSettingsPage();
   }, []);
-  console.log(profileData);
   return (
     <div className="w-full px-6 lg:mt-6 mt-1 font-poppins">
       <div>

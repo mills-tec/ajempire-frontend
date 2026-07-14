@@ -1,9 +1,21 @@
 "use client";
-import { API_URL, getBearerToken } from "@/lib/api";
-import axios from "axios";
+import {
+  fetchProfile,
+  ProfileUpdatePayload,
+  resendProfileEmailVerification,
+  updateProfile,
+  updateShippingAddress,
+  verifyProfileEmailChange,
+} from "@/lib/profileApi";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import VerificationModal from "./VerificationModal";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isFullName = (value: string) => value.trim().split(/\s+/).filter(Boolean).length >= 2;
+const isValidEmailFormat = (value: string) => EMAIL_REGEX.test(value.trim());
 
 interface ShippingAddress {
   fullName: string;
@@ -59,17 +71,27 @@ export default function EditProfileModal({
   profile: UserProfile;
   onSaved: (updated: UserProfile) => void;
 }) {
-  console.log(profile);
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const [agreeToReceiveEmails, setAgreeToReceiveEmails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const { setUser, user } = useAuthStore()
 
   const canChangePassword = profile.authProvider === "email";
+
+  const isNameDirty = name.trim() !== (profile.fullname ?? "").trim();
+  const isEmailDirty = email.trim() !== (profile.email ?? "").trim();
+  const isPasswordDirty = canChangePassword && newPassword.length > 0;
+  const isProfileDirty = isNameDirty || isEmailDirty || isPasswordDirty;
 
   // Reset the form from the latest profile every time the sheet opens, so a
   // cancelled edit never leaks into the next time it's opened.
@@ -77,6 +99,9 @@ export default function EditProfileModal({
     if (!isOpen) return;
     setActiveTab("profile");
     setName(profile.fullname ?? "");
+    setNameError("");
+    setEmail(profile.email ?? "");
+    setEmailError("");
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError("");
@@ -104,56 +129,117 @@ export default function EditProfileModal({
     setAddress((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSaving) return;
+  const handleNameBlur = () => {
+    setNameError(isFullName(name) ? "" : "Please enter your full name (first and last name).");
+  };
+
+  const handleEmailBlur = () => {
+    setEmailError(isValidEmailFormat(email) ? "" : "Please enter a valid email address.");
+  };
+
+  const handleVerificationCancel = () => {
+    setIsVerificationOpen(false);
+    setPendingEmail("");
+  };
+
+  const handleVerified = async () => {
+    try {
+      const updated = await fetchProfile();
+      onSaved(updated);
+      setUser({ email: updated.email, name: updated.fullname ?? "", id: updated._id });
+      toast.success("Profile updated");
+    } catch (err) {
+      console.error("Error refreshing profile:", err);
+      toast.error("Verified, but couldn't refresh your profile. Please reload the page.");
+    } finally {
+      setIsVerificationOpen(false);
+      setPendingEmail("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
+  const handleProfileSubmit = async () => {
+    if (!isFullName(name)) {
+      setNameError("Please enter your full name (first and last name).");
+      return;
+    }
+    if (!isValidEmailFormat(email)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
 
     setPasswordError("");
     if (canChangePassword && newPassword) {
       if (newPassword.length < 8) {
         setPasswordError("Password must be at least 8 characters");
-        setActiveTab("profile");
         return;
       }
       if (newPassword !== confirmPassword) {
         setPasswordError("Passwords do not match");
-        setActiveTab("profile");
         return;
       }
     }
 
+    if (!isProfileDirty) return;
+
     setIsSaving(true);
     try {
-      const token = getBearerToken();
-      const data = {
-        url: `${API_URL}/${activeTab === "profile" ? "profile" : "shipping"}`,
-        data: activeTab === "profile" ? {
-          name
-        } : {
-          name,
-          shippingAddress: address,
-          agreeToReceiveEmails,
-          ...(canChangePassword && newPassword ? { password: newPassword } : {}),
-        }
-      }
-      const res = await axios.patch(
-        data.url,
-        data.data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const payload: ProfileUpdatePayload = {};
+      if (isNameDirty) payload.name = name.trim();
+      if (isEmailDirty) payload.email = email.trim();
+      if (canChangePassword && newPassword) payload.password = newPassword;
 
-      onSaved(res.data?.message ?? { ...profile, name, shippingAddress: address, agreeToReceiveEmails });
-      toast.success("Profile updated");
-      onClose();
+      const result = await updateProfile(payload);
+
+      if (result.requiresVerification) {
+        setPendingEmail(email.trim());
+        setIsVerificationOpen(true);
+        onClose();
+      } else {
+        onSaved(result.profile);
+        setUser({ email: result.profile.email, name: result.profile.fullname ?? "", id: result.profile._id });
+        setNewPassword("");
+        setConfirmPassword("");
+        toast.success("Profile updated");
+        onClose();
+      }
     } catch (err) {
       console.error("Error updating profile:", err);
-      toast.error("Couldn't save your changes. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Couldn't save your changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleShippingSubmit = async () => {
+    setIsSaving(true);
+    try {
+      await updateShippingAddress(address);
+      onSaved({ ...profile, shippingAddress: address });
+      toast.success("Profile updated");
+      onClose();
+    } catch (err) {
+      console.error("Error updating shipping address:", err);
+      toast.error(err instanceof Error ? err.message : "Couldn't save your changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSaving) return;
+
+    if (activeTab === "profile") {
+      await handleProfileSubmit();
+    } else {
+      await handleShippingSubmit();
+    }
+  };
+
   return (
+    <>
     <div
       className={`fixed inset-0 z-[100] font-poppins transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
@@ -232,18 +318,46 @@ export default function EditProfileModal({
                         id="name"
                         type="text"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (nameError) setNameError("");
+                        }}
+                        onBlur={handleNameBlur}
                         placeholder="Your name"
+                        aria-invalid={!!nameError}
                         className="w-full bg-transparent text-[14px] font-medium text-gray-800 placeholder:text-gray-300 outline-none"
                       />
-
-
+                      {nameError && (
+                        <p className="text-[12px] text-red-500 mt-1">{nameError}</p>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-[14px] text-gray-500">Email</span>
-                      <span className="text-[14px] font-medium text-gray-800">{profile.email}</span>
+                    <div className="py-2.5">
+                      <label htmlFor="email" className="block text-[11px] text-gray-400 mb-0.5">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (emailError) setEmailError("");
+                        }}
+                        onBlur={handleEmailBlur}
+                        placeholder="you@example.com"
+                        aria-invalid={!!emailError}
+                        className="w-full bg-transparent text-[14px] font-medium text-gray-800 placeholder:text-gray-300 outline-none"
+                      />
+                      {emailError && (
+                        <p className="text-[12px] text-red-500 mt-1">{emailError}</p>
+                      )}
                     </div>
                   </div>
+                  {isEmailDirty && !emailError && (
+                    <p className="text-[12px] text-gray-400 mt-1.5 px-1">
+                      You&apos;ll need to verify this new email before it takes effect.
+                    </p>
+                  )}
                 </div>
 
                 {canChangePassword && (
@@ -349,7 +463,7 @@ export default function EditProfileModal({
             <div className="px-6 py-4 border-t border-gray-100 bg-white">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || (activeTab === "profile" && !isProfileDirty)}
                 className="w-full h-12 rounded-2xl bg-brand_pink text-white text-[15px] font-semibold flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
               >
                 {isSaving ? (
@@ -366,5 +480,15 @@ export default function EditProfileModal({
         </div>
       </div>
     </div>
+
+    <VerificationModal
+      isOpen={isVerificationOpen}
+      email={pendingEmail}
+      onCancel={handleVerificationCancel}
+      onVerify={verifyProfileEmailChange}
+      onVerified={handleVerified}
+      onResend={resendProfileEmailVerification}
+    />
+    </>
   );
 }
