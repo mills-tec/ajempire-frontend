@@ -31,6 +31,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -44,23 +45,35 @@ import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
+// Shimmer-swept placeholder cards, staggered per index so the loading state
+// reads as a fluid wave instead of a flat, uniform pulse.
 
 export function FeedSkeleton() {
-  return Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
-    <div
-      className="space-y-1 h-screen bg-gray-200 flex flex-col relative md:rounded-2xl"
-      key={i}
-    >
-      <span className="absolute top-10 left-4 shadow-2xl bg-gray-300 animate-pulse h-10 w-32 py-2 px-5 rounded-full text-sm font-poppins text-white z-10" />
-      <div className="flex flex-col gap-4 translate-y-[55%] h-full pl-4">
-        <h2 className="text-sm truncate h-10 bg-gray-300 animate-pulse rounded-sm w-[60%]" />
-        <div>
-          <p className="lg:text-xs text-black/60 h-12 bg-gray-300 animate-pulse w-[40%]" />
+  return (
+    <>
+      {Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
+        <div
+          className="space-y-1 h-screen bg-gray-200 flex flex-col relative md:rounded-2xl overflow-hidden"
+          key={i}
+        >
+          <div
+            className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent"
+            style={{ animationDelay: `${i * 90}ms` }}
+          />
+          <span className="absolute top-10 left-4 shadow-2xl bg-gray-300/80 h-10 w-32 py-2 px-5 rounded-full text-sm font-poppins text-white z-10" />
+          <div className="flex flex-col gap-4 translate-y-[55%] h-full pl-4 pr-10">
+            <div className="h-8 bg-gray-300/80 rounded-md w-[60%]" />
+            <div className="h-4 bg-gray-300/70 rounded-md w-[75%]" />
+            <div className="h-4 bg-gray-300/70 rounded-md w-[45%]" />
+            <div className="flex items-center gap-3 mt-2">
+              <div className="h-10 w-10 rounded-full bg-gray-300/80" />
+              <div className="h-10 w-10 rounded-full bg-gray-300/80" />
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 pr-2 text-[7px] lg:text-[10px] rounded-sm h-12 bg-gray-300 animate-pulse w-[80%]" />
-      </div>
-    </div>
-  ));
+      ))}
+    </>
+  );
 }
 
 // ─── Countdown ───────────────────────────────────────────────────────────────
@@ -103,6 +116,15 @@ const ChevronDown = () => (
   </svg>
 );
 
+// How many items on either side of the currently-viewed one keep a real
+// <video>/<Image> mounted. Everything outside this window renders a cheap
+// placeholder instead — the feed is designed to scroll forever, so without
+// this every video/image ever scrolled past would stay mounted (and every
+// video keeps decoding/autoplaying) for the rest of the session. iOS Safari
+// in particular has hard limits on concurrent video decoders and will kill
+// the tab once too many are alive at once.
+const MEDIA_RENDER_WINDOW = 3;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CommentState = {
@@ -111,6 +133,296 @@ type CommentState = {
   parent: { parentId: string; fullname: string; email: string };
   focus: boolean;
 };
+
+// ─── FeedCard (memoized per-item media + actions) ──────────────────────────────
+// Extracted so that state changes elsewhere in the feed (typing a comment,
+// liking a different post, a video's play state) don't force every mounted
+// item's image/video subtree to re-render — only the item whose own props
+// actually changed re-renders.
+
+type FeedCardProps = {
+  item: Feed;
+  index: number;
+  isLoaded: boolean;
+  isPlaying: boolean;
+  hasLiked: boolean;
+  commentCount: number;
+  itemInWishlist: boolean;
+  isDescExpanded: boolean;
+  isMediaActive: boolean;
+  pull: number;
+  muted: boolean;
+  showPlayOverlay: boolean;
+  registerVideoRef: (el: HTMLVideoElement | null) => void;
+  onMediaLoaded: (index: number) => void;
+  onVideoPlayStateChange: (index: number, playing: boolean) => void;
+  onVideoClick: (index: number) => void;
+  onShowPlayTemporarily: (index: number) => void;
+  onToggleMute: (index: number) => void;
+  onToggleDesc: (index: number) => void;
+  onLike: (id: string) => void;
+  onToggleComment: () => void;
+  onShare: () => void;
+  onWishlistToggle: (product: Product) => void;
+};
+
+const FeedCard = memo(function FeedCard({
+  item,
+  index,
+  isLoaded,
+  isPlaying,
+  hasLiked,
+  commentCount,
+  itemInWishlist,
+  isDescExpanded,
+  isMediaActive,
+  pull,
+  muted,
+  showPlayOverlay,
+  registerVideoRef,
+  onMediaLoaded,
+  onVideoPlayStateChange,
+  onVideoClick,
+  onShowPlayTemporarily,
+  onToggleMute,
+  onToggleDesc,
+  onLike,
+  onToggleComment,
+  onShare,
+  onWishlistToggle,
+}: FeedCardProps) {
+  const handleMediaLoaded = useCallback(() => onMediaLoaded(index), [onMediaLoaded, index]);
+  const handlePlay = useCallback(() => onVideoPlayStateChange(index, true), [onVideoPlayStateChange, index]);
+  const handlePause = useCallback(() => onVideoPlayStateChange(index, false), [onVideoPlayStateChange, index]);
+  const handleVideoClick = useCallback(() => onVideoClick(index), [onVideoClick, index]);
+  const handleShowPlay = useCallback(() => onShowPlayTemporarily(index), [onShowPlayTemporarily, index]);
+  const handleToggleMute = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggleMute(index);
+    },
+    [onToggleMute, index],
+  );
+  const handleToggleDesc = useCallback(() => onToggleDesc(index), [onToggleDesc, index]);
+  const handleLike = useCallback(() => onLike(item._id), [onLike, item._id]);
+  const handleWishlist = useCallback(() => {
+    if (item.product) onWishlistToggle(item.product);
+  }, [onWishlistToggle, item.product]);
+
+  return (
+    <>
+      {/* Media panel */}
+      <div
+        className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent"
+        style={{
+          transform: `translateY(-${pull * 0.7}px)`,
+          opacity: 1 - Math.min(pull / 150, 1),
+          transition: pull === 0 ? "all 0.25s ease" : "none",
+        }}
+      >
+        {item.type === "flashsale" && (
+          <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
+            Flashsale
+          </span>
+        )}
+
+        {!isMediaActive ? (
+          // Outside the render window: no <video>/<Image> mounted at all, so
+          // nothing is decoding or holding a frame buffer for it. Same size
+          // as the real media so scroll-snap positions don't shift.
+          <div className="absolute inset-0 bg-gray-800" />
+        ) : item.mediaType === "image" ? (
+          <>
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-gray-200 overflow-hidden">
+                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              </div>
+            )}
+            <Image
+              src={item.mediaUrl}
+              alt={item.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 40vw"
+              className={`object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={handleMediaLoaded}
+              onError={handleMediaLoaded}
+              priority={index < 2}
+            />
+          </>
+        ) : (
+          <>
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-gray-200 overflow-hidden">
+                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              </div>
+            )}
+            <video
+              preload="auto"
+              ref={registerVideoRef}
+              autoPlay
+              loop
+              muted={muted}
+              src={item.mediaUrl}
+              className={`w-full h-full object-cover cursor-pointer transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onLoadedData={handlePlay}
+              onCanPlay={handleMediaLoaded}
+              onError={handleMediaLoaded}
+              onClick={handleShowPlay}
+              onMouseMove={handleShowPlay}
+              playsInline
+            />
+
+            <div
+              onClick={handleVideoClick}
+              className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${showPlayOverlay
+                ? "opacity-100"
+                : "hidden opacity-0"
+                }`}
+            >
+              <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
+                {isPlaying ? (
+                  <Pause size={40} color="white" />
+                ) : (
+                  <Play size={40} color="white" />
+                )}
+              </div>
+              <span
+                className="absolute top-12 right-4 cursor-pointer"
+                onClick={handleToggleMute}
+              >
+                {muted ? (
+                  <VolumeX color="white" size={16} />
+                ) : (
+                  <Volume2 color="white" size={16} />
+                )}
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* Overlay info */}
+        <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+          <div onClick={handleToggleDesc} className="w-[80%]">
+            <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+              {item.title}
+            </p>
+            <p className="text-sm md:text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+              {isDescExpanded
+                ? item.description
+                : item.description.slice(0, 80)}
+              <span className="text-[#aaa] cursor-pointer">
+                {isDescExpanded ? " less..." : " more..."}
+              </span>
+            </p>
+          </div>
+
+          {item.product && (
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
+                    fill="white"
+                  />
+                </svg>
+                {item.flashPrice ? (
+                  <div className="flex items-center text-xs gap-2">
+                    <span>
+                      {Number(item.flashPrice).toLocaleString(
+                        "en-NG",
+                        { style: "currency", currency: "NGN" },
+                      )}
+                    </span>
+                    <small className="line-through">
+                      {Number(
+                        item.product.price,
+                      ).toLocaleString("en-NG", {
+                        style: "currency",
+                        currency: "NGN",
+                      })}
+                    </small>
+                  </div>
+                ) : (
+                  <p className="text-xs">
+                    {Number(item.product.price).toLocaleString(
+                      "en-NG",
+                      { style: "currency", currency: "NGN" },
+                    )}
+                  </p>
+                )}
+              </span>
+              <Link
+                href={`/product/${item.product._id}`}
+                className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
+              >
+                View Product
+              </Link>
+            </div>
+          )}
+
+          {item.type === "flashsale" && item.endDate && (
+            <Countdown targetDate={item.endDate} />
+          )}
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
+        {item.likes && (
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
+              onClick={handleLike}
+            >
+              {hasLiked ? <HeartFill /> : <Heart size={26} />}
+            </div>
+            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+              {item.likes.length}
+            </p>
+          </div>
+        )}
+
+        {item.comments && (
+          <div className="flex flex-col items-center gap-2" onClick={onToggleComment}>
+            <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
+              <CommentIcon />
+            </div>
+            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+              {commentCount}
+            </p>
+          </div>
+        )}
+
+        <div
+          className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
+          onClick={onShare}
+        >
+          <ShareIcon />
+        </div>
+
+        {item.product && (
+          <div
+            className={`w-10 h-10 ${itemInWishlist ? "bg-primaryhover" : "bg-white"
+              } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+            onClick={handleWishlist}
+          >
+            <Favorite fill={itemInWishlist ? "#FFF" : "#FF81C6"} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+});
 
 // ─── FeedItem (shell) ─────────────────────────────────────────────────────────
 
@@ -161,19 +473,21 @@ function FeedContent({
   const [addCommentLoading, setAddCommentLoading] = useState<boolean>(false);
   const { id: idParam, type } = params;
 
-  const { pull, refreshing } = usePullToRefresh();
+  const { pull } = usePullToRefresh();
 
   // ── Refs ────────────────────────────────────────────────────────────────
   const originalFeedsRef = useRef<Feed[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const hidePlayTimeout = useRef<NodeJS.Timeout | null>(null);
+  const itemRefCallbacks = useRef<Map<number, (el: HTMLDivElement | null) => void>>(new Map());
+  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
+  const videoRefCallbacks = useRef<Map<number, (el: HTMLVideoElement | null) => void>>(new Map());
+  const hidePlayTimeouts = useRef<Record<number, NodeJS.Timeout>>({});
   const hasFocusedRef = useRef(false);
   const isFetchingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const onLoadMoreRef = useRef<() => void>(() => { });
 
-  // ── Custom hooks ────────────────────────────────────────────────────────
   // ── Custom hooks ────────────────────────────────────────────────────────
   const {
     addComments,
@@ -187,9 +501,11 @@ function FeedContent({
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
 
   // ── State ───────────────────────────────────────────────────────────────
-  const [isDuplicating, setIsDuplicating] = useState(false);
-  const [, startDuplicateTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
+  // Gate the skeleton → real content swap on the first item's media actually
+  // being ready, so we never flash an empty/broken-looking card.
+  const [mediaReady, setMediaReady] = useState(false);
   const [id, setId] = useState<string | string[] | undefined>(idParam);
   const [href, setHref] = useState("");
   const [data, setData] = useState<{
@@ -197,20 +513,20 @@ function FeedContent({
     nextCursor: string;
     hasMore: boolean;
   }>({ feeds: [], nextCursor: "", hasMore: false });
-  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
+  const [playingMap, setPlayingMap] = useState<Record<number, boolean>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // ✅ FIX 1: Replace single inWishlist boolean with a per-item map
   const [wishlistMap, setWishlistMap] = useState<Record<string, boolean>>({});
 
-  const [showDesc, setShowDesc] = useState(false);
-  const [isLastItem, setLastItem] = useState(false);
+  // Per-item description expansion & per-item video mute/play-overlay state —
+  // these used to be single shared booleans, which meant expanding one
+  // caption or muting one video affected every card in the feed.
+  const [expandedDesc, setExpandedDesc] = useState<Set<number>>(new Set());
+  const [mutedMap, setMutedMap] = useState<Record<number, boolean>>({});
+  const [showPlayMap, setShowPlayMap] = useState<Record<number, boolean>>({});
+
   const [share, setShare] = useState(false);
   const [loadedIndex, setLoadedIndex] = useState<Set<number>>(new Set());
-  const [videoState, setVideoState] = useState({
-    muted: true,
-    showPlay: false,
-  });
   const [comment, setComment] = useState<CommentState>({
     show: false,
     commentText: "",
@@ -230,6 +546,8 @@ function FeedContent({
   );
   const activeComments = activeFeed?.comments ?? [];
 
+  const showSkeleton = isLoading || (data.feeds.length > 0 && !mediaReady);
+
   // ── Sync refs with state ────────────────────────────────────────────────
   useEffect(() => {
     feedsForRefreshRef.current = data.feeds;
@@ -241,21 +559,18 @@ function FeedContent({
     };
   }, [setFeedsExternallyRef]);
 
-  // ── Reset loading when pull-to-refresh completes ────────────────────────
-  useEffect(() => {
-    if (refreshing) {
-      setIsLoading(true);
-      return;
-    }
-    if (data.feeds.length > 0) {
-      setIsLoading(false);
-    }
-  }, [refreshing, data.feeds.length]);
-
-  // ── Initial fetch ───────────────────────────────────────────────────────
+  // ── Initial fetch (runs once per feed type, not on pull-to-refresh) ─────
+  // Pull-to-refresh reshuffles the already-loaded feeds client-side (see
+  // FeedItem's handleRefresh) — it never needs a server round trip, so this
+  // effect no longer depends on `refreshing`. Re-fetching on every refresh
+  // gesture was racing the client-side shuffle and forcing an unnecessary
+  // full-skeleton flash.
   useEffect(() => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
+    setIsLoading(true);
+    setMediaReady(false);
+    setLoadedIndex(new Set());
 
     const fetchInitialFeeds = async () => {
       try {
@@ -276,7 +591,19 @@ function FeedContent({
 
     fetchInitialFeeds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, refreshing]);
+  }, [type]);
+
+  // ── Wait for the first item's media before revealing real content ───────
+  useEffect(() => {
+    if (isLoading || mediaReady || data.feeds.length === 0) return;
+    if (loadedIndex.has(0)) {
+      setMediaReady(true);
+      return;
+    }
+    // Fallback so a slow/broken first image never leaves the skeleton stuck.
+    const timeout = setTimeout(() => setMediaReady(true), 4000);
+    return () => clearTimeout(timeout);
+  }, [isLoading, mediaReady, data.feeds.length, loadedIndex]);
 
   // ── User & href initialization ──────────────────────────────────────────
   useEffect(() => {
@@ -286,7 +613,7 @@ function FeedContent({
 
   // ── Focus to initial feed ───────────────────────────────────────────────
   useEffect(() => {
-    if (isLoading || hasFocusedRef.current || !data.feeds.length) return;
+    if (showSkeleton || hasFocusedRef.current || !data.feeds.length) return;
     const focusedIndex = data.feeds.findIndex((f) => f._id === idParam);
     if (focusedIndex === -1) return;
 
@@ -298,75 +625,84 @@ function FeedContent({
     scrollToWithOffset(el, 60);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, data.feeds, idParam]);
+  }, [showSkeleton, data.feeds, idParam]);
 
-  // ── Intersection Observer for feed visibility ───────────────────────────
-  useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
+  // ── Stable per-index ref callbacks ──────────────────────────────────────
+  // Cached so React doesn't detach/reattach every mounted item's ref on
+  // every render (which an inline arrow function would otherwise cause).
+  const getItemRefCallback = useCallback((index: number) => {
+    let cb = itemRefCallbacks.current.get(index);
+    if (!cb) {
+      cb = (el: HTMLDivElement | null) => {
+        itemRefs.current[index] = el;
+        if (el) observerRef.current?.observe(el);
+      };
+      itemRefCallbacks.current.set(index, cb);
     }
+    return cb;
+  }, []);
 
+  const getVideoRefCallback = useCallback((index: number) => {
+    let cb = videoRefCallbacks.current.get(index);
+    if (!cb) {
+      cb = (el: HTMLVideoElement | null) => {
+        videoRefs.current[index] = el;
+      };
+      videoRefCallbacks.current.set(index, cb);
+    }
+    return cb;
+  }, []);
+
+  // ── Intersection Observer for feed visibility (tracks current id/url) ───
+  // Only recreated when the feed type changes; individual items self-register
+  // via getItemRefCallback as they mount, so liking/commenting (which
+  // replace the `data.feeds` array reference) no longer force a full
+  // disconnect + re-query of every section in the list.
+  //
+  // Landing on the last item (even if it's the only item) also kicks off
+  // onLoadMore below — this is what gives the feed its endless "keep hitting
+  // next and it keeps going" feel. Safe to trigger from here as well as from
+  // the scroll-sentinel below because onLoadMore is guarded by isFetchingRef,
+  // so it can't append duplicates twice.
+  useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
 
           const index = Number(entry.target.id.replace("feed-", ""));
-          const feed = data.feeds[index];
+          const feed = feedsForRefreshRef.current[index];
+          if (!feed) return;
 
-          if (feed) {
-            setShowDesc(false);
-            setId(feed._id);
-            window.history.replaceState(
-              null,
-              "",
-              `/pages/update/${type}/${feed._id}`,
-            );
-          }
+          setId(feed._id);
+          // Keeps the media render window centered on whatever the user is
+          // actually looking at — previously currentIndex only moved via
+          // the prev/next buttons, so natural swipe-scrolling never slid
+          // the window and could unmount the very item on screen.
+          setCurrentIndex(index);
+          window.history.replaceState(
+            null,
+            "",
+            `/pages/update/${type}/${feed._id}`,
+          );
 
-          if (index === data.feeds.length - 1) {
-            setLastItem(true);
-            observerRef.current?.unobserve(entry.target);
+          if (index === feedsForRefreshRef.current.length - 1) {
+            onLoadMoreRef.current();
           }
         });
       },
       { threshold: 0.6 },
     );
 
-    const sections = document.querySelectorAll(".section");
-    sections.forEach((s) => observerRef.current?.observe(s));
+    itemRefs.current.forEach((el) => {
+      if (el) observerRef.current?.observe(el);
+    });
 
     return () => {
       observerRef.current?.disconnect();
       observerRef.current = null;
     };
-  }, [type, data.feeds]);
-
-  // ── Duplicate feeds when reaching end ───────────────────────────────────
-  useEffect(() => {
-    if (
-      !isLastItem ||
-      data.hasMore ||
-      isDuplicating ||
-      !originalFeedsRef.current.length
-    )
-      return;
-
-    setIsDuplicating(true);
-    setLastItem(false);
-  }, [isLastItem, data.hasMore, isDuplicating]);
-
-  useEffect(() => {
-    if (!isDuplicating || !originalFeedsRef.current.length) return;
-
-    startDuplicateTransition(() => {
-      setData((prev) => ({
-        ...prev,
-        feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
-      }));
-    });
-    setIsDuplicating(false);
-  }, [isDuplicating, startDuplicateTransition]);
+  }, [type, feedsForRefreshRef]);
 
   // ── Body scroll lock for comments ───────────────────────────────────────
   useEffect(() => {
@@ -378,8 +714,9 @@ function FeedContent({
 
   // ── Cleanup timeouts ────────────────────────────────────────────────────
   useEffect(() => {
+    const timeouts = hidePlayTimeouts.current;
     return () => {
-      if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
+      Object.values(timeouts).forEach(clearTimeout);
     };
   }, []);
 
@@ -405,9 +742,18 @@ function FeedContent({
       const feeds = data.feeds;
       if (feeds.length === 0) return;
 
-      const nextIndex =
-        direction === "next" ? currentIndex + 1 : currentIndex - 1;
-      if (nextIndex < 0 || nextIndex >= feeds.length) return;
+      let nextIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
+
+      // There's no "earlier" page to fetch — the feed API only paginates
+      // forward — so going past the first item loops to the end of what's
+      // currently loaded instead of dead-ending, mirroring the endless feel
+      // going forward (where the visibility observer duplicates/fetches more
+      // before you can ever actually run out).
+      if (nextIndex < 0) {
+        nextIndex = feeds.length - 1;
+      } else if (nextIndex >= feeds.length) {
+        return;
+      }
 
       const el = itemRefs.current[nextIndex];
       if (!el) return;
@@ -427,13 +773,22 @@ function FeedContent({
     else video.pause();
   }, []);
 
-  const showPlayTemporarily = useCallback(() => {
-    setVideoState((prev) => ({ ...prev, showPlay: true }));
+  const showPlayTemporarily = useCallback((index: number) => {
+    setShowPlayMap((prev) => ({ ...prev, [index]: true }));
 
-    if (hidePlayTimeout.current) clearTimeout(hidePlayTimeout.current);
-    hidePlayTimeout.current = setTimeout(() => {
-      setVideoState((prev) => ({ ...prev, showPlay: false }));
+    const existing = hidePlayTimeouts.current[index];
+    if (existing) clearTimeout(existing);
+    hidePlayTimeouts.current[index] = setTimeout(() => {
+      setShowPlayMap((prev) => ({ ...prev, [index]: false }));
     }, 5000);
+  }, []);
+
+  const toggleMute = useCallback((index: number) => {
+    setMutedMap((prev) => ({ ...prev, [index]: !(prev[index] ?? true) }));
+  }, []);
+
+  const setVideoPlaying = useCallback((index: number, playing: boolean) => {
+    setPlayingMap((prev) => (prev[index] === playing ? prev : { ...prev, [index]: playing }));
   }, []);
 
   // ── Auth helper ─────────────────────────────────────────────────────────
@@ -563,8 +918,6 @@ function FeedContent({
       setAddCommentLoading(true);
 
       try {
-
-
         const newComment: CommentData = {
           _id: "",
           text: comment.commentText.trim(),
@@ -578,12 +931,6 @@ function FeedContent({
         };
 
         const feedType = data.feeds.find((f) => f._id === id)?.type;
-
-
-
-
-       
-
 
         const req = await addComments({
           feedId: id as string,
@@ -601,7 +948,7 @@ function FeedContent({
           updateFeedComments(id!, (comments) => [...comments, newComment]);
         }
 
-         setComment((prev) => ({
+        setComment((prev) => ({
           ...prev,
           commentText: "",
           parent: { parentId: "", fullname: "", email: "" },
@@ -723,7 +1070,6 @@ function FeedContent({
     ],
   );
 
-  // ✅ FIX 3: handleWishlistToggle now uses wishlistMap keyed by product._id
   const handleWishlistToggle = useCallback(
     (product: Product) => {
       if (!checkIfUserLoggedIn("manage your wishlist")) return;
@@ -743,33 +1089,60 @@ function FeedContent({
     [checkIfUserLoggedIn, wishlistMap, isInWishlist, removeItem, addItem],
   );
 
+  const toggleDesc = useCallback((index: number) => {
+    setExpandedDesc((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+
+  const toggleCommentPanel = useCallback(() => {
+    setComment((prev) => ({ ...prev, show: !prev.show }));
+  }, []);
+
+  const openShare = useCallback(() => setShare(true), []);
+  const closeCommentPanel = useCallback(() => setComment((prev) => ({ ...prev, show: false })), []);
+
   // ── Infinite scroll ─────────────────────────────────────────────────────
-  const [infiniteRef] = useInfiniteScroll({
-    loading,
-    hasNextPage: data.hasMore,
-    onLoadMore: useCallback(async () => {
-      if (data.hasMore && !isFetchingRef.current) {
-        isFetchingRef.current = true;
-        try {
-          const newData = await getFeeds(type as string, data.nextCursor || "");
-          setData((prev) => ({
-            ...prev,
-            feeds: [...prev.feeds, ...newData.data],
-            nextCursor: newData.nextCursor,
-            hasMore: newData.hasMore,
-          }));
-        } catch (err) {
-          console.error("Error loading more feeds:", err);
-        } finally {
-          isFetchingRef.current = false;
-        }
-      } else if (!data.hasMore && originalFeedsRef.current.length) {
+  // Both "fetch the next real page" and "loop by reshuffling what we already
+  // have" now live in a single onLoadMore — previously a second, separate
+  // IntersectionObserver-driven mechanism duplicated this responsibility,
+  // and the two could append shuffled batches independently of each other.
+  const onLoadMore = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      if (data.hasMore) {
+        const newData = await getFeeds(type as string, data.nextCursor || "");
+        originalFeedsRef.current = [...originalFeedsRef.current, ...newData.data];
         setData((prev) => ({
           ...prev,
-          feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
+          feeds: [...prev.feeds, ...newData.data],
+          nextCursor: newData.nextCursor,
+          hasMore: newData.hasMore,
         }));
+      } else if (originalFeedsRef.current.length) {
+        startTransition(() => {
+          setData((prev) => ({
+            ...prev,
+            feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
+          }));
+        });
       }
-    }, [data.hasMore, data.nextCursor, type, getFeeds]),
+    } catch (err) {
+      console.error("Error loading more feeds:", err);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, [data.hasMore, data.nextCursor, type, getFeeds, startTransition]);
+  onLoadMoreRef.current = onLoadMore;
+
+  const [infiniteRef] = useInfiniteScroll({
+    loading,
+    hasNextPage: data.hasMore || originalFeedsRef.current.length > 0,
+    onLoadMore,
   });
 
   // ── Comment count helper ────────────────────────────────────────────────
@@ -808,19 +1181,22 @@ function FeedContent({
             className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
             style={{ scrollSnapType: "y mandatory" }}
           >
-            {isLoading ? (
-              <div className="w-full h-screen grid gap-3 overflow-y-hidden no-scrollbar">
-                <FeedSkeleton />
+            {showSkeleton ? (
+              <div className="w-full h-screen flex flex-col justify-center items-center gap-3 overflow-y-hidden no-scrollbar">
+                <div className="md:w-[40%] h-full">
+                  <FeedSkeleton />
+                </div>
+
               </div>
             ) : data.feeds.length === 0 ? (
               <div className="h-screen flex items-center justify-center text-sm text-gray-500">
                 No feeds available
               </div>
             ) : (
-              <>
+              <div className="grid gap-3 animate-placeholderFromBottom">
                 {data.feeds.map((item, index) => {
                   const isLoaded = loadedIndex.has(index);
-                  const isPlaying = playingMap[index];
+                  const isPlaying = playingMap[index] ?? false;
                   const hasLiked =
                     item.likes?.some((l) => l === user?._id) ?? false;
                   const commentCount = item.comments
@@ -830,256 +1206,44 @@ function FeedContent({
                     ? (wishlistMap[item.product._id] ??
                       isInWishlist(item.product._id))
                     : false;
+                  const isMediaActive = Math.abs(index - currentIndex) <= MEDIA_RENDER_WINDOW;
 
                   return (
                     <div
                       key={`${item._id}-${index}`}
                       id={`feed-${index}`}
-                      ref={(el) => {
-                        itemRefs.current[index] = el;
-                      }}
+                      ref={getItemRefCallback(index)}
                       className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show
                         ? "md:justify-start md:pl-[10%]"
                         : "md:justify-center"
                         } section`}
                       style={{ scrollSnapAlign: "start" }}
                     >
-                      {/* Media panel */}
-                      <div
-                        className="w-full md:w-[40%] h-full relative overflow-hidden md:rounded-2xl selection:bg-transparent"
-                        style={{
-                          transform: `translateY(-${pull * 0.7}px)`,
-                          opacity: 1 - Math.min(pull / 150, 1),
-                          transition: pull === 0 ? "all 0.25s ease" : "none",
-                        }}
-                      >
-                        {item.type === "flashsale" && (
-                          <span className="absolute top-10 left-4 shadow-2xl py-2 px-5 rounded-full text-sm font-poppins bg-primaryhover text-white z-10">
-                            Flashsale
-                          </span>
-                        )}
-
-                        {item.mediaType === "image" ? (
-                          <>
-                            {!isLoaded && (
-                              <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                            )}
-                            <Image
-                              src={item.mediaUrl}
-                              alt={item.title}
-                              fill
-                              sizes="(max-width: 768px) 100vw, 40vw"
-                              className="object-cover"
-                              onLoad={() => handleMediaLoaded(index)}
-                              priority={index < 2}
-                            />
-                          </>
-                        ) : (
-                          <>
-                            {!isLoaded && (
-                              <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-                            )}
-                            <video
-                              preload={index < 2 ? "auto" : "none"}
-                              ref={(el) => {
-                                videoRefs.current[index] = el;
-                              }}
-                              autoPlay
-                              loop
-                              muted={videoState.muted}
-                              src={item.mediaUrl}
-                              className="w-full h-full object-cover cursor-pointer"
-                              onPlay={() =>
-                                setPlayingMap((prev) => ({
-                                  ...prev,
-                                  [index]: true,
-                                }))
-                              }
-                              onPause={() =>
-                                setPlayingMap((prev) => ({
-                                  ...prev,
-                                  [index]: false,
-                                }))
-                              }
-                              onLoadedData={() =>
-                                setPlayingMap((prev) => ({
-                                  ...prev,
-                                  [index]: true,
-                                }))
-                              }
-                              onCanPlay={() => handleMediaLoaded(index)}
-                              onClick={showPlayTemporarily}
-                              onMouseMove={showPlayTemporarily}
-                              playsInline
-                            />
-
-                            <div
-                              onClick={() => handleVideoPlay(index)}
-                              className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${videoState.showPlay
-                                ? "opacity-100"
-                                : "hidden opacity-0"
-                                }`}
-                            >
-                              <div className="w-20 h-20 rounded-full bg-primaryhover flex items-center justify-center">
-                                {isPlaying ? (
-                                  <Pause size={40} color="white" />
-                                ) : (
-                                  <Play size={40} color="white" />
-                                )}
-                              </div>
-                              <span
-                                className="absolute top-12 right-4 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setVideoState((prev) => ({
-                                    ...prev,
-                                    muted: !prev.muted,
-                                  }));
-                                }}
-                              >
-                                {videoState.muted ? (
-                                  <VolumeX color="white" size={16} />
-                                ) : (
-                                  <Volume2 color="white" size={16} />
-                                )}
-                              </span>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Overlay info */}
-                        <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
-                          <div
-                            onClick={() => setShowDesc((prev) => !prev)}
-                            className="w-[80%]"
-                          >
-                            <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                              {item.title}
-                            </p>
-                            <p className="text-sm md:text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                              {showDesc
-                                ? item.description
-                                : item.description.slice(0, 80)}
-                              <span className="text-[#aaa] cursor-pointer">
-                                {showDesc ? " less..." : " more..."}
-                              </span>
-                            </p>
-                          </div>
-
-                          {item.product && (
-                            <div className="flex items-center gap-4">
-                              <span className="flex items-center gap-1">
-                                <svg
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 14 14"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                    d="M0.0821635 7.21058C0.273497 7.87924 0.78883 8.39391 1.81883 9.42391L3.03883 10.6439C4.83216 12.4379 5.72816 13.3332 6.8415 13.3332C7.9555 13.3332 8.8515 12.4372 10.6442 10.6446C12.4375 8.85124 13.3335 7.95524 13.3335 6.84124C13.3335 5.72791 12.4375 4.83124 10.6448 3.03858L9.42483 1.81858C8.39416 0.788578 7.8795 0.273244 7.21083 0.0819108C6.54216 -0.110089 5.83216 0.0539108 4.41283 0.381911L3.59416 0.570578C2.3995 0.845911 1.80216 0.983911 1.39283 1.39258C0.983497 1.80124 0.84683 2.39991 0.57083 3.59391L0.381497 4.41258C0.0541636 5.83258 -0.10917 6.54191 0.0821635 7.21058ZM5.41483 3.51391C5.54341 3.63791 5.646 3.7863 5.7166 3.95039C5.7872 4.11448 5.82439 4.291 5.82601 4.46963C5.82763 4.64825 5.79364 4.82541 5.72603 4.99076C5.65842 5.15611 5.55854 5.30632 5.43222 5.43264C5.30591 5.55895 5.15569 5.65883 4.99035 5.72644C4.825 5.79406 4.64784 5.82805 4.46921 5.82643C4.29058 5.82481 4.11407 5.78761 3.94998 5.71701C3.78588 5.64641 3.6375 5.54383 3.5135 5.41524C3.26887 5.16158 3.13359 4.82202 3.13679 4.46963C3.13998 4.11723 3.28139 3.78018 3.53058 3.53099C3.77977 3.2818 4.11682 3.1404 4.46921 3.1372C4.8216 3.13401 5.16116 3.26928 5.41483 3.51391ZM11.3668 6.70058L6.71416 11.3539C6.61982 11.4449 6.49349 11.4953 6.3624 11.4941C6.2313 11.4929 6.10592 11.4402 6.01325 11.3475C5.92059 11.2547 5.86807 11.1293 5.86699 10.9982C5.86591 10.8671 5.91637 10.7408 6.0075 10.6466L10.6595 5.99324C10.7533 5.89945 10.8805 5.84675 11.0132 5.84675C11.1458 5.84675 11.273 5.89945 11.3668 5.99324C11.4606 6.08704 11.5133 6.21426 11.5133 6.34691C11.5133 6.47956 11.4606 6.60678 11.3668 6.70058Z"
-                                    fill="white"
-                                  />
-                                </svg>
-                                {item.flashPrice ? (
-                                  <div className="flex items-center text-xs gap-2">
-                                    <span>
-                                      {Number(item.flashPrice).toLocaleString(
-                                        "en-NG",
-                                        { style: "currency", currency: "NGN" },
-                                      )}
-                                    </span>
-                                    <small className="line-through">
-                                      {Number(
-                                        item.product.price,
-                                      ).toLocaleString("en-NG", {
-                                        style: "currency",
-                                        currency: "NGN",
-                                      })}
-                                    </small>
-                                  </div>
-                                ) : (
-                                  <p className="text-xs">
-                                    {Number(item.product.price).toLocaleString(
-                                      "en-NG",
-                                      { style: "currency", currency: "NGN" },
-                                    )}
-                                  </p>
-                                )}
-                              </span>
-                              <Link
-                                href={`/product/${item.product._id}`}
-                                className="text-xs bg-primaryhover flex items-center justify-center h-7 w-[40%]"
-                              >
-                                View Product
-                              </Link>
-                            </div>
-                          )}
-
-                          {item.type === "flashsale" && item.endDate && (
-                            <Countdown targetDate={item.endDate} />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
-                        {item.likes && (
-                          <div className="flex flex-col items-center gap-2">
-                            <div
-                              className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
-                              onClick={() => likePost(item._id)}
-                            >
-                              {hasLiked ? <HeartFill /> : <Heart size={26} />}
-                            </div>
-                            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                              {item.likes.length}
-                            </p>
-                          </div>
-                        )}
-
-                        {item.comments && (
-                          <div
-                            className="flex flex-col items-center gap-2"
-                            onClick={() =>
-                              setComment((prev) => ({
-                                ...prev,
-                                show: !prev.show,
-                              }))
-                            }
-                          >
-                            <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
-                              <CommentIcon />
-                            </div>
-                            <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-                              {commentCount}
-                            </p>
-                          </div>
-                        )}
-
-                        <div
-                          className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-                          onClick={() => setShare(true)}
-                        >
-                          <ShareIcon />
-                        </div>
-
-                        {item.product && (
-                          <div
-                            className={`w-10 h-10 ${itemInWishlist ? "bg-primaryhover" : "bg-white"
-                              } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
-                            onClick={() =>
-                              handleWishlistToggle(item.product as Product)
-                            }
-                          >
-                            <Favorite
-                              fill={itemInWishlist ? "#FFF" : "#FF81C6"}
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <FeedCard
+                        item={item}
+                        index={index}
+                        isLoaded={isLoaded}
+                        isPlaying={isPlaying}
+                        hasLiked={hasLiked}
+                        commentCount={commentCount}
+                        itemInWishlist={itemInWishlist}
+                        isDescExpanded={expandedDesc.has(index)}
+                        isMediaActive={isMediaActive}
+                        pull={pull}
+                        muted={mutedMap[index] ?? true}
+                        showPlayOverlay={showPlayMap[index] ?? false}
+                        registerVideoRef={getVideoRefCallback(index)}
+                        onMediaLoaded={handleMediaLoaded}
+                        onVideoPlayStateChange={setVideoPlaying}
+                        onVideoClick={handleVideoPlay}
+                        onShowPlayTemporarily={showPlayTemporarily}
+                        onToggleMute={toggleMute}
+                        onToggleDesc={toggleDesc}
+                        onLike={likePost}
+                        onToggleComment={toggleCommentPanel}
+                        onShare={openShare}
+                        onWishlistToggle={handleWishlistToggle}
+                      />
                     </div>
                   );
                 })}
@@ -1091,35 +1255,37 @@ function FeedContent({
                 />
 
                 <div className="h-[30vh] md:h-[10vh]" />
-              </>
+              </div>
             )}
           </div>
 
           {/* Comments panel */}
           <div
-            onClick={() => setComment((prev) => ({ ...prev, show: false }))}
+            onClick={closeCommentPanel}
             className={`fixed right-0 h-screen flex items-end md:items-center md:top-[5%] top-0 justify-center w-screen md:w-auto overflow-hidden duration-300 gap-3 ${comment.show ? "" : "translate-y-full md:translate-y-0"
               }`}
             style={{ zIndex: 100 }}
           >
             {/* Prev / Next navigation */}
-            <div
-              className="pr-4 gap-6 hidden md:grid md:-translate-y-[10vh]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                className="w-10 h-10 cursor-pointer bg-white rounded-full duration-300 flex items-center justify-center rotate-180 scale-90 hover:scale-100"
-                onClick={() => smoothScrollTo("prev")}
+            {
+              !showSkeleton && <div
+                className="pr-4 gap-6 hidden md:grid md:-translate-y-[10vh]"
+                onClick={(e) => e.stopPropagation()}
               >
-                <ChevronDown />
+                <div
+                  className="w-10 h-10 cursor-pointer bg-white rounded-full duration-300 flex items-center justify-center rotate-180 scale-90 hover:scale-100"
+                  onClick={() => smoothScrollTo("prev")}
+                >
+                  <ChevronDown />
+                </div>
+                <div
+                  className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
+                  onClick={() => smoothScrollTo("next")}
+                >
+                  <ChevronDown />
+                </div>
               </div>
-              <div
-                className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-                onClick={() => smoothScrollTo("next")}
-              >
-                <ChevronDown />
-              </div>
-            </div>
+            }
 
             {/* Comment drawer */}
             <div
@@ -1131,12 +1297,7 @@ function FeedContent({
             >
               <div className="p-5 h-[50vh] flex-1 ">
                 <div className="flex items-center mb-6">
-                  <span
-                    className="cursor-pointer"
-                    onClick={() =>
-                      setComment((prev) => ({ ...prev, show: false }))
-                    }
-                  >
+                  <span className="cursor-pointer" onClick={closeCommentPanel}>
                     <GoBack />
                   </span>
                   <p className="text-sm px-[30%]">Comments</p>

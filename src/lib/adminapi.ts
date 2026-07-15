@@ -22,6 +22,7 @@ import {
   Customer,
   Education,
   FlashSale,
+  IReturn,
   LoginCredentials,
   LoginResponse,
   LogisticsPickupAddress,
@@ -72,7 +73,7 @@ const apiCall = async <T, M = T>(
     if (!response.ok) {
       throw new Error(data.error || data.message || 'API request failed');
     }
-    
+
     return data;
   } catch (error) {
     // console.error('API Error:', error);
@@ -102,7 +103,7 @@ export const getAllReviews = (): Promise<ApiResponse<Review[]>> =>
 export const deleteReview = (product: string, user: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/reviews/${product}`, {
     method: 'DELETE',
-    body: JSON.stringify({user})
+    body: JSON.stringify({ user })
   });
 
 // Category endpoints
@@ -198,17 +199,19 @@ export const deleteOrder = (id: string): Promise<ApiResponse<void>> =>
   });
 
 // Return endpoints
-export const getAllReturns = (): Promise<ApiResponse<ReturnRequest[]>> =>
-  apiCall('/return/');
+export const getAllReturns = (): Promise<ApiResponse<IReturn[]>> =>
+  apiCall('/admin/return/');
 
-export const getReturnById = (id: string): Promise<ApiResponse<ReturnRequest>> =>
-  apiCall(`/return/${id}`);
+export const getReturnById = (id: string): Promise<ApiResponse<IReturn>> =>
+  apiCall(`/admin/return/${id}`);
 
-export const updateReturn = (id: string, data: UpdateReturnData): Promise<ApiResponse<ReturnRequest>> =>
-  apiCall(`/return/${id}`, {
-    method: 'PUT',
+export const updateReturn = (id: string, data: UpdateReturnData): Promise<ApiResponse<IReturn>> => {
+  console.log(data);
+  return apiCall(`/admin/return/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
+}
 
 // Shipping Fee endpoints
 export const getShippingFees = (): Promise<ApiResponse<ShippingFee[]>> =>

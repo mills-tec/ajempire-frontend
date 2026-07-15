@@ -69,6 +69,13 @@ const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
 // Items appended to the bottom of displayItems on each recycle trigger.
 const APPEND_BATCH = 20;
 
+// TEMPORARILY DISABLED
+// Recycle mode paused while investigating performance issues.
+// Re-enable this block once performance has been optimized.
+// Flipping this back to `true` restores the sliding-window/shuffle/append
+// behaviour below with no other code changes needed.
+const RECYCLE_MODE_ENABLED = false;
+
 // ── Internal item shape ────────────────────────────────────────────────────────
 
 interface SlottedItem<T> {
@@ -147,7 +154,13 @@ export function InfiniteFeed<T>({
   );
 
 
-  const isRecycleMode = !hasNextPage && sourceItems.length > 0;
+  // TEMPORARILY DISABLED: gated by RECYCLE_MODE_ENABLED (see top of file).
+  // With the flag off, isRecycleMode is always false, so every recycle-only
+  // effect/branch below (seeding, appendBatch, the recycle sentinel observer,
+  // and the recycle render path) short-circuits and never runs. Once the API
+  // runs out of pages, the component simply falls through to the plain API
+  // pagination render path and stops — no shuffling, no appending, no trimming.
+  const isRecycleMode = RECYCLE_MODE_ENABLED && !hasNextPage && sourceItems.length > 0;
 
   // ── Stable refs ──────────────────────────────────────────────────────────────
   const shuffleRef = useRef(shuffle);
@@ -363,6 +376,8 @@ export function InfiniteFeed<T>({
   }
 
   // ── Recycle mode ──────────────────────────────────────────────────────────────
+  // TEMPORARILY DISABLED: unreachable while RECYCLE_MODE_ENABLED is false,
+  // since isRecycleMode can never be true. Left intact for a quick re-enable.
   if (isRecycleMode && isSeeded) {
     return (
       <div className={className}>

@@ -8,11 +8,18 @@ interface RecentPurchase {
   recentPurchases?: RecentPurchaseItem[];
 }
 interface RecentPurchaseItem {
+  price: number;
   product: Product;
   qty: number;
+  discountedPrice: number;
+  variants?: {
+    combinedVariant: string;
+    options: { name: string; value: string; }[]
+  }
 }
 export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
   // const _url = process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/reorder/";
+  console.log(recentPurchases);
   const { addItem, getItem, setQuantity } = useCartStore();
 
   const handleReorder = async (purchase: RecentPurchaseItem) => {
@@ -30,20 +37,43 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
       setQuantity(product._id, cartItem.quantity + purchase.qty);
       toast.success("Item quantity incremented");
     } else {
+      const basePrice = purchase.product.price + (purchase.variants
+        ? (purchase.product.variantCombinations?.find(
+          vc => vc._id === purchase.variants?.combinedVariant
+        )?.additionalPrice ?? 0)
+        : 0);
+      const finalPrice = product.flashSales
+        ? calcDiscountPrice(
+          basePrice,
+          product.flashSales.discountValue,
+          product.flashSales.discountType,
+        )
+        : basePrice;
+
       // Item not in cart → add fresh
       // addItem({ quantity: purchase.qty, ...product! });
-      addItem([{
-        _id: product._id,
-        name: product.name,
-        price: product.price,
-        flashSales: product.flashSales,
-        cover_image: product.cover_image,
-        description: product.description,
-        quantity: purchase.qty,
-        selectedVariants: [],
-        selected: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any]);
+
+      const selectedVariant = purchase.product.variantCombinations?.find(
+        vc => vc._id === purchase.variants?.combinedVariant
+      );
+      addItem([
+        {
+          ...product,
+          basePrice,
+          discount: product.flashSales
+            ? calcDiscountPrice(
+              basePrice,
+              product.flashSales.discountValue,
+              product.flashSales.discountType,
+            )
+            : 0,
+          stock: purchase.variants ? selectedVariant?.stock : product.stock,
+          quantity: purchase.qty,
+          selected: true,
+          selectedVariants: purchase.variants ? purchase.variants.options : [],
+          finalPrice,
+        },
+      ]);
       toast.success("Item added to cart successfully");
     }
   };
@@ -54,8 +84,10 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
       <div className="flex flex-col gap-5 lg:w-[45%]">
         {recentPurchases &&
           recentPurchases.length > 0 &&
-          recentPurchases.map((purchase, index) => (
-            <div
+          recentPurchases.map((purchase, index) => {
+
+
+            return <div
               key={index}
               className="w-full flex items-center gap-2  border border-gray-300 rounded-md  p-3 text-[14px] font-extralight"
             >
@@ -69,11 +101,11 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
               </div>
               <div className="w-[70%] flex flex-col ">
                 <p>{purchase.product.name}</p>
-                {purchase.product.variants &&
-                  purchase.product.variants.map((variant, idx) => (
+                {purchase.variants &&
+                  purchase.variants.options.map((variant, idx) => (
                     <div key={idx} className="flex items-center gap-2 opacity-70 text-[13px]">
                       <p>{variant.name}:</p>
-                      <p>{variant.values}</p>
+                      <p>{variant.value}</p>
                     </div>
                   ))}
 
@@ -85,11 +117,19 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
                   {Number(
                     purchase.product.flashSales
                       ? calcDiscountPrice(
-                          purchase.product.price,
-                          purchase.product.flashSales.discountValue!,
-                          purchase.product.flashSales.discountType!,
-                        )
-                      : purchase.product.price,
+                        purchase.product.price + (purchase.variants
+                          ? (purchase.product.variantCombinations?.find(
+                            vc => vc._id === purchase.variants?.combinedVariant
+                          )?.additionalPrice ?? 0)
+                          : 0),
+                        purchase.product.flashSales.discountValue!,
+                        purchase.product.flashSales.discountType!,
+                      )
+                      : purchase.product.price + (purchase.variants
+                        ? (purchase.product.variantCombinations?.find(
+                          vc => vc._id === purchase.variants?.combinedVariant
+                        )?.additionalPrice ?? 0)
+                        : 0),
                   ).toLocaleString("en-ng", {
                     style: "currency",
                     currency: "NGN",
@@ -105,7 +145,7 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
                 </div>
               </div>
             </div>
-          ))}
+          })}
       </div>
     </div>
   );
