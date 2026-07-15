@@ -1,28 +1,29 @@
 'use client'
 
+import { IOrder } from "@/lib/types";
+import Image from "next/image";
+
 interface TopSellingCategoryProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    orders?: any[];
+    orders?: IOrder[];
     period?: string;
 }
 
 const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCategoryProps) => {
     // Calculate category sales from orders
-    const categorySales = orders?.reduce((acc: Record<string, { name: string; sales: number; value: number }>, order) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        order.items?.forEach((item: any) => {
-            const category = item.category || 'Unknown Category';
-            
+    const categorySales = orders?.reduce((acc: Record<string, { name: string; sales: number; value: number; image: string; }>, order) => {
+        order.items?.forEach((item) => {
+            const category = item.product.category?.name || 'Unknown Category';
             if (!acc[category]) {
                 acc[category] = {
                     name: category,
+                    image: item.product.category?.image || '',
                     sales: 0,
                     value: 0
                 };
             }
-            
-            const itemValue = (item.price || item.unitPrice || 0) * (item.quantity || item.qty || 1);
-            acc[category].sales += (item.quantity || item.qty || 1);
+
+            const itemValue = item.price * item.qty;
+            acc[category].sales += (item.qty || 1);
             acc[category].value += itemValue;
         });
         return acc;
@@ -37,7 +38,8 @@ const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCat
             value: category.value.toLocaleString(),
             change: `${Math.floor(Math.random() * 40) - 20}%`, // Random change for demo
             negative: Math.random() > 0.5,
-            neutral: Math.random() > 0.8
+            neutral: Math.random() > 0.8,
+            image: category.image
         }));
 
     const displayCategories = topCategories;
@@ -58,16 +60,18 @@ const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCat
                     displayCategories.map((category, index) => (
                         <div key={index} className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-brand_pink/10" />
-                                <span className="text-[13px] font-medium text-gray-700">{category.name}</span>
+                                <div className="w-9 h-9  bg-brand_pink/10 relative rounded-full" >
+                                    <Image className="object-cover rounded-full" fill alt={category.name} src={category.image} />
+                                </div>
+                                <span className=" capitalize">{category.name}</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="text-[13px] font-bold text-gray-800">₦{category.value}</span>
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${category.neutral ? 'bg-gray-100 text-gray-400 border border-gray-200' :
-                                        category.negative ? 'bg-red-50 text-red-400 border border-red-100' : 'bg-green-50 text-green-500 border border-green-100'
+                                {/* <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${category.neutral ? 'bg-gray-100 text-gray-400 border border-gray-200' :
+                                    category.negative ? 'bg-red-50 text-red-400 border border-red-100' : 'bg-green-50 text-green-500 border border-green-100'
                                     }`}>
                                     {category.change}
-                                </span>
+                                </span> */}
                             </div>
                         </div>
                     ))

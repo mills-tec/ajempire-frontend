@@ -3,11 +3,11 @@
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
 import { deleteProduct, deleteReview, getAllCategories, getProductById, getProducts, Product, Review, updateProduct } from '@/lib/adminapi';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Edit2, Eye, Filter, Folder, LayoutGrid, Loader2, Package, Plus, Search, ShoppingCart, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface MappedProduct {
     id: string;
@@ -492,7 +492,7 @@ const InventoryPage = () => {
                                         <h3 className="text-2xl font-bold text-brand_gray_dark">{lowStockProducts}</h3>
                                     </div>
                                     <div>
-                                        <p className="text-brand_gray_dark/60 text-xs font-medium mb-1">Star Rating</p>
+                                        <p className="text-brand_gray_dark/60 text-xs font-medium mb-1"> Avg. Rating</p>
                                         <h3 className="text-2xl font-bold text-brand_gray_dark">{Math.round(parseFloat(averageRating) || 0)}</h3>
                                     </div>
                                     <div>

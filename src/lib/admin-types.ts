@@ -162,6 +162,62 @@ export interface ReturnRequest {
   updatedAt: string;
 }
 
+export interface IReturn {
+  _id: string;
+
+  reason: string;
+
+  itemUsed: boolean;
+
+  imageEvidence: string;
+
+  phoneNumber: string;
+
+  order: {
+    order_id: string;
+    paymentStatus: "pending" | "paid" | "failed" | "refunded";
+    totalPrice: number;
+    orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+    deliveredAt?: Date;
+  };
+
+  user: {
+    _id: string;
+    fullname: string;
+    email: string;
+  };
+
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    cover_image: string;
+    images: string[];
+    reviews: unknown[]; // Replace with IReview[] if you have a review interface
+  }[];
+
+  status: 
+  "processing"
+  | "approved"
+  | "declined"
+  | "refunded";
+
+  statusUpdatedAt: {
+    _id: string;
+    status:
+    "processing"
+    | "approved"
+    | "declined"
+    | "refunded";
+    updatedAt: Date;
+  }[];
+
+  createdAt: Date;
+
+  updatedAt: Date;
+}
+
+
 export interface ReturnItem {
   productId: string;
   quantity: number;
@@ -169,7 +225,11 @@ export interface ReturnItem {
 }
 
 export interface UpdateReturnData {
-  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  returnStatus?:
+  "processing"
+  | "approved"
+  | "declined"
+  | "refunded";
   refundAmount?: number;
   notes?: string;
 }

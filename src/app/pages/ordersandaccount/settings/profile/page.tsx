@@ -4,8 +4,10 @@ import { API_URL, getBearerToken } from "@/lib/api";
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import EditProfileModal from "./EditProfileModal";
 interface UserProfile {
   _id: string;
+  fullname?: string;
   email: string;
   authProvider: "google" | "email";
   isVerified: boolean;
@@ -22,8 +24,47 @@ interface UserProfile {
   };
 }
 
+function ProfileSkeleton() {
+  return (
+    <div className="lg:flex gap-3 flex-col lg:flex-row">
+      {/* LEFT – PROFILE SUMMARY */}
+      <div className="w-full lg:w-[45%] bg-white p-5 rounded-md border relative overflow-hidden">
+        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+        <div className="flex items-center gap-3">
+          <div className="w-[65px] h-[65px] rounded-full bg-gray-200 shrink-0" />
+          <div className="flex flex-col gap-2">
+            <div className="h-3.5 w-28 bg-gray-200 rounded" />
+            <div className="h-3 w-36 bg-gray-200 rounded" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 mt-4">
+          <div className="h-3 w-full bg-gray-200 rounded" />
+          <div className="h-3 w-3/4 bg-gray-200 rounded" />
+        </div>
+        <div className="h-3.5 w-24 bg-gray-200 rounded mt-4" />
+      </div>
+
+      {/* RIGHT – DETAILS */}
+      <div className="lg:w-[55%] w-full bg-white p-5 rounded-md border relative overflow-hidden">
+        <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+        <div className="h-3.5 w-40 bg-gray-200 rounded mb-6" />
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex justify-between items-center border-b pb-2">
+              <div className="h-3 w-20 bg-gray-200 rounded" />
+              <div className="h-3 w-28 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileSettingsPage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const _styleadress = "font-semibold opacity-75";
   useEffect(() => {
     const token = getBearerToken();
@@ -33,10 +74,12 @@ export default function ProfileSettingsPage() {
         const res = await axios.get(`${API_URL}/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Fetched profile settings:", res.data.message);
         setProfileData(res.data.message);
+
       } catch (err) {
         console.error("Error fetching profile settings:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     profileSettingsPage();
@@ -68,33 +111,55 @@ export default function ProfileSettingsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row">
-        {/* LEFT – PROFILE SUMMARY */}
-        {profileData && (
-          <div className="w-full lg:w-[45%] bg-white p-5 rounded-md border">
-            <ProfileName email={profileData.email} />
-            <p className="text-[13px] text-gray-500 mt-2">
-              Manage your personal information and delivery details. Your data
-              is safe and secure.
-            </p>
+      {isLoading ? (
+        <ProfileSkeleton />
+      ) : (
+        <div className="lg:flex gap-3  flex-col lg:flex-row ">
+          {/* LEFT – PROFILE SUMMARY */}
+          {profileData && (
+            <div className=" w-full lg:w-[45%] bg-white p-5 rounded-md border">
+              <ProfileName email={profileData.email} />
+              <p className="text-[13px] text-gray-500 mt-2">
+                Manage your personal information and delivery details. Your data
+                is safe and secure.
+              </p>
 
-            <button className="mt-4 text-sm text-pink-600 font-medium hover:underline">
-              Edit Profile
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => setIsEditOpen(true)}
+                className="mt-4 text-sm text-pink-600 font-medium hover:underline"
+              >
+                Edit Profile
+              </button>
+            </div>
+          )}
 
-        {/* RIGHT – DETAILS */}
-        {profileData && (
-          <div className="lg:w-[55%] w-full bg-white p-5 rounded-md border">
-            <h3 className="text-[15px] font-semibold mb-4">
-              Personal Information
-            </h3>
+          {/* RIGHT – DETAILS */}
+          {profileData?.shippingAddress && (
+            <div className="lg:w-[55%] w-full bg-white p-5 rounded-md border">
+              <h3 className="text-[15px] font-semibold mb-4">
+                Personal Information
+              </h3>
 
-            {profileData.shippingAddress ? (
               <div className="flex flex-col gap-3 text-[14px]">
                 {[
-                  ["Full Name", profileData.shippingAddress.fullName],
+                  ["Full Name", profileData.fullname],
+                  ["Email", profileData.email]
+
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between border-b pb-2">
+                    <p className="text-gray-500">{label}</p>
+                    <p className="font-medium text-gray-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-[15px] font-semibold mb-4 mt-10">
+                Shipping Address
+              </h3>
+
+              <div className="flex flex-col gap-3 text-[14px]">
+                {[
+                  ["Name", profileData.shippingAddress.fullName],
                   ["Phone", profileData.shippingAddress.phone],
                   ["Email", profileData.email],
                   ["Street", profileData.shippingAddress.street],
@@ -105,25 +170,23 @@ export default function ProfileSettingsPage() {
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between border-b pb-2">
                     <p className="text-gray-500">{label}</p>
-                    <p className="font-medium text-gray-800">{value || "—"}</p>
+                    <p className="font-medium text-gray-800">{value}</p>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-[13px] text-gray-400">
-                No delivery address saved yet. Add one from the{" "}
-                <Link
-                  href="/pages/ordersandaccount/address"
-                  className="text-pink-600 underline"
-                >
-                  address page
-                </Link>
-                .
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {profileData && (
+        <EditProfileModal
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          profile={profileData}
+          onSaved={setProfileData}
+        />
+      )}
     </div>
   );
 }

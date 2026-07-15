@@ -2,22 +2,31 @@
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
+import { IReturn } from '@/lib/admin-types';
 import { getAllReturns, getReturnById, updateReturn } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
 import { ChevronLeft, ChevronRight, CornerDownRight, Edit2, Eye, Filter, Search, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+interface ReturnTableRow {
+  id: string;
+  customer: string;
+  items: number;
+  returnDate: string;
+  status: IReturn['status'] | 'Unknown';
+  fullReturn: IReturn;
+}
+
 const ReturnsPage = () => {
   const toast = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [returns, setReturns] = useState<any[]>([]);
+  const [returns, setReturns] = useState<ReturnTableRow[]>([]);
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [selectedReturn, setSelectedReturn] = useState<any>(null);
+  const [selectedReturn, setSelectedReturn] = useState<IReturn | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showFullImage, setShowFullImage] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -27,16 +36,16 @@ const ReturnsPage = () => {
   }, []);
 
   const fetchReturns = async () => {
+
     try {
       setLoading(true);
       const response = await getAllReturns();
-      
+
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const transformedReturns = response.message.map((returnItem: any) => ({
+        const transformedReturns: ReturnTableRow[] = response.message.map((returnItem) => ({
           id: returnItem.order?.order_id || 'Unknown',
-          customer: returnItem.phoneNumber || 'Unknown Customer',
+          customer: returnItem.user?.fullname || returnItem.phoneNumber || 'Unknown Customer',
           items: returnItem.product?.length || 0,
           returnDate: returnItem.createdAt ? new Date(returnItem.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -66,7 +75,7 @@ const ReturnsPage = () => {
   const declinedReturns = periodFilteredReturns?.filter(r => r.status?.toLowerCase() === 'rejected').length || 0;
 
   // Filter returns based on search with safe checks
-  const filteredReturns = periodFilteredReturns?.filter(returnItem => 
+  const filteredReturns = periodFilteredReturns?.filter(returnItem =>
     returnItem?.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem?.status?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -74,47 +83,43 @@ const ReturnsPage = () => {
 
   const getStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'pending': return 'bg-yellow-50 text-yellow-500 border-yellow-100';
       case 'approved': return 'bg-green-50 text-green-500 border-green-100';
-      case 'processing': return 'bg-blue-50 text-blue-500 border-blue-100';
-      case 'completed': return 'bg-green-50 text-green-500 border-green-100';
-      case 'rejected': return 'bg-red-50 text-red-500 border-red-100';
+      case 'processing': return 'bg-yellow-50 text-yellow-500 border-yellow-100';
+      case 'refunded': return 'bg-green-50 text-green-500 border-green-100';
+      case 'declined': return 'bg-red-50 text-red-500 border-red-100';
       default: return 'bg-gray-50 text-gray-500 border-gray-100';
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleViewReturn = async (returnItem: any) => {
+  const handleViewReturn = async (returnItem: IReturn) => {
     try {
       // Get detailed return data
-      const response = await getReturnById(returnItem.fullReturn._id);
+      const response = await getReturnById(returnItem._id);
       if (response.message) {
         setSelectedReturn(response.message);
       } else {
-        setSelectedReturn(returnItem.fullReturn);
+        setSelectedReturn(returnItem);
       }
       setShowViewModal(true);
     } catch (error) {
       console.error('Error fetching return details:', error);
       toast.error('Failed to fetch return details');
-      setSelectedReturn(returnItem.fullReturn);
+      setSelectedReturn(returnItem);
       setShowViewModal(true);
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleEditReturn = (returnItem: any) => {
-    setSelectedReturn(returnItem.fullReturn);
+  const handleEditReturn = (returnItem: IReturn) => {
+    setSelectedReturn(returnItem);
     setShowEditModal(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleUpdateReturn = async (updatedData: any) => {
+  const handleUpdateReturn = async (updatedData: { returnStatus: IReturn['status'] }) => {
     if (selectedReturn) {
       try {
         setIsUpdating(true);
         const response = await updateReturn(selectedReturn._id, updatedData);
-        
+
         if (response.message) {
           toast.success('Return updated successfully');
           setShowEditModal(false);
@@ -132,7 +137,7 @@ const ReturnsPage = () => {
     }
   };
 
-  
+
   const cancelEdit = () => {
     setShowEditModal(false);
     setSelectedReturn(null);
@@ -298,12 +303,12 @@ const ReturnsPage = () => {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {
-                  paginatedReturns.length === 0 && <EmptyTable colSpan={6} searchTerm={searchTerm} tableType='Returns'/>
+                  paginatedReturns.length === 0 && <EmptyTable colSpan={6} searchTerm={searchTerm} tableType='Returns' />
                 }
                 {paginatedReturns.map((returnItem, idx) => (
-                  <tr 
-                    key={idx} 
-                    onClick={() => handleViewReturn(returnItem)}
+                  <tr
+                    key={idx}
+                    onClick={() => handleViewReturn(returnItem.fullReturn)}
                     className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
                   >
                     <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{returnItem.id}</td>
@@ -325,16 +330,16 @@ const ReturnsPage = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-3">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleViewReturn(returnItem); }}
-                          className="text-brand_gray hover:text-brand_pink transition-colors" 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleViewReturn(returnItem.fullReturn); }}
+                          className="text-brand_gray hover:text-brand_pink transition-colors"
                           title="View Return"
                         >
                           <Eye size={16} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleEditReturn(returnItem); }}
-                          className="text-brand_gray hover:text-blue-500 transition-colors" 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditReturn(returnItem.fullReturn); }}
+                          className="text-brand_gray hover:text-blue-500 transition-colors"
                           title="Edit Return"
                         >
                           <Edit2 size={16} />
@@ -352,7 +357,7 @@ const ReturnsPage = () => {
         <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-50 bg-gray-50/20">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <select 
+              <select
                 className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none"
                 value={itemsPerPage}
                 onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
@@ -370,7 +375,7 @@ const ReturnsPage = () => {
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <select 
+              <select
                 className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none"
                 value={currentPage}
                 onChange={(e) => handlePageChange(Number(e.target.value))}
@@ -384,14 +389,14 @@ const ReturnsPage = () => {
               <span className="text-xs text-brand_gray font-medium">of {totalPages} pages</span>
             </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={handlePreviousPage}
                 disabled={currentPage === 1}
                 className="p-1 rounded-md text-brand_gray hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button 
+              <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
                 className="p-1 rounded-md text-brand_gray hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -403,21 +408,21 @@ const ReturnsPage = () => {
         </div>
       </div>
 
-      
+
       {/* View Return Modal */}
       {showViewModal && selectedReturn && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900">Return Details</h3>
-              <button 
-                onClick={() => setShowViewModal(false)}
+              <button
+                onClick={() => { setShowViewModal(false); setShowFullImage(false); }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {/* Order Information */}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -441,7 +446,26 @@ const ReturnsPage = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Phone Number</p>
-                    <p className="font-medium">{selectedReturn?.phoneNumber || 'N/A'}</p>
+                    {selectedReturn?.phoneNumber ? (
+                      <a
+                        href={`tel:${selectedReturn.phoneNumber}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                        title="Click to call"
+                      >
+                        {selectedReturn.phoneNumber}
+                      </a>
+                    ) : (
+                      <p className="font-medium">N/A</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Reason</p>
+                    <p className="font-medium">{selectedReturn?.reason || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Item Used</p>
+                    <p className="font-medium">{selectedReturn?.itemUsed ? 'Yes' : 'No'}</p>
                   </div>
                 </div>
               </div>
@@ -451,21 +475,22 @@ const ReturnsPage = () => {
                 <h4 className="font-medium text-gray-900 mb-3">Product Information</h4>
                 {selectedReturn?.product && Array.isArray(selectedReturn.product) ? (
                   <div className="space-y-3">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {selectedReturn.product.map((item: any, index: number) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-3">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <p className="text-sm text-gray-500">Product Name</p>
-                            <p className="font-medium">{item.productName || 'N/A'}</p>
+                    {selectedReturn.product.map((item, index) => (
+                      <div key={item._id || index} className="border border-gray-200 rounded-lg p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                          <div className="flex items-center gap-3 md:col-span-2">
+                            {item.cover_image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={item.cover_image} alt={item.name} className="w-10 h-10 rounded object-cover" />
+                            )}
+                            <div>
+                              <p className="text-sm text-gray-500">Product Name</p>
+                              <p className="font-medium">{item.name || 'N/A'}</p>
+                            </div>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Quantity</p>
-                            <p className="font-medium">{item.quantity || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Reason</p>
-                            <p className="font-medium">{item.reason || 'N/A'}</p>
+                            <p className="text-sm text-gray-500">Price</p>
+                            <p className="font-medium">{item.price ?? 'N/A'}</p>
                           </div>
                         </div>
                       </div>
@@ -492,11 +517,27 @@ const ReturnsPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Image Evidence */}
+              {selectedReturn?.imageEvidence && (
+                <div
+                  className="relative w-full h-56 rounded-lg overflow-hidden cursor-pointer group"
+                  onClick={() => setShowFullImage(true)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedReturn.imageEvidence} alt="Return evidence" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-all duration-200 flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white text-sm font-medium">
+                      Click to view full image
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-            
+
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setShowViewModal(false)}
+                onClick={() => { setShowViewModal(false); setShowFullImage(false); }}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
               >
                 Close
@@ -504,7 +545,8 @@ const ReturnsPage = () => {
               <button
                 onClick={() => {
                   setShowViewModal(false);
-                  handleEditReturn({ fullReturn: selectedReturn });
+                  setShowFullImage(false);
+                  handleEditReturn(selectedReturn);
                 }}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
               >
@@ -521,14 +563,14 @@ const ReturnsPage = () => {
           <div className="bg-white rounded-lg p-6 max-w-2xl mx-4 w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900">Edit Return</h3>
-              <button 
+              <button
                 onClick={cancelEdit}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {/* Status Update */}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -536,16 +578,14 @@ const ReturnsPage = () => {
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Return Status</label>
-                    <select 
+                    <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      defaultValue={selectedReturn?.status || 'Pending'}
+                      defaultValue={selectedReturn?.status || 'pending'}
                       id="statusSelect"
                     >
-                      <option value="Pending">Pending</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Rejected">Rejected</option>
+                      <option value="approved">Approved</option>
+                      <option value="refunded">Refunded</option>
+                      <option value="declined">Declined</option>
                     </select>
                   </div>
                 </div>
@@ -561,12 +601,22 @@ const ReturnsPage = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Phone Number</p>
-                    <p className="font-medium">{selectedReturn?.phoneNumber || 'N/A'}</p>
+                    {selectedReturn?.phoneNumber ? (
+                      <a
+                        href={`tel:${selectedReturn.phoneNumber}`}
+                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                        title="Click to call"
+                      >
+                        {selectedReturn.phoneNumber} <span className="text-xs text-gray-500">(click to call)</span>
+                      </a>
+                    ) : (
+                      <p className="font-medium">N/A</p>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-6 flex gap-3">
               <button
                 onClick={cancelEdit}
@@ -577,8 +627,8 @@ const ReturnsPage = () => {
               <button
                 onClick={() => {
                   const statusSelect = document.getElementById('statusSelect') as HTMLSelectElement;
-                  const newStatus = statusSelect?.value;
-                  handleUpdateReturn({ status: newStatus });
+                  const newStatus = statusSelect?.value as IReturn['status'];
+                  handleUpdateReturn({ returnStatus: newStatus });
                 }}
                 disabled={isUpdating}
                 className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -594,6 +644,28 @@ const ReturnsPage = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Full Image Overlay */}
+      {showFullImage && selectedReturn?.imageEvidence && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center"
+          onClick={() => setShowFullImage(false)}
+        >
+          <button
+            onClick={() => setShowFullImage(false)}
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+          >
+            <X size={24} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={selectedReturn.imageEvidence}
+            alt="Return evidence"
+            className="max-w-full max-h-[85vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
