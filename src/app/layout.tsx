@@ -1,9 +1,12 @@
+import NotificationWrapper from "@/components/NotificationWrapper";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import React from "react";
+import { Toaster } from "sonner";
 import LayoutWrapper from "./components/LayoutWrapper";
 import NetworkStatus from "./components/NetworkStatus";
 import ModalProvider from "./components/providers/ModalProvider";
@@ -86,9 +89,9 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} antialiased`}>
         {/* System UI */}
-        {/* <Toaster />
+        <Toaster />
         <NotificationWrapper />
-        <PWAInstallPrompt /> */}
+        <PWAInstallPrompt />
 
         <Providers>
           <SocketProvider>

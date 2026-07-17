@@ -51,10 +51,7 @@ export default function AdminLogin() {
 
             const response = await adminLogin(credentials);
 
-            console.log('Login response:', response);
-            console.log('Response message:', response.message);
-            console.log('Response data:', response.data);
-            console.log('Response success:', response.success);
+          
 
             // Handle success - API returns { "message": token }
             if (response.message) {
@@ -90,11 +87,12 @@ export default function AdminLogin() {
                 route.push("/admin");
             } else {
                 console.log('No token found in response');
-                toast.error(response.error || "Login failed");
+                toast.error((response.error as any).message || "Login failed");
             }
         } catch (error: unknown) {
             console.error("Login error:", error);
             const msg = error instanceof Error ? error.message : "Unknown error";
+            console.log(msg);
             toast.error("Login failed: " + msg);
         } finally {
             setLoading(false);

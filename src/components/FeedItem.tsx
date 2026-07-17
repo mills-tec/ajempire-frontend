@@ -17,6 +17,7 @@ import {
   ShareIcon,
 } from "@/components/svgs/Icons";
 import { getUser } from "@/lib/api";
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { CommentData, Feed, IUpdateSocketFeed, IUpdateSocketFeedComment, Product } from "@/lib/types";
@@ -115,13 +116,31 @@ const ChevronDown = () => (
 );
 
 // How many items on either side of the currently-viewed one keep a real
-// <video>/<Image> mounted. Everything outside this window renders a cheap
-// placeholder instead — the feed is designed to scroll forever, so without
-// this every video/image ever scrolled past would stay mounted (and every
-// video keeps decoding/autoplaying) for the rest of the session. iOS Safari
-// in particular has hard limits on concurrent video decoders and will kill
-// the tab once too many are alive at once.
+// <Image> (or, for video, at least a poster thumbnail) mounted. Everything
+// outside this window renders a cheap flat placeholder instead — the feed
+// is designed to scroll forever, so without this every item ever scrolled
+// past would stay mounted for the rest of the session.
 const MEDIA_RENDER_WINDOW = 3;
+
+// How many items on either side of the currently-viewed one keep a real
+// <video> element mounted (src set, decoding). This is intentionally much
+// tighter than MEDIA_RENDER_WINDOW — Instagram/TikTok/Shorts-style feeds
+// only ever keep the current video plus its immediate neighbors alive:
+//   distance 0 (current)        -> preload="auto", playing
+//   distance 1 (prev/next)      -> preload="metadata", paused, ready to
+//                                   resume instantly the moment it becomes
+//                                   current
+//   beyond this window          -> no <video> mounted at all, just the
+//                                   poster thumbnail (still within
+//                                   MEDIA_RENDER_WINDOW) or a flat
+//                                   placeholder — zero network requests,
+//                                   zero decoders held. iOS Safari in
+//                                   particular has hard limits on
+//                                   concurrent video decoders and will kill
+//                                   the tab once too many are alive at once.
+// Configurable independently of MEDIA_RENDER_WINDOW since a poster image is
+// orders of magnitude cheaper to keep around than a live video decoder.
+const VIDEO_ACTIVE_WINDOW = 1;
 
 // Hard cap on how many cards stay mounted at once, in either direction.
 // Once the API runs out of real pages, older items are recycled: new
@@ -166,6 +185,8 @@ type FeedCardProps = {
   itemInWishlist: boolean;
   isDescExpanded: boolean;
   isMediaActive: boolean;
+  isCurrent: boolean;
+  isVideoActive: boolean;
   pull: number;
   muted: boolean;
   showPlayOverlay: boolean;
@@ -192,6 +213,8 @@ const FeedCard = memo(function FeedCard({
   itemInWishlist,
   isDescExpanded,
   isMediaActive,
+  isCurrent,
+  isVideoActive,
   pull,
   muted,
   showPlayOverlay,
@@ -258,13 +281,31 @@ const FeedCard = memo(function FeedCard({
               src={item.mediaUrl}
               alt={item.title}
               fill
-              sizes="(max-width: 768px) 100vw, 40vw"
+              sizes="300px"
               className={`object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
               onLoad={handleMediaLoaded}
               onError={handleMediaLoaded}
+              loader={bunnyLoader}
               priority={index < 2}
             />
           </>
+        ) : !isVideoActive ? (
+          // Outside the tight video window (prev/next only): no <video> is
+          // mounted at all — zero network request, zero decoder held. Show
+          // the poster thumbnail instead of a flat box when we have one, so
+          // the card still looks alive while it waits its turn.
+          <div className="absolute inset-0 bg-gray-800">
+            {item.image && (
+              <Image
+                src={item.image}
+                alt={item.title}
+                fill
+                sizes="300px"
+                className="object-cover"
+                loader={bunnyLoader}
+              />
+            )}
+          </div>
         ) : (
           <>
             {!isLoaded && (
@@ -273,16 +314,19 @@ const FeedCard = memo(function FeedCard({
               </div>
             )}
             <video
-              preload="auto"
+              // Current video gets a full preload since it's playing right
+              // now; prev/next only preload metadata — just enough to
+              // resume instantly once it becomes current, without pulling
+              // down the full file in the background.
+              preload={isCurrent ? "auto" : "metadata"}
               ref={registerVideoRef}
-              autoPlay
               loop
               muted={muted}
+              poster={item.image || undefined}
               src={item.mediaUrl}
               className={`w-full h-full object-cover cursor-pointer transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
               onPlay={handlePlay}
               onPause={handlePause}
-              onLoadedData={handlePlay}
               onCanPlay={handleMediaLoaded}
               onError={handleMediaLoaded}
               onClick={handleShowPlay}
@@ -1031,6 +1075,26 @@ function FeedContent({
     setPlayingMap((prev) => (prev[index] === playing ? prev : { ...prev, [index]: playing }));
   }, []);
 
+  // Drives play/pause for every mounted <video>, the single source of
+  // truth for which one is actually decoding/playing. The old `autoPlay`
+  // attribute only fires once on mount, so it can't pause a video once it
+  // stops being current — combined with a wide render window, that let up
+  // to MEDIA_RENDER_WINDOW*2+1 videos play simultaneously. Now only the
+  // current index ever plays; every other mounted video (the prev/next
+  // preload tier) stays paused, ready to resume instantly once it becomes
+  // current.
+  useEffect(() => {
+    Object.entries(videoRefs.current).forEach(([key, video]) => {
+      if (!video) return;
+      const idx = Number(key);
+      if (idx === currentIndex) {
+        if (video.paused) video.play().catch(() => { });
+      } else if (!video.paused) {
+        video.pause();
+      }
+    });
+  }, [currentIndex, slots]);
+
   // ── Auth helper ─────────────────────────────────────────────────────────
   const checkIfUserLoggedIn = useCallback(
     (action = "perform this action"): boolean => {
@@ -1528,6 +1592,8 @@ function FeedContent({
                       isInWishlist(item.product._id))
                     : false;
                   const isMediaActive = Math.abs(index - currentIndex) <= MEDIA_RENDER_WINDOW;
+                  const isCurrent = index === currentIndex;
+                  const isVideoActive = Math.abs(index - currentIndex) <= VIDEO_ACTIVE_WINDOW;
 
                   return (
                     <div
@@ -1550,6 +1616,8 @@ function FeedContent({
                         itemInWishlist={itemInWishlist}
                         isDescExpanded={expandedDesc.has(index)}
                         isMediaActive={isMediaActive}
+                        isCurrent={isCurrent}
+                        isVideoActive={isVideoActive}
                         pull={pull}
                         muted={mutedMap[index] ?? true}
                         showPlayOverlay={showPlayMap[index] ?? false}
