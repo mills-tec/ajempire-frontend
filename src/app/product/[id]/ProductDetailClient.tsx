@@ -48,7 +48,6 @@ export default function ProductDetailPage({ id }: { id: string }) {
     selectAllCartItems,
     addItem,
     removeItem,
-    setQuantity: setCartItemQty,
   } = useCartStore();
   const {
     addItem: addWishlistItem,
@@ -107,9 +106,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
     selectedVariantsArray,
   ]);
 
-  const [quantity, setQuantity] = useState(
-    cartItem?.quantity && cartItem.quantity > 0 ? cartItem.quantity : 1,
-  );
+  // Only used for the pre-cart "Add to Cart" quantity. Once in cart the store is the source of truth.
+  const [quantity, setQuantity] = useState(1);
 
   const [currentCoverItem, setCurrentCoverItem] = useState<{
     src: string;
@@ -122,10 +120,16 @@ export default function ProductDetailPage({ id }: { id: string }) {
   const openModal = useModalStore((s) => s.openModal);
 
   const ensureVariantSelection = useCallback(() => {
-    if (!hasVariants || !missingVariantName) return true;
-    toast.error(`Please select ${missingVariantName}`);
-    return false;
-  }, [hasVariants, missingVariantName]);
+    if (hasVariants && missingVariantName) {
+      toast.error(`Please select ${missingVariantName}`);
+      return false;
+    }
+    if (currentStock === 0) {
+      toast.error("This item is out of stock");
+      return false;
+    }
+    return true;
+  }, [hasVariants, missingVariantName, currentStock]);
 
   const resolvedCartPrice =
     item && selectedCombination
@@ -226,24 +230,6 @@ export default function ProductDetailPage({ id }: { id: string }) {
     );
   }, []);
 
-  useEffect(() => {
-    if (!item || !cartItem) return;
-
-    if (quantity === 0) {
-      removeItem(cartItem._id);
-    } else if (cartItem.quantity !== quantity) {
-      setCartItemQty(cartItem._id, quantity);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quantity, cartItem, item]);
-
-  useEffect(() => {
-    if (cartItem) {
-      setQuantity(cartItem.quantity > 0 ? cartItem.quantity : 1);
-    } else {
-      setQuantity(1);
-    }
-  }, [cartItem]);
 
   useEffect(() => {
     if (!item) return;
@@ -665,25 +651,23 @@ export default function ProductDetailPage({ id }: { id: string }) {
               </button>
             ) : (
               <div
-                // onClick={() => addItem({ ...item, quantity })}
                 className="h-[2rem] lg:h-[3rem] flex font-bold justify-between text-xs lg:text-base border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] lg:w-[10rem] overflow-clip"
               >
                 <button
                   onClick={() => {
-                    setQuantity((prev) => Math.max(prev - 1, 0));
-                    if (quantity == 0) {
+                    if (cartItem.quantity <= 1) {
                       removeItem(item._id);
+                    } else {
+                      decreaseQuantity(item._id);
                     }
                   }}
                   className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
                 >
                   -
                 </button>
-                {quantity}
+                {cartItem.quantity}
                 <button
-                  onClick={() =>
-                    setQuantity((prev) => Math.min(prev + 1, currentStock))
-                  }
+                  onClick={() => increaseQuantity(item._id)}
                   className="size-[2rem] lg:size-[3rem]  rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
                 >
                   +
