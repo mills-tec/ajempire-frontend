@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
-import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import { ApexOptions } from "apexcharts";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 interface UserUsageChartProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trendData?: any[];
@@ -93,11 +94,22 @@ export default function UserUsageChart({ trendData }: UserUsageChartProps) {
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <div className="w-8 h-8 relative">
+                  <Image
+                  loader={bunnyLoader}
+                  fill
+                  src={item.image ?? "/placeholder.jpg"}
+                  alt={item.name ?? "Category image"}
+                  sizes="50px"
+                  className="object-cover rounded-full"
+              
+                />
+                </div>
+                {/* <Image
                   src={item.image || categoryImages.default}
                   alt={item.name}
                   className="w-8 h-8 object-cover rounded-full"
-                />
+                /> */}
                 <p className="text-[14px] font-medium">
                   {item.percentage.toFixed(0)}%
                 </p>

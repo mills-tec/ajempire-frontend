@@ -1,6 +1,7 @@
 "use client";
 
 import { useUpdates } from "@/api/customHooks";
+import { useSocket } from "@/app/components/providers/SocketProvider";
 import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
 import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
 import {
@@ -18,7 +19,7 @@ import {
 import { getUser } from "@/lib/api";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
-import { CommentData, Feed, Product } from "@/lib/types";
+import { CommentData, Feed, IUpdateSocketFeed, IUpdateSocketFeedComment, Product } from "@/lib/types";
 import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import {
   Heart,
@@ -34,14 +35,11 @@ import {
   memo,
   useCallback,
   useEffect,
-  useMemo,
+  useLayoutEffect,
   useRef,
   useState,
-  useTransition,
 } from "react";
-import useInfiniteScroll from "react-infinite-scroll-hook";
 import { toast } from "sonner";
-import EndlessScrollLoading from "./EndlessScrollLoading";
 import ShareModal from "./ShareModal";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
@@ -124,6 +122,24 @@ const ChevronDown = () => (
 // in particular has hard limits on concurrent video decoders and will kill
 // the tab once too many are alive at once.
 const MEDIA_RENDER_WINDOW = 3;
+
+// Hard cap on how many cards stay mounted at once, in either direction.
+// Once the API runs out of real pages, older items are recycled: new
+// (reshuffled, same underlying objects — nothing is cloned) items are
+// appended/prepended, and once the cap is exceeded the far end is trimmed.
+// Memory stays bounded no matter how many times Next/Previous is clicked.
+const MAX_RENDERED_ITEMS = 40;
+
+// How many recycled items to splice in per extension, in either direction.
+const RECYCLE_BATCH = 6;
+
+let slotCounter = 0;
+// Globally unique per mounted card, even when the same underlying feed._id
+// is recycled multiple times — without this, React would confuse two
+// on-screen copies of the same post that share a key.
+const nextSlotKey = (feedId: string) => `${feedId}::${slotCounter++}`;
+
+type FeedSlot = { key: string; feed: Feed };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -427,9 +443,6 @@ const FeedCard = memo(function FeedCard({
 // ─── FeedItem (shell) ─────────────────────────────────────────────────────────
 
 export default function FeedItem() {
-  const params = useParams();
-  const { type: _type } = params;
-
   const feedsForRefreshRef = useRef<Feed[]>([]);
   const setFeedsExternallyRef = useRef<((feeds: Feed[]) => void) | null>(null);
 
@@ -486,7 +499,10 @@ function FeedContent({
   const hasFocusedRef = useRef(false);
   const isFetchingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const onLoadMoreRef = useRef<() => void>(() => { });
+  // Guards extendForward/extendBackward against overlapping invocations —
+  // e.g. a fast burst of Next clicks, or a click racing the
+  // IntersectionObserver's own edge-reached trigger for the same edge.
+  const navLockRef = useRef(false);
 
   // ── Custom hooks ────────────────────────────────────────────────────────
   const {
@@ -499,22 +515,57 @@ function FeedContent({
   } = useUpdates();
   const openModal = useModalStore((s) => s.openModal);
   const { addItem, isInWishlist, removeItem } = useWishlistStore();
+  const socket = useSocket();
+
+  // useUpdates() returns new function references on every render (it isn't
+  // memoized internally), so any useCallback listing them as a dependency
+  // gets a new identity every render too. That's mostly harmless — except
+  // likePost is passed straight through as FeedCard's onLike prop, and an
+  // unstable identity there silently defeats FeedCard's memo(), forcing
+  // every card in the list to re-render on every unrelated state change.
+  // Mirroring the latest functions in a ref keeps the callbacks that use
+  // them stable across renders instead of recreating every time.
+  const apiRef = useRef({ addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, getFeeds });
+  apiRef.current = { addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, getFeeds };
 
   // ── State ───────────────────────────────────────────────────────────────
-  const [, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   // Gate the skeleton → real content swap on the first item's media actually
   // being ready, so we never flash an empty/broken-looking card.
   const [mediaReady, setMediaReady] = useState(false);
-  const [id, setId] = useState<string | string[] | undefined>(idParam);
   const [href, setHref] = useState("");
-  const [data, setData] = useState<{
-    feeds: Feed[];
-    nextCursor: string;
-    hasMore: boolean;
-  }>({ feeds: [], nextCursor: "", hasMore: false });
-  const [playingMap, setPlayingMap] = useState<Record<number, boolean>>({});
+
+  // Pagination cursor only — NOT the rendered list. `slots` (below) is the
+  // bounded, recyclable window actually shown; `originalFeedsRef` is the
+  // master pool of every real item ever fetched, used only as a source to
+  // recycle from once hasMore is false. Recycled slots reference the same
+  // Feed objects (nothing is cloned), so a like/comment mutation applied via
+  // updateFeedById (below) is visible on every recycled copy at once.
+  const [apiData, setApiData] = useState({ nextCursor: "", hasMore: true });
+  const apiDataRef = useRef(apiData);
+  apiDataRef.current = apiData;
+
+  const [slots, setSlots] = useState<FeedSlot[]>([]);
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+
+  // Anchor-based scroll compensation for prepend/append+trim: captured
+  // immediately before any slots mutation that might shift content above
+  // the current viewport, consumed by the layout effect below to hold the
+  // previously-visible frame pixel-stable before (optionally) animating to
+  // a new target. See captureAnchor's comment for why this is measured by
+  // element position rather than inferred from scrollHeight deltas.
+  const pendingAnchorRef = useRef<{ key: string; offsetTop: number } | null>(null);
+  // A slot key to smooth-scroll to once it's actually in the DOM — set by
+  // goNext/goPrev when the target isn't in the currently rendered window
+  // yet, so we have to wait for the append/prepend to commit first.
+  const pendingTargetKeyRef = useRef<string | null>(null);
+
+  const [playingMap, setPlayingMap] = useState<Record<number, boolean>>({});
 
   const [wishlistMap, setWishlistMap] = useState<Record<string, boolean>>({});
 
@@ -539,23 +590,31 @@ function FeedContent({
     fullname: string;
   } | null>(null);
 
-  // ── Memoized values ─────────────────────────────────────────────────────
-  const activeFeed = useMemo(
-    () => data.feeds.find((f) => f._id === id),
-    [data.feeds, id],
-  );
+  // ── Derived values ───────────────────────────────────────────────────────
+  const activeFeed = slots[currentIndex]?.feed;
+  const id = activeFeed?._id;
   const activeComments = activeFeed?.comments ?? [];
 
-  const showSkeleton = isLoading || (data.feeds.length > 0 && !mediaReady);
+  const showSkeleton = isLoading || (slots.length > 0 && !mediaReady);
 
   // ── Sync refs with state ────────────────────────────────────────────────
+  // feedsForRefreshRef mirrors the master pool (every real item fetched so
+  // far), not the bounded/recycled `slots` window — pull-to-refresh needs
+  // the full set to reshuffle from, not just whatever's currently rendered.
   useEffect(() => {
-    feedsForRefreshRef.current = data.feeds;
-  }, [data.feeds, feedsForRefreshRef]);
+    feedsForRefreshRef.current = originalFeedsRef.current;
+  }, [slots, feedsForRefreshRef]);
 
   useEffect(() => {
     setFeedsExternallyRef.current = (shuffled: Feed[]) => {
-      setData((prev) => ({ ...prev, feeds: shuffled }));
+      originalFeedsRef.current = shuffled;
+      setSlots(
+        shuffled
+          .slice(0, RECYCLE_BATCH * 3)
+          .map((feed) => ({ key: nextSlotKey(feed._id), feed })),
+      );
+      setCurrentIndex(0);
+      hasFocusedRef.current = true;
     };
   }, [setFeedsExternallyRef]);
 
@@ -574,13 +633,11 @@ function FeedContent({
 
     const fetchInitialFeeds = async () => {
       try {
-        const result = await getFeeds(type as string, "");
-        setData({
-          feeds: result.data,
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-        });
+        const result = await apiRef.current.getFeeds(type as string, "");
         originalFeedsRef.current = result.data;
+        setSlots(result.data.map((feed: Feed) => ({ key: nextSlotKey(feed._id), feed })));
+        setApiData({ nextCursor: result.nextCursor, hasMore: result.hasMore });
+        setCurrentIndex(0);
       } catch (err) {
         console.error("Error fetching initial feeds:", err);
       } finally {
@@ -590,12 +647,11 @@ function FeedContent({
     };
 
     fetchInitialFeeds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
   // ── Wait for the first item's media before revealing real content ───────
   useEffect(() => {
-    if (isLoading || mediaReady || data.feeds.length === 0) return;
+    if (isLoading || mediaReady || slots.length === 0) return;
     if (loadedIndex.has(0)) {
       setMediaReady(true);
       return;
@@ -603,18 +659,28 @@ function FeedContent({
     // Fallback so a slow/broken first image never leaves the skeleton stuck.
     const timeout = setTimeout(() => setMediaReady(true), 4000);
     return () => clearTimeout(timeout);
-  }, [isLoading, mediaReady, data.feeds.length, loadedIndex]);
+  }, [isLoading, mediaReady, slots.length, loadedIndex]);
 
-  // ── User & href initialization ──────────────────────────────────────────
+  // ── User initialization ──────────────────────────────────────────────────
   useEffect(() => {
     setUser(getUser());
-    setHref(window.location.href);
   }, []);
+
+  // ── Share URL ────────────────────────────────────────────────────────────
+  // Was `window.location.href` read once on mount — meaning the Share
+  // button always shared whatever post the page *first* loaded with, never
+  // the one actually being viewed after scrolling. Built from type/id
+  // instead so it stays correct as the active post changes, and doesn't
+  // depend on the address-bar sync (below) having already caught up.
+  useEffect(() => {
+    if (!id || typeof window === "undefined") return;
+    setHref(`${window.location.origin}/pages/update/${type}/${id}`);
+  }, [id, type]);
 
   // ── Focus to initial feed ───────────────────────────────────────────────
   useEffect(() => {
-    if (showSkeleton || hasFocusedRef.current || !data.feeds.length) return;
-    const focusedIndex = data.feeds.findIndex((f) => f._id === idParam);
+    if (showSkeleton || hasFocusedRef.current || !slots.length) return;
+    const focusedIndex = slots.findIndex((s) => s.feed._id === idParam);
     if (focusedIndex === -1) return;
 
     const el = itemRefs.current[focusedIndex];
@@ -623,9 +689,158 @@ function FeedContent({
     hasFocusedRef.current = true;
     setCurrentIndex(focusedIndex);
     scrollToWithOffset(el, 60);
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSkeleton, data.feeds, idParam]);
+  }, [showSkeleton, slots, idParam]);
+
+  // ── Anchor-based scroll compensation ─────────────────────────────────────
+  // Core mechanic for the endless-in-both-directions feed: whenever slots
+  // are prepended, or trimmed from the front to enforce MAX_RENDERED_ITEMS,
+  // content shifts above the current viewport and the browser would
+  // otherwise visibly jump. captureAnchor records exactly where the item
+  // the user is currently looking at sits (by slot key, not index — indices
+  // shift, keys don't), right before such a mutation. The layout effect
+  // below runs synchronously after the DOM commits the new slots, before
+  // the browser paints: it re-measures that same anchor's new position and
+  // adjusts scrollTop by the delta, so the visible frame never moves. This
+  // is measured directly (anchor position before vs. after) rather than
+  // inferred from scrollHeight before/after, because a scrollHeight delta
+  // conflates "content changed above the viewport" (needs compensation)
+  // with "content changed below it" (a pure append — needs none); a plain
+  // append+trim or prepend+trim mixes both in one mutation, and only the
+  // anchor's own measured position is unambiguous about which happened.
+  const captureAnchor = useCallback(() => {
+    const container = containerRef.current;
+    const slot = slotsRef.current[currentIndexRef.current];
+    const el = itemRefs.current[currentIndexRef.current];
+    if (!container || !slot || !el) return;
+    pendingAnchorRef.current = {
+      key: slot.key,
+      offsetTop:
+        el.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop,
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (pendingAnchorRef.current) {
+      const { key, offsetTop: oldOffsetTop } = pendingAnchorRef.current;
+      pendingAnchorRef.current = null;
+      const idx = slots.findIndex((s) => s.key === key);
+      const el = idx !== -1 ? itemRefs.current[idx] : null;
+      if (el) {
+        const newOffsetTop =
+          el.getBoundingClientRect().top -
+          container.getBoundingClientRect().top +
+          container.scrollTop;
+        container.scrollTop += newOffsetTop - oldOffsetTop;
+      }
+    }
+
+    if (pendingTargetKeyRef.current) {
+      const targetKey = pendingTargetKeyRef.current;
+      pendingTargetKeyRef.current = null;
+      const idx = slots.findIndex((s) => s.key === targetKey);
+      if (idx !== -1) {
+        const el = itemRefs.current[idx];
+        if (el) scrollToWithOffset(el, 60);
+        setCurrentIndex(idx);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots]);
+
+  // Appends recycled/fetched feeds as fresh slots, trims from the front if
+  // the window exceeds MAX_RENDERED_ITEMS (adjusting currentIndex so it
+  // still points at the same conceptual item), and captures a scroll anchor
+  // first since a front-trim shifts content above the viewport.
+  const appendSlots = useCallback((feeds: Feed[]): FeedSlot[] => {
+    const newSlots = feeds.map((feed) => ({ key: nextSlotKey(feed._id), feed }));
+    if (!newSlots.length) return newSlots;
+    captureAnchor();
+    setSlots((prev) => {
+      const next = [...prev, ...newSlots];
+      if (next.length <= MAX_RENDERED_ITEMS) return next;
+      const trimCount = next.length - MAX_RENDERED_ITEMS;
+      setCurrentIndex((ci) => Math.max(0, ci - trimCount));
+      return next.slice(trimCount);
+    });
+    return newSlots;
+  }, [captureAnchor]);
+
+  // Mirror of appendSlots for the backward direction: prepends, shifts
+  // currentIndex forward by however many were added (everything after them
+  // moved down), and trims from the back (below the viewport — no anchor
+  // disturbance) if over the cap.
+  const prependSlots = useCallback((feeds: Feed[]): FeedSlot[] => {
+    const newSlots = feeds.map((feed) => ({ key: nextSlotKey(feed._id), feed }));
+    if (!newSlots.length) return newSlots;
+    captureAnchor();
+    setSlots((prev) => {
+      const next = [...newSlots, ...prev];
+      setCurrentIndex((ci) => ci + newSlots.length);
+      return next.length <= MAX_RENDERED_ITEMS ? next : next.slice(0, MAX_RENDERED_ITEMS);
+    });
+    return newSlots;
+  }, [captureAnchor]);
+
+  // Extends the feed forward: fetches the next real API page if one exists,
+  // otherwise recycles a shuffled batch from the master pool. Shared by
+  // goNext (button, at the end of the window) and the IntersectionObserver
+  // (natural scroll reaching the last rendered item) — same "reached this
+  // edge" event, same response, regardless of how the user got there.
+  // autoScroll is only requested by the button handler: natural scroll
+  // should silently top up the window (still anchor-compensated if a
+  // front-trim happens), never hijack the user's own scroll with a forced
+  // programmatic jump.
+  const extendForward = useCallback(async (opts?: { autoScroll?: boolean }): Promise<FeedSlot[]> => {
+    if (navLockRef.current) return [];
+    navLockRef.current = true;
+    try {
+      let feeds: Feed[];
+      if (apiDataRef.current.hasMore) {
+        const page = await apiRef.current.getFeeds(type as string, apiDataRef.current.nextCursor || "");
+        originalFeedsRef.current = [...originalFeedsRef.current, ...page.data];
+        setApiData({ nextCursor: page.nextCursor, hasMore: page.hasMore });
+        feeds = page.data;
+      } else if (originalFeedsRef.current.length) {
+        feeds = shuffleArray(originalFeedsRef.current).slice(0, RECYCLE_BATCH);
+      } else {
+        feeds = [];
+      }
+      if (!feeds.length) return [];
+      const created = appendSlots(feeds);
+      if (opts?.autoScroll && created.length) pendingTargetKeyRef.current = created[0].key;
+      return created;
+    } catch (err) {
+      console.error("Error extending feed forward:", err);
+      return [];
+    } finally {
+      navLockRef.current = false;
+    }
+  }, [type, appendSlots]);
+
+  // Backward counterpart. Always synchronous/recycled — the API only
+  // paginates forward, so there's no "earlier real page" to fetch; going
+  // back just recycles from whatever's already in the master pool. The
+  // autoScroll target is the *last* item of the newly prepended batch —
+  // the one that now sits immediately before the old first item, i.e. one
+  // step back from wherever the user was.
+  const extendBackward = useCallback((opts?: { autoScroll?: boolean }): FeedSlot[] => {
+    if (navLockRef.current) return [];
+    if (!originalFeedsRef.current.length) return [];
+    navLockRef.current = true;
+    try {
+      const created = prependSlots(shuffleArray(originalFeedsRef.current).slice(0, RECYCLE_BATCH));
+      if (opts?.autoScroll && created.length) pendingTargetKeyRef.current = created[created.length - 1].key;
+      return created;
+    } finally {
+      navLockRef.current = false;
+    }
+  }, [prependSlots]);
 
   // ── Stable per-index ref callbacks ──────────────────────────────────────
   // Cached so React doesn't detach/reattach every mounted item's ref on
@@ -653,17 +868,18 @@ function FeedContent({
     return cb;
   }, []);
 
-  // ── Intersection Observer for feed visibility (tracks current id/url) ───
+  // ── Intersection Observer for feed visibility ────────────────────────────
   // Only recreated when the feed type changes; individual items self-register
   // via getItemRefCallback as they mount, so liking/commenting (which
-  // replace the `data.feeds` array reference) no longer force a full
-  // disconnect + re-query of every section in the list.
+  // replace the `slots` array reference) no longer force a full disconnect +
+  // re-query of every section in the list.
   //
-  // Landing on the last item (even if it's the only item) also kicks off
-  // onLoadMore below — this is what gives the feed its endless "keep hitting
-  // next and it keeps going" feel. Safe to trigger from here as well as from
-  // the scroll-sentinel below because onLoadMore is guarded by isFetchingRef,
-  // so it can't append duplicates twice.
+  // Natural scroll/swipe is the primary way users move through a feed like
+  // this — Next/Previous buttons are a secondary desktop affordance — so
+  // reaching either edge here extends the feed exactly the way the buttons
+  // do (same extendForward/extendBackward engine), just without an
+  // autoScroll target: this should silently top up the window, never hijack
+  // the user's own scroll with a forced jump.
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -671,23 +887,17 @@ function FeedContent({
           if (!entry.isIntersecting) return;
 
           const index = Number(entry.target.id.replace("feed-", ""));
-          const feed = feedsForRefreshRef.current[index];
-          if (!feed) return;
+          if (!slotsRef.current[index]) return;
 
-          setId(feed._id);
-          // Keeps the media render window centered on whatever the user is
-          // actually looking at — previously currentIndex only moved via
-          // the prev/next buttons, so natural swipe-scrolling never slid
-          // the window and could unmount the very item on screen.
+          // Never called for a button-driven change — those already scroll
+          // and set currentIndex themselves — only for genuine user scroll,
+          // so no programmatic scroll is triggered here.
           setCurrentIndex(index);
-          window.history.replaceState(
-            null,
-            "",
-            `/pages/update/${type}/${feed._id}`,
-          );
 
-          if (index === feedsForRefreshRef.current.length - 1) {
-            onLoadMoreRef.current();
+          if (index === slotsRef.current.length - 1) {
+            void extendForward();
+          } else if (index === 0) {
+            extendBackward();
           }
         });
       },
@@ -702,7 +912,25 @@ function FeedContent({
       observerRef.current?.disconnect();
       observerRef.current = null;
     };
-  }, [type, feedsForRefreshRef]);
+  }, [type, extendForward, extendBackward]);
+
+  // ── URL sync ──────────────────────────────────────────────────────────────
+  // Tried routing this through next/navigation's router.replace() so
+  // generateMetadata() would re-run server-side and keep <title>/OG tags in
+  // sync with the active post — verified live, and it reliably remounts this
+  // component on every settled navigation (fresh isLoading/data.feeds, media
+  // reloading, scroll/video state lost), not just during the initial
+  // unsettled window a debounce guard could paper over. That's a worse
+  // regression than the metadata staying static, so back to a plain
+  // history.replaceState — cosmetic address-bar sync only, no App Router
+  // involvement, no remount. generateMetadata() only reflects the post the
+  // page was first loaded with; revisit if this needs solving without the
+  // remount cost (e.g. a dedicated client-only metadata update, or filing
+  // the remount behavior against this Next.js version).
+  useEffect(() => {
+    if (!id) return;
+    window.history.replaceState(null, "", `/pages/update/${type}/${id}`);
+  }, [id, type]);
 
   // ── Body scroll lock for comments ───────────────────────────────────────
   useEffect(() => {
@@ -737,32 +965,39 @@ function FeedContent({
     container.scrollTo({ top: scrollTop, behavior: "smooth" });
   }, []);
 
-  const smoothScrollTo = useCallback(
-    (direction: "next" | "prev") => {
-      const feeds = data.feeds;
-      if (feeds.length === 0) return;
+  // Next/Previous never wrap and never dead-end: reaching either edge of
+  // the currently rendered window extends the feed in that direction
+  // (fetch-or-recycle) via the same extendForward/extendBackward engine
+  // natural scroll uses, rather than looping back to an existing index —
+  // that's what makes the feed feel like it has no beginning or end.
+  const goNext = useCallback(async () => {
+    const curIndex = currentIndexRef.current;
+    const curSlots = slotsRef.current;
 
-      let nextIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
+    if (curIndex < curSlots.length - 1) {
+      const targetIndex = curIndex + 1;
+      const el = itemRefs.current[targetIndex];
+      if (el) scrollToWithOffset(el, 60);
+      setCurrentIndex(targetIndex);
+      return;
+    }
 
-      // There's no "earlier" page to fetch — the feed API only paginates
-      // forward — so going past the first item loops to the end of what's
-      // currently loaded instead of dead-ending, mirroring the endless feel
-      // going forward (where the visibility observer duplicates/fetches more
-      // before you can ever actually run out).
-      if (nextIndex < 0) {
-        nextIndex = feeds.length - 1;
-      } else if (nextIndex >= feeds.length) {
-        return;
-      }
+    await extendForward({ autoScroll: true });
+  }, [extendForward, scrollToWithOffset]);
 
-      const el = itemRefs.current[nextIndex];
-      if (!el) return;
+  const goPrev = useCallback(() => {
+    const curIndex = currentIndexRef.current;
 
-      scrollToWithOffset(el, 60);
-      setCurrentIndex(nextIndex);
-    },
-    [currentIndex, data.feeds, scrollToWithOffset],
-  );
+    if (curIndex > 0) {
+      const targetIndex = curIndex - 1;
+      const el = itemRefs.current[targetIndex];
+      if (el) scrollToWithOffset(el, 60);
+      setCurrentIndex(targetIndex);
+      return;
+    }
+
+    extendBackward({ autoScroll: true });
+  }, [extendBackward, scrollToWithOffset]);
 
   // ── Video helpers ───────────────────────────────────────────────────────
   const handleVideoPlay = useCallback((index: number) => {
@@ -774,7 +1009,12 @@ function FeedContent({
   }, []);
 
   const showPlayTemporarily = useCallback((index: number) => {
-    setShowPlayMap((prev) => ({ ...prev, [index]: true }));
+    // onMouseMove fires continuously while the cursor moves over an active
+    // video — without this bail-out (same pattern setVideoPlaying already
+    // uses), every single mousemove event was triggering a state update and
+    // re-rendering the whole feed list, even though the overlay was already
+    // showing and nothing visible actually changed.
+    setShowPlayMap((prev) => (prev[index] ? prev : { ...prev, [index]: true }));
 
     const existing = hidePlayTimeouts.current[index];
     if (existing) clearTimeout(existing);
@@ -806,22 +1046,38 @@ function FeedContent({
     [user?._id, openModal],
   );
 
+  // Patches a feed by _id everywhere it currently appears — potentially
+  // several recycled slots at once — plus the master pool, so any future
+  // recycled copy reflects the update too. Necessary because recycling
+  // means the same underlying post can be on screen more than once
+  // simultaneously; without patching every occurrence, liking one copy
+  // would leave the others showing stale data.
+  const updateFeedById = useCallback(
+    (feedId: string | string[], updater: (feed: Feed) => Feed) => {
+      setSlots((prev) =>
+        prev.map((slot) =>
+          slot.feed._id === feedId ? { ...slot, feed: updater(slot.feed) } : slot,
+        ),
+      );
+      originalFeedsRef.current = originalFeedsRef.current.map((feed) =>
+        feed._id === feedId ? updater(feed) : feed,
+      );
+    },
+    [],
+  );
+
   // ── Comment helpers ─────────────────────────────────────────────────────
   const updateFeedComments = useCallback(
     (
       feedId: string | string[],
       updater: (comments: CommentData[]) => CommentData[],
     ) => {
-      setData((prev) => ({
-        ...prev,
-        feeds: prev.feeds.map((feed) =>
-          feed._id === feedId
-            ? { ...feed, comments: updater(feed.comments ?? []) }
-            : feed,
-        ),
+      updateFeedById(feedId, (feed) => ({
+        ...feed,
+        comments: updater(feed.comments ?? []),
       }));
     },
-    [],
+    [updateFeedById],
   );
 
   const addReplyRecursive = useCallback(
@@ -871,6 +1127,33 @@ function FeedContent({
     [],
   );
 
+  // Like addRecursiveLike, but sets the like to an explicit target state
+  // instead of toggling it — needed for reconciling a remote user's
+  // liked/unliked event, where blindly toggling could invert the wrong way
+  // if events arrive out of order or get replayed.
+  const setRecursiveLike = useCallback(
+    (list: CommentData[], targetId: string, userId: string, liked: boolean): CommentData[] =>
+      list.map((node) => {
+        if (node._id === targetId) {
+          const alreadyLiked = node.likes.some((l) => l === userId);
+          if (alreadyLiked === liked) return node;
+          return {
+            ...node,
+            likes: liked
+              ? [...node.likes, userId]
+              : node.likes.filter((l) => l !== userId),
+          };
+        }
+        if (node.replies?.length)
+          return {
+            ...node,
+            replies: setRecursiveLike(node.replies, targetId, userId, liked),
+          };
+        return node;
+      }),
+    [],
+  );
+
   const recursiveDeleteComment = useCallback(
     (list: CommentData[], targetId: string): CommentData[] =>
       list
@@ -883,6 +1166,109 @@ function FeedContent({
         })),
     [],
   );
+
+  // ── Socket.IO — feed room + live event syncing ───────────────────────────
+  // Joins the room for whichever post is currently in view, applies live
+  // like/unlike (feed:post) and comment activity (feed:comment) from other
+  // users to local state, and leaves the room again when the viewed post
+  // changes or the component unmounts. Declared after the comment helpers
+  // above (updateFeedComments/addReplyRecursive/recursiveDeleteComment/
+  // setRecursiveLike) since it closes over them.
+  const activePostId = activeFeed?._id;
+  const activePostType = activeFeed?.type;
+
+  useEffect(() => {
+    if (!socket || loading || !activePostId) return;
+
+    // The shared socket also reconnects for reasons that have nothing to do
+    // with the feed (e.g. SocketProvider re-authenticating after login), so
+    // re-join on every "connect" rather than just once — otherwise a
+    // reconnect would silently drop this room server-side.
+    const join = () => {
+      socket.emit("feed:join", {
+        postId: activePostId,
+        type: activePostType,
+      });
+    };
+    // Live like/unlike from other users viewing this same post. Whoever
+    // actually clicked the heart already got their own optimistic update
+    // from likePost() below, so re-applying their own echoed event here
+    // would be redundant — only other users' actions need to land here.
+    const handleFeedPost = (payload: IUpdateSocketFeed) => {
+      if (payload.postId !== activePostId) return;
+      if (payload.userId === user?._id) return;
+
+      updateFeedById(payload.postId, (feed) => {
+        const alreadyLiked = feed.likes?.some((l) => l === payload.userId) ?? false;
+        if (payload.liked === alreadyLiked) return feed;
+
+        const likes = payload.liked
+          ? [...(feed.likes ?? []), payload.userId]
+          : (feed.likes ?? []).filter((l) => l !== payload.userId);
+
+        return { ...feed, likes };
+      });
+    };
+    // Live comment activity from other users viewing this same post —
+    // mirrors the local optimistic updates sendComment/deleteComment/
+    // likeComment already apply to the acting user's own view.
+    const handleFeedComment = (payload: IUpdateSocketFeedComment) => {
+      if (payload.postId !== activePostId) return;
+
+      if (payload.action === "created") {
+        const comment = payload.comment as CommentData;
+        if (comment.user?._id === user?._id) return; // already added optimistically
+
+        updateFeedComments(payload.postId, (comments) =>
+          comment.parentId
+            ? addReplyRecursive(comments, comment.parentId, comment)
+            : [...comments, comment],
+        );
+        return;
+      }
+
+      if (payload.action === "deleted") {
+        updateFeedComments(payload.postId, (comments) =>
+          recursiveDeleteComment(comments, payload.commentId),
+        );
+        return;
+      }
+
+      // action is "liked" | "unliked"
+      if (payload.userId === user?._id) return; // already applied optimistically
+      updateFeedComments(payload.postId, (comments) =>
+        setRecursiveLike(comments, payload.commentId, payload.userId, payload.liked),
+      );
+    };
+
+    if (socket.connected) join();
+    socket.on("connect", join);
+    socket.on("feed:post", handleFeedPost);
+    socket.on("feed:comment", handleFeedComment);
+
+    return () => {
+      socket.off("connect", join);
+      socket.off("feed:post", handleFeedPost);
+      socket.off("feed:comment", handleFeedComment);
+      if (socket.connected) {
+        socket.emit("feed:leave", {
+          postId: activePostId,
+          type: activePostType,
+        });
+      }
+    };
+  }, [
+    socket,
+    activePostId,
+    activePostType,
+    loading,
+    user?._id,
+    updateFeedById,
+    updateFeedComments,
+    addReplyRecursive,
+    recursiveDeleteComment,
+    setRecursiveLike,
+  ]);
 
   const handleToggle = useCallback(
     (targetId: string) => {
@@ -930,9 +1316,9 @@ function FeedContent({
           updatedAt: new Date().toISOString(),
         };
 
-        const feedType = data.feeds.find((f) => f._id === id)?.type;
+        const feedType = originalFeedsRef.current.find((f) => f._id === id)?.type;
 
-        const req = await addComments({
+        const req = await apiRef.current.addComments({
           feedId: id as string,
           type: feedType as string,
           comment: newComment.text,
@@ -964,10 +1350,8 @@ function FeedContent({
       comment.commentText,
       user,
       id,
-      data.feeds,
       updateFeedComments,
       addReplyRecursive,
-      addComments,
       checkIfUserLoggedIn,
     ],
   );
@@ -976,45 +1360,35 @@ function FeedContent({
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like posts")) return;
 
-      const targetFeed = data.feeds.find((f) => f._id === _id);
+      const targetFeed = originalFeedsRef.current.find((f) => f._id === _id);
       if (!targetFeed) return;
 
       const liked = targetFeed.likes?.some((l) => l === user!._id);
       const newLikes = liked
         ? targetFeed.likes!.filter((l) => l !== user!._id)
         : [...(targetFeed.likes ?? []), user!._id];
+      const previousLikes = targetFeed.likes;
 
-      setData((prev) => ({
-        ...prev,
-        feeds: prev.feeds.map((feed) =>
-          feed._id === _id ? { ...feed, likes: newLikes } : feed,
-        ),
-      }));
+      updateFeedById(_id, (feed) => ({ ...feed, likes: newLikes }));
 
       try {
-        await likeUpdate({
+        await apiRef.current.likeUpdate({
           feedId: _id,
           type: targetFeed.type,
         });
       } catch (err) {
-        // Revert on failure
-        setData((prev) => ({
-          ...prev,
-          feeds: prev.feeds.map((feed) =>
-            feed._id === _id ? { ...feed, likes: targetFeed.likes } : feed,
-          ),
-        }));
+        updateFeedById(_id, (feed) => ({ ...feed, likes: previousLikes }));
         console.error("Failed to like post:", err);
       }
     },
-    [checkIfUserLoggedIn, user, data.feeds, likeUpdate],
+    [checkIfUserLoggedIn, user, updateFeedById],
   );
 
   const likeComment = useCallback(
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like comments")) return;
 
-      const feed = data.feeds.find((f) => f._id === id);
+      const feed = originalFeedsRef.current.find((f) => f._id === id);
       if (!feed) return;
 
       updateFeedComments(id!, (comments) =>
@@ -1022,7 +1396,7 @@ function FeedContent({
       );
 
       try {
-        await likeUpdateComment({
+        await apiRef.current.likeUpdateComment({
           feedId: id as string,
           type: feed.type,
           commentId: _id,
@@ -1031,27 +1405,19 @@ function FeedContent({
         console.error("Failed to like comment:", err);
       }
     },
-    [
-      checkIfUserLoggedIn,
-      id,
-      user,
-      data.feeds,
-      updateFeedComments,
-      addRecursiveLike,
-      likeUpdateComment,
-    ],
+    [checkIfUserLoggedIn, id, user, updateFeedComments, addRecursiveLike],
   );
 
   const deleteComment = useCallback(
     async (item: CommentData) => {
-      const selectedFeed = data.feeds.find((f) => f._id === id);
+      const selectedFeed = originalFeedsRef.current.find((f) => f._id === id);
       if (!selectedFeed) return;
 
       updateFeedComments(id!, (comments) =>
         recursiveDeleteComment(comments, item._id),
       );
       try {
-        await deleteUpdateComment({
+        await apiRef.current.deleteUpdateComment({
           feedId: id as string,
           commentId: item._id,
           type: selectedFeed.type,
@@ -1061,13 +1427,7 @@ function FeedContent({
         toast.error("Failed to delete comment");
       }
     },
-    [
-      id,
-      data.feeds,
-      updateFeedComments,
-      recursiveDeleteComment,
-      deleteUpdateComment,
-    ],
+    [id, updateFeedComments, recursiveDeleteComment],
   );
 
   const handleWishlistToggle = useCallback(
@@ -1104,46 +1464,6 @@ function FeedContent({
 
   const openShare = useCallback(() => setShare(true), []);
   const closeCommentPanel = useCallback(() => setComment((prev) => ({ ...prev, show: false })), []);
-
-  // ── Infinite scroll ─────────────────────────────────────────────────────
-  // Both "fetch the next real page" and "loop by reshuffling what we already
-  // have" now live in a single onLoadMore — previously a second, separate
-  // IntersectionObserver-driven mechanism duplicated this responsibility,
-  // and the two could append shuffled batches independently of each other.
-  const onLoadMore = useCallback(async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    try {
-      if (data.hasMore) {
-        const newData = await getFeeds(type as string, data.nextCursor || "");
-        originalFeedsRef.current = [...originalFeedsRef.current, ...newData.data];
-        setData((prev) => ({
-          ...prev,
-          feeds: [...prev.feeds, ...newData.data],
-          nextCursor: newData.nextCursor,
-          hasMore: newData.hasMore,
-        }));
-      } else if (originalFeedsRef.current.length) {
-        startTransition(() => {
-          setData((prev) => ({
-            ...prev,
-            feeds: [...prev.feeds, ...shuffleArray(originalFeedsRef.current)],
-          }));
-        });
-      }
-    } catch (err) {
-      console.error("Error loading more feeds:", err);
-    } finally {
-      isFetchingRef.current = false;
-    }
-  }, [data.hasMore, data.nextCursor, type, getFeeds, startTransition]);
-  onLoadMoreRef.current = onLoadMore;
-
-  const [infiniteRef] = useInfiniteScroll({
-    loading,
-    hasNextPage: data.hasMore || originalFeedsRef.current.length > 0,
-    onLoadMore,
-  });
 
   // ── Comment count helper ────────────────────────────────────────────────
   const getNumberOfComments = useCallback((comments: CommentData[]) => {
@@ -1183,18 +1503,19 @@ function FeedContent({
           >
             {showSkeleton ? (
               <div className="w-full h-screen flex flex-col justify-center items-center gap-3 overflow-y-hidden no-scrollbar">
-                <div className="md:w-[40%] h-full">
+                <div className="w-full md:w-[40%] h-full">
                   <FeedSkeleton />
                 </div>
 
               </div>
-            ) : data.feeds.length === 0 ? (
+            ) : slots.length === 0 ? (
               <div className="h-screen flex items-center justify-center text-sm text-gray-500">
                 No feeds available
               </div>
             ) : (
               <div className="grid gap-3 animate-placeholderFromBottom">
-                {data.feeds.map((item, index) => {
+                {slots.map((slot, index) => {
+                  const item = slot.feed;
                   const isLoaded = loadedIndex.has(index);
                   const isPlaying = playingMap[index] ?? false;
                   const hasLiked =
@@ -1210,7 +1531,7 @@ function FeedContent({
 
                   return (
                     <div
-                      key={`${item._id}-${index}`}
+                      key={slot.key}
                       id={`feed-${index}`}
                       ref={getItemRefCallback(index)}
                       className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show
@@ -1248,12 +1569,6 @@ function FeedContent({
                   );
                 })}
 
-                <EndlessScrollLoading
-                  infiniteRef={infiniteRef}
-                  hasNextPage={data.hasMore}
-                  gridNumber="grid-cols-1"
-                />
-
                 <div className="h-[30vh] md:h-[10vh]" />
               </div>
             )}
@@ -1274,13 +1589,13 @@ function FeedContent({
               >
                 <div
                   className="w-10 h-10 cursor-pointer bg-white rounded-full duration-300 flex items-center justify-center rotate-180 scale-90 hover:scale-100"
-                  onClick={() => smoothScrollTo("prev")}
+                  onClick={() => goPrev()}
                 >
                   <ChevronDown />
                 </div>
                 <div
                   className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100"
-                  onClick={() => smoothScrollTo("next")}
+                  onClick={() => goNext()}
                 >
                   <ChevronDown />
                 </div>

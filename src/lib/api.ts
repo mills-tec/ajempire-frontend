@@ -9,6 +9,7 @@ import {
   ProductResponse,
   ProductsResponse,
 } from "./types";
+import { ITEMS_TO_APPEND } from "./utils";
 
 export type Coupon = {
   _id: string;
@@ -205,6 +206,29 @@ export async function getUpdates(
     nextCursor: string;
     hasMore: boolean;
   };
+}
+
+// There's no single-item-by-id endpoint for feeds — only the paginated list
+// used by getUpdates. Direct/shared links (and generateMetadata, which needs
+// to resolve a specific id server-side) walk forward through pages until the
+// target is found. Bounded rather than unbounded: an unbounded walk would
+// mean a page load for a deep link could block on an unpredictable number of
+// sequential requests before generateMetadata can resolve.
+const FEED_LOOKUP_MAX_PAGES = 5;
+
+export async function getFeedById(
+  type: string,
+  id: string,
+): Promise<Feed | null> {
+  let cursor = "";
+  for (let page = 0; page < FEED_LOOKUP_MAX_PAGES; page++) {
+    const res = await getUpdates(type, cursor, ITEMS_TO_APPEND);
+    const feed = res?.data?.find((f) => f._id === id);
+    if (feed) return feed;
+    if (!res?.hasMore || !res.nextCursor) break;
+    cursor = res.nextCursor;
+  }
+  return null;
 }
 
 export async function getRelatedProducts(

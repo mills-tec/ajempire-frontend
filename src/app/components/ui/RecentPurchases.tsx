@@ -1,7 +1,9 @@
 import { getBearerToken } from "@/lib/api";
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
+import Image from "next/image";
 import { toast } from "sonner";
 
 interface RecentPurchase {
@@ -91,12 +93,14 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
               key={index}
               className="w-full flex items-center gap-2  border border-gray-300 rounded-md  p-3 text-[14px] font-extralight"
             >
-              <div className="w-[30%]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={purchase?.product.cover_image}
-                  alt=""
-                  className="w-[100px] h-[100px] object-cover"
+              <div className="relative w-[30%] h-[100px]">
+                <Image
+                loader={bunnyLoader}
+                  fill
+                  src={purchase?.product.cover_image ?? "/placeholder.jpg"}
+                  alt={purchase?.product.name ?? "Product image"}
+                  sizes="150px"
+                  className="object-cover"
                 />
               </div>
               <div className="w-[70%] flex flex-col ">

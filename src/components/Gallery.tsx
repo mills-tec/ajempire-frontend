@@ -1,5 +1,6 @@
 "use client"
 import { getUpdates } from '@/lib/api';
+import { bunnyLoader } from '@/lib/bunnyLoader';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { useWishlistStore } from '@/lib/stores/wishlist-store';
 import { Feed, Product } from '@/lib/types';
@@ -153,11 +154,13 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
                     <Image
                         src={feed.mediaUrl}
                         alt={feed.title}
+                        loader={bunnyLoader}
                         fill
                         sizes="(max-width: 768px) 50vw, 33vw"
                         className={`object-cover transition-opacity duration-500 hover:scale-105 ${isLoaded ? "opacity-100" : "opacity-0"}`}
                         onLoad={handleLoaded}
                         onError={handleLoaded}
+                        priority={index < 4}
                     />
                 )}
 
@@ -196,12 +199,30 @@ export default function Gallery() {
     const { data, isLoading } = useQuery({
         queryKey: ["gallery"],
         queryFn: () => getUpdates("gallery", "", ITEMS_TO_APPEND),
+        // This query is only ever consumed once, to seed `slots` (see the
+        // effect below, guarded by `slots.length > 0`) — every subsequent
+        // page comes from onLoadMore's direct getUpdates calls instead. With
+        // the default staleTime, remounting this component (e.g. navigating
+        // away and back) would trigger a background refetch whose result the
+        // seed guard can only ever throw away — pure wasted network traffic.
+        staleTime: Infinity,
     });
 
     const [slots, setSlots] = useState<GallerySlot[]>([]);
     const [apiData, setApiData] = useState({ nextCursor: "", hasMore: true });
-    const { addItem: addWishlistItem, removeItem: removeWishlistItem, isInWishlist } = useWishlistStore();
-    const { removeItem: removeCartItem, getItem } = useCartStore();
+    // Selector subscriptions, not a whole-store destructure — Gallery only
+    // needs to react when wishlist/cart *items* change, but a whole-store
+    // subscription re-renders every mounted card (up to MAX_GALLERY_ITEMS)
+    // on any store field changing, including ones with nothing to do with
+    // this screen (checkout step, logistics, coupons, etc. on cart-store).
+    // Same fix already applied to NotificationWrapper for the same reason.
+    const addWishlistItem = useWishlistStore((s) => s.addItem);
+    const removeWishlistItem = useWishlistStore((s) => s.removeItem);
+    const isInWishlist = useWishlistStore((s) => s.isInWishlist);
+    useWishlistStore((s) => s.items); // subscribe: re-render when wishlist items actually change
+    const removeCartItem = useCartStore((s) => s.removeItem);
+    const getItem = useCartStore((s) => s.getItem);
+    useCartStore((s) => s.items); // subscribe: re-render when cart items actually change
     const [mounted, setMounted] = useState(false);
     const isFetchingRef = useRef(false);
     const onLoadMoreRef = useRef<() => void>(() => { });
@@ -327,7 +348,7 @@ export default function Gallery() {
                         slotKey={slot.key}
                         index={index}
                         isOptionOpen={showOption === slot.key}
-                        inCart={!!getItem(slot.feed.product._id)}
+                        inCart={mounted && !!getItem(slot.feed.product._id)}
                         inWishlist={mounted && isInWishlist(slot.feed.product._id)}
                         onNavigate={handleNavigate}
                         onToggleOption={handleToggleOption}

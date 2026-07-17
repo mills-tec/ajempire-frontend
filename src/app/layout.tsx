@@ -1,15 +1,13 @@
-import NotificationWrapper from "@/components/NotificationWrapper";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import React from "react";
-import { Toaster } from "sonner";
 import LayoutWrapper from "./components/LayoutWrapper";
 import NetworkStatus from "./components/NetworkStatus";
 import ModalProvider from "./components/providers/ModalProvider";
+import { SocketProvider } from "./components/providers/SocketProvider";
 import { CartIconProvider } from "./contextanimation/CartIconContext";
 import "./globals.css";
 import { Providers } from "./provider";
@@ -23,6 +21,8 @@ const poppins = Poppins({
 
 export const viewport = {
   themeColor: "#E91E63",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -73,6 +73,7 @@ export const metadata: Metadata = {
   },
 };
 
+
 export default function RootLayout({
   children,
 }: {
@@ -85,23 +86,25 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} antialiased`}>
         {/* System UI */}
-        <Toaster />
+        {/* <Toaster />
         <NotificationWrapper />
-        <PWAInstallPrompt />
+        <PWAInstallPrompt /> */}
 
         <Providers>
-          <TooltipProvider>
-            <CartIconProvider>
-              <NetworkStatus />
-              {/* Splash Screen - Shows on app load */}
-              <SplashScreenWrapper>
-                {/* App Layout */}
-                <LayoutWrapper>{children}</LayoutWrapper>
-              </SplashScreenWrapper>
-              {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
-              <ModalProvider />
-            </CartIconProvider>
-          </TooltipProvider>
+          <SocketProvider>
+            <TooltipProvider>
+              <CartIconProvider>
+                <NetworkStatus />
+                {/* Splash Screen - Shows on app load */}
+                <SplashScreenWrapper>
+                  {/* App Layout */}
+                  <LayoutWrapper>{children}</LayoutWrapper>
+                </SplashScreenWrapper>
+                {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
+                <ModalProvider />
+              </CartIconProvider>
+            </TooltipProvider>
+          </SocketProvider>
         </Providers>
         <SpeedInsights />
       </body>

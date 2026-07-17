@@ -1,3 +1,4 @@
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import Image from "next/image";
 
 export default function OrderCard({
@@ -22,9 +23,10 @@ export default function OrderCard({
           <Image
             src={image}
             alt={title}
+            loader={bunnyLoader}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, 8.5rem"
+            sizes="200px"
             loading="eager"
           />
         </div>
