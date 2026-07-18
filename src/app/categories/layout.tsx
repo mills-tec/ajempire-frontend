@@ -58,16 +58,32 @@ export default function CategoriesLayout({
         </div>
         <RefreshWrapper>
           <div className="hidden lg:block mb-6">
-            <Categories categories={data?.message} selectedCategoryId={activeCategoryId} />
+            <Categories
+              categories={data?.message}
+              selectedCategoryId={activeCategoryId}
+            />
           </div>
 
           <div className="mt-[6rem] lg:mt-0">
-            <div className="px-2 pb-3">
+            <div className="lg:hidden px-2 pb-3">
               <BannerPlaceholder />
             </div>
 
-            <div className="flex gap-2 lg:h-auto">
-              {/* SIDE NAV */}
+            {/* Desktop: full-width centered "view all categories" */}
+            <div className="hidden lg:flex h-[400px] w-full flex-col items-center justify-center gap-y-1">
+              <h1 className="text-center font-poppins text-lg font-semibold">
+                click the view all categories button to see all categories
+              </h1>
+              <a
+                className="text-center font-poppins text-sm text-white bg-primaryhover px-10 py-3 rounded-full mt-5"
+                href="/"
+              >
+                view all categories
+              </a>
+            </div>
+
+            {/* Mobile: side nav + products */}
+            <div className="flex gap-2">
               <div className="lg:hidden font-poppins w-[120px] h-[600px] scrollbar-hide border-r border-gray-200 overflow-y-auto flex flex-col gap-3 px-3 py-3">
                 {data?.message?.map((cat) => {
                   const slug = cat.name.toLowerCase().replace(/\s+/g, "-");
