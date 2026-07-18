@@ -50,7 +50,6 @@ const unfilledStar = (
   </svg>
 );
 
-
 export default function CategoryPage() {
   const params = useParams();
   const slug = params.id as string;
@@ -85,7 +84,6 @@ export default function CategoryPage() {
     );
   }, [data, searchedQuery]);
 
-
   if (isError) return <p>Error loading products.</p>;
 
   return (
@@ -113,119 +111,117 @@ export default function CategoryPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {filteredProducts.map((product, index) => (
+              <div key={`mobile-${product._id}-${index}`}>
                 <div
-                  key={`mobile-${product._id}-${index}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/product/${product._id}`);
+                  }}
+                  className="w-full"
                 >
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/product/${product._id}`);
-                    }}
-                    className="w-full"
-                  >
-                    <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex gap-3">
-                      {/* Image + info */}
-                      <div className="flex gap-3 flex-1">
-                        <div className="relative w-[90px] h-auto flex-shrink-0 rounded-md overflow-hidden border">
-                          <Image
-                            src={product.cover_image || "/placeholder.png"}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                          />
+                  <div className="lg:hidden w-full border rounded-lg p-2 bg-white flex gap-3 overflow-hidden">
+                    {/* Image + info */}
+                    <div className="flex gap-3 flex-1 min-w-0">
+                      <div className="relative w-[70px] h-auto flex-shrink-0 rounded-md overflow-hidden border">
+                        <Image
+                          src={product.cover_image || "/placeholder.png"}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <p className="text-sm font-medium leading-tight truncate w-full">
+                          {product.name.length > 10
+                            ? product.name.substring(0, 10) + "..."
+                            : product.name}
+                        </p>
+                        <p className="text-[0.65rem] text-brand_purple">
+                          Only {product.stock} left
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) =>
+                              i <
+                              (product.averageRating
+                                ? +product.averageRating
+                                : 0) ? (
+                                <span key={i}>{filledStar}</span>
+                              ) : (
+                                <span key={i}>{unfilledStar}</span>
+                              ),
+                            )}
+                          </div>
+                          <p className="text-[10px] text-black/60">
+                            {product.numReviews}
+                          </p>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium leading-tight truncate w-full">
-                            {product.name.length > 10
-                              ? product.name.substring(0, 10) + "..."
-                              : product.name}
-                          </p>
-                          <p className="text-[0.65rem] text-brand_purple">
-                            Only {product.stock} left
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) =>
-                                i <
-                                (product.averageRating
-                                  ? +product.averageRating
-                                  : 0) ? (
-                                  <span key={i}>{filledStar}</span>
-                                ) : (
-                                  <span key={i}>{unfilledStar}</span>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
+                            {product.flashSales &&
+                              Number(
+                                calcDiscountPrice(
+                                  product.price,
+                                  product.flashSales.discountValue,
+                                  product.flashSales.discountType,
                                 ),
-                              )}
-                            </div>
-                            <p className="text-[10px] text-black/60">
-                              {product.numReviews}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-[14px] lg:text-lg font-medium text-brand_pink">
-                              {product.flashSales &&
-                                Number(
-                                  calcDiscountPrice(
-                                    product.price,
-                                    product.flashSales.discountValue,
-                                    product.flashSales.discountType,
-                                  ),
-                                ).toLocaleString("en-NG", {
-                                  style: "currency",
-                                  currency: "NGN",
-                                })}
-                            </h3>
-                            <p className="text-[9px] text-black/60">1k+ sold</p>
-                          </div>
+                              ).toLocaleString("en-NG", {
+                                style: "currency",
+                                currency: "NGN",
+                              })}
+                          </h3>
+                          <p className="text-[9px] text-black/60">1k+ sold</p>
                         </div>
                       </div>
-                      {/* Cart button */}
-                      <button
-                        className="relative flex-shrink-0 flex items-end cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedItem(product);
-                        }}
-                      >
-                        {cartQuantities.has(product._id) && (
-                          <div className="absolute size-4 rounded-full left-5 bottom-3 z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
-                            <p>{cartQuantities.get(product._id)}</p>
-                          </div>
-                        )}
-                        <svg
-                          width="30"
-                          height="20"
-                          viewBox="0 0 30 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <rect
-                            x="0.35"
-                            y="0.35"
-                            width="28.4667"
-                            height="18.9667"
-                            rx="9.48333"
-                            stroke="black"
-                            strokeWidth="0.7"
-                          />
-                          <path
-                            d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.1862 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667"
-                            stroke="black"
-                            strokeWidth="0.7"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
                     </div>
+                    {/* Cart button */}
+                    <button
+                      className="relative flex-shrink-0 self-end cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItem(product);
+                      }}
+                    >
+                      {cartQuantities.has(product._id) && (
+                        <div className="absolute -top-1 -right-1 size-4 rounded-full z-10 bg-brand_pink text-white text-xs font-semibold flex items-center justify-center">
+                          <p>{cartQuantities.get(product._id)}</p>
+                        </div>
+                      )}
+                      <svg
+                        width="30"
+                        height="20"
+                        viewBox="0 0 30 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <rect
+                          x="0.35"
+                          y="0.35"
+                          width="28.4667"
+                          height="18.9667"
+                          rx="9.48333"
+                          stroke="black"
+                          strokeWidth="0.7"
+                        />
+                        <path
+                          d="M8.5 5.66667H21.1667L19.1667 12.3333H10.5L8.5 5.66667ZM8.5 5.66667L8 4M13.1613 9H14.4947M14.4947 9H15.828M14.4947 9V7.66667M14.4947 9V10.3333M13.8333 14.6667C13.8333 14.9319 13.728 15.1862 13.5404 15.3738C13.3529 15.5613 13.0985 15.6667 12.8333 15.6667C12.5681 15.6667 12.3138 15.1862 12.1262 15.3738C11.9387 15.1862 11.8333 14.9319 11.8333 14.6667M17.8333 14.6667C17.8333 14.9319 17.728 15.1862 17.5404 15.3738C17.3529 15.5613 17.0986 15.6667 16.8333 15.6667C16.5681 15.6667 16.3138 15.5613 16.1262 15.3738C15.9387 15.1862 15.8333 14.9319 15.8333 14.6667"
+                          stroke="black"
+                          strokeWidth="0.7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
       {/* Desktop layout */}
-      {isLoading ? (
+      {/* {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
           {[...Array(10)].map((_, i) => (
             <div
@@ -269,7 +265,7 @@ export default function CategoryPage() {
             ))}
           </div>
         </div>
-      )}
+      )} */}
     </>
   );
 }
