@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import VideoPlayer from "@/components/VideoPlayer";
 import { animateToCart } from "@/lib/animateToCart";
 import { getBearerToken, getProduct } from "@/lib/api";
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
@@ -137,10 +138,10 @@ export default function ProductDetailPage({ id }: { id: string }) {
 
   const resolvedFinalPrice = item?.flashSales
     ? calcDiscountPrice(
-        resolvedCartPrice,
-        item.flashSales.discountValue!,
-        item.flashSales.discountType!,
-      )
+      resolvedCartPrice,
+      item.flashSales.discountValue!,
+      item.flashSales.discountType!,
+    )
     : resolvedCartPrice;
   const resolvedDiscount = resolvedCartPrice - resolvedFinalPrice;
   const checkoutHandler = useCallback(() => {
@@ -223,9 +224,9 @@ export default function ProductDetailPage({ id }: { id: string }) {
       prev[src]
         ? prev
         : {
-            ...prev,
-            [src]: true,
-          },
+          ...prev,
+          [src]: true,
+        },
     );
   }, []);
 
@@ -281,8 +282,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
   return (
     <RefreshWrapper
       category={item.category?._id ?? ""}
-      // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
-      // onRefreshExtra={reshuffle}
+    // queryKeys={[["relatedProducts", item.category?._id ?? ""]]}
+    // onRefreshExtra={reshuffle}
     >
       <section className="">
         <div className="flex lg:hidden justify-between items-center py-3 px-4 z-50 border-b sticky bg-white top-0">
@@ -348,29 +349,30 @@ export default function ProductDetailPage({ id }: { id: string }) {
             <div className="lg:w-1/2 h-full space-y-8">
               <div className="space-y-4">
                 <div
-                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${
-                    !isCurrentMediaLoaded
-                      ? "bg-gray-200 animate-fast-pulse"
-                      : ""
-                  }`}
+                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${!isCurrentMediaLoaded
+                    ? "bg-gray-200 animate-fast-pulse"
+                    : ""
+                    }`}
                 >
                   {currentCoverItem.type === "image" ? (
                     <Image
                       src={currentMediaSrc}
+                      loader={bunnyLoader}
+
+                      sizes="400px"
+
                       alt={item.name}
                       fill
-                      className={`absolute object-cover transition-opacity duration-200 ${
-                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                        }`}
                       onLoad={() => {
                         markMediaLoaded(currentMediaSrc);
                       }}
                     />
                   ) : (
                     <div
-                      className={`absolute w-full h-full transition-opacity duration-200 ${
-                        isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`absolute w-full h-full transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
+                        }`}
                     >
                       <VideoPlayer
                         handleVideoPlay={handleVideoPlay}
@@ -397,12 +399,11 @@ export default function ProductDetailPage({ id }: { id: string }) {
                         <button
                           type="button"
                           key={key}
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                            currentCoverItem.type === "image" &&
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "image" &&
                             currentCoverItem.src === image
-                              ? "border-brand_pink"
-                              : "border-transparent"
-                          }`}
+                            ? "border-brand_pink"
+                            : "border-transparent"
+                            }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: image,
@@ -413,6 +414,9 @@ export default function ProductDetailPage({ id }: { id: string }) {
                           <Image
                             src={image}
                             alt={`${item.name} thumbnail ${key + 1}`}
+                            loader={bunnyLoader}
+                            sizes="100px"
+
                             fill
                             className="absolute object-cover"
                           />
@@ -422,11 +426,10 @@ export default function ProductDetailPage({ id }: { id: string }) {
                       {item.video && (
                         <button
                           type="button"
-                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${
-                            currentCoverItem.type === "video"
-                              ? "border-brand_pink"
-                              : "border-transparent"
-                          }`}
+                          className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "video"
+                            ? "border-brand_pink"
+                            : "border-transparent"
+                            }`}
                           onClick={() => {
                             setCurrentCoverItem({
                               src: item.video!,
@@ -569,6 +572,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
                           src={item.cover_image ?? ""}
                           alt="product image"
                           fill
+                          sizes="100px"
                           className="transition-transform duration-300 ease-in-out group-hover:scale-110"
                         />
                       </div>
@@ -604,7 +608,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
             {item.category && (
               <RelatedProducts
                 category={item.category._id}
-                // shuffleSeed={shuffleSeed}
+              // shuffleSeed={shuffleSeed}
               />
             )}
           </div>

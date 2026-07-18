@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import Modal from './Modal'
-import { IItem } from '@/lib/types'
-import Image from 'next/image'
 import { useReviews } from '@/api/customHooks'
-import { IoMdStar } from 'react-icons/io'
-import { ImSpinner8 } from 'react-icons/im'
 import { getUser } from '@/lib/api'
+import { IItem, Review } from '@/lib/types'
+import Image from 'next/image'
+import React, { useEffect, useState } from 'react'
+import { ImSpinner8 } from 'react-icons/im'
+import { IoMdStar } from 'react-icons/io'
 import MobilePage from './MobilePage'
+import Modal from './Modal'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showOverlay }: { selectedProduct: IItem, handleHideOverlay: () => void, setUpdatedReviews: (review: any) => void, showOverlay: boolean }) => {
@@ -27,8 +27,7 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
 
     const data = {
       data: { rating: inputs.selectedRating, comment: inputs.comment },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      product: (selectedProduct.product as any)._id,
+      product: selectedProduct.product._id,
     };
 
     const req = await postReview(data);
@@ -38,7 +37,7 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
     if (req) {
       handleHideOverlay();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setUpdatedReviews({ ...updatedReview, product: (selectedProduct.product as any)._id });
+      setUpdatedReviews({ ...updatedReview, product: selectedProduct.product._id });
       setInputs({
         selectedRating: 0,
         comment: "",
@@ -48,7 +47,8 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const reviews: [] = (selectedProduct.product as any).reviews;
+    const reviews: Review[] = selectedProduct.product.reviews!;
+    console.log(reviews);
     const user = getUser();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userReview: any = reviews.find((review: any) => review.user == user?._id);
@@ -79,8 +79,8 @@ const Children = ({ selectedProduct, handleHideOverlay, setUpdatedReviews, showO
               </div>
               <div>
                 <h1>{selectedProduct.name}</h1>
-                {selectedProduct.variant && (
-                  <p>{selectedProduct.variant?.value}</p>
+                {selectedProduct.variants && (
+                  <p>{selectedProduct.variants.options.map(option=> option.value)?.join(", ")}</p>
                 )}
                 <div className="text-xs font-light flex gap-2">
                   <p className="font-semibold">

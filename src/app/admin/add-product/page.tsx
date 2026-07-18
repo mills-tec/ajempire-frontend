@@ -174,7 +174,7 @@ const AddProductPage = () => {
             if (newCategoryImage) fd.append('image', newCategoryImage);
 
             const response = await createCategory(fd);
-            if (response.success || response.data) {
+            if (response.status) {
                 showToast('Category created successfully!', 'success');
                 await fetchCategories();
                 setNewCategoryName('');

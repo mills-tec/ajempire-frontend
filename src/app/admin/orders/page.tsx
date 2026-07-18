@@ -29,6 +29,7 @@ const OrdersPage = () => {
         // Transform API data to match our table structure
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedOrders = response.message.map((order: any) => ({
+          
           id: order.order_id || 'Unknown',
           customer: order.shippingAddress?.fullName || 'Unknown Customer',
           products: order.items?.length || 0,

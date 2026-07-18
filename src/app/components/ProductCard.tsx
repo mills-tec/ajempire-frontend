@@ -1,5 +1,6 @@
 "use client";
 import CountdownTimer from "@/components/CountDownTimer";
+import { bunnyLoader } from "@/lib/bunnyLoader";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
@@ -72,18 +73,17 @@ function ProductCard({
       onClick={() => {
         router.push(`/product/${product._id}`);
       }}
-      className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${
-        index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
-      }`}
+      className={`space-y-0 group text-left hover:shadow-sm hover:rounded-md hover:bg-white p-2 lg:w-[13rem] border border-transparent hover:border-black/10 w-full break-inside-avoid ${index % 2 === 0 ? "mt-0 lg:mt-0" : "mt-6 lg:mt-0"
+        }`}
     >
       <div
         className={`relative aspect-square lg:w-full lg:h-[14rem] w-full break-inside-avoid  rounded-sm overflow-hidden md:overflow-clip `}
       >
         <Image
-          src={product.cover_image ?? ""}
-          
+          src={`${product.cover_image}`}
+          loader={bunnyLoader}
           alt="product image"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          sizes="200px"
           fill
           className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${!imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
           onLoad={() => {

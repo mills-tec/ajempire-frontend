@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import LayoutWrapper from "./components/LayoutWrapper";
 import NetworkStatus from "./components/NetworkStatus";
 import ModalProvider from "./components/providers/ModalProvider";
+import { SocketProvider } from "./components/providers/SocketProvider";
 import { CartIconProvider } from "./contextanimation/CartIconContext";
 import "./globals.css";
 import { Providers } from "./provider";
@@ -23,6 +24,8 @@ const poppins = Poppins({
 
 export const viewport = {
   themeColor: "#E91E63",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -73,6 +76,7 @@ export const metadata: Metadata = {
   },
 };
 
+
 export default function RootLayout({
   children,
 }: {
@@ -90,18 +94,20 @@ export default function RootLayout({
         <PWAInstallPrompt />
 
         <Providers>
-          <TooltipProvider>
-            <CartIconProvider>
-              <NetworkStatus />
-              {/* Splash Screen - Shows on app load */}
-              <SplashScreenWrapper>
-                {/* App Layout */}
-                <LayoutWrapper>{children}</LayoutWrapper>
-              </SplashScreenWrapper>
-              {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
-              <ModalProvider />
-            </CartIconProvider>
-          </TooltipProvider>
+          <SocketProvider>
+            <TooltipProvider>
+              <CartIconProvider>
+                <NetworkStatus />
+                {/* Splash Screen - Shows on app load */}
+                <SplashScreenWrapper>
+                  {/* App Layout */}
+                  <LayoutWrapper>{children}</LayoutWrapper>
+                </SplashScreenWrapper>
+                {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
+                <ModalProvider />
+              </CartIconProvider>
+            </TooltipProvider>
+          </SocketProvider>
         </Providers>
         <SpeedInsights />
       </body>

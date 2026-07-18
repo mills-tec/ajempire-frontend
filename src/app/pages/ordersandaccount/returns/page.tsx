@@ -1,13 +1,13 @@
 "use client";
 import { useIssueReturn } from "@/api/customHooks";
+import EmptyList from "@/components/EmptyList";
+import Skeleton from "@/components/ui/Skeleton";
+import { IReturnRequest } from "@/lib/types";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import OrderTabs from "../components/OrderTabs";
-import { IReturnRequest } from "@/lib/types";
-import EmptyList from "@/components/EmptyList";
-import Skeleton from "@/components/ui/Skeleton";
 
 export default function Returns() {
   const pathname = usePathname();
@@ -22,7 +22,7 @@ export default function Returns() {
         setLoading(false);
       });
       if (data.status) {
-        setReturns(data.message);
+        setReturns(data.message as IReturnRequest[]);
 
       }
 

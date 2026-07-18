@@ -1,13 +1,13 @@
 "use client";
+import CountdownTimer from "@/components/CountDownTimer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
-import { useRouter } from "next/navigation";
-import CountdownTimer from "@/components/CountDownTimer";
-import { useProductVariants } from "@/lib/useProductVariants";
 
 function CartCard({
   item,
@@ -100,6 +100,7 @@ function CartCard({
               alt="product image"
               fill
               className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
+              sizes="100px"
             />
           </div>
           <div className="flex w-full flex-col justify-between overflow-clip">

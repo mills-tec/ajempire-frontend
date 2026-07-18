@@ -1,4 +1,14 @@
-// bunnyLoader.ts — one place, handles all sizing automatically
-export default function bunnyLoader({ url, width, quality }: { url: string; width: string; quality: number }) {
-    return `${url}?width=${width}&quality=${quality || 80}`
+type LoaderProps = {
+    src: string;
+    width: number;
+    quality?: number;
+};
+export function bunnyLoader({ src, width, quality }: LoaderProps): string {
+    if (!src.startsWith("https:")) return src;
+    const url = new URL(src);
+    url.searchParams.set("width", width.toString());
+    url.searchParams.set("height", width.toString());
+    url.searchParams.set("quality", (quality ?? 80).toString());
+    return url.toString();
+
 }

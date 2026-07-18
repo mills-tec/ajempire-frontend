@@ -2,7 +2,7 @@
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
-import { deleteProduct, deleteReview, getAllCategories, getProductById, getProducts, Product, Review, updateProduct } from '@/lib/adminapi';
+import { Category, deleteProduct, deleteReview, getAllCategories, getProductById, getProducts, Product, Review, updateProduct } from '@/lib/adminapi';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Edit2, Eye, Filter, Folder, LayoutGrid, Loader2, Package, Plus, Search, ShoppingCart, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
@@ -31,10 +31,8 @@ const InventoryPage = () => {
     const queryClient = useQueryClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [products, setProducts] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [categories, setCategories] = useState<any[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedProduct, setSelectedProduct] = useState<MappedProduct | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);

@@ -177,8 +177,9 @@ const SettingsPage = () => {
     setWalletLoadingStates(prev => ({ ...prev, get: true }))
     try {
       const req = await getWalletBalance();
-      setWalletBalance(prev => ({ ...prev, currency: (req.message as any).currency, balance: (req.message as any).balance, amount: 0 }))
+      const walletMessage = req.message ?? { currency: walletBalance.currency, balance: walletBalance.balance };
 
+      setWalletBalance(prev => ({ ...prev, currency: walletMessage.currency, balance: walletMessage.balance, amount: 0 }))
 
     } catch (error) {
       console.error('Error fetching balance:', error);
@@ -295,7 +296,7 @@ const SettingsPage = () => {
 
         break;
     }
-  }, [selectedTab]);
+  }, [selectedTab, fetchWalletBalance]);
 
   const renderProfileTab = () => {
     const handleProfileUpdate = async (e: React.FormEvent) => {

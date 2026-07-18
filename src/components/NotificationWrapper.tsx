@@ -1,9 +1,10 @@
 "use client";
 
 import { useNotification } from "@/api/customHooks";
+import { useSocket } from "@/app/components/providers/SocketProvider";
 import { Product } from "@/lib/admin-types";
 import { updateAdminPushNotification } from "@/lib/adminapi";
-import { fetchFromCart, getBearerToken } from "@/lib/api";
+import { fetchFromCart } from "@/lib/api";
 import { generateToken, messaging } from "@/lib/firebase";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { CartItem, useCartStore } from "@/lib/stores/cart-store";
@@ -12,7 +13,6 @@ import type { Notification as AppNotification } from "@/lib/types";
 import { onMessage } from "firebase/messaging";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
 
 export default function NotificationWrapper() {
   // Selector subscriptions — the old whole-store destructures re-rendered this
@@ -29,7 +29,7 @@ export default function NotificationWrapper() {
   const setCartLoaded = useCartStore((s) => s.setCartLoaded);
   const setNotifications = useNotificationStore((s) => s.setNotifications);
   const updateNotifications = useNotificationStore((s) => s.updateNotifications);
-  const socketRef = useRef<Socket | null>(null);
+  const socket = useSocket();
   const [isMounted, setIsMounted] = useState(false);
   const isUpdatingToken = useRef(false);
   const pathname = usePathname();
@@ -99,46 +99,42 @@ export default function NotificationWrapper() {
   }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet]);
 
   // Socket.IO — user notifications (non-admin routes only)
+  // Consumes the single shared connection from SocketProvider instead of
+  // opening its own — the provider re-authenticates that same socket
+  // whenever `user` changes, which is what triggers the "connect" below.
   useEffect(() => {
-    if (isAdminRoute || !user) return;
+    if (isAdminRoute || !user || !socket) return;
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ;
-    if (!backendUrl) return;
-
-    const token = getBearerToken();
-    if (!token) return;
-
-    const socket = io(backendUrl, {
-      auth: { token },
-      transports: ["websocket"],
-      reconnection: true,
-    });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
+    const requestNotifications = () => {
       socket.emit("get:userNotifications");
-    });
+    };
 
-    socket.on("userNotifications", ({ notifications }: { notifications: AppNotification[]; unreadCount: number }) => {
-      // console.log(notifications);
+    const handleUserNotifications = ({ notifications }: { notifications: AppNotification[]; unreadCount: number }) => {
       setNotifications(notifications);
-    });
+    };
 
     // Live push from server (e.g. new order, flash sale)
-    socket.on("new-notification", (notification: AppNotification) => {
+    const handleNewNotification = (notification: AppNotification) => {
       updateNotifications(notification);
-    });
+    };
 
-    socket.on("connect_error", (err) => {
+    const handleConnectError = (err: Error) => {
       console.error("Socket connection error:", err.message);
-    });
+    };
+
+    if (socket.connected) requestNotifications();
+    socket.on("connect", requestNotifications);
+    socket.on("userNotifications", handleUserNotifications);
+    socket.on("new-notification", handleNewNotification);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      socket.off("connect", requestNotifications);
+      socket.off("userNotifications", handleUserNotifications);
+      socket.off("new-notification", handleNewNotification);
+      socket.off("connect_error", handleConnectError);
     };
-  }, [user, isAdminRoute, setNotifications, updateNotifications]);
+  }, [user, isAdminRoute, socket, setNotifications, updateNotifications]);
 
   // Cart hydration (non-admin routes only)
   useEffect(() => {

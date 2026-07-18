@@ -20,6 +20,26 @@ type SideBarCompProps = {
   items: SideBarItem[];
 };
 
+// Matches only if pathname equals the route or is nested under it (avoids
+// "/orders" falsely matching "/orders-history").
+const isRouteActive = (pathname: string, route?: string) => {
+  if (!route) return false;
+  return pathname === route || pathname.startsWith(`${route}/`);
+};
+
+// When sibling routes are nested inside each other (e.g. "Unused" ->
+// ".../coupoonsandoffers" and "Used" -> ".../coupoonsandoffers/usedcoupon"),
+// more than one sibling can match via isRouteActive at once. Only the
+// longest (most specific) matching route should be treated as active.
+const getActiveChildRoute = (pathname: string, children?: SideBarItem[]) => {
+  if (!children) return null;
+  return children.reduce<string | null>((best, child) => {
+    if (!isRouteActive(pathname, child.route)) return best;
+    if (!best || child.route!.length > best.length) return child.route!;
+    return best;
+  }, null);
+};
+
 const SideBarComp = ({ items }: SideBarCompProps) => {
   const [openRoute, setOpenRoute] = useState<string | null>(null);
   const pathname = usePathname();
@@ -31,11 +51,9 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
   useEffect(() => {
     const foundParent = items.find(
       (item) =>
-        (item.route && pathname.startsWith(item.route)) ||
+        isRouteActive(pathname, item.route) ||
         (item.children &&
-          item.children.some((child) =>
-            pathname.startsWith(child.route ?? ""),
-          )),
+          item.children.some((child) => isRouteActive(pathname, child.route))),
     );
     setOpenRoute(foundParent?.route ?? null);
   }, [pathname, items]);
@@ -70,7 +88,9 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
     <div className="w-64 p-4 font-poppins text-[14px]">
       {" "}
       <ul className="space-y-3">
-        {items.map((item) => (
+        {items.map((item) => {
+          const activeChildRoute = getActiveChildRoute(pathname, item.children);
+          return (
           <li key={item.title}>
             {item.children ? (
               <div>
@@ -160,13 +180,11 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
                           <Link
                             href={child.route || "#"}
                             className={`block text-[13px] p-2 px-6 rounded-md transition-all duration-300 ${
-                              pathname.includes(child.route!)
+                              child.route === activeChildRoute
                                 ? "bg-[#FFD9EE] text-[#525252]"
                                 : "hover:bg-pink-50 text-[#525252]"
                             }`}
                           >
-                            {/* {pathname} */}
-                            {/* {child.route} */}
                             {child.title}
                           </Link>
                         )}
@@ -189,7 +207,8 @@ const SideBarComp = ({ items }: SideBarCompProps) => {
               </Link>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
