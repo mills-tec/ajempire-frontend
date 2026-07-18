@@ -74,7 +74,9 @@ const CategoryItem = memo(function CategoryItem({
           className="object-cover size-full absolute rounded-full"
           height={44}
           width={44}
-          sizes="10px"
+          sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         25vw"
         />
       </div>
       <p className={labelCn}>{category.name}</p>

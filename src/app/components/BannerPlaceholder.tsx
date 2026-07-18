@@ -3,7 +3,13 @@
 import { BannerImage, getBanner } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import type { Swiper as SwiperType } from "swiper/types";
+
+import { bunnyLoader } from "@/lib/bunnyLoader";
+import "swiper/css";
 
 function BannerSkeleton({ className = "" }: { className?: string }) {
   return (
@@ -45,7 +51,7 @@ export default function BannerPlaceholder({
   className?: string;
 }) {
   const [current, setCurrent] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const swiperRef = useRef<SwiperType | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["home-banner"],
@@ -57,38 +63,66 @@ export default function BannerPlaceholder({
       ? data.message.images
       : [];
 
-  useEffect(() => {
-    if (images.length <= 1) return;
-    intervalRef.current = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % images.length);
-    }, 4000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [images]);
-
   if (isLoading) return <BannerSkeleton className={className} />;
   if (images.length === 0) return <BannerSkeleton className={className} />;
 
-  const image = images[current];
-  const content = (
+  return (
     <div
       className={`relative w-full overflow-hidden rounded-2xl h-[120px]  lg:h-[379px] ${className}`}
     >
-      <Image
-        src={image.url}
-        alt="Banner"
-        className="w-full lg:h-full object-cover transition-opacity duration-500"
-        fill
-      />
+      <Swiper
+        modules={[Autoplay]}
+        onSwiper={(swiper) => {
+          swiperRef.current = swiper;
+        }}
+        loop={images.length > 1}
+        autoplay={
+          images.length > 1
+            ? { delay: 4000, disableOnInteraction: false }
+            : false
+        }
+        onSlideChange={(swiper) => setCurrent(swiper.realIndex)}
+        className="w-full h-full"
+      >
+        {images.map((image, i) => {
+          const slide = (
+            <div className="relative w-full h-full">
+              <Image
+                loader={bunnyLoader}
+                sizes="100vw"                
+                src={image.url}
+                alt="Banner"
+                className="w-full lg:h-full object-cover"
+                fill
+              />
+            </div>
+          );
+          return (
+            <SwiperSlide key={i}>
+              {image.link ? (
+                <a
+                  href={image.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full"
+                >
+                  {slide}
+                </a>
+              ) : (
+                slide
+              )}
+            </SwiperSlide>
+          );
+        })}
+      </Swiper>
       {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
           {images.map((_, i) => (
             <button
               key={i}
               onClick={(e) => {
                 e.preventDefault();
-                setCurrent(i);
+                swiperRef.current?.slideToLoop(i);
               }}
               className={`w-2 h-2 rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/50"}`}
             />
@@ -97,14 +131,4 @@ export default function BannerPlaceholder({
       )}
     </div>
   );
-
-  if (image.link) {
-    return (
-      <a href={image.link} target="_blank" rel="noopener noreferrer">
-        {content}
-      </a>
-    );
-  }
-
-  return content;
 }
