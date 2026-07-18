@@ -1,10 +1,11 @@
 import whiteLogo from "@/assets/whitelogo.png";
-import Image from "next/image";
-import FooterRout from "./ui/FooterRout";
-import Link from "next/link";
-import { useCategoryStore } from "@/lib/stores/category-store";
 import { getCategories } from "@/lib/api";
+import { useCategoryStore } from "@/lib/stores/category-store";
+import { Category } from "@/lib/types";
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
+import Link from "next/link";
+import FooterRout from "./ui/FooterRout";
 
 const Footer = () => {
   const { setSelectedCategory } = useCategoryStore();
@@ -15,7 +16,7 @@ const Footer = () => {
 
   const categories = data?.message?.slice(0, 5);
 
-  const handleCategoryClick = (category: unknown) => {
+  const handleCategoryClick = (category: Category) => {
     setSelectedCategory(category);
 
     const section = document.getElementById("categories-section");

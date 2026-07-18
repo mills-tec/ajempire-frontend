@@ -11,7 +11,7 @@ import { Trash } from 'lucide-react';
 import { getUser } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
-export const TimerInterval = ({ date }: { date: string }) => {
+const TimerInterval = ({ date }: { date: string }) => {
     const [time, setTimer] = useState(timeAgo(date));
 
     useEffect(() => {

@@ -63,19 +63,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     initWishlist();
   }, []);
 
-  useEffect(() => {
-    const retrySync = useWishlistStore.getState().retrySync;
 
-    // Retry when connection is restored
-    window.addEventListener("online", retrySync);
-    // Retry periodically (e.g., every 1 minute)
-    const interval = setInterval(retrySync, 60000);
-
-    return () => {
-      window.removeEventListener("online", retrySync);
-      clearInterval(interval);
-    };
-  }, []);
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>

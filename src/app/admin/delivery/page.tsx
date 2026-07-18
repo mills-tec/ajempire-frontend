@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Package, ShoppingBag, X } from 'lucide-react';
+import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
-import { useToast, ToastContainer } from '@/app/components/ui/Toast';
+import { ChevronLeft, ChevronRight, Eye, Filter, Package, Search, ShoppingBag, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 const DeliveryPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -414,7 +414,7 @@ const DeliveryPage = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     {[
                       { label: 'Pending', value: 'processing', activeVal: 'Pending', color: 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100/50' },
-                      { label: 'In Transit', value: 'shipped', activeVal: 'In Transit', color: 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100/50' },
+                      { label: 'Shipped', value: 'shipped', activeVal: 'In Transit', color: 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100/50' },
                       { label: 'Delivered', value: 'delivered', activeVal: 'Delivered', color: 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100/50' },
                       { label: 'Failed', value: 'cancelled', activeVal: 'Failed', color: 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' },
                     ].map((statusBtn) => {

@@ -372,7 +372,6 @@ export const useUpdates = () => {
     if (!loading) {
       setLoading(true);
       try {
-        console.log(data.feedId, data.type);
         await postData(
           `/updates/like`,
           { id: data.feedId, type: data.type },

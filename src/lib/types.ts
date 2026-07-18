@@ -75,6 +75,9 @@ export type Review = {
   createdAt?: string;
   updatedAt?: string;
   product?: string;
+  user: {
+    fullname: string;
+  }
 }
 
 export interface Variant {
@@ -262,3 +265,23 @@ export interface Notification {
   readBy: { userId: string }[];
   hide?: string[];
 }
+
+export interface IUpdateSocketFeed {
+  action: string;
+  postId: string;
+  type: string;
+  userId: string;
+  liked: boolean;
+}
+
+export type IUpdateSocketFeedComment =
+  | { action: "created"; postId: string; type: "flashsale" | "education"; comment: any }
+  | { action: "deleted"; postId: string; type: "flashsale" | "education"; commentId: string }
+  | {
+    action: "liked" | "unliked";
+    postId: string;
+    type: "flashsale" | "education";
+    commentId: string;
+    userId: string;
+    liked: boolean;
+  }

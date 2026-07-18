@@ -1,8 +1,7 @@
 import FeedItem from "@/components/FeedItem";
 import Gallery from "@/components/Gallery";
-import { getUpdates } from "@/lib/api";
+import { getFeedById } from "@/lib/api";
 import { buildFeedMetadata } from "@/lib/feedMetadata"; // ✅ import only
-import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { Metadata } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
@@ -17,8 +16,7 @@ export async function generateMetadata({
     const { type, id } = await params;
     const url = `${BASE_URL}/pages/update/${type}/${id}`;
 
-    const req = await getUpdates(type, "", ITEMS_TO_APPEND);
-    const feed = req?.data?.find((f) => f._id === id);
+    const feed = await getFeedById(type, id);
 
     if (!feed) return {};
 

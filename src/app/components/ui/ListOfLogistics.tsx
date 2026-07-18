@@ -1,7 +1,7 @@
 import { getBearerToken, getShippingRates } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useCartStore } from "@/lib/stores/cart-store";
 
 interface Courier {
   courier_id: string;
@@ -56,7 +56,7 @@ export default function ListOfLogistics() {
 
     setLoading(true);
     try {
-      const response = await getShippingRates(packageItems);
+      const response = await getShippingRates();
       console.log("🔥 RAW API RESPONSE:", response);
 
       if (response?.message) {
