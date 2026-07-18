@@ -75,6 +75,9 @@ export type Review = {
   createdAt?: string;
   updatedAt?: string;
   product?: string;
+  user: {
+    fullname: string;
+  }
 }
 
 export interface Variant {

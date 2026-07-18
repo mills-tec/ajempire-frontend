@@ -124,7 +124,6 @@ const SingleOrderPage = () => {
       if (response.status) {
         await fetchOrderDetails();
       }
-      console.log(response.status);
       // if (response.success) {
       //   await fetchOrderDetails();
       // } else {

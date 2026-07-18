@@ -1,11 +1,11 @@
 'use client'
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
     BarElement,
-    Tooltip,
-    Legend
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Tooltip
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 
@@ -76,7 +76,7 @@ const LineChart = ({ data = [] }: LineChartProps) => {
                                 size: 10,
                                 family: 'Poppins',
                             },
-                            callback: (value: unknown) => {
+                            callback: (value: number) => {
                                 if (value === 0) return '0';
                                 return value / 1000 + 'k';
                             },
