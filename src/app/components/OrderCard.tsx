@@ -26,7 +26,9 @@ export default function OrderCard({
             loader={bunnyLoader}
             fill
             className="object-cover"
-            sizes="200px"
+            sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         25vw"
             loading="eager"
           />
         </div>
@@ -46,9 +48,9 @@ export default function OrderCard({
             <p className="text-black/50 line-through">
               {discount
                 ? Number(price.toFixed(2)).toLocaleString("en-NG", {
-                    style: "currency",
-                    currency: "NGN",
-                  })
+                  style: "currency",
+                  currency: "NGN",
+                })
                 : ""}
             </p>
           </div>
