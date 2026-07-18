@@ -26,6 +26,10 @@ export default function CategoriesLayout({
   const router = useRouter();
   const { clearSearch } = useSearchStore();
 
+  const activeCategoryId = data?.message?.find(
+    (cat) => cat.name.toLowerCase().replace(/\s+/g, "-") === activeId,
+  )?._id;
+
   // useEffect(() => {
   //     if (!activeId && data?.message?.length) {
   //         const firstCategory = data.message[0];
@@ -54,7 +58,7 @@ export default function CategoriesLayout({
         </div>
         <RefreshWrapper>
           <div className="hidden lg:block mb-6">
-            <Categories categories={data?.message} />
+            <Categories categories={data?.message} selectedCategoryId={activeCategoryId} />
           </div>
 
           <div className="mt-[6rem] lg:mt-0">
