@@ -18,7 +18,7 @@ import {
   updateLogisticsShippingAddress
 } from '@/lib/adminapi';
 import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, RefreshCcw, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 // Toast component
 const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
@@ -45,6 +45,29 @@ const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 
   );
 };
 
+// Static, has no dependency on component state/props — hoisted so it isn't recreated every render
+const TABS = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'roles', label: 'Roles & Access Control', icon: Shield },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'security', label: 'Security', icon: Lock },
+  { id: 'logistics', label: 'Logistics', icon: Package }
+];
+
+interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  status?: string;
+}
+
+interface PermissionItem {
+  id: string;
+  name: string;
+  description: string;
+}
+
 const SettingsPage = () => {
   const [_selectedPeriod, _setSelectedPeriod] = useState('This Week');
   const [selectedTab, setSelectedTab] = useState('profile');
@@ -59,10 +82,8 @@ const SettingsPage = () => {
   const [profileLoading, setProfileLoading] = useState(false);
 
   // Roles & Access state
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [admins, setAdmins] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [_permissions, setPermissions] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [_permissions, setPermissions] = useState<PermissionItem[]>([]);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [_selectedAdmin, _setSelectedAdmin] = useState(null);
   const [adminFormData, setAdminFormData] = useState({
@@ -73,8 +94,7 @@ const SettingsPage = () => {
   });
   const [adminLoading, setAdminLoading] = useState(false);
   const [showDeleteAdminModal, setShowDeleteAdminModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [adminToDelete, setAdminToDelete] = useState<any>(null);
+  const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
 
   // Notifications state
@@ -139,16 +159,10 @@ const SettingsPage = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'roles', label: 'Roles & Access Control', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'logistics', label: 'Logistics', icon: Package }
-  ];
-
   // Data fetching functions
-  const fetchProfileData = async () => {
+  // Wrapped in useCallback with stable (empty) deps so the tab-change effect
+  // below only re-runs when the tab actually changes, not on every render.
+  const fetchProfileData = useCallback(async () => {
     try {
       setProfileLoading(true);
       const response = await fetchAdminProfile();
@@ -171,15 +185,17 @@ const SettingsPage = () => {
     } finally {
       setProfileLoading(false);
     }
-  };
+  }, []);
 
-  const fetchWalletBalance = async () => {
+  const fetchWalletBalance = useCallback(async () => {
     setWalletLoadingStates(prev => ({ ...prev, get: true }))
     try {
       const req = await getWalletBalance();
-      const walletMessage = req.message ?? { currency: walletBalance.currency, balance: walletBalance.balance };
 
-      setWalletBalance(prev => ({ ...prev, currency: walletMessage.currency, balance: walletMessage.balance, amount: 0 }))
+      setWalletBalance(prev => {
+        const walletMessage = req.message ?? { currency: prev.currency, balance: prev.balance };
+        return { ...prev, currency: walletMessage.currency, balance: walletMessage.balance, amount: 0 };
+      })
 
     } catch (error) {
       console.error('Error fetching balance:', error);
@@ -190,9 +206,9 @@ const SettingsPage = () => {
 
     }
 
-  }
+  }, []);
 
-  const fetchAdminsData = async () => {
+  const fetchAdminsData = useCallback(async () => {
     try {
       setAdminLoading(true);
       const [adminsResponse, permissionsResponse] = await Promise.all([
@@ -201,16 +217,14 @@ const SettingsPage = () => {
       ]);
 
       if (adminsResponse.message && Array.isArray(adminsResponse.message)) {
-        setAdmins(adminsResponse.message);
+        setAdmins(adminsResponse.message as unknown as AdminUser[]);
       } else if (adminsResponse.data) {
-        setAdmins(adminsResponse.data);
+        setAdmins(adminsResponse.data as unknown as AdminUser[]);
       }
-      console.log("Permissions: ", permissionsResponse)
       if (permissionsResponse.data) {
         // Handle the API response structure with allPermissions array
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const permissionsData = permissionsResponse.data as any;
-        if (permissionsData.allPermissions && Array.isArray(permissionsData.allPermissions)) {
+        const permissionsData = permissionsResponse.data as unknown as { allPermissions?: PermissionItem[] };
+        if (Array.isArray(permissionsData.allPermissions)) {
           setPermissions(permissionsData.allPermissions);
         } else if (Array.isArray(permissionsResponse.data)) {
           // Fallback if data is directly an array
@@ -222,9 +236,9 @@ const SettingsPage = () => {
     } finally {
       setAdminLoading(false);
     }
-  };
+  }, []);
 
-  const fetchNotificationData = async () => {
+  const fetchNotificationData = useCallback(async () => {
     try {
       setNotificationLoading(true);
       // This would need to be implemented in the API
@@ -234,9 +248,9 @@ const SettingsPage = () => {
     } finally {
       setNotificationLoading(false);
     }
-  };
+  }, []);
 
-  const fetchSecurityData = async () => {
+  const fetchSecurityData = useCallback(async () => {
     try {
       setSecurityLoading(true);
       // This would need to be implemented in the API
@@ -246,16 +260,16 @@ const SettingsPage = () => {
     } finally {
       setSecurityLoading(false);
     }
-  };
+  }, []);
 
-  const fetchLogisticsData = async () => {
-
+  const fetchLogisticsData = useCallback(async () => {
     try {
       setLogisticsLoading(true);
       const response = await getLogisticsSettings();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mode = (response as any).logisticsMode || response.data?.logisticsMode || 'auto';
+      const mode = (response as unknown as { logisticsMode?: 'auto' | 'manual' }).logisticsMode
+        || response.data?.logisticsMode
+        || 'auto';
       setLogisticsSettings({
         logisticsMode: mode,
       });
@@ -264,7 +278,7 @@ const SettingsPage = () => {
     } finally {
       setLogisticsLoading(false);
     }
-  };
+  }, []);
 
   const _handleIsActiveToggle = () => {
     const newIsActive = !isActive;
@@ -296,7 +310,7 @@ const SettingsPage = () => {
 
         break;
     }
-  }, [selectedTab, fetchWalletBalance]);
+  }, [selectedTab, fetchProfileData, fetchAdminsData, fetchNotificationData, fetchSecurityData, fetchLogisticsData, fetchWalletBalance]);
 
   const renderProfileTab = () => {
     const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -513,8 +527,7 @@ const SettingsPage = () => {
       }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleDeleteAdmin = (admin: any) => {
+    const handleDeleteAdmin = (admin: AdminUser) => {
       setAdminToDelete(admin);
       setShowDeleteAdminModal(true);
     };
@@ -528,7 +541,7 @@ const SettingsPage = () => {
         fetchAdminsData();
       } catch (error: unknown) {
         console.error('Error deleting admin:', error);
-        showToast((error as any).message || 'Failed to delete admin', 'error');
+        showToast(error instanceof Error ? error.message : 'Failed to delete admin', 'error');
       } finally {
         setIsDeletingAdmin(false);
         setShowDeleteAdminModal(false);
@@ -927,23 +940,15 @@ const SettingsPage = () => {
     const handleFundWallet = async (e: React.FormEvent) => {
       e.preventDefault();
 
-      // Open the tab synchronously, right when the user clicks — before any await
-      const newTab = window.open("", "_blank", "noopener,noreferrer");
-
       setWalletLoadingStates(prev => ({ ...prev, post: true }));
       try {
         const response = await fundWallet({ amount: walletBalance.amount });
 
         if (response.message || response.data) {
-          const paymentUrl = (response.message as any).data.payment_url;
+          const paymentUrl = response.message?.data?.payment_url;
 
           if (paymentUrl) {
-            if (newTab) {
-              newTab.location.href = paymentUrl;
-            } else {
-              // Popup was blocked — fallback to same-tab redirect
-              window.location.href = paymentUrl;
-            }
+            window.location.href = paymentUrl;
             return;
           }
 
@@ -952,7 +957,6 @@ const SettingsPage = () => {
           throw new Error(response.error);
         }
       } catch (err) {
-        newTab?.close(); // clean up the blank tab if something failed
         console.error('Error updating pickup address:', err);
         showToast(err instanceof Error ? err.message : String(err), "error");
       } finally {
@@ -1282,7 +1286,7 @@ const SettingsPage = () => {
         {/* Tab Navigation */}
         <div className="pl-4">
           <div className="flex items-center gap-36 p-1">
-            {tabs.map((tab) => {
+            {TABS.map((tab) => {
               return (
                 <button
                   key={tab.id}

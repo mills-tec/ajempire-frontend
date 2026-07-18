@@ -83,7 +83,9 @@ function ProductCard({
           src={`${product.cover_image}`}
           loader={bunnyLoader}
           alt="product image"
-          sizes="200px"
+           sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         25vw"
           fill
           className={` group-hover:scale-110 bg-gray-200 lg:p-2 object-cover ${!imgLoading ? "" : "transition-transform duration-300 ease-in-out"}`}
           onLoad={() => {
