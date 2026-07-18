@@ -7,7 +7,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "aj-empire.b-cdn.net",
         pathname: "/**",
-      }
+      },
+      {
+        protocol: "https",
+        hostname: "i.pinimg.com",
+        pathname: "/**",
+      },
     ],
 
     formats: ["image/avif", "image/webp"],
