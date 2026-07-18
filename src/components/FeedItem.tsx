@@ -281,7 +281,9 @@ const FeedCard = memo(function FeedCard({
               src={item.mediaUrl}
               alt={item.title}
               fill
-              sizes="300px"
+               sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 50vw,
+         50vw"
               className={`object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
               onLoad={handleMediaLoaded}
               onError={handleMediaLoaded}

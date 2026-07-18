@@ -73,7 +73,10 @@ export default function Reviews({ items, setUpdatedReviews }: { items: IItem[]; 
             }}>
               <div className="grid grid-cols-1 md:grid-cols-3">
                 <div className="w-[8.5rem] h-[6rem] bg-gray-400 rounded-lg overflow-hidden flex relative">
-                  <Image src={item.image} alt={item.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 8.5rem" loading="eager" />
+                  <Image src={item.image} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         25vw"
+                    loading="lazy" />
                 </div>
                 <div className="md:col-span-2">
                   <h1 className="text-sm">{review.comment!.slice(0, 30).concat(review.comment!.length > 30 ? "..." : "")}</h1>

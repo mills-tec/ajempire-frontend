@@ -31,7 +31,7 @@ const RecentlyViewedMobile = ({
         <div className="overflow-x-auto py-2">
           <div className="flex gap-4">
             {products.map((product, index) => (
-              <Link
+              product && <Link
                 key={product._id ?? index}
                 href={`/product/${product._id}`}
                 className="relative w-40 flex-shrink-0 rounded-lg bg-white shadow-md transition-transform duration-200 hover:scale-[1.02]"
@@ -46,7 +46,9 @@ const RecentlyViewedMobile = ({
                     alt={product.name}
                     fill
                     className="rounded-t-lg object-cover"
-                    sizes="160px"
+                    sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         50vw"
                   />
                 </div>
 

@@ -100,7 +100,9 @@ function CartCard({
               alt="product image"
               fill
               className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
-              sizes="100px"
+               sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 33vw,
+         25vw"
             />
           </div>
           <div className="flex w-full flex-col justify-between overflow-clip">

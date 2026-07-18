@@ -359,7 +359,9 @@ export default function ProductDetailPage({ id }: { id: string }) {
                       src={currentMediaSrc}
                       loader={bunnyLoader}
 
-                      sizes="400px"
+                      sizes="(max-width: 640px) 50vw,
+         (max-width: 1024px) 50vw,
+         50vw"
 
                       alt={item.name}
                       fill
@@ -415,7 +417,9 @@ export default function ProductDetailPage({ id }: { id: string }) {
                             src={image}
                             alt={`${item.name} thumbnail ${key + 1}`}
                             loader={bunnyLoader}
-                            sizes="100px"
+                             sizes="(max-width: 640px) 30vw,
+         (max-width: 1024px) 30vw,
+         30vw"
 
                             fill
                             className="absolute object-cover"
