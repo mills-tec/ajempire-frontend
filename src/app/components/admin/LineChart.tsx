@@ -7,6 +7,7 @@ import {
     LinearScale,
     Tooltip
 } from "chart.js";
+import { memo } from "react";
 import { Bar } from "react-chartjs-2";
 
 ChartJS.register(
@@ -21,7 +22,7 @@ interface LineChartProps {
     data?: { date: string; sales: number }[];
 }
 
-const LineChart = ({ data = [] }: LineChartProps) => {
+const LineChart = memo(function LineChart({ data = [] }: LineChartProps) {
     if (!data || data.length === 0) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center text-brand_gray text-xs font-poppins min-h-[180px] border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
@@ -104,6 +105,6 @@ const LineChart = ({ data = [] }: LineChartProps) => {
             } as unknown as object}
         />
     )
-}
+})
 
 export default LineChart

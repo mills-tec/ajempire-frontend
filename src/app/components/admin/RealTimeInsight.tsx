@@ -1,12 +1,13 @@
 'use client'
 import { Eye, MousePointer2, ShoppingCart, User } from "lucide-react";
+import { memo } from "react";
 
 interface RealTimeInsightProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     orders?: any[];
 }
 
-const RealTimeInsight = ({ orders = [] }: RealTimeInsightProps) => {
+const RealTimeInsight = memo(function RealTimeInsight({ orders = [] }: RealTimeInsightProps) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -100,6 +101,6 @@ const RealTimeInsight = ({ orders = [] }: RealTimeInsightProps) => {
             </div>
         </div>
     );
-};
+});
 
 export default RealTimeInsight;

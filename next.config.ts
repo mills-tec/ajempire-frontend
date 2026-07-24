@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "aj-empire.b-cdn.net",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "i.pinimg.com",
+        pathname: "/**",
       }
     ],
 
@@ -16,8 +21,7 @@ const nextConfig: NextConfig = {
       480,
       768,
       1024,
-      1280,
-      1536,
+     
     ],
 
     imageSizes: [

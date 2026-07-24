@@ -82,7 +82,7 @@ export default function NotificationWrapper() {
           }
         } else {
           const updateAdminToken = await updateAdminPushNotification(token);
-          if (updateAdminToken.success) {
+          if (updateAdminToken.status) {
             setIsPushTokenSet(true);
           } else {
             console.warn("Server rejected push token update");

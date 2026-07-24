@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ImSpinner8 } from "react-icons/im";
 
 import { useIssueReturn, useOrders } from "@/api/customHooks";
@@ -127,32 +127,7 @@ export default function Status() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const _handleSubmit = useCallback(async () => {
-    if (!order) return;
 
-    const formData = new FormData();
-    inputs.products.forEach((p) => formData.append("product[]", p));
-    formData.append("order", order._id);
-    formData.append("reason", inputs.reason);
-    formData.append("itemUsed", JSON.stringify(inputs.itemUsed === "Yes"));
-    formData.append("phoneNumber", inputs.phoneNumber);
-    formData.append("additionalNotes", inputs.additionalNotes);
-    if (inputs.imageEvidence) {
-      formData.append("imageEvidence", inputs.imageEvidence);
-    }
-    formData.append("otherReason", inputs.otherReason);
-
-    try {
-      const success = await postIssueReturn(formData);
-      if (success) {
-        setReturnModal(false);
-        setInputs(INITIAL_RETURN_INPUTS);
-      }
-    } catch (err) {
-      // Handle error appropriately — toast, alert, etc.
-      console.error("Return submission failed:", err);
-    }
-  }, [order, inputs, postIssueReturn]);
 
   const isDelivered = useMemo(
     () => order?.orderStatus.toLowerCase().includes("delivered") ?? false,

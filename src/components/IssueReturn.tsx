@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react'
-import Modal from './Modal';
-import { IItem, Product } from '@/lib/types';
 import { useIssueReturn } from '@/api/customHooks';
-import { ImSpinner8 } from 'react-icons/im';
+import { IItem, Product } from '@/lib/types';
 import Link from 'next/link';
+import { useRef, useState } from 'react';
+import { ImSpinner8 } from 'react-icons/im';
 import MobileHeader from './MobileHeader';
+import Modal from './Modal';
 
 const Children = ({ data, setReturnModal }: { data: { _id: string, items: IItem[] }, setReturnModal: (modal: boolean) => void }) => {
     const { postIssueReturn, loading } = useIssueReturn();

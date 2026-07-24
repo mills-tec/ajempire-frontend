@@ -19,7 +19,7 @@ export async function generateMetadata({
     const feed = await getFeedById(type, id);
 
     if (!feed) return {};
-
+    console.log(feed);
     return buildFeedMetadata(feed, url); // ✅ just call it as normal
 }
 
@@ -32,8 +32,8 @@ export default async function Page({
 
     return (
         <div>
-            
-            {type !== "gallery" ? <FeedItem  /> : <Gallery />}
+
+            {type !== "gallery" ? <FeedItem /> : <Gallery />}
         </div>
     );
 }

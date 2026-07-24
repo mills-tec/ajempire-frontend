@@ -20,6 +20,7 @@ export default function AdminLogin() {
   // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
   const passwordRegex = /^.{6,}$/;
 
+  // Validate password whenever it changes
   useEffect(() => {
     setIsValidPassword(passwordRegex.test(passwordinput));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,12 +31,6 @@ export default function AdminLogin() {
     setIsValidEmail(emailRegex.test(emailinput));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailinput]);
-
-  // Validate password whenever it changes
-  useEffect(() => {
-    setIsValidPassword(passwordRegex.test(passwordinput));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passwordinput]);
 
   // Only enable login if both are valid
   const isFormValid = isValidEmail && isValidPassword;
@@ -56,36 +51,11 @@ export default function AdminLogin() {
             // Handle success - API returns { "message": token }
             if (response.message) {
                 const token = response.message;
-                console.log('Token extracted:', token);
-                const user = {
-                    id: response.data?.user?.id || '',
-                    email: emailinput,
-                    name: 'Administrator',
-                    role: response.data?.user?.role || 'Administrator'
-                };
-
                 localStorage.setItem("adminToken", token);
-                localStorage.setItem("adminUser", JSON.stringify(user));
                 document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
-            } else if (response.data && response.data.token) {
-                // Alternative: check if token is in response.data.token
-                const token = response.data.token;
-                console.log('Token extracted from data:', token);
-                const user = {
-                    id: response.data?.user?.id || '',
-                    email: emailinput,
-                    name: 'Administrator',
-                    role: response.data?.user?.role || 'Administrator'
-                };
-
-                localStorage.setItem("adminToken", token);
-                localStorage.setItem("adminUser", JSON.stringify(user));
-                document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-                toast.success("Login successful!");
-                route.push("/admin");
-            } else {
+            }  else {
                 console.log('No token found in response');
                 toast.error((response.error as any).message || "Login failed");
             }

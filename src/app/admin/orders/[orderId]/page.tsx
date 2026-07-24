@@ -120,15 +120,13 @@ const SingleOrderPage = () => {
       } else {
         apiStatus = newStatus;
       }
-      const response = await updateOrder(order._id, { orderStatus: apiStatus });
+      const response = await updateOrder(order.order_id, { orderStatus: apiStatus });
+    
       if (response.status) {
         await fetchOrderDetails();
+      } else {
+        toast.error(response.error || 'Failed to update order status');
       }
-      // if (response.success) {
-      //   await fetchOrderDetails();
-      // } else {
-      //   toast.error(response.error || 'Failed to update order status');
-      // }
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('An error occurred while updating order status');

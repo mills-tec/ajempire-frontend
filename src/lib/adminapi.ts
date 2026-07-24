@@ -2,7 +2,9 @@
 //AdminAPI
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 
+import axios, { AxiosResponse } from 'axios';
 // Import all types from the types file
+import { PromotionPayload } from '@/app/admin/promotions/types';
 import {
   AddressValidation,
   Admin,
@@ -15,9 +17,7 @@ import {
   Coupon,
   CreateAdminData,
   CreateCategoryData,
-  CreateCouponData,
-  CreateEducationData,
-  CreateFlashSaleData,
+  CreateCouponData, CreateFlashSaleData,
   CreateProductData, CreateShippingFeeData,
   Customer,
   Education,
@@ -113,7 +113,18 @@ export const getAllCategories = (): Promise<ApiResponse<Category[]>> =>
 export const getCategoryById = (id: string): Promise<ApiResponse<Category>> =>
   apiCall(`/category/${id}`);
 
-export const createCategory = (data: CreateCategoryData | FormData): Promise<ApiResponse<Category>> => {
+export const getImagePresignedUpload = (file: File): Promise<ApiResponse<unknown, { uploadUrl: string; objectKey: string; publicUrl: string; expiresIn: number; }>> =>
+  apiCall(`/admin/uploads/image/sign`, { method: "POST", body: JSON.stringify({ fileName: file.name, contentType: file.type }) });
+
+export const getVideoPresignedUpload = (file: File): Promise<ApiResponse<unknown, { videoId: string; libraryId: string; expirationTime: string; signature: string; }>> =>
+  apiCall(`/admin/uploads/video/sign`, { method: "POST", body: JSON.stringify({ fileName: file.name, contentType: file.type }) });
+
+export const uploadFile = (file: File, url: string): Promise<AxiosResponse<{}>> =>
+  axios.put(url, file, {
+    headers: { "Content-Type": file.type },
+  });
+
+export const createCategory = (data: CreateCategoryData): Promise<ApiResponse<Category>> => {
   // Check if data is FormData (for file uploads) or regular JSON data
   if (data instanceof FormData) {
     return apiCall('/admin/category', {
@@ -131,7 +142,7 @@ export const createCategory = (data: CreateCategoryData | FormData): Promise<Api
 
 export const updateCategory = (id: string, data: UpdateCategoryData): Promise<ApiResponse<Category>> =>
   apiCall(`/admin/category/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -153,21 +164,11 @@ export const getProducts = (cursor?: string): Promise<ApiResponse<Product[]>> =>
 export const getProductById = (id: string): Promise<ApiResponse<Product>> =>
   apiCall(`/admin/product/${id}`);
 
-export const createProduct = (data: CreateProductData | FormData): Promise<ApiResponse<Product>> => {
-  // Check if data is FormData (for file uploads) or regular JSON data
-  if (data instanceof FormData) {
-    return apiCall('/admin/product', {
-      method: 'POST',
-      body: data,
-      // headers: {}, // Let browser set Content-Type for FormData
-    });
-  } else {
-    return apiCall('/admin/product', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-};
+export const createProduct = (data: CreateProductData): Promise<ApiResponse<Product>> =>
+  apiCall('/admin/product', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 
 export const updateProduct = (id: string, data: UpdateProductData): Promise<ApiResponse<Product>> =>
   apiCall(`/admin/product/${id}`, {
@@ -228,7 +229,7 @@ export const createShippingFee = (data: CreateShippingFeeData): Promise<ApiRespo
 
 export const updateShippingFee = (id: string, data: UpdateShippingFeeData): Promise<ApiResponse<ShippingFee>> =>
   apiCall(`/admin/shippingFees/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -266,7 +267,9 @@ export const getPromotions = (params?: PromotionQueryParams): Promise<ApiRespons
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
+export const createPromotion = (data: PromotionPayload): Promise<ApiResponse<{
+
+}>> => {
   if (data instanceof FormData) {
     return apiCall('/admin/promotions', {
       method: 'POST',
@@ -279,8 +282,7 @@ export const createPromotion = (data: any): Promise<ApiResponse<any>> => {
   });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>> => {
+export const updatePromotion = (id: string, data: PromotionPayload): Promise<ApiResponse<any>> => {
   if (data instanceof FormData) {
     return apiCall(`/admin/promotions/${id}`, {
       method: 'PATCH',
@@ -288,7 +290,7 @@ export const updatePromotion = (id: string, data: any): Promise<ApiResponse<any>
     });
   }
   return apiCall(`/admin/promotions/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 };
@@ -307,13 +309,22 @@ export const deleteEducation = (id: string): Promise<ApiResponse<void>> =>
     method: 'DELETE',
   });
 
-export const updateEducation = (id: string, data: FormData): Promise<ApiResponse<Education>> =>
+export const updateEducation = (id: string, data: {
+  title?: string;
+  description?: string;
+  image?: string;
+  video?: string;
+}): Promise<ApiResponse<Education>> =>
   apiCall(`/admin/education/${id}`, {
-    method: 'PUT',
-    body: data,
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 
-export const createEducation = (data: CreateEducationData): Promise<ApiResponse<Education>> =>
+export const createEducation = (data: {
+  title: string;
+  description: string;
+  image?: string;
+}): Promise<ApiResponse<Education>> =>
   apiCall('/admin/education', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -324,6 +335,8 @@ export const createEducationWithFiles = (formData: FormData): Promise<ApiRespons
     method: 'POST',
     body: formData,
   });
+
+
 
 // Coupon endpoints
 export const createCoupon = (data: CreateCouponData): Promise<ApiResponse<Coupon>> =>
@@ -348,7 +361,7 @@ export const addAdmin = (data: CreateAdminData): Promise<ApiResponse<Admin>> =>
 
 export const updateAdminPermission = (id: string, data: CreateAdminData): Promise<ApiResponse<Admin>> =>
   apiCall(`/admin/settings/roleandaccess/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -356,7 +369,10 @@ export const getAllAdmins = (): Promise<ApiResponse<Admin[]>> =>
   apiCall('/admin/settings/roleandaccess');
 
 export const fetchPermissions = (): Promise<ApiResponse<{ id: string; name: string; description: string }[]>> =>
-  apiCall('/admin/settings/permissions');
+  apiCall('/admin/permissions');
+
+export const fetchDefaultPermissions = (role: string): Promise<ApiResponse<string[]>> =>
+  apiCall(`/admin/default-permission/${role}`);
 
 export const deleteAdmin = (id: string): Promise<ApiResponse<void>> =>
   apiCall(`/admin/settings/roleandaccess/${id}`, {
@@ -380,15 +396,15 @@ export const updateAdminPushNotification = (token: string): Promise<ApiResponse<
   body: JSON.stringify({ token }),
 });
 
-export const updateAdminProfile = (data: AdminProfile): Promise<ApiResponse<AdminProfile>> =>
+export const updateAdminProfile = (data: {name: string}): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile', {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
 export const updateAdminSecuritySettings = (data: AdminSecuritySettings): Promise<ApiResponse<AdminSecuritySettings>> =>
   apiCall('/admin/settings/security', {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -398,7 +414,7 @@ export const setupAdminPassword = (data: { token: string, password: string }): P
 })
 export const updateAdminNotificationSettings = (data: AdminNotificationSettings): Promise<ApiResponse<AdminNotificationSettings>> =>
   apiCall('/admin/settings/notifications', {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -435,7 +451,7 @@ export const getCustomerById = (id: string): Promise<ApiResponse<Customer>> =>
 
 export const updateCustomer = (id: string, data: UpdateCustomerData): Promise<ApiResponse<Customer>> =>
   apiCall(`/admin/customers/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 
@@ -449,7 +465,7 @@ export const getCustomerOrders = (id: string): Promise<ApiResponse<IOrder[]>> =>
 
 export const updateCustomerStatus = (id: string, status: string): Promise<ApiResponse<Customer>> =>
   apiCall(`/admin/customers/${id}/status`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify({ status }),
   });
 
@@ -463,10 +479,13 @@ export const toggleCustomerStatus = (id: string): Promise<ApiResponse<any>> =>
 export const getBanners = (): Promise<ApiResponse<Banner[]>> =>
   apiCall('/admin/banner');
 
-export const createBanner = (data: FormData): Promise<ApiResponse<Banner>> =>
+export const createBanner = (images: {
+  url: string;
+  link?: string;
+}[]): Promise<ApiResponse<Banner>> =>
   apiCall('/admin/banner', {
     method: 'POST',
-    body: data,
+    body: JSON.stringify({ images }),
   });
 
 export const updateBanner = (id: string, data: FormData): Promise<ApiResponse<Banner>> =>

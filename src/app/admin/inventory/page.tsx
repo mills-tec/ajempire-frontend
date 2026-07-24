@@ -2,12 +2,41 @@
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
-import { Category, deleteProduct, deleteReview, getAllCategories, getProductById, getProducts, Product, Review, updateProduct } from '@/lib/adminapi';
+import { Category, deleteProduct, deleteReview, getAllCategories, getImagePresignedUpload, getProductById, getProducts, Product, Review, updateProduct, uploadFile } from '@/lib/adminapi';
+import { bunnyLoader } from '@/lib/bunnyLoader';
+import { compressImage } from '@/lib/utils';
+import { uploadProductVideoInBackground } from '@/lib/videoUploadManager';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Edit2, Eye, Filter, Folder, LayoutGrid, Loader2, Package, Plus, Search, ShoppingCart, Trash2, X } from 'lucide-react';
+import { AlertCircle, Edit2, Eye, Film, Filter, Folder, LayoutGrid, Loader2, Package, Plus, Search, ShoppingCart, Trash2, UploadCloud, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+// ─── Media preview card ───────────────────────────────────────────────────────
+
+interface PreviewCardProps {
+    src: string;
+    name: string;
+    onRemove: () => void;
+}
+
+const PreviewCard = ({ src, name, onRemove }: PreviewCardProps) => (
+    <div className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0">
+        <Image src={src} alt={name} fill className="object-cover" loader={src.startsWith('data:') ? undefined : bunnyLoader} unoptimized={src.startsWith('data:')} />
+        <button
+            type="button"
+            onClick={onRemove}
+            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            title={`Remove ${name}`}
+        >
+            <X size={16} className="text-white" />
+        </button>
+        <span className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[9px] truncate px-1 py-0.5">
+            {name}
+        </span>
+    </div>
+);
 
 interface MappedProduct {
     id: string;
@@ -48,6 +77,18 @@ const InventoryPage = () => {
     const [editSpecialOfferTime, setEditSpecialOfferTime] = useState('');
     const [reviewsLoading] = useState(false);
     const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+    // ── Edit modal media state ────────────────────────────────────────────────
+    const [editCoverImage, setEditCoverImage] = useState<
+        { type: 'existing'; url: string } | { type: 'new'; file: File; preview: string } | null
+    >(null);
+    const [editImages, setEditImages] = useState<
+        ({ id: string; type: 'existing'; url: string } | { id: string; type: 'new'; file: File; preview: string })[]
+    >([]);
+    const [editVideo, setEditVideo] = useState<
+        { type: 'existing'; url: string } | { type: 'new'; file: File } | null
+    >(null);
 
     useEffect(() => {
         setMounted(true);
@@ -114,8 +155,10 @@ const InventoryPage = () => {
                 setProducts([]); // Reset for fresh load
             }
 
-            const productsResponse = await getProducts(cursor);
-            const categoriesResponse = await getAllCategories();
+            const [productsResponse, categoriesResponse] = await Promise.all([
+                getProducts(cursor),
+                getAllCategories(),
+            ]);
 
             console.log('Products Response:', productsResponse);
             console.log('Categories Response:', categoriesResponse);
@@ -191,8 +234,7 @@ const InventoryPage = () => {
     const averageRating = products?.length > 0
         ? (products.reduce((sum, p) => sum + (p.rating || 0), 0) / products.length).toFixed(1)
         : '0.0';
-    const _totalItemsSold = products?.reduce((sum, p) => sum + (p.itemsSold || 0), 0) || 0;
-    const _featuredProducts = products?.filter(p => p.isFeatured).length || 0;
+
 
     // Filter products based on search
     const filteredProducts = products?.filter(product => {
@@ -208,10 +250,7 @@ const InventoryPage = () => {
             status.toLowerCase().includes(searchLower);
     }) || [];
 
-    // Debug logging
-    console.log('Current products state:', products);
-    console.log('Filtered products:', filteredProducts);
-    console.log('Search term:', searchTerm);
+
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleDeleteClick = (product: any) => {
@@ -219,12 +258,74 @@ const InventoryPage = () => {
         setShowDeleteModal(true);
     };
 
+    // ── Shared upload helper ───────────────────────────────────────────────────
+    // Compresses images before upload (videos pass through unchanged), then
+    // uploads to the presigned storage URL and returns the resulting object key.
+    const uploadImageFileToStorage = async (file: File): Promise<string> => {
+        const fileToUpload = file.type.startsWith("image")
+            ? await compressImage(file, "medium")
+            : file;
+
+        const tr = await getImagePresignedUpload(fileToUpload);
+        if (!tr.status || !tr.message) {
+            throw new Error("Failed to get upload URL");
+        }
+
+        const uploadResult = await uploadFile(fileToUpload, tr.message.uploadUrl);
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            throw new Error("Upload failed");
+        }
+
+        return tr.message.objectKey;
+    };
+
+    // ── Edit modal media handlers ─────────────────────────────────────────────
+    const handleEditCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => setEditCoverImage({ type: 'new', file, preview: reader.result as string });
+        reader.readAsDataURL(file);
+    };
+
+    const removeEditCoverImage = () => setEditCoverImage(null);
+
+    const handleEditAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditImages(prev => [...prev, { id: crypto.randomUUID(), type: 'new', file, preview: reader.result as string }]);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        e.target.value = '';
+    };
+
+    const removeEditImage = (id: string) => setEditImages(prev => prev.filter(img => img.id !== id));
+
+    const handleEditVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) setEditVideo({ type: 'new', file });
+        e.target.value = '';
+    };
+
+    const removeEditVideo = () => setEditVideo(null);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleEditClick = (product: any) => {
         setSelectedProduct(product);
         setEditIsTimedSpecialOffer(product?.fullProduct?.isTimedSpecialOffer === true);
         setEditSpecialOfferDate(product?.fullProduct?.specialOfferDate || '');
         setEditSpecialOfferTime(product?.fullProduct?.specialOfferTime || '');
+        setEditCoverImage(product?.fullProduct?.cover_image ? { type: 'existing', url: product.fullProduct.cover_image } : null);
+        setEditImages(
+            ((product?.fullProduct?.images ?? []) as string[]).map((url, i) => ({ id: `existing-${i}`, type: 'existing' as const, url }))
+        );
+        setEditVideo(product?.fullProduct?.video ? { type: 'existing', url: product.fullProduct.video } : null);
         setShowEditModal(true);
     };
 
@@ -285,6 +386,13 @@ const InventoryPage = () => {
 
     const handleEditSave = async () => {
         if (!selectedProduct) return;
+
+        if (!editCoverImage) {
+            toast.error('Cover image is required');
+            return;
+        }
+
+        setIsSavingEdit(true);
         try {
             // Collect form data
             const form = document.querySelector('#edit-product-form') as HTMLFormElement;
@@ -350,9 +458,34 @@ const InventoryPage = () => {
                 return;
             }
 
+            // Compress + upload any newly-selected cover image and additional
+            // images in parallel; existing (untouched) media passes through
+            // as-is. A newly-selected video is deliberately NOT awaited here —
+            // it uploads in the background (global pill/manager) and attaches
+            // itself to the product via its own updateProduct call once done,
+            // the same pattern used on product creation.
+            const [coverImageValue, imageValues] = await Promise.all([
+                editCoverImage.type === 'new' ? uploadImageFileToStorage(editCoverImage.file) : Promise.resolve(editCoverImage.url),
+                Promise.all(editImages.map(img => (img.type === 'new' ? uploadImageFileToStorage(img.file) : Promise.resolve(img.url)))),
+            ]);
+
+            updatedProduct.cover_image = coverImageValue;
+            updatedProduct.images = imageValues;
+            if (editVideo === null) {
+                updatedProduct.video = '';
+            } else if (editVideo.type === 'existing') {
+                updatedProduct.video = editVideo.url;
+            }
+            // editVideo.type === 'new' → leave updatedProduct.video unset;
+            // the background upload attaches it once it finishes.
+
             // Call update product API
             console.log('Updating product:', updatedProduct);
             await updateProduct(selectedProduct.id, updatedProduct);
+
+            if (editVideo?.type === 'new') {
+                void uploadProductVideoInBackground(editVideo.file, selectedProduct.id);
+            }
 
             // Update local state immediately to reflect changes
             setProducts(prev => {
@@ -379,37 +512,17 @@ const InventoryPage = () => {
         } catch (error) {
             console.error('Error updating product:', error);
             // Show error toast
-            toast.error('Failed to update product');
+            toast.error(error instanceof Error ? error.message : 'Failed to update product');
             // If API fails, refresh data to restore correct state
             fetchInventoryData();
+        } finally {
+            setIsSavingEdit(false);
         }
     };
 
-    const _confirmDelete = async () => {
-        if (selectedProduct) {
-            try {
-                // Call delete product API
-                console.log('Deleting product:', selectedProduct.id);
-                await deleteProduct(selectedProduct.id);
 
-                // Remove from local state
-                setProducts(prev => prev.filter(p => p.id !== selectedProduct.id));
-                setShowDeleteModal(false);
-                setSelectedProduct(null);
 
-                // Refresh data to ensure consistency
-                fetchInventoryData();
-            } catch (error) {
-                console.error('Error deleting product:', error);
-                // You could add error handling here (e.g., show error message)
-            }
-        }
-    };
 
-    const _cancelDelete = () => {
-        setShowDeleteModal(false);
-        setSelectedProduct(null);
-    };
 
     const getStatusStyle = (status: string) => {
         switch (status) {
@@ -437,7 +550,7 @@ const InventoryPage = () => {
         }
     };
 
-    
+
     return (
         <div className="min-h-screen bg-gray-50/30 font-poppins pr-5 pb-10">
             {!mounted ? (
@@ -510,7 +623,7 @@ const InventoryPage = () => {
                                 <AlertCircle size={18} />
                                 Refresh Stats
                             </button>
-                            <Link href="/admin/add-product" className="bg-brand_pink hover:bg-brand_pink/90 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-md active:scale-95">
+                            <Link href="/admin/inventory/add-product" className="bg-brand_pink hover:bg-brand_pink/90 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-md active:scale-95">
                                 <Plus size={18} />
                                 Add New Product
                             </Link>
@@ -722,6 +835,145 @@ const InventoryPage = () => {
                                         </button>
                                     </div>
 
+                                    {/* ── Media ─────────────────────────────────────────────── */}
+                                    <div className="mb-4 pb-4 border-b border-gray-100 space-y-5">
+                                        {/* Cover image */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                Cover Image <span className="text-red-500">*</span>
+                                            </label>
+                                            {editCoverImage ? (
+                                                <div className="relative w-24 h-24">
+                                                    <Image
+                                                        src={editCoverImage.type === 'new' ? editCoverImage.preview : editCoverImage.url}
+                                                        alt="Cover preview"
+                                                        fill
+                                                        className="object-cover rounded-lg border border-gray-200"
+                                                        loader={editCoverImage.type === 'new' ? undefined : bunnyLoader}
+                                                        unoptimized={editCoverImage.type === 'new'}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeEditCoverImage}
+                                                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="rounded-lg flex flex-col items-center justify-center cursor-pointer bg-gray-100 p-6 py-10 w-max gap-2">
+                                                    <UploadCloud size={24} className="text-brand_pink" />
+                                                    <div className="flex items-center gap-1 text-brand_pink">
+                                                        <span className="text-[10px]">Upload Cover Image</span>
+                                                    </div>
+                                                    <input type="file" accept="image/*" onChange={handleEditCoverImageChange} className="hidden" />
+                                                </label>
+                                            )}
+                                        </div>
+
+                                        {/* Additional images */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                Additional Images
+                                                <span className="ml-1 text-gray-400 font-normal">(up to 10)</span>
+                                            </label>
+
+                                            {editImages.length > 0 && (
+                                                <div className="flex flex-wrap gap-3 mb-3">
+                                                    {editImages.map(img => (
+                                                        <PreviewCard
+                                                            key={img.id}
+                                                            src={img.type === 'new' ? img.preview : img.url}
+                                                            name={img.type === 'new' ? img.file.name : 'Image'}
+                                                            onRemove={() => removeEditImage(img.id)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600 ${editImages.length >= 10 ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                <Plus size={16} className="text-brand_pink" />
+                                                {editImages.length === 0 ? 'Add images' : 'Add more'}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    onChange={handleEditAdditionalImagesChange}
+                                                    className="hidden"
+                                                    disabled={editImages.length >= 10}
+                                                />
+                                            </label>
+
+                                            {editImages.length > 0 && (
+                                                <p className="mt-1 text-xs text-gray-400">
+                                                    {editImages.length} / 10 image{editImages.length !== 1 ? 's' : ''} selected
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Video */}
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                                                Product Video
+                                                <span className="ml-1 text-gray-400 font-normal">(optional)</span>
+                                            </label>
+
+                                            {editVideo?.type === 'new' ? (
+                                                <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                                    <div className="shrink-0 w-10 h-10 rounded-lg bg-brand_pink/10 flex items-center justify-center">
+                                                        <Film size={18} className="text-brand_pink" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-medium text-gray-800 truncate">{editVideo.file.name}</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {(editVideo.file.size / (1024 * 1024)).toFixed(1)} MB
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeEditVideo}
+                                                        className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                        title="Remove video"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : editVideo?.type === 'existing' ? (
+                                                <div className="relative h-80">
+
+                                                    <iframe
+                                                        src={`${editVideo.url}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
+                                                        loading="lazy"
+                                                        style={{ border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%' }}
+                                                        allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+                                                    />
+                                                    {/* <video src={editVideo.url} controls className="w-full max-h-48 rounded-lg border border-gray-200" /> */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeEditVideo}
+                                                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                                        title="Remove video"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600">
+                                                    <Film size={16} className="text-brand_pink" />
+                                                    Upload video
+                                                    <input
+                                                        type="file"
+                                                        accept="video/*"
+                                                        onChange={handleEditVideoChange}
+                                                        className="hidden"
+                                                    />
+                                                </label>
+                                            )}
+
+                                            <p className="mt-1 text-xs text-gray-400">MP4, MOV, WebM · max 100 MB</p>
+                                        </div>
+                                    </div>
+
                                     <form id="edit-product-form" className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
@@ -892,15 +1144,24 @@ const InventoryPage = () => {
                                     <div className="flex gap-3 mt-6">
                                         <button
                                             onClick={() => setShowEditModal(false)}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                            disabled={isSavingEdit}
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             onClick={handleEditSave}
-                                            className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/80"
+                                            disabled={isSavingEdit}
+                                            className="flex-1 px-4 py-2 bg-brand_pink text-white rounded-lg hover:bg-brand_pink/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
-                                            Save Changes
+                                            {isSavingEdit ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Saving...
+                                                </>
+                                            ) : (
+                                                'Save Changes'
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -923,6 +1184,64 @@ const InventoryPage = () => {
                                     </div>
 
                                     <div className="space-y-4">
+                                        {/* ── Media ─────────────────────────────────────────── */}
+                                        {(selectedProduct?.fullProduct?.cover_image || (selectedProduct?.fullProduct?.images?.length ?? 0) > 0 || selectedProduct?.fullProduct?.video) && (
+                                            <div className="pb-4 border-b border-gray-100 space-y-4">
+                                                {selectedProduct?.fullProduct?.cover_image && (
+                                                    <div>
+                                                        <p className="text-sm text-gray-500 mb-2">Cover Image</p>
+                                                        <div className="relative w-24 h-24">
+                                                            <Image
+                                                                src={selectedProduct.fullProduct.cover_image}
+                                                                alt="Cover"
+                                                                fill
+                                                                className="object-cover rounded-lg border border-gray-200"
+                                                                loader={bunnyLoader}
+                                                                sizes="(max-width: 480px) 100vw,
+                                                                        (max-width: 768px) 50vw,
+                                                                        (max-width: 1024px) 40vw,
+                                                                        384px"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {(selectedProduct?.fullProduct?.images?.length ?? 0) > 0 && (
+                                                    <div>
+                                                        <p className="text-sm text-gray-500 mb-2">Additional Images</p>
+                                                        <div className="flex flex-wrap gap-3">
+                                                            {selectedProduct!.fullProduct!.images!.map((src, idx) => (
+                                                                <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                                                                    <Image
+                                                                        src={src}
+                                                                        alt={`Image ${idx + 1}`}
+                                                                        fill
+                                                                        className="object-cover"
+                                                                        loader={bunnyLoader}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedProduct?.fullProduct?.video && (
+                                                    <div >
+                                                        <p className="text-sm text-gray-500 mb-2">Video</p>
+                                                        <div className="relative w-full aspect-video bg-slate-300">
+                                                            <iframe
+                                                                src={`${selectedProduct.fullProduct.video}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
+                                                                loading="lazy"
+                                                                style={{ border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%' }}
+                                                                allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+                                                            />
+                                                        </div>
+
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <p className="text-sm text-gray-500">Product Name</p>

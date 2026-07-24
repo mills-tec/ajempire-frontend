@@ -3,7 +3,9 @@
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
 import { Category } from '@/lib/admin-types';
-import { createCategory, deleteCategory, getAllCategories, updateCategoryWithFiles } from '@/lib/adminapi';
+import { createCategory, deleteCategory, getAllCategories, getImagePresignedUpload, updateCategory, uploadFile } from '@/lib/adminapi';
+import { bunnyLoader } from '@/lib/bunnyLoader';
+import { compressImage } from '@/lib/utils';
 import { AlertCircle, ChevronLeft, ChevronRight, Edit2, Eye, Filter, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState } from 'react';
@@ -144,18 +146,34 @@ const CategoriesPage = () => {
     }
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      if (formData.description) {
-        formDataToSend.append('description', formData.description);
-      }
+      let objectKey: string | undefined;
+
       if (formData.image) {
-        formDataToSend.append('image', formData.image);
+        const fileToUpload = formData.image.type.startsWith("image")
+          ? await compressImage(formData.image, "medium")
+          : formData.image;
+
+        const tr = await getImagePresignedUpload(fileToUpload);
+        if (!tr.status || !tr.message) {
+          throw new Error("Failed to get upload URL");
+        }
+
+        const uploadResult = await uploadFile(fileToUpload, tr.message.uploadUrl);
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+          // handle upload failure — don't create the category
+          throw new Error("Image upload failed");
+        }
+
+        objectKey = tr.message.objectKey;
       }
 
-      const response = await createCategory(formDataToSend);
+      const category = await createCategory({
+        name: formData.name,
+        description: formData.description,
+        image: objectKey,
+      });
 
-      if (response.message) {
+      if (category.status) {
         setFormData({ name: '', description: '', image: null });
         setShowAddModal(false);
         fetchCategories();
@@ -163,6 +181,8 @@ const CategoriesPage = () => {
       } else {
         toast.error('Error creating category. Please try again.');
       }
+
+
     } catch (error) {
       console.error('Error creating category:', error);
       toast.error('Error creating category. Please try again.');
@@ -178,18 +198,33 @@ const CategoriesPage = () => {
     setLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', editFormData.name);
-      if (editFormData.description) {
-        formDataToSend.append('description', editFormData.description);
-      }
+      let objectKey: string | undefined;
+
       if (editFormData.image) {
-        formDataToSend.append('image', editFormData.image);
+        const fileToUpload = editFormData.image.type.startsWith("image")
+          ? await compressImage(editFormData.image, "medium")
+          : editFormData.image;
+
+        const tr = await getImagePresignedUpload(fileToUpload);
+        if (!tr.status || !tr.message) {
+          throw new Error("Failed to get upload URL");
+        }
+
+        const uploadResult = await uploadFile(fileToUpload, tr.message.uploadUrl);
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+          throw new Error("Image upload failed");
+        }
+
+        objectKey = tr.message.objectKey;
       }
 
-      const response = await updateCategoryWithFiles(selectedCategory.id, formDataToSend);
+      const response = await updateCategory(selectedCategory.id, {
+        name: editFormData.name,
+        description: editFormData.description,
+        image: objectKey,
+      });
 
-      if (response.message) {
+      if (response.status) {
         setEditFormData({ name: '', description: '', image: null });
         setShowEditModal(false);
         setSelectedCategory(null);
@@ -207,7 +242,6 @@ const CategoriesPage = () => {
   };
 
 
-  console.log(loading);
 
   return (
     <main className="w-full min-h-screen bg-gray-50/30 font-poppins pr-5 lg:overflow-y-auto">
@@ -277,8 +311,10 @@ const CategoriesPage = () => {
                           <Image
                             src={item.image}
                             alt={item.name}
+                            sizes="40px"
                             fill
                             className="object-cover"
+                            loader={bunnyLoader}
                           />
                         </div>
                       ) : (
@@ -598,12 +634,15 @@ const CategoriesPage = () => {
               {selectedCategory.image && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Image</h3>
-                  <div className="w-full h-48 relative rounded-lg overflow-hidden">
+                  <div className="w-full h-48 relative rounded-lg overflow-hidden bg-gray-100">
                     <Image
                       src={selectedCategory.image}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       alt={selectedCategory.name}
                       fill
+                      quality={65}
                       className="object-cover"
+                      loader={bunnyLoader}
                     />
                   </div>
                 </div>

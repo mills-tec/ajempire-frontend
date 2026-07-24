@@ -4,11 +4,13 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import React, { useState } from "react";
 import Header from "../components/admin/Header";
+import OrphanedVideoUploadBanner from "../components/admin/OrphanedVideoUploadBanner";
 import Sidebar from "../components/admin/Sidebar";
+import VideoUploadPill from "../components/admin/VideoUploadPill";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
+    
     return (
         <div className="flex bg-[#F4F5FA] min-h-screen w-full lg:gap-x-0">
             <AuthProvider>
@@ -35,6 +37,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <Header onMenuClick={() => setSidebarOpen(true)} />
                         <main className="min-h-screen pt-6 px-5">{children}</main>
                     </div>
+
+                    {/* Survive navigation between admin pages — the upload itself
+                        lives in a module-level store, not this layout's lifecycle. */}
+                    <VideoUploadPill />
+                    <OrphanedVideoUploadBanner />
                 </ProtectedRoute>
             </AuthProvider>
         </div>

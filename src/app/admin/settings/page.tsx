@@ -1,24 +1,24 @@
 'use client'
 
-import ProtectedRoute from '@/components/auth-component/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { PickupAddress } from '@/lib/admin-types';
 import {
   addAdmin,
   deleteAdmin,
   fetchAdminProfile,
+  fetchDefaultPermissions,
   fetchPermissions,
   fundWallet,
   getAllAdmins,
   getLogisticsSettings,
   getWalletBalance,
-  updateAdminNotificationSettings,
-  updateAdminProfile,
-  updateAdminSecuritySettings,
+  updateAdminNotificationSettings, updateAdminPermission, updateAdminProfile, updateAdminSecuritySettings,
   updateLogisticsSettings,
   updateLogisticsShippingAddress
 } from '@/lib/adminapi';
 import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, RefreshCcw, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 // Toast component
 const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) => {
@@ -48,7 +48,7 @@ const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 
 // Static, has no dependency on component state/props — hoisted so it isn't recreated every render
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'roles', label: 'Roles & Access Control', icon: Shield },
+  { id: 'roles', label: 'Roles & Access Control', icon: Shield, },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'logistics', label: 'Logistics', icon: Package }
@@ -60,6 +60,8 @@ interface AdminUser {
   email: string;
   role: string;
   status?: string;
+  active?: boolean;
+  permissions?: string[];
 }
 
 interface PermissionItem {
@@ -69,12 +71,13 @@ interface PermissionItem {
 }
 
 const SettingsPage = () => {
+  const { user } = useAuth()
   const [_selectedPeriod, _setSelectedPeriod] = useState('This Week');
   const [selectedTab, setSelectedTab] = useState('profile');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   // Profile state
   const [profileData, setProfileData] = useState({
-    firstName: '',
+    name: '',
     email: '',
     phone: '',
     profilePicture: '' as string | null
@@ -85,7 +88,6 @@ const SettingsPage = () => {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [_permissions, setPermissions] = useState<PermissionItem[]>([]);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
-  const [_selectedAdmin, _setSelectedAdmin] = useState(null);
   const [adminFormData, setAdminFormData] = useState({
     name: '',
     email: '',
@@ -96,6 +98,21 @@ const SettingsPage = () => {
   const [showDeleteAdminModal, setShowDeleteAdminModal] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
+
+  // New admin's role-based default permissions, toggleable on/off
+  const [newAdminDefaultPermissions, setNewAdminDefaultPermissions] = useState<string[]>([]);
+  const [newAdminSelectedPermissions, setNewAdminSelectedPermissions] = useState<string[]>([]);
+  const [defaultPermissionsLoading, setDefaultPermissionsLoading] = useState(false);
+
+  // Edit admin permissions state
+  const [showEditAdminModal, setShowEditAdminModal] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  // The selected admin's role's default permissions - the only ones that can't be unchecked
+  const [editDefaultPermissions, setEditDefaultPermissions] = useState<string[]>([]);
+  const [editDefaultPermissionsLoading, setEditDefaultPermissionsLoading] = useState(false);
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false);
 
   // Notifications state
   const [notificationSettings, setNotificationSettings] = useState({
@@ -133,14 +150,7 @@ const SettingsPage = () => {
   })
 
 
-  const [isActive, setIsActive] = useState(() => {
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('logisticsActive');
-      return saved !== null ? JSON.parse(saved) : true;
-    }
-    return true;
-  });
+
   const [logisticsLoading, setLogisticsLoading] = useState(false);
   const [pickupAddressLoading, setPickupAddressLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState<{
@@ -168,10 +178,11 @@ const SettingsPage = () => {
       const response = await fetchAdminProfile();
       if (response.data) {
         setProfileData({
-          firstName: response.data.firstName || response.data.name || '',
+          name: response.data.name!,
           email: response.data.email || '',
-          phone: response.data.phone || response.data.phoneNumber || '',
-          profilePicture: response.data.profilePicture || response.data.avatar || null
+          phone: "",
+          profilePicture: ""
+
         });
         if (response.data.pickupAddress) {
           setPickUpAddress(response.data.pickupAddress)
@@ -280,14 +291,6 @@ const SettingsPage = () => {
     }
   }, []);
 
-  const _handleIsActiveToggle = () => {
-    const newIsActive = !isActive;
-    setIsActive(newIsActive);
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('logisticsActive', JSON.stringify(newIsActive));
-    }
-  };
 
   // Load data when tab changes
   useEffect(() => {
@@ -314,10 +317,11 @@ const SettingsPage = () => {
 
   const renderProfileTab = () => {
     const handleProfileUpdate = async (e: React.FormEvent) => {
+
       e.preventDefault();
 
       // Validate form data
-      if (!profileData.firstName.trim() || !profileData.email.trim()) {
+      if (!profileData.name.trim() || !profileData.email.trim()) {
         alert('Please fill in all required fields.');
         return;
       }
@@ -331,9 +335,9 @@ const SettingsPage = () => {
 
       try {
         setProfileLoading(true);
-        const response = await updateAdminProfile(profileData);
+        const response = await updateAdminProfile({ name: profileData.name.trim() });
 
-        if (response.message || response.data) {
+        if (response.status) {
           alert('Profile updated successfully!');
           // Refresh data to ensure we have the latest
           fetchProfileData();
@@ -446,13 +450,13 @@ const SettingsPage = () => {
           </div>
 
           <form onSubmit={handleProfileUpdate} className="flex flex-col gap-5">
-            <div className='flex items-center gap-36'>
-              <label className="text-sm font-medium text-brand_gray_dark">First Name</label>
+            <div className='flex items-center gap-6'>
+              <label className="text-sm font-medium text-brand_gray_dark w-40 shrink-0">Name</label>
               <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
                 <input
                   type="text"
-                  name="firstName"
-                  value={profileData.firstName}
+                  name="name"
+                  value={profileData.name}
                   onChange={handleInputChange}
                   className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
                 />
@@ -460,8 +464,8 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <div className='flex items-center gap-[11.1rem]'>
-              <label className="text-sm font-medium text-brand_gray_dark">Email</label>
+            <div className='flex items-center gap-6'>
+              <label className="text-sm font-medium text-brand_gray_dark w-40 shrink-0">Email</label>
               <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
                 <input
                   type="email"
@@ -474,19 +478,7 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <div className='flex items-center gap-28'>
-              <label className="text-sm font-medium text-brand_gray_dark">Phone number</label>
-              <div className="flex items-center gap-2 border border-gray-400 rounded-lg">
-                <input
-                  type="tel"
-                  name="phone"
-                  value={profileData.phone}
-                  onChange={handleInputChange}
-                  className="w-96 px-4 py-2 rounded-lg focus:outline-none focus:border-brand_pink/50 focus:bg-white transition-all"
-                />
-                <SquarePen size={16} className="text-brand_gray hover:text-blue-500 transition-colors mr-4" />
-              </div>
-            </div>
+          
           </form>
         </div>
 
@@ -512,14 +504,54 @@ const SettingsPage = () => {
   };
 
   const renderRolesTab = () => {
+    const resetAddAdminState = () => {
+      setShowAddAdminModal(false);
+      setAdminFormData({ name: '', email: '', role: '' });
+      setNewAdminDefaultPermissions([]);
+      setNewAdminSelectedPermissions([]);
+    };
+
+    const handleAddAdminRoleChange = async (role: string) => {
+      setAdminFormData(prev => ({ ...prev, role }));
+      if (!role) {
+        setNewAdminDefaultPermissions([]);
+        setNewAdminSelectedPermissions([]);
+        return;
+      }
+      try {
+        setDefaultPermissionsLoading(true);
+        const res = await fetchDefaultPermissions(role);
+        const defaults = res.message || res.data || [];
+        setNewAdminDefaultPermissions(defaults);
+        // Default permissions start checked, but remain toggleable
+        setNewAdminSelectedPermissions(defaults);
+      } catch (error) {
+        console.error('Error fetching default permissions:', error);
+        setNewAdminDefaultPermissions([]);
+        setNewAdminSelectedPermissions([]);
+      } finally {
+        setDefaultPermissionsLoading(false);
+      }
+    };
+
+    const toggleNewAdminPermission = (permission: string) => {
+      setNewAdminSelectedPermissions(prev =>
+        prev.includes(permission)
+          ? prev.filter(p => p !== permission)
+          : [...prev, permission]
+      );
+    };
+
     const handleAddAdmin = async (e: React.FormEvent) => {
       e.preventDefault();
       try {
         setAdminLoading(true);
-        await addAdmin(adminFormData);
-        setShowAddAdminModal(false);
+        await addAdmin({
+          ...adminFormData,
+          permissions: newAdminSelectedPermissions,
+        });
+        resetAddAdminState();
         fetchAdminsData();
-        setAdminFormData({ name: '', email: '', role: '' });
       } catch (error) {
         console.error('Error adding admin:', error);
       } finally {
@@ -546,6 +578,62 @@ const SettingsPage = () => {
         setIsDeletingAdmin(false);
         setShowDeleteAdminModal(false);
         setAdminToDelete(null);
+      }
+    };
+
+    const resetEditAdminState = () => {
+      setShowEditAdminModal(false);
+      setSelectedAdmin(null);
+      setEditPermissions([]);
+      setEditDefaultPermissions([]);
+    };
+
+    const handleEditAdmin = async (admin: AdminUser) => {
+      setSelectedAdmin(admin);
+      setEditPermissions(admin.permissions || []);
+      setEditIsActive(admin.active!);
+      setEditDefaultPermissions([]);
+      setShowEditAdminModal(true);
+      try {
+        setEditDefaultPermissionsLoading(true);
+        const res = await fetchDefaultPermissions(admin.role);
+        setEditDefaultPermissions(res.message || res.data || []);
+      } catch (error) {
+        console.error('Error fetching default permissions:', error);
+      } finally {
+        setEditDefaultPermissionsLoading(false);
+      }
+    };
+
+    const togglePermission = (permission: string) => {
+      setEditPermissions(prev =>
+        prev.includes(permission)
+          ? prev.filter(p => p !== permission)
+          : [...prev, permission]
+      );
+    };
+
+    const handleUpdatePermissions = async (e: React.FormEvent) => {
+      console.log("Hiiii");
+      e.preventDefault();
+      if (!selectedAdmin) return;
+      try {
+        setIsUpdatingPermissions(true);
+        await updateAdminPermission(selectedAdmin._id, {
+          name: selectedAdmin.name,
+          email: selectedAdmin.email,
+          role: selectedAdmin.role,
+          permissions: editPermissions,
+          active: editIsActive,
+        });
+        showToast('Admin updated', 'success');
+        resetEditAdminState();
+        fetchAdminsData();
+      } catch (error: unknown) {
+        console.error('Error updating admin permissions:', error);
+        showToast(error instanceof Error ? error.message : 'Failed to update permissions', 'error');
+      } finally {
+        setIsUpdatingPermissions(false);
       }
     };
 
@@ -597,16 +685,20 @@ const SettingsPage = () => {
                     <td className="px-4 py-3">{admin.email}</td>
                     <td className="px-4 py-3">{admin.role}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${admin.status === 'active'
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${admin.active !== false
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-700'
                         }`}>
-                        {admin.status || 'active'}
+                        {admin.active !== false ? 'active' : 'inactive'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button className="text-blue-500 hover:text-blue-700">
+                        <button
+                          onClick={() => handleEditAdmin(admin)}
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Edit Permissions"
+                        >
                           <SquarePen size={16} />
                         </button>
                         <button
@@ -626,13 +718,13 @@ const SettingsPage = () => {
         </div>
 
         {/* Add Admin Modal */}
-        {showAddAdminModal && (
+        {showAddAdminModal && createPortal(
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Add New Admin</h3>
                 <button
-                  onClick={() => setShowAddAdminModal(false)}
+                  onClick={resetAddAdminState}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <X size={20} />
@@ -667,7 +759,7 @@ const SettingsPage = () => {
                   <select
                     required
                     value={adminFormData.role}
-                    onChange={(e) => setAdminFormData(prev => ({ ...prev, role: e.target.value }))}
+                    onChange={(e) => handleAddAdminRoleChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
                   >
                     <option value="">Select Role</option>
@@ -676,10 +768,44 @@ const SettingsPage = () => {
                   </select>
                 </div>
 
+                {adminFormData.role && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
+                    {defaultPermissionsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading default permissions...
+                      </div>
+                    ) : newAdminDefaultPermissions.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-2">No default permissions for this role</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                        {newAdminDefaultPermissions.map((permission) => {
+                          const isChecked = newAdminSelectedPermissions.includes(permission);
+                          return (
+                            <label
+                              key={permission}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleNewAdminPermission(permission)}
+                                className="accent-brand_pink"
+                              />
+                              <span className="capitalize truncate">{permission.replace(/_/g, ' ')}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddAdminModal(false)}
+                    onClick={resetAddAdminState}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
@@ -694,11 +820,12 @@ const SettingsPage = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Delete Confirmation Modal */}
-        {showDeleteAdminModal && (
+        {showDeleteAdminModal && createPortal(
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
@@ -746,7 +873,101 @@ const SettingsPage = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Edit Admin Modal */}
+        {showEditAdminModal && selectedAdmin && createPortal(
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-lg font-bold text-gray-900">Edit Admin</h3>
+                <button
+                  onClick={resetEditAdminState}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">{selectedAdmin.name} &middot; {selectedAdmin.email}</p>
+
+              <form onSubmit={handleUpdatePermissions}>
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 mb-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Status</p>
+                    <p className="text-xs text-gray-500">{editIsActive ? 'Active' : 'Inactive'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsActive(v => !v)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editIsActive ? 'bg-brand_pink' : 'bg-gray-200'
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editIsActive ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                    />
+                  </button>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
+                {editDefaultPermissionsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500 py-2 mb-6">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading default permissions...
+                  </div>
+                ) : editDefaultPermissions.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-2 mb-6">No default permissions for this role</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1 mb-6">
+                    {editDefaultPermissions.map((permission) => {
+                      const isChecked = editPermissions.includes(permission);
+                      return (
+                        <label
+                          key={permission}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => togglePermission(permission)}
+                            className="accent-brand_pink"
+                          />
+                          <span className="capitalize truncate">{permission.replace(/_/g, ' ')}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={resetEditAdminState}
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingPermissions}
+                    className="flex-1 px-4 py-2 bg-brand_pink hover:bg-brand_pink/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    {isUpdatingPermissions ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Permissions'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     );
@@ -993,10 +1214,10 @@ const SettingsPage = () => {
                     })}
                   </p>
 
-                  <RefreshCcw size={16} className='cursor-pointer' onClick={()=>{
-                      fetchWalletBalance();
-                      
-                  }}/>
+                  <RefreshCcw size={16} className='cursor-pointer' onClick={() => {
+                    fetchWalletBalance();
+
+                  }} />
                 </div>
               </div>
             </div>
@@ -1263,30 +1484,42 @@ const SettingsPage = () => {
     );
   };
 
+  const canManageAdmins =
+    user?.permissions?.includes("all") ||
+    user?.permissions?.includes("manage_admins");
+  const isSuperAdmin = user?.role === "super";
+
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'profile':
         return renderProfileTab();
       case 'roles':
-        return renderRolesTab();
+        return canManageAdmins && renderRolesTab();
       case 'notifications':
         return renderNotificationsTab();
       case 'security':
         return renderSecurityTab();
       case 'logistics':
-        return renderLogisticsTab();
+        return isSuperAdmin && renderLogisticsTab();
       default:
         return renderProfileTab();
     }
   };
 
   return (
-    <ProtectedRoute>
+    <>
       <main className="w-full min-h-screen bg-gray-50/30 font-poppins pr-5">
         {/* Tab Navigation */}
         <div className="pl-4">
           <div className="flex items-center gap-36 p-1">
             {TABS.map((tab) => {
+              if (tab.id === "roles" && !canManageAdmins) {
+                return;
+              }
+
+              if (tab.id === "logistics" && !isSuperAdmin) {
+                return;
+              }
               return (
                 <button
                   key={tab.id}
@@ -1319,7 +1552,7 @@ const SettingsPage = () => {
           onClose={() => setToast(null)}
         />
       )}
-    </ProtectedRoute>
+    </>
   );
 };
 

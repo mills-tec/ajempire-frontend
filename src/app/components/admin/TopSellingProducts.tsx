@@ -1,18 +1,17 @@
 'use client'
-import { filterByPeriod } from '@/lib/dashboard-utils';
 import { IOrder } from '@/lib/types';
 import Image from "next/image";
 import Link from "next/link";
+import { memo } from "react";
 
 interface TopSellingProductsProps {
+    /** Expected to already be filtered by `period` — the dashboard computes this once and shares it with TopSellingCategory. */
     orders?: IOrder[];
     period?: string;
 }
 
-const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingProductsProps) => {
-    const filteredOrders = filterByPeriod(orders, period, (o) => o.createdAt);
-
-    const productSales = filteredOrders.reduce((acc: Record<string, { id: string; name: string; sales: number; price: number; image: string }>, order) => {
+const TopSellingProducts = memo(function TopSellingProducts({ orders = [], period = 'This week' }: TopSellingProductsProps) {
+    const productSales = orders.reduce((acc: Record<string, { id: string; name: string; sales: number; price: number; image: string }>, order) => {
         order.items?.forEach((item) => {
             const productId = item.product._id;
             if (!productId || productId === 'unknown') return;
@@ -82,6 +81,6 @@ const TopSellingProducts = ({ orders = [], period = 'This week' }: TopSellingPro
             </div>
         </div>
     );
-};
+});
 
 export default TopSellingProducts;

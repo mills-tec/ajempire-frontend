@@ -4,11 +4,11 @@ import EmptyTable from '@/components/EmptyTable';
 import {
   createPromotion,
   deletePromotion,
-  getAllCategories,
-  getProducts,
+  getAllCategories, getProducts,
   getPromotions,
-  updatePromotion,
+  updatePromotion
 } from '@/lib/adminapi';
+import { uploadImageFileToStorage } from '@/lib/utils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -187,6 +187,7 @@ const PromotionsPage = () => {
       setLoading(true);
       const response = await getPromotions({ page: pageToLoad, limit });
       const result = extractPaginatedList<Promotion>(response);
+      console.log(result);
       setPromotions(result.items);
       setTotalItems(result.totalItems);
       setServerTotalPages(result.totalPages);
@@ -286,7 +287,16 @@ const PromotionsPage = () => {
       setSubmitting(true);
       setActionError(null);
       try {
-        const payload = buildPromotionPayload(values, bannerFile);
+        // Existing banner URL by default; replaced with the freshly-uploaded
+        // object key below if the admin picked a new file.
+        let bannerKey = "";
+
+        if (bannerFile) {
+     
+          bannerKey = await uploadImageFileToStorage(bannerFile);
+        }
+
+        const payload = buildPromotionPayload(values, bannerKey);
         const response = isEdit
           ? await updatePromotion(selectedPromotion!._id!, payload)
           : await createPromotion(payload);
@@ -538,11 +548,10 @@ const PromotionsPage = () => {
                 }}
                 aria-haspopup="menu"
                 aria-expanded={showFilterDropdown}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  promotionFilter !== 'all'
-                    ? 'bg-brand_pink/10 border-brand_pink/30 text-brand_pink'
-                    : 'bg-gray-50 border-gray-100 text-brand_gray_dark hover:bg-gray-100'
-                }`}
+                className={`flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${promotionFilter !== 'all'
+                  ? 'bg-brand_pink/10 border-brand_pink/30 text-brand_pink'
+                  : 'bg-gray-50 border-gray-100 text-brand_gray_dark hover:bg-gray-100'
+                  }`}
               >
                 <Filter size={16} />
                 {FILTER_BUTTON_LABELS[promotionFilter] ?? 'Filter'}
@@ -565,11 +574,10 @@ const PromotionsPage = () => {
                           key={option.value}
                           role="menuitem"
                           onClick={() => handleFilterSelect(option.value)}
-                          className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${
-                            promotionFilter === option.value
-                              ? 'text-brand_pink font-semibold bg-brand_pink/5'
-                              : 'text-gray-700'
-                          }`}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${promotionFilter === option.value
+                            ? 'text-brand_pink font-semibold bg-brand_pink/5'
+                            : 'text-gray-700'
+                            }`}
                         >
                           {option.menuLabel}
                         </button>

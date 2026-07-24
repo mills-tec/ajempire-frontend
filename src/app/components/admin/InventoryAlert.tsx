@@ -1,12 +1,13 @@
 'use client'
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { memo } from "react";
 
 interface InventoryAlertProps {
     products?: { stock: number; name?: string; _id?: string }[];
 }
 
-const InventoryAlert = ({ products = [] }: InventoryAlertProps) => {
+const InventoryAlert = memo(function InventoryAlert({ products = [] }: InventoryAlertProps) {
     // Generate alerts based on actual product stock data
     const alerts = [
         // Low stock products (1-10 items)
@@ -76,6 +77,6 @@ const InventoryAlert = ({ products = [] }: InventoryAlertProps) => {
             </div>
         </div>
     );
-};
+});
 
 export default InventoryAlert;

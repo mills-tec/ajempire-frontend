@@ -239,6 +239,10 @@ export interface Feed {
   price?: number;
   product: Product;
   mediaUrl: string;
+  // Direct Play MP4 URL for this post, if Bunny Stream has one available.
+  // Used by FeedItem as the HLS fallback for browsers with neither native
+  // HLS nor MSE/hls.js support, so a video element is never left dead.
+  mp4Url?: string;
   mediaType: "image" | "video";
   type: "flashsale" | "education" | "gallery";
   image: string;

@@ -3,7 +3,7 @@
 import { HomeIcon } from '@/components/svgs/HomeIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminNotification, buildAdminNotifications } from '@/lib/admin-notifications';
-import { fetchAdminProfile, getProducts, getReturns, getUserOrders } from '@/lib/adminapi';
+import { getProducts, getReturns, getUserOrders } from '@/lib/adminapi';
 import { Bell, LogOut, Menu, Package, RotateCcw, ShoppingBag, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -17,7 +17,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     const pathname = usePathname();
     const router = useRouter();
     const { user, logout } = useAuth();
-    const [adminRole, setAdminRole] = useState('Administrator');
+    const adminRole = user?.role || 'Administrator';
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
     const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -48,22 +48,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         setReadNotificationIds(updated);
         localStorage.setItem('readAdminNotifications', JSON.stringify(updated));
     };
-
-    useEffect(() => {
-        const loadProfile = async () => {
-            try {
-                const response = await fetchAdminProfile();
-                const profile = response.data || response.message;
-                if (profile && typeof profile !== 'string') {
-                    const role = profile.role || profile.adminRole || user?.role || 'Administrator';
-                    setAdminRole(role);
-                }
-            } catch {
-                setAdminRole(user?.role || 'Administrator');
-            }
-        };
-        loadProfile();
-    }, [user?.role]);
 
     useEffect(() => {
         const loadNotifications = async () => {

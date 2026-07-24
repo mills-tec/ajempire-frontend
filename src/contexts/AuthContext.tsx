@@ -1,21 +1,19 @@
 'use client';
 
+import { AdminProfile } from '@/lib/admin-types';
+import { fetchAdminProfile } from '@/lib/adminapi';
 import { useRouter } from 'next/navigation';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  
-}
+
+
 
 interface AuthContextType {
-  user: User | null;
+  user: AdminProfile | null;
   token: string | null;
-  login: (token: string, user: User) => void;
+  login: (token: string) => void;
   logout: () => void;
+  getProfile: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -34,48 +32,71 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AdminProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check for existing auth on mount
-    const storedToken = localStorage.getItem('adminToken');
-    const storedUser = localStorage.getItem('adminUser');
+  const getProfile = useCallback(async () => {
+    const response = await fetchAdminProfile();
+    const profile = response.data || (typeof response.message !== 'string' ? response.message : undefined);
 
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        // Clear invalid data
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-      }
-    }
-    setIsLoading(false);
+    if (!profile) return;
+    setUser((prevUser) => {
+      const newUser: AdminProfile = {
+        id: prevUser?.id ?? (profile as any)._id,
+        name: profile.name!,
+        email: profile.email,
+        role: profile.role!,
+        permissions: profile.permissions,
+        active: profile.active
+
+      };
+
+      localStorage.setItem('adminUser', JSON.stringify(newUser));
+      return newUser;
+    });
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
+  const login = useCallback((newToken: string) => {
     setToken(newToken);
-    setUser(newUser);
     localStorage.setItem('adminToken', newToken);
-    localStorage.setItem('adminUser', JSON.stringify(newUser));
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     router.push('/admin-login');
-  };
+  }, [router]);
+
+  useEffect(() => {
+    // Check for existing auth on mount
+    const storedToken = localStorage.getItem('adminToken');
+
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    setToken(storedToken);
+    getProfile()
+      .catch((error) => {
+        console.error('Error fetching admin profile:', error);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+      })
+      .finally(() => setIsLoading(false));
+  }, [getProfile]);
+
+  const value = useMemo(
+    () => ({ user, token, login, logout, getProfile, isLoading }),
+    [user, token, login, logout, getProfile, isLoading]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
