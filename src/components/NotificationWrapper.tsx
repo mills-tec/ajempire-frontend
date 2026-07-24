@@ -20,6 +20,10 @@ export default function NotificationWrapper() {
   const user = useAuthStore((s) => s.user);
   const isPushTokenSet = useAuthStore((s) => s.isPushTokenSet);
   const setIsPushTokenSet = useAuthStore((s) => s.setIsPushTokenSet);
+  // Bumped by AuthContext.login() — admin auth lives in a React context this
+  // component isn't nested under, so localStorage.getItem('adminToken') below
+  // is otherwise only re-checked on the next mount/full page load.
+  const adminTokenTick = useAuthStore((s) => s.adminTokenTick);
   const { updatePushToken } = useNotification();
   // useNotification returns a new function reference on every render; going
   // through a ref keeps the push-token effect from re-running per render.
@@ -59,7 +63,7 @@ export default function NotificationWrapper() {
     if (!isAdminRoute) {
       if (!isMounted || !user || isPushTokenSet || isUpdatingToken.current) return;
     } else {
-      if (isPushTokenSet || !localStorage.getItem('adminToken')) return;
+      if (isPushTokenSet || isUpdatingToken.current || !localStorage.getItem('adminToken')) return;
     }
 
     const registerPushToken = async () => {
@@ -96,7 +100,7 @@ export default function NotificationWrapper() {
     };
 
     registerPushToken();
-  }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet]);
+  }, [isMounted, user, isPushTokenSet, isAdminRoute, setIsPushTokenSet, adminTokenTick]);
 
   // Socket.IO — user notifications (non-admin routes only)
   // Consumes the single shared connection from SocketProvider instead of

@@ -119,7 +119,7 @@ export const getImagePresignedUpload = (file: File): Promise<ApiResponse<unknown
 export const getVideoPresignedUpload = (file: File): Promise<ApiResponse<unknown, { videoId: string; libraryId: string; expirationTime: string; signature: string; }>> =>
   apiCall(`/admin/uploads/video/sign`, { method: "POST", body: JSON.stringify({ fileName: file.name, contentType: file.type }) });
 
-export const uploadFile = (file: File, url: string): Promise<AxiosResponse<{}>> =>
+export const uploadFile = (file: File, url: string): Promise<AxiosResponse<unknown>> =>
   axios.put(url, file, {
     headers: { "Content-Type": file.type },
   });
@@ -266,10 +266,7 @@ export const getPromotions = (params?: PromotionQueryParams): Promise<ApiRespons
   return apiCall(queryString ? `/admin/promotions?${queryString}` : '/admin/promotions');
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const createPromotion = (data: PromotionPayload): Promise<ApiResponse<{
-
-}>> => {
+export const createPromotion = (data: PromotionPayload): Promise<ApiResponse<Promotion>> => {
   if (data instanceof FormData) {
     return apiCall('/admin/promotions', {
       method: 'POST',
@@ -282,7 +279,7 @@ export const createPromotion = (data: PromotionPayload): Promise<ApiResponse<{
   });
 };
 
-export const updatePromotion = (id: string, data: PromotionPayload): Promise<ApiResponse<any>> => {
+export const updatePromotion = (id: string, data: PromotionPayload): Promise<ApiResponse<Promotion>> => {
   if (data instanceof FormData) {
     return apiCall(`/admin/promotions/${id}`, {
       method: 'PATCH',

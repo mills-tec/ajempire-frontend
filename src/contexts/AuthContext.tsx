@@ -2,6 +2,7 @@
 
 import { AdminProfile } from '@/lib/admin-types';
 import { fetchAdminProfile } from '@/lib/adminapi';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { useRouter } from 'next/navigation';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
@@ -40,7 +41,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const getProfile = useCallback(async () => {
     const response = await fetchAdminProfile();
     const profile = response.data || (typeof response.message !== 'string' ? response.message : undefined);
-
     if (!profile) return;
     setUser((prevUser) => {
       const newUser: AdminProfile = {
@@ -56,11 +56,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('adminUser', JSON.stringify(newUser));
       return newUser;
     });
+
   }, []);
 
   const login = useCallback((newToken: string) => {
     setToken(newToken);
     localStorage.setItem('adminToken', newToken);
+    // NotificationWrapper can't see this context (it's mounted outside
+    // AuthProvider, in the root layout) — this nudges its push-token effect
+    // to re-check localStorage immediately instead of only on next reload.
+    useAuthStore.getState().bumpAdminTokenTick();
   }, []);
 
   const logout = useCallback(() => {
@@ -84,8 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getProfile()
       .catch((error) => {
         console.error('Error fetching admin profile:', error);
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        logout();
       })
       .finally(() => setIsLoading(false));
   }, [getProfile]);

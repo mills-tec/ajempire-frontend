@@ -18,7 +18,7 @@ const GOOGLE_CLIENT_ID =
 // Everything else (products, search, feeds) must always be fetched fresh, since
 // an admin deleting a product elsewhere has no way to reach into a customer's
 // localStorage to invalidate a persisted snapshot.
-const PERSISTABLE_QUERY_KEYS = new Set(["categories", "home-banner"]);
+const PERSISTABLE_QUERY_KEYS = new Set(["home-banner"]);
 
 // Bump this string whenever the shape of a persisted query changes (or on a
 // deploy where you want to force everyone's persisted cache to drop).

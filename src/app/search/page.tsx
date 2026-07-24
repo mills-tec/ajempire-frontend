@@ -5,11 +5,10 @@ import SearchBar from "@/app/components/ui/SearchBar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getCategories, getProductsByCategory, searchProducts } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
-import type { Product as CatalogProduct, Product } from "@/lib/types";
+import type { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Clock, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -48,8 +47,12 @@ function SearchContent() {
   const rawQuery = searchParams.get("q") || "";
   const query = rawQuery.trim();
   const hasQuery = query.length > 0;
-  const hasImageResults = (searchByImageProducts?.length ?? 0) > 0;
-  const hasAnySearch = hasQuery || hasImageResults;
+  // Mirrors hasQuery: "an image search is active" per the URL, independent of
+  // whether it happened to return zero results — so a genuinely empty image
+  // search still renders the results/empty-state block instead of falling
+  // back to the pre-search view.
+  const hasImageQuery = searchParams.get("type") === "image";
+  const hasAnySearch = hasQuery || hasImageQuery;
 
   const minParam = searchParams.get("min");
   const maxParam = searchParams.get("max");
@@ -152,10 +155,9 @@ function SearchContent() {
       if (matchedCategoryNames.length > 0 && isCategoryProductsLoading) return true;
       return false;
     }
-    if (hasImageResults) return false;
     return false;
   }, [
-    hasAnySearch, hasQuery, hasImageResults, searchByImageLoading,
+    hasAnySearch, hasQuery, searchByImageLoading,
     skeletonLoading, isLoading, data, matchedCategoryNames, isCategoryProductsLoading,
   ]);
 
@@ -167,7 +169,7 @@ function SearchContent() {
       transition={{ duration: 0.22, ease: "easeOut" }}
     >
       {/* Sticky header: back arrow + search bar */}
-      <div className="sticky top-0 z-50 bg-white border-b flex items-center gap-3 px-4 py-3">
+      <div className="sticky top-0 z-50 bg-white border-b flex md:hidden items-center gap-3 px-4 py-3 ">
         <button
           onClick={() => router.back()}
           aria-label="Go back"
@@ -183,49 +185,7 @@ function SearchContent() {
       </div>
 
       {/* Pre-search state: show recent searches */}
-      {!hasAnySearch && (
-        <div className="px-4 py-6 font-poppins">
-          {recent.length > 0 ? (
-            <section>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-base">Recently searched</span>
-                <button
-                  onClick={clearRecent}
-                  className="text-gray-400 hover:text-black p-1 transition-colors"
-                  aria-label="Clear all recent searches"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recent.map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => {
-                      setQuery(term);
-                      router.push(`/search?q=${encodeURIComponent(term)}`);
-                    }}
-                    className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 text-sm text-gray-700 active:scale-95 transition-all"
-                  >
-                    <Clock size={13} className="text-gray-400 shrink-0" />
-                    <span className="max-w-[140px] truncate">{term}</span>
-                    <span
-                      role="button"
-                      aria-label={`Remove ${term}`}
-                      onClick={(e) => { e.stopPropagation(); removeRecent(term); }}
-                      className="text-gray-400 hover:text-black ml-0.5"
-                    >
-                      <X size={13} />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : (
-            <p className="text-sm text-gray-400 text-center mt-24">No recent searches</p>
-          )}
-        </div>
-      )}
+      
 
       {/* Results state */}
       {hasAnySearch && (
@@ -312,7 +272,7 @@ function SearchContent() {
                     <Tooltip key={product._id}>
                       <TooltipTrigger asChild>
                         <div>
-                          <ProductCard product={product as CatalogProduct} index={index} />
+                          <ProductCard product={product} index={index} />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" align="center">
