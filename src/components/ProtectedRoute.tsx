@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import Spinner from '@/app/components/Spinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,16 +16,43 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     if (!isLoading) {
-      if (!token || !user) {
+      if (!token) {
         router.push('/admin-login');
-      } else if (user.role?.toLowerCase() === 'junior') {
-        const isAllowed = pathname === '/admin' || pathname.startsWith('/admin/inventory') || pathname.startsWith('/admin/add-product');
-        if (!isAllowed) {
-          router.push('/admin');
+
+      }
+
+      if (user) {
+        if (user?.role !== "super") {
+          if (!user?.permissions.includes("manage_users") && pathname.includes("customers")) {
+            router.push('/admin');
+            return;
+          }
+          if (!user?.permissions.includes("manage_orders") && pathname.includes("orders")) {
+            router.push('/admin');
+            return;
+          }
+          if (!user.permissions.includes("manage_products") && (pathname.includes("inventory") || pathname.includes("categories"))) {
+            router.push('/admin');
+            return;
+          }
+          if (!user.permissions.includes("manage_promo") && pathname.includes("promotions")) {
+            router.push('/admin');
+            return;
+          }
+          if (!user.permissions.includes("manage_returns") && pathname.includes("returns")) {
+            router.push('/admin');
+            return;
+          }
+          if (!user.permissions.includes("manage_content") && pathname.includes("content-management")) {
+            router.push('/admin');
+            return;
+          }
         }
       }
     }
-  }, [token, user, isLoading, pathname, router]);
+  }, [token, isLoading, pathname, router, user]);
+
+
 
   if (isLoading) {
     return (

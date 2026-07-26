@@ -3,7 +3,7 @@
 import { getAllCategories, getProducts, getReturns, getUserOrders } from '@/lib/adminapi';
 import { aggregateOrdersByDate, calculatePercentChange, filterByDateRange, filterByPeriod, getPreviousPeriodRange } from '@/lib/dashboard-utils';
 import { ChartPie, CornerDownLeft, FolderMinus, ShoppingBagIcon, UsersRound } from "lucide-react";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DoughnutChart from "../components/admin/DoughnutChart";
 import InventoryAlert from "../components/admin/InventoryAlert";
 import LineChart from "../components/admin/LineChart";
@@ -29,11 +29,7 @@ export default function AdminPage() {
     const [summaryPeriod, setSummaryPeriod] = useState('All time');
     const [inventoryPeriod, setInventoryPeriod] = useState('All time');
 
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
-
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
             const [ordersResponse, productsResponse, categoriesResponse, returnsResponse] = await Promise.all([
@@ -46,8 +42,6 @@ export default function AdminPage() {
             if (ordersResponse.message && Array.isArray(ordersResponse.message)) {
                 setOrders(ordersResponse.message);
             }
-
-            console.log(ordersResponse.message);
             // Transform products data
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const productsData = productsResponse.message as any;
@@ -73,64 +67,95 @@ export default function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    // Sales Card calculations
-    const salesFilteredOrders = filterByPeriod(orders, salesPeriod, (o) => o.createdAt);
-    const salesPrevRange = getPreviousPeriodRange(salesPeriod);
-    const salesPrevOrders = filterByDateRange(orders, salesPrevRange.start, salesPrevRange.end, (o) => o.createdAt);
-    const totalSales = salesFilteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
-    const prevSales = salesPrevOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
-    const salesChange = calculatePercentChange(totalSales, prevSales);
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
+
+    // Sales Card calculations — recomputed only when orders or salesPeriod change,
+    // not on every render triggered by one of the other 5 unrelated period selectors.
+    const sales = useMemo(() => {
+        const filteredOrders = filterByPeriod(orders, salesPeriod, (o) => o.createdAt);
+        const prevRange = getPreviousPeriodRange(salesPeriod);
+        const prevOrders = filterByDateRange(orders, prevRange.start, prevRange.end, (o) => o.createdAt);
+        const totalSales = filteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+        const prevSales = prevOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+        return {
+            filteredOrders,
+            totalSales,
+            change: calculatePercentChange(totalSales, prevSales),
+        };
+    }, [orders, salesPeriod]);
 
     // Customers & Orders Card calculations
-    const customersFilteredOrders = filterByPeriod(orders, customersPeriod, (o) => o.createdAt);
-    const customersPrevRange = getPreviousPeriodRange(customersPeriod);
-    const customersPrevOrders = filterByDateRange(orders, customersPrevRange.start, customersPrevRange.end, (o) => o.createdAt);
-    const totalCustomers = new Set(customersFilteredOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
-    const prevCustomers = new Set(customersPrevOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
-    const customersChange = calculatePercentChange(totalCustomers, prevCustomers);
-    const totalOrders = customersFilteredOrders.length;
-    const prevOrdersCount = customersPrevOrders.length;
-    const ordersChange = calculatePercentChange(totalOrders, prevOrdersCount);
+    const customersAndOrders = useMemo(() => {
+        const filteredOrders = filterByPeriod(orders, customersPeriod, (o) => o.createdAt);
+        const prevRange = getPreviousPeriodRange(customersPeriod);
+        const prevOrders = filterByDateRange(orders, prevRange.start, prevRange.end, (o) => o.createdAt);
+        const totalCustomers = new Set(filteredOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
+        const prevCustomers = new Set(prevOrders.map(order => order.shippingAddress?.fullName).filter(Boolean)).size;
+        const totalOrders = filteredOrders.length;
+        const prevOrdersCount = prevOrders.length;
+        return {
+            totalCustomers,
+            customersChange: calculatePercentChange(totalCustomers, prevCustomers),
+            totalOrders,
+            ordersChange: calculatePercentChange(totalOrders, prevOrdersCount),
+        };
+    }, [orders, customersPeriod]);
 
     // Products & Categories stats
-    const totalProducts = products?.length || 0;
-    const totalCategories = categories?.length || 0;
+    const catalogStats = useMemo(() => ({
+        totalProducts: products?.length || 0,
+        totalCategories: categories?.length || 0,
+        inStockProducts: products?.filter(p => p.stock > 0).length || 0,
+        lowStockProducts: products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0,
+        outOfStockProducts: products?.filter(p => p.stock === 0).length || 0,
+    }), [products, categories]);
 
     // Returns Card calculations
-    const returnsFilteredReturns = filterByPeriod(returns, returnsPeriod, (r) => r.createdAt);
-    const returnsPrevRange = getPreviousPeriodRange(returnsPeriod);
-    const returnsPrevReturns = filterByDateRange(returns, returnsPrevRange.start, returnsPrevRange.end, (r) => r.createdAt);
-    const totalReturns = returnsFilteredReturns.length;
-    const prevReturnsCount = returnsPrevReturns.length;
-    const returnsChange = calculatePercentChange(totalReturns, prevReturnsCount);
-    const pendingReturns = returnsFilteredReturns.filter(r => r.status === 'pending').length;
+    const returnsStats = useMemo(() => {
+        const filteredReturns = filterByPeriod(returns, returnsPeriod, (r) => r.createdAt);
+        const prevRange = getPreviousPeriodRange(returnsPeriod);
+        const prevReturns = filterByDateRange(returns, prevRange.start, prevRange.end, (r) => r.createdAt);
+        const totalReturns = filteredReturns.length;
+        const prevReturnsCount = prevReturns.length;
+        return {
+            totalReturns,
+            change: calculatePercentChange(totalReturns, prevReturnsCount),
+            pendingReturns: filteredReturns.filter(r => r.status === 'pending').length,
+        };
+    }, [returns, returnsPeriod]);
 
     // Summary Card calculations
-    const summaryFilteredOrders = filterByPeriod(orders, summaryPeriod, (o) => o.createdAt);
-    const summaryTotalSales = summaryFilteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
-    const salesData = aggregateOrdersByDate(summaryFilteredOrders).map(item => ({
-        date: item.date,
-        sales: item.sales
-    }));
+    const summary = useMemo(() => {
+        const filteredOrders = filterByPeriod(orders, summaryPeriod, (o) => o.createdAt);
+        const totalSales = filteredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+        const salesData = aggregateOrdersByDate(filteredOrders).map(item => ({
+            date: item.date,
+            sales: item.sales
+        }));
+        return { filteredOrders, totalSales, salesData };
+    }, [orders, summaryPeriod]);
 
     // Inventory Values Card calculations
-    const inventoryFilteredOrders = filterByPeriod(orders, inventoryPeriod, (o) => o.createdAt);
-    const processingOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'processing').length;
-    const shippingOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'shipping' || o.orderStatus === 'shipped').length;
-    const deliveredOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'delivered').length;
-    const canceledOrders = inventoryFilteredOrders.filter(o => o.orderStatus === 'canceled' || o.orderStatus === 'cancelled').length;
+    const inventory = useMemo(() => {
+        const filteredOrders = filterByPeriod(orders, inventoryPeriod, (o) => o.createdAt);
+        const processingOrders = filteredOrders.filter(o => o.orderStatus === 'processing').length;
+        const shippingOrders = filteredOrders.filter(o => o.orderStatus === 'shipping' || o.orderStatus === 'shipped').length;
+        const deliveredOrders = filteredOrders.filter(o => o.orderStatus === 'delivered').length;
+        const canceledOrders = filteredOrders.filter(o => o.orderStatus === 'canceled' || o.orderStatus === 'cancelled').length;
 
-    const orderStatusData = [
-        { name: 'Processing', value: processingOrders, color: '#FFA500' },
-        { name: 'Shipping', value: shippingOrders, color: '#3B82F6' },
-        { name: 'Delivered', value: deliveredOrders, color: '#10B981' },
-        { name: 'Canceled', value: canceledOrders, color: '#EF4444' }
-    ];
-
-    const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock <= 10).length || 0;
-    const outOfStockProducts = products?.filter(p => p.stock === 0).length || 0;
+        return {
+            orderStatusData: [
+                { name: 'Processing', value: processingOrders, color: '#FFA500' },
+                { name: 'Shipping', value: shippingOrders, color: '#3B82F6' },
+                { name: 'Delivered', value: deliveredOrders, color: '#10B981' },
+                { name: 'Canceled', value: canceledOrders, color: '#EF4444' }
+            ],
+        };
+    }, [orders, inventoryPeriod]);
 
     if (loading) {
         return <AdminDashboardSkeleton />;
@@ -144,7 +169,7 @@ export default function AdminPage() {
                         <div className='bg-brand_pink/10 p-2 rounded-xl border'>
                             <ChartPie size={18} color="#ff008c" />
                         </div>
-                        <select 
+                        <select
                             value={salesPeriod}
                             onChange={(e) => setSalesPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -158,8 +183,8 @@ export default function AdminPage() {
 
                     <h4 className="mt-6 text-brand_gray_dark text-xs">Sales</h4>
                     <div className="flex items-center gap-2">
-                        <p className="text-lg font-bold">₦{totalSales.toLocaleString()}</p>
-                        <p className={`text-xs ${salesChange.startsWith('+') || salesChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{salesChange}</p>
+                        <p className="text-lg font-bold">₦{sales.totalSales.toLocaleString()}</p>
+                        <p className={`text-xs ${sales.change.startsWith('+') || sales.change === '0%' ? 'text-green-500' : 'text-red-500'}`}>{sales.change}</p>
                     </div>
                 </div>
 
@@ -168,7 +193,7 @@ export default function AdminPage() {
                         <div className='bg-yellow-500/10 p-2 rounded-xl border'>
                             <UsersRound size={18} />
                         </div>
-                        <select 
+                        <select
                             value={customersPeriod}
                             onChange={(e) => setCustomersPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -184,16 +209,16 @@ export default function AdminPage() {
                         <div>
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Customers</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalCustomers}</p>
-                                <p className={`text-xs ${customersChange.startsWith('+') || customersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{customersChange}</p>
+                                <p className="text-lg font-bold">{customersAndOrders.totalCustomers}</p>
+                                <p className={`text-xs ${customersAndOrders.customersChange.startsWith('+') || customersAndOrders.customersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{customersAndOrders.customersChange}</p>
                             </div>
                         </div>
 
                         <div>
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Orders</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalOrders}</p>
-                                <p className={`text-xs ${ordersChange.startsWith('+') || ordersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{ordersChange}</p>
+                                <p className="text-lg font-bold">{customersAndOrders.totalOrders}</p>
+                                <p className={`text-xs ${customersAndOrders.ordersChange.startsWith('+') || customersAndOrders.ordersChange === '0%' ? 'text-green-500' : 'text-red-500'}`}>{customersAndOrders.ordersChange}</p>
                             </div>
                         </div>
                     </div>
@@ -204,7 +229,7 @@ export default function AdminPage() {
                         <div className='bg-blue-500/10 p-2 rounded-xl border'>
                             <ShoppingBagIcon size={18} />
                         </div>
-                        <select 
+                        <select
                             value={productsPeriod}
                             onChange={(e) => setProductsPeriod(e.target.value)}
                             className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -220,7 +245,7 @@ export default function AdminPage() {
                         <div>
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Products</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalProducts}</p>
+                                <p className="text-lg font-bold">{catalogStats.totalProducts}</p>
                                 <p className="text-gray-400 text-xs">in catalog</p>
                             </div>
                         </div>
@@ -228,7 +253,7 @@ export default function AdminPage() {
                         <div>
                             <h4 className="mt-6 text-brand_gray_dark text-xs">Categories</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalCategories}</p>
+                                <p className="text-lg font-bold">{catalogStats.totalCategories}</p>
                                 <p className="text-gray-400 text-xs">active</p>
                             </div>
                         </div>
@@ -249,7 +274,7 @@ export default function AdminPage() {
 
                             <h4 className="mt-6 text-brand_gray_dark text-xs">All Products</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalProducts}</p>
+                                <p className="text-lg font-bold">{catalogStats.totalProducts}</p>
                                 <p className="text-gray-400 text-xs">in catalog</p>
                             </div>
                         </div>
@@ -259,7 +284,7 @@ export default function AdminPage() {
                                 <div className='bg-yellow-500/10 p-2 rounded-xl'>
                                     <CornerDownLeft size={18} />
                                 </div>
-                                <select 
+                                <select
                                     value={returnsPeriod}
                                     onChange={(e) => setReturnsPeriod(e.target.value)}
                                     className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -273,8 +298,8 @@ export default function AdminPage() {
 
                             <h4 className="mt-6 text-red-500 text-xs">Returns</h4>
                             <div className="flex items-center gap-2">
-                                <p className="text-lg font-bold">{totalReturns}</p>
-                                <p className={`text-xs ${returnsChange.startsWith('+') ? 'text-red-500' : 'text-green-500'}`}>{returnsChange}{pendingReturns > 0 ? ` · ${pendingReturns} pending` : ''}</p>
+                                <p className="text-lg font-bold">{returnsStats.totalReturns}</p>
+                                <p className={`text-xs ${returnsStats.change.startsWith('+') ? 'text-red-500' : 'text-green-500'}`}>{returnsStats.change}{returnsStats.pendingReturns > 0 ? ` · ${returnsStats.pendingReturns} pending` : ''}</p>
                             </div>
                         </div>
                     </div>
@@ -290,10 +315,10 @@ export default function AdminPage() {
                                 </select>
 
                                 <div className="flex items-center gap-2 sm:ml-4">
-                                    <p className="text-brand_pink font-bold text-sm">N{summaryTotalSales.toLocaleString()}</p>
+                                    <p className="text-brand_pink font-bold text-sm">N{summary.totalSales.toLocaleString()}</p>
                                 </div>
                             </div>
-                            <select 
+                            <select
                                 value={summaryPeriod}
                                 onChange={(e) => setSummaryPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -306,7 +331,7 @@ export default function AdminPage() {
                         </div>
 
                         <div className="mt-8 flex-1 h-[180px] relative">
-                            <LineChart data={salesData} />
+                            <LineChart data={summary.salesData} />
                         </div>
                     </div>
                 </div>
@@ -315,7 +340,7 @@ export default function AdminPage() {
                     <div className="bg-white p-4 rounded-xl border h-full">
                         <div className="flex items-center justify-between">
                             <h4 className="font-medium text-brand_gray_dark text-sm">Inventory Values</h4>
-                            <select 
+                            <select
                                 value={inventoryPeriod}
                                 onChange={(e) => setInventoryPeriod(e.target.value)}
                                 className="bg-transparent rounded-xl text-brand_gray font-poppins text-xs outline-none"
@@ -332,7 +357,7 @@ export default function AdminPage() {
                                     <div className="w-2 h-2 rounded-full bg-brand_pink" />
                                     <p className="text-brand_gray text-sm">In Stock</p>
                                 </div>
-                                <p className="text-brand_gray text-sm font-medium">{products?.filter(p => p.stock > 0).length || 0}</p>
+                                <p className="text-brand_gray text-sm font-medium">{catalogStats.inStockProducts}</p>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -340,7 +365,7 @@ export default function AdminPage() {
                                     <div className="w-2 h-2 rounded-full bg-brand_purple" />
                                     <p className="text-brand_gray text-sm">Low Stock</p>
                                 </div>
-                                <p className="text-brand_gray text-sm font-medium">{lowStockProducts}</p>
+                                <p className="text-brand_gray text-sm font-medium">{catalogStats.lowStockProducts}</p>
                             </div>
 
                             <div className="flex items-center justify-between">
@@ -348,14 +373,14 @@ export default function AdminPage() {
                                     <div className="w-2 h-2 rounded-full bg-red-500" />
                                     <p className="text-brand_gray text-sm">Out of Stock</p>
                                 </div>
-                                <p className="text-brand_gray text-sm font-medium">{outOfStockProducts}</p>
+                                <p className="text-brand_gray text-sm font-medium">{catalogStats.outOfStockProducts}</p>
                             </div>
                         </div>
 
                         {/* chart placeholder fix */}
                         <div className="flex justify-center items-center mt-10">
                             <div className="relative w-32 h-32">
-                                <DoughnutChart data={orderStatusData} />
+                                <DoughnutChart data={inventory.orderStatusData} />
                             </div>
                         </div>
                     </div>
@@ -364,7 +389,7 @@ export default function AdminPage() {
                         <h4 className="font-medium text-brand_gray_dark text-sm">Recent Orders</h4>
                         <div className="flex flex-col gap-y-4 overflow-y-auto max-h-[400px]">
                             {orders?.slice(0, 6).map((order, idx) => (
-                                <div key={idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0">
+                                <div key={order._id || order.id || idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0">
                                     <div className="flex w-full gap-x-3">
                                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex-shrink-0 relative overflow-hidden">
                                             {order.items?.[0]?.image ? (
@@ -382,12 +407,12 @@ export default function AdminPage() {
                                     <div className="text-right flex-shrink-0 ml-2">
                                         <p className="text-[8px] text-brand_gray mb-1">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                                         <span className={`text-[8px] px-2 py-0.5 rounded-full ${
-                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' : 
-                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' : 
+                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' :
+                                            order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' :
                                             'bg-gray-100 text-gray-600'
                                         }`}>
-                                            {order.orderStatus === 'delivered' ? 'Done' : 
-                                             order.orderStatus === 'processing' ? 'Pending' : 
+                                            {order.orderStatus === 'delivered' ? 'Done' :
+                                             order.orderStatus === 'processing' ? 'Pending' :
                                              order.orderStatus}
                                         </span>
                                     </div>
@@ -401,13 +426,13 @@ export default function AdminPage() {
             {/* New Design Section */}
             <section className="mt-8 flex flex-col gap-8">
                 <div className="flex flex-col lg:flex-row gap-6">
-                    <WebsiteTrafficChart orders={summaryFilteredOrders} />
+                    <WebsiteTrafficChart orders={summary.filteredOrders} />
                     <RealTimeInsight orders={orders} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                    <TopSellingProducts orders={orders} period={salesPeriod} />
-                    <TopSellingCategory orders={salesFilteredOrders} period={salesPeriod} />
+                    <TopSellingProducts orders={sales.filteredOrders} period={salesPeriod} />
+                    <TopSellingCategory orders={sales.filteredOrders} period={salesPeriod} />
                     <InventoryAlert products={products} />
                 </div>
             </section>

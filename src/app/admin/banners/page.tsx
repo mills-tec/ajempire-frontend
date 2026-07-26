@@ -1,15 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Trash2, Edit2, Eye, Link2, Image as ImageIcon, X,
-  Loader2, ToggleLeft, ToggleRight, ExternalLink, Calendar, Copy,
-  Images, CheckCircle2, AlertCircle
-} from 'lucide-react';
-import { 
-  getBanners, createBanner, updateBanner, removeImageFromBanner, deleteBanner,
-  Banner
+import {
+  Banner,
+  createBanner,
+  deleteBanner,
+  getBanners,
+  removeImageFromBanner,
+  updateBanner
 } from '@/lib/adminapi';
+import { uploadImageFileToStorage } from '@/lib/utils';
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Copy,
+  Edit2,
+  ExternalLink,
+  Eye,
+  Image as ImageIcon,
+  Images,
+  Link2,
+  Loader2,
+  Plus,
+  ToggleLeft, ToggleRight,
+  Trash2,
+  X
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface NewImageItem {
@@ -22,15 +39,15 @@ export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  
+
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   // Selection state
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
-  
+
   // Form state
   const [newImages, setNewImages] = useState<NewImageItem[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -134,7 +151,7 @@ export default function BannersPage() {
       setActionLoading(true);
       const formData = new FormData();
       formData.append('isActive', (!banner.isActive).toString());
-      
+
       const res = await updateBanner(banner._id, formData);
       if (res && res.success !== false && !res.error) {
         toast.success(`Banner status updated to ${!banner.isActive ? 'Active' : 'Inactive'}`);
@@ -160,22 +177,12 @@ export default function BannersPage() {
 
     try {
       setActionLoading(true);
-      const formData = new FormData();
-      
-      // Append files
-      newImages.forEach(img => {
-        formData.append('images', img.file);
-      });
-
-      // Prepare metadata
-      const meta = newImages.map(img => ({
-        link: img.link.trim()
-      }));
-      formData.append('imagesMeta', JSON.stringify(meta));
-      formData.append('isActive', 'true');
-
-      const res = await createBanner(formData);
-      if (res && res.success !== false && !res.error) {
+      const uploadedImages = await Promise.all(
+        newImages.map((item) => uploadImageFileToStorage(item.file))
+      );
+      const data = uploadedImages.map((item, index) => ({ url: item, link: newImages[index].link }))
+      const res = await createBanner(data);
+      if (res.status) {
         toast.success('Banner created successfully');
         setShowAddModal(false);
         // Clean up object URLs
@@ -205,10 +212,10 @@ export default function BannersPage() {
   // Delete individual image from banner (Edit mode)
   const handleDeleteImageFromBanner = async (imageUrl: string) => {
     if (!selectedBanner) return;
-    
+
     // Add to deleting state for loading UI indicator
     setDeletingImageUrls(prev => [...prev, imageUrl]);
-    
+
     try {
       const res = await removeImageFromBanner(selectedBanner._id, imageUrl);
       if (res && res.success !== false && !res.error) {
@@ -392,23 +399,22 @@ export default function BannersPage() {
         /* Banners Cards Grid */
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {banners.map((banner) => (
-            <div 
-              key={banner._id} 
+            <div
+              key={banner._id}
               className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow duration-200"
             >
               {/* Card Header */}
               <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                 <div className="flex items-center gap-3">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                    banner.isActive 
-                      ? 'bg-green-50 text-green-500 border-green-100' 
-                      : 'bg-gray-100 text-gray-500 border-gray-200'
-                  }`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${banner.isActive
+                    ? 'bg-green-50 text-green-500 border-green-100'
+                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                    }`}>
                     {banner.isActive ? 'Active' : 'Inactive'}
                   </span>
-                  
+
                   {/* Status Toggle Button */}
-                  <button 
+                  <button
                     onClick={() => handleToggleStatus(banner)}
                     disabled={actionLoading}
                     className="text-brand_gray hover:text-brand_pink transition-colors disabled:opacity-50"
@@ -445,33 +451,33 @@ export default function BannersPage() {
                 {banner.images && banner.images.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {banner.images.map((img, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className="border border-gray-100 rounded-xl overflow-hidden flex flex-col bg-gray-50"
                       >
                         <div className="relative aspect-[21/9] w-full bg-gray-200 overflow-hidden group">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={img.url} 
-                            alt={`Banner ${idx + 1}`} 
+                          <img
+                            src={img.url}
+                            alt={`Banner ${idx + 1}`}
                             className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                           />
-                          <a 
-                            href={img.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={img.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1 rounded-md transition-colors"
                           >
                             <Eye size={12} />
                           </a>
                         </div>
-                        
+
                         <div className="p-3 flex items-center justify-between text-xs text-brand_gray gap-2">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Link2 size={14} className="flex-shrink-0 text-brand_pink" />
                             {img.link ? (
-                              <span 
-                                className="truncate font-medium cursor-pointer hover:text-brand_pink transition-colors" 
+                              <span
+                                className="truncate font-medium cursor-pointer hover:text-brand_pink transition-colors"
                                 title={img.link}
                                 onClick={() => copyToClipboard(img.link || '')}
                               >
@@ -483,17 +489,17 @@ export default function BannersPage() {
                           </div>
                           {img.link && (
                             <div className="flex gap-1.5 flex-shrink-0">
-                              <button 
+                              <button
                                 onClick={() => copyToClipboard(img.link || '')}
                                 className="p-1 rounded hover:bg-white text-gray-400 hover:text-brand_pink transition-colors"
                                 title="Copy link"
                               >
                                 <Copy size={12} />
                               </button>
-                              <a 
-                                href={img.link} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                              <a
+                                href={img.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="p-1 rounded hover:bg-white text-gray-400 hover:text-brand_pink transition-colors"
                                 title="Open redirect URL"
                               >
@@ -574,15 +580,15 @@ export default function BannersPage() {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-brand_gray">Selected Files ({newImages.length})</h4>
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                     {newImages.map((item, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className="flex items-start gap-4 p-3 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all"
                       >
                         <div className="relative w-20 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={item.preview} alt="Selected file" className="w-full h-full object-cover" />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0 space-y-1">
                           <p className="text-xs font-bold text-gray-800 truncate">{item.file.name}</p>
                           <input
@@ -657,7 +663,7 @@ export default function BannersPage() {
 
             {/* Modal Body */}
             <form onSubmit={handleEditBannerSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-              
+
               {/* Active Toggle */}
               <div className="bg-gray-50 p-4 rounded-xl flex items-center justify-between border border-gray-100">
                 <div>
@@ -685,8 +691,8 @@ export default function BannersPage() {
                     selectedBanner.images.map((img, idx) => {
                       const isDeleting = deletingImageUrls.includes(img.url);
                       return (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className="flex items-center gap-4 p-3 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all"
                         >
                           <div className="relative w-20 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
@@ -698,7 +704,7 @@ export default function BannersPage() {
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 text-xs text-brand_gray">
                               <Link2 size={12} className="text-brand_pink flex-shrink-0" />
@@ -734,7 +740,7 @@ export default function BannersPage() {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-brand_gray mb-1">Add More Images</h4>
                   <p className="text-xs text-brand_gray">Select additional images to append to this banner</p>
                 </div>
-                
+
                 <div className="border-2 border-dashed border-gray-200 hover:border-brand_pink rounded-xl p-6 text-center bg-gray-50/50 hover:bg-brand_pink/5 transition-all duration-200 relative cursor-pointer">
                   <input
                     type="file"
@@ -754,15 +760,15 @@ export default function BannersPage() {
                     <h5 className="text-[10px] font-bold uppercase tracking-wider text-brand_gray">Newly Appended Files ({appendedImages.length})</h5>
                     <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1">
                       {appendedImages.map((item, idx) => (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className="flex items-start gap-4 p-3 border border-gray-100 rounded-xl bg-gray-50/50"
                         >
                           <div className="relative w-16 h-10 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.preview} alt="Appended file" className="w-full h-full object-cover" />
                           </div>
-                          
+
                           <div className="flex-1 min-w-0 space-y-1">
                             <p className="text-[10px] font-bold text-gray-800 truncate">{item.file.name}</p>
                             <input

@@ -1,6 +1,8 @@
 'use client'
 
+import { bunnyLoader } from '@/lib/bunnyLoader';
 import { X } from 'lucide-react';
+import Image from 'next/image';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Category, Product, PromotionFormValues, SelectOption } from '../types';
 import { getEntityId } from '../utils';
@@ -326,11 +328,13 @@ const PromotionFormModal = ({
           {previewSrc && (
             <div className="mt-3 flex items-end gap-3">
               <div className="relative w-40 h-24 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 shadow-sm shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={previewSrc}
                   alt="Banner preview"
                   className="w-full h-full object-cover"
+                  loader={bunnyLoader}
+                  fill
+                  loading='eager'
                 />
                 <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-semibold">
                   {bannerPreviewUrl ? 'New image' : 'Current banner'}

@@ -99,7 +99,7 @@ export const useSearchStore = create<SearchStore>()(
       recentImageSearches: [],
 
       addRecentImageSearch: async (file: File) => {
-        const base64 = await fileToBase64(file);
+        const base64 = await fileToThumbnailDataUrl(file);
         const hash = await hashBase64(base64);
 
         // Deduplicate before adding
@@ -131,11 +131,20 @@ export const useSearchStore = create<SearchStore>()(
     {
       name: "search-store",
 
+      // Bumped because older versions stored full-resolution image searches
+      // and blew past the localStorage quota; this drops any such stale,
+      // oversized state instead of failing every future write.
+      version: 1,
+
+      // Without this, a version mismatch (i.e. every browser with data from
+      // before the bump above) logs "couldn't be migrated" and discards the
+      // old state anyway — same outcome, just silent instead of alarming.
+      migrate: () => ({ recent: [], recentImageSearches: [] }),
+
       // 👇 ONLY these survive refresh
       partialize: (state) => ({
         recent: state.recent,
         recentImageSearches: state.recentImageSearches,
-        searchByImageProducts: state.searchByImageProducts,
       }),
     },
   ),
@@ -151,10 +160,34 @@ const hashBase64 = async (base64: string) => {
     .join(""); // "a3f1c9..." — short, fast to compare
 };
 
-const fileToBase64 = (file: File): Promise<string> =>
+// Downscales the uploaded file before it's stored, since the original can be
+// several MB and localStorage has a ~5-10MB quota shared across the app.
+const fileToThumbnailDataUrl = (
+  file: File,
+  maxDimension = 320,
+): Promise<string> =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string); // "data:image/png;base64,..."
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      URL.revokeObjectURL(objectUrl);
+      if (!ctx) {
+        reject(new Error("Canvas 2D context unavailable"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image for thumbnail"));
+    };
+    img.src = objectUrl;
   });

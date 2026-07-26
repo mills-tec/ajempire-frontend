@@ -2,13 +2,14 @@
 
 import { IOrder } from "@/lib/types";
 import Image from "next/image";
+import { memo } from "react";
 
 interface TopSellingCategoryProps {
     orders?: IOrder[];
     period?: string;
 }
 
-const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCategoryProps) => {
+const TopSellingCategory = memo(function TopSellingCategory({ orders = [], period = 'This week' }: TopSellingCategoryProps) {
     // Calculate category sales from orders
     const categorySales = orders?.reduce((acc: Record<string, { name: string; sales: number; value: number; image: string; }>, order) => {
         order.items?.forEach((item) => {
@@ -30,19 +31,14 @@ const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCat
     }, {}) || {};
 
     // Convert to array, sort by value, and take top 7
-    const topCategories = Object.values(categorySales)
+    const displayCategories = Object.values(categorySales)
         .sort((a, b) => b.value - a.value)
         .slice(0, 7)
         .map((category) => ({
             name: category.name,
             value: category.value.toLocaleString(),
-            change: `${Math.floor(Math.random() * 40) - 20}%`, // Random change for demo
-            negative: Math.random() > 0.5,
-            neutral: Math.random() > 0.8,
             image: category.image
         }));
-
-    const displayCategories = topCategories;
     const lowerPeriod = period.toLowerCase();
     const periodLabel = lowerPeriod === 'all time' ? 'all time' : lowerPeriod === 'this week' ? 'this week' : lowerPeriod === 'this month' ? 'this month' : 'this year';
 
@@ -60,18 +56,15 @@ const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCat
                     displayCategories.map((category, index) => (
                         <div key={index} className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9  bg-brand_pink/10 relative rounded-full" >
+                               {
+                                category.image &&  <div className="w-9 h-9  bg-brand_pink/10 relative rounded-full" >
                                     <Image className="object-cover rounded-full" fill alt={category.name} src={category.image} />
                                 </div>
+                               }
                                 <span className=" capitalize">{category.name}</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="text-[13px] font-bold text-gray-800">₦{category.value}</span>
-                                {/* <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${category.neutral ? 'bg-gray-100 text-gray-400 border border-gray-200' :
-                                    category.negative ? 'bg-red-50 text-red-400 border border-red-100' : 'bg-green-50 text-green-500 border border-green-100'
-                                    }`}>
-                                    {category.change}
-                                </span> */}
                             </div>
                         </div>
                     ))
@@ -79,6 +72,6 @@ const TopSellingCategory = ({ orders = [], period = 'This week' }: TopSellingCat
             </div>
         </div>
     );
-};
+});
 
 export default TopSellingCategory;

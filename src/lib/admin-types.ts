@@ -74,6 +74,7 @@ export interface Product {
   category?: { _id: string; name: string } | string;
   images?: string[];
   cover_image?: string;
+  video?: string;
   stock: number;
   weight?: number;
   sku?: string;
@@ -93,16 +94,37 @@ export interface Product {
   reviews: Review[];
 }
 
+export interface ProductVariant {
+  name: string;
+  values: string[];
+}
+
+export interface ProductVariantCombination {
+  options: { name: string; value: string }[];
+  stock: number;
+  additionalPrice: number;
+}
+
 export interface CreateProductData {
   name: string;
   description: string;
   price: number;
-  categoryId: string;
+  category: string;
+  cover_image: string;
   images: string[];
+  video?: string;
   stock: number;
   weight: number;
+  sku?: string;
+  barcode?: string;
   status?: 'active' | 'inactive' | 'draft';
   isReturnable?: boolean;
+  isTimedSpecialOffer?: boolean;
+  specialOfferDate?: string;
+  specialOfferTime?: string;
+  whatsInside?: string[];
+  variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
 }
 
 export interface UpdateProductData {
@@ -110,11 +132,18 @@ export interface UpdateProductData {
   description?: string;
   price?: number;
   categoryId?: string;
+  cover_image?: string;
   images?: string[];
+  video?: string;
   stock?: number;
   weight?: number;
+  sku?: string;
+  barcode?: string;
   status?: 'active' | 'inactive' | 'draft';
   isReturnable?: boolean;
+  isTimedSpecialOffer?: boolean;
+  specialOfferDate?: string;
+  specialOfferTime?: string;
 }
 
 // Order interfaces
@@ -144,9 +173,10 @@ export interface Address {
   country: string;
 }
 
+export type IOrderStats = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 export interface UpdateOrderData {
   status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  orderStatus?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  orderStatus?: IOrderStats;
   trackingNumber?: string;
 }
 
@@ -196,7 +226,7 @@ export interface IReturn {
     reviews: unknown[]; // Replace with IReview[] if you have a review interface
   }[];
 
-  status: 
+  status:
   "processing"
   | "approved"
   | "declined"
@@ -326,7 +356,7 @@ export interface CreateEducationData {
   video?: string;
   type?: 'video' | 'article' | 'tutorial';
   url?: string;
-  thumbnail?: string;
+  // thumbnail?: string;
   isActive?: boolean;
 }
 
@@ -374,7 +404,7 @@ export interface Admin {
   name: string;
   role: string;
   permissions: string[];
-  isActive: boolean;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -385,6 +415,7 @@ export interface CreateAdminData {
   name: string;
   role: string;
   permissions?: string[];
+  active?: boolean;
 }
 
 // ─── AdminProfile ─────────────────────────────────────────────────────────────
@@ -400,17 +431,28 @@ export interface PickupAddress {
   country: string;
   postalCode: string;
 }
+
+export const PERMISSIONS = [
+  "",
+  "all",
+  "manage_users",
+  "manage_admins",
+  "manage_activity",
+  "manage_products",
+  "manage_orders",
+  "manage_content",
+  "manage_promo",
+  "analytics",
+  "manage_returns"
+] as const;
 export interface AdminProfile {
-  name?: string;
-  firstName?: string;
+  name: string;
   email: string;
-  phone?: string;
-  phoneNumber?: string;
-  avatar?: string;
-  profilePicture?: string | null;
-  role?: string;
-  adminRole?: string;
-  pickupAddress?: PickupAddress
+  role: string;
+  pickupAddress?: PickupAddress;
+  id: string;
+  active: boolean;
+  permissions: typeof PERMISSIONS
 }
 
 // ─── AdminSecuritySettings ────────────────────────────────────────────────────

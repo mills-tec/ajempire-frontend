@@ -8,6 +8,13 @@ type AuthStore = {
   setIsLoggedIn: (logged_in: boolean) => void;
   setUser: (user: User) => void;
   setIsPushTokenSet: (isPushTokenSet: boolean) => void;
+  // Admin login lives in AuthContext (React context, scoped to /admin/*),
+  // which NotificationWrapper — mounted in the root layout, outside that
+  // provider — can't subscribe to. This tick is a provider-agnostic signal
+  // AuthContext bumps on login so NotificationWrapper's push-token effect
+  // re-runs immediately instead of waiting for the next full page load.
+  adminTokenTick: number;
+  bumpAdminTokenTick: () => void;
 };
 
 interface User {
@@ -25,6 +32,9 @@ export const useAuthStore = create<AuthStore>()(
       setUser: (user: User) => set({ user }),
       isPushTokenSet: false,
       setIsPushTokenSet: (val: boolean) => set({ isPushTokenSet: val }),
+      adminTokenTick: 0,
+      bumpAdminTokenTick: () =>
+        set((state) => ({ adminTokenTick: state.adminTokenTick + 1 })),
     }),
     {
       name: "auth-storage",
@@ -32,7 +42,7 @@ export const useAuthStore = create<AuthStore>()(
         isLoggedIn: state.isLoggedIn,
         user: state.user,
         isPushTokenSet: state.isPushTokenSet,
-      }), // only persist items
+      }), // only persist items — adminTokenTick is an in-memory signal only
     },
   ),
 );

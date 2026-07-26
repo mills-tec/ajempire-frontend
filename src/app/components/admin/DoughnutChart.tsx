@@ -1,5 +1,6 @@
 'use client'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { memo } from "react";
 import { Doughnut } from "react-chartjs-2";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -10,7 +11,7 @@ interface DoughnutChartProps {
     unsold?: number;
 }
 
-const DoughnutChart = ({ data = [], sold = 65, unsold = 35 }: DoughnutChartProps) => {
+const DoughnutChart = memo(function DoughnutChart({ data = [], sold = 65, unsold = 35 }: DoughnutChartProps) {
     // Use dynamic data if provided, otherwise use sold/unsold props
     const chartData = data.length > 0 ? data : [
         { name: 'Sold Units', value: sold, color: '#ff008c' },
@@ -54,6 +55,6 @@ const DoughnutChart = ({ data = [], sold = 65, unsold = 35 }: DoughnutChartProps
             </div>
         </div>
     );
-};
+});
 
 export default DoughnutChart;

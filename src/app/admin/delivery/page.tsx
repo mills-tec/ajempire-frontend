@@ -1,6 +1,7 @@
 'use client'
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import { IOrderStats } from '@/lib/admin-types';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
 import { ChevronLeft, ChevronRight, Eye, Filter, Package, Search, ShoppingBag, X } from 'lucide-react';
@@ -52,18 +53,16 @@ const DeliveryPage = () => {
   const handleUpdateStatus = async (orderDbId: string, newStatus: string) => {
     try {
       setIsUpdatingStatus(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await updateOrder(orderDbId, { orderStatus: newStatus as any });
+      const response = await updateOrder(orderDbId, { orderStatus: newStatus as IOrderStats });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (response.success || (response as any).message === "Order Status Updated") {
+      if (response.status) {
         toast.success('Order status updated successfully');
         // Refresh orders
         await fetchOrders();
         // Update selected delivery to reflect new status
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setSelectedDelivery((prev: any) => {
-          if (!prev || prev.dbId !== orderDbId) return prev;
+          // if (!prev || prev.dbId !== orderDbId) return prev;
 
           const updatedStatus = newStatus === 'shipped' ? 'In Transit' :
             newStatus === 'delivered' ? 'Delivered' :
@@ -258,7 +257,7 @@ const DeliveryPage = () => {
                   onClick={() => { setDeliveryFilter('in transit'); setShowFilterDropdown(false); }}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 ${deliveryFilter === 'in transit' ? 'text-brand_pink font-semibold bg-brand_pink/5' : 'text-gray-700'}`}
                 >
-                  In Transit
+                  Shipped
                 </button>
                 <button
                   onClick={() => { setDeliveryFilter('delivered'); setShowFilterDropdown(false); }}
@@ -423,7 +422,7 @@ const DeliveryPage = () => {
                         <button
                           key={statusBtn.value}
                           disabled={isUpdatingStatus}
-                          onClick={() => handleUpdateStatus(selectedDelivery.dbId, statusBtn.value)}
+                          onClick={() => handleUpdateStatus(selectedDelivery.id, statusBtn.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${statusBtn.color} ${isActive
                             ? 'ring-2 ring-brand_pink border-transparent scale-105 shadow-sm'
                             : 'opacity-70 hover:opacity-100'

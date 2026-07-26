@@ -21,8 +21,7 @@ const nextConfig: NextConfig = {
       480,
       768,
       1024,
-      1280,
-      1536,
+     
     ],
 
     imageSizes: [
