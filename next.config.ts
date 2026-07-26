@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.pinimg.com",
         pathname: "/**",
-      }
+      },
     ],
 
     formats: ["image/avif", "image/webp"],
