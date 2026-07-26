@@ -1,7 +1,9 @@
 'use client'
 
+import { bunnyLoader } from '@/lib/bunnyLoader';
 import { Trash2, X } from 'lucide-react';
-import React, { memo } from 'react';
+import Image from 'next/image';
+import { memo } from 'react';
 import { Promotion } from '../types';
 import { formatDiscount, getStatusStyle } from '../utils';
 import ModalShell from './ModalShell';
@@ -45,12 +47,20 @@ const PromotionDetailsModal = ({
       <div className="space-y-6">
         {promotion.banner && (
           <div className="w-full h-48 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center relative shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={promotion.banner}
               alt="Campaign Banner"
               className="w-full h-full object-cover"
+              loader={bunnyLoader}
+              fill
+              loading='eager'
+              sizes="(max-width: 480px) 100vw,
+         (max-width: 768px) 50vw,
+         (max-width: 1024px) 40vw,
+         384px"
             />
+
+
             <div className="absolute top-3 right-3">
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusStyle(promotion.status)}`}

@@ -1,6 +1,9 @@
 "use client";
 
+import { CreateProductData } from '@/lib/admin-types';
 import { createCategory, createProduct, getAllCategories } from '@/lib/adminapi';
+import { uploadImageFileToStorage } from '@/lib/utils';
+import { uploadProductVideoInBackground } from '@/lib/videoUploadManager';
 import { AlertCircle, CheckCircle, Film, Info, Plus, PlusIcon, Trash2, Upload, UploadCloud, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -164,16 +167,39 @@ const AddProductPage = () => {
         fetchCategories();
     }, [fetchCategories, router, showToast]);
 
+    // ── Shared upload helper ───────────────────────────────────────────────────
+    // Compresses images before upload (videos pass through unchanged), then
+    // uploads to the presigned storage URL and returns the resulting object key.
+    // const uploadImageFileToStorage = async (file: File): Promise<string> => {
+    //     const fileToUpload = file.type.startsWith("image")
+    //         ? await compressImage(file, "medium")
+    //         : file;
+
+    //     const tr = await getImagePresignedUpload(fileToUpload);
+    //     if (!tr.status || !tr.message) {
+    //         throw new Error("Failed to get upload URL");
+    //     }
+
+    //     const uploadResult = await uploadFile(fileToUpload, tr.message.uploadUrl);
+    //     if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    //         throw new Error("Upload failed");
+    //     }
+
+
+    //     return tr.message.objectKey;
+    // };
+
     // ── Category creation ─────────────────────────────────────────────────────
     const handleCreateCategory = async () => {
         if (!newCategoryName.trim()) { showToast('Please enter a category name', 'error'); return; }
         setCreatingCategory(true);
         try {
-            const fd = new FormData();
-            fd.append('name', newCategoryName.trim());
-            if (newCategoryImage) fd.append('image', newCategoryImage);
+            const objectKey = newCategoryImage ? await uploadImageFileToStorage(newCategoryImage) : undefined;
 
-            const response = await createCategory(fd);
+            const response = await createCategory({
+                name: newCategoryName.trim(),
+                image: objectKey,
+            });
             if (response.status) {
                 showToast('Category created successfully!', 'success');
                 await fetchCategories();
@@ -321,62 +347,72 @@ const AddProductPage = () => {
                 return;
             }
 
-            const fd = new FormData();
-            fd.append('name', productName);
-            fd.append('description', productDescription);
-            fd.append('category', productCategory);
-            fd.append('price', productPrice);
-            fd.append('stock', stock);
-            fd.append('weight', weight);
-            fd.append('isReturnable', String(isReturnable));
-            fd.append('isTimedSpecialOffer', String(isTimedSpecialOffer));
-            if (isTimedSpecialOffer) {
-                if (specialOfferDate) fd.append('specialOfferDate', specialOfferDate);
-                if (specialOfferTime) fd.append('specialOfferTime', specialOfferTime);
-            }
-            if (sku) fd.append('sku', sku);
-            if (barcode) fd.append('barcode', barcode);
+            // Compress + upload cover image and additional images in parallel —
+            // these are required, so product creation waits on them. The video
+            // is left out of this: it can take a while, and shouldn't hold up
+            // creating the product. It uploads in the background and gets
+            // attached to the product afterwards, whenever it finishes.
+            const [coverImageKey, additionalImageKeys] = await Promise.all([
+                uploadImageFileToStorage(coverImage!),
+                Promise.all(additionalImages.map(({ file }) => uploadImageFileToStorage(file))),
+            ]);
 
-            // Cover image
-            fd.append('cover_image', coverImage!);
-
-            // Additional images — each appended under the same key "images"
-            additionalImages.forEach(({ file }) => fd.append('images', file));
-
-            // Video
-            if (productVideo) fd.append('video', productVideo);
-
-            // What's inside
             const validInside = whatsInside.filter(i => i.trim());
-            if (validInside.length) fd.append('whatsInside', JSON.stringify(validInside));
-
-            // Variants
             const validVariants = variants.filter(v => v.name && v.values.some(val => val));
-            if (validVariants.length) {
-                fd.append('variants', JSON.stringify(validVariants));
-                const validCombos = variantCombinations.filter(c => c.options.every(o => o.value));
-                if (validCombos.length) fd.append('variantCombinations', JSON.stringify(validCombos));
-            }
+            const validCombos = variantCombinations.filter(c => c.options.every(o => o.value));
 
-            const response = await createProduct(fd);
+            const data: CreateProductData = {
+                name: productName,
+                description: productDescription,
+                category: productCategory,
+                price: Number(productPrice),
+                stock: Number(stock),
+                weight: Number(weight),
+                isReturnable,
+                cover_image: coverImageKey,
+                images: additionalImageKeys,
+                ...(sku ? { sku } : {}),
+                ...(barcode ? { barcode } : {}),
+                isTimedSpecialOffer,
+                ...(isTimedSpecialOffer && specialOfferDate ? { specialOfferDate } : {}),
+                ...(isTimedSpecialOffer && specialOfferTime ? { specialOfferTime } : {}),
+                ...(validInside.length ? { whatsInside: validInside } : {}),
+                ...(validVariants.length ? { variants: validVariants } : {}),
+                ...(validVariants.length && validCombos.length ? { variantCombinations: validCombos } : {}),
+            };
+
+            const response = await createProduct(data);
             if (response.status) {
+                // Fire-and-forget: this lives in a global store/module (not
+                // this component), so it keeps uploading — and the admin-layout
+                // HUD keeps tracking it — even after we navigate away below.
+                const newProductId = response.message?._id;
+                if (productVideo && newProductId) {
+                    void uploadProductVideoInBackground(productVideo, newProductId);
+                }
+
                 showToast('Product created successfully!', 'success');
                 // Reset all fields
-                setProductName(''); setProductDescription(''); setProductCategory('');
+                setProductName('');
+                setProductDescription('');
+                setProductCategory('');
                 setProductPrice(''); setStock(''); setWeight(''); setSku(''); setBarcode('');
                 setCoverImage(null); setCoverImagePreview('');
                 setAdditionalImages([]);
                 setProductVideo(null);
-                setIsReturnable(true); setIsTimedSpecialOffer(false);
+                setIsReturnable(true);
+                setIsTimedSpecialOffer(false);
                 setSpecialOfferDate(''); setSpecialOfferTime('');
                 setWhatsInside(['']);
                 setVariants([{ name: 'color', values: [''] }, { name: 'size', values: [''] }]);
                 setVariantCombinations([]);
                 setSelectedCombinationIndex(0);
+
+                router.push("/admin/inventory");
             } else {
-                   showToast(response.error ?? 'Failed to create product', 'error');
+                showToast(response.error ?? 'Failed to create product', 'error');
             }
-            
+
         } catch (error) {
             showToast(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
         } finally {

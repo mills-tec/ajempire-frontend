@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { useSearchStore } from "@/lib/search-store";
-import SearchDropdown from "./SearchDropdown";
-import { SearchIcon } from "@/components/svgs/SearchIcon";
+import { useProduct } from "@/api/customHooks";
 import { CameraIcon } from "@/components/svgs/CameraIcon";
 import { CameraSnap } from "@/components/svgs/CameraSnap";
-import { useRouter } from "next/navigation";
-import { useProduct } from "@/api/customHooks";
+import { SearchIcon } from "@/components/svgs/SearchIcon";
+import { useSearchStore } from "@/lib/search-store";
 import { Product } from "@/lib/types";
 import { LoaderCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import SearchDropdown from "./SearchDropdown";
 
 const PLACEHOLDERS = [
   "Super deals 🔥",
@@ -22,7 +22,9 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  // Bumped on every submit/image-search so a slow response can detect it's
+  // been superseded and skip applying its (now stale) result.
+  const searchGenerationRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
@@ -32,13 +34,16 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   );
 
   const { searchByImage, searchByImageLoading } = useProduct();
-  const {
-    query,
-    setQuery,
-    submitSearch,
-    setSearchByImageProducts,
-    addRecentImageSearch,
-  } = useSearchStore();
+
+  // Selected individually rather than destructuring the whole store, so this
+  // component only re-renders when these specific fields change — not on
+  // every unrelated search-store update (recent list, price range, etc.)
+  const query = useSearchStore((s) => s.query);
+  const setQuery = useSearchStore((s) => s.setQuery);
+  const submitSearch = useSearchStore((s) => s.submitSearch);
+  const setSearchByImageProducts = useSearchStore((s) => s.setSearchByImageProducts);
+  const addRecentImageSearch = useSearchStore((s) => s.addRecentImageSearch);
+
   const router = useRouter();
 
   useEffect(() => setMounted(true), []);
@@ -64,22 +69,33 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     };
   }, [placeholderIndex]);
 
-  // Update dropdown position
+  // Update dropdown position. The dropdown is `position: fixed`, so it needs
+  // viewport-relative coordinates (getBoundingClientRect already gives us
+  // that) — recomputed on resize/scroll too, since otherwise it stays glued
+  // to wherever the search bar was when the dropdown first opened.
   useEffect(() => {
-    if (!open || !wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    const newPos = {
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width,
+    if (!open) return;
+
+    const updatePosition = () => {
+      if (!wrapperRef.current) return;
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const newPos = { top: rect.bottom, left: rect.left, width: rect.width };
+      setDropdownPos((prev) =>
+        prev.top === newPos.top &&
+        prev.left === newPos.left &&
+        prev.width === newPos.width
+          ? prev
+          : newPos,
+      );
     };
-    setDropdownPos((prev) =>
-      prev.top === newPos.top &&
-      prev.left === newPos.left &&
-      prev.width === newPos.width
-        ? prev
-        : newPos,
-    );
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
   }, [open]);
 
   // Outside click
@@ -94,40 +110,38 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
+    searchGenerationRef.current += 1; // invalidate any in-flight image search
     setQuery(trimmedQuery);
     submitSearch();
     router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
     setOpen(false);
     inputRef.current?.blur();
-  }, [query, setQuery, submitSearch, router]);
+  };
 
-  const handleImageSearch = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const data: Product[] = await searchByImage(file);
-        setSearchByImageProducts(data);
-        addRecentImageSearch(file);
-        router.push(`/search?type=image`);
-      } catch (err) {
-        console.error(err);
-      }
-    },
-    [searchByImage, setSearchByImageProducts, addRecentImageSearch, router],
-  );
+  const handleImageSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const generation = ++searchGenerationRef.current;
+    try {
+      const data: Product[] | undefined = await searchByImage(file);
+      // A newer search (another image upload, or a text search) started
+      // while this request was in flight, or the request itself failed —
+      // either way, this result is stale and shouldn't be applied.
+      if (searchGenerationRef.current !== generation || !data) return;
+      setSearchByImageProducts(data);
+      addRecentImageSearch(file);
+      router.push(`/search?type=image`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") handleSubmit();
-    },
-    [handleSubmit],
-  );
-
-  const handleFocus = useCallback(() => setOpen(true), []);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSubmit();
+  };
 
   useEffect(() => {
     if (!searchByImageLoading) {
@@ -143,7 +157,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={handleFocus}
+          onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={PLACEHOLDERS[placeholderIndex]}
           className={`w-full outline-none bg-transparent text-base ${placeholderClass}`}
@@ -190,7 +204,6 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
         open &&
         createPortal(
           <SearchDropdown
-            ref={dropdownRef}
             inputRef={inputRef}
             onClose={() => setOpen(false)}
             position={dropdownPos}

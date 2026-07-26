@@ -48,6 +48,21 @@ export interface PromotionFormValues {
   couponCode: string;
 }
 
+/** JSON body sent to createPromotion/updatePromotion — banner is an already-uploaded object key/URL, never a raw File. */
+export interface PromotionPayload {
+  title: string;
+  description: string;
+  promotionType: PromotionType;
+  discountType: DiscountType;
+  discountValue: number;
+  applyTo: ApplyTo;
+  applyToId: string[];
+  banner?: string;
+  startDate?: string;
+  endDate?: string;
+  couponCode: string;
+}
+
 export interface SelectOption {
   value: string;
   label: string;

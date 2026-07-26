@@ -1,3 +1,4 @@
+import { getImagePresignedUpload, uploadFile } from "./adminapi";
 import { Review } from "./types";
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
@@ -157,6 +158,55 @@ export function getCountdown(targetDate: string | Date) {
 
   return { days, hours, minutes, seconds };
 }
+export type CompressionType = "low" | "medium" | "high";
+
+const COMPRESSION_PRESETS: Record<CompressionType, { maxWidth: number; maxHeight: number; quality: number }> = {
+  low: { maxWidth: 800, maxHeight: 800, quality: 0.5 },
+  medium: { maxWidth: 1280, maxHeight: 1280, quality: 0.7 },
+  high: { maxWidth: 1920, maxHeight: 1920, quality: 0.9 },
+};
+
+// Resizes/re-encodes an image client-side before upload to cut payload size.
+// Skips gif/svg (canvas re-encoding would drop animation / rasterize vectors)
+// and falls back to the original file if the compressed result isn't smaller.
+export async function compressImage(
+  file: File,
+  compressionType: CompressionType = "medium",
+): Promise<File> {
+  const { maxWidth, maxHeight, quality } = COMPRESSION_PRESETS[compressionType];
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") {
+    return file;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+
+    let { width, height } = bitmap;
+    const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob(resolve, file.type, quality),
+    );
+
+    if (!blob || blob.size >= file.size) return file;
+
+    return new File([blob], file.name, { type: file.type, lastModified: Date.now() });
+  } catch {
+    return file;
+  }
+}
+
 export const ITEMS_TO_APPEND = 10;
 export function shuffleArray<T>(array: T[]) {
   const arr = [...array]; // copy so original isn't mutated
@@ -169,3 +219,22 @@ export function shuffleArray<T>(array: T[]) {
   return arr.slice(startIndex, endIndex);
 }
 
+
+export const uploadImageFileToStorage = async (file: File): Promise<string> => {
+        const fileToUpload = file.type.startsWith("image")
+            ? await compressImage(file, "medium")
+            : file;
+
+        const tr = await getImagePresignedUpload(fileToUpload);
+        if (!tr.status || !tr.message) {
+            throw new Error("Failed to get upload URL");
+        }
+
+        const uploadResult = await uploadFile(fileToUpload, tr.message.uploadUrl);
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            throw new Error("Upload failed");
+        }
+
+
+        return tr.message.objectKey;
+    };

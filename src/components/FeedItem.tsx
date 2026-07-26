@@ -22,6 +22,7 @@ import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { CommentData, Feed, IUpdateSocketFeed, IUpdateSocketFeedComment, Product } from "@/lib/types";
 import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import Hls from "hls.js";
 import {
   Heart,
   LoaderCircle,
@@ -541,6 +542,14 @@ function FeedContent({
   const itemRefCallbacks = useRef<Map<number, (el: HTMLDivElement | null) => void>>(new Map());
   const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
   const videoRefCallbacks = useRef<Map<number, (el: HTMLVideoElement | null) => void>>(new Map());
+  // hls.js instances keyed by the same slot index as videoRefs — only ever
+  // holds an entry for a video that's (a) actually mediaType "video", (b)
+  // playing via MSE/hls.js rather than native/MP4 <video src>, and (c)
+  // currently inside VIDEO_ACTIVE_WINDOW. Populated/torn down from the same
+  // ref callback that mounts/unmounts the <video> element itself (see
+  // getVideoRefCallback), since FeedCard already only renders a <video> node
+  // for indices inside that window.
+  const hlsRefs = useRef<Record<number, Hls | null>>({});
   const hidePlayTimeouts = useRef<Record<number, NodeJS.Timeout>>({});
   const hasFocusedRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -888,6 +897,83 @@ function FeedContent({
     }
   }, [prependSlots]);
 
+  // ── HLS.js attach/detach ─────────────────────────────────────────────────
+  // Buffer target for the currently-playing video vs. its prev/next preload
+  // neighbors — a short-form feed should never let the "next" video's
+  // background fetch grow past a small look-ahead, while the one actually
+  // on screen gets a normal buffer.
+  const hlsBufferConfig = (isCurrentNow: boolean) =>
+    isCurrentNow
+      ? { maxBufferLength: 30, maxMaxBufferLength: 60 }
+      : { maxBufferLength: 4, maxMaxBufferLength: 8 };
+
+  const detachHls = useCallback((index: number) => {
+    const hls = hlsRefs.current[index];
+    if (!hls) return;
+    hls.destroy();
+    delete hlsRefs.current[index];
+  }, []);
+
+  // Called from the video ref callback the moment a <video> element for this
+  // index mounts (i.e. the index just entered VIDEO_ACTIVE_WINDOW). Safari/
+  // iOS gets native HLS via a plain src (more efficient there than MSE);
+  // everywhere else gets an hls.js instance if MSE is supported, or the
+  // Direct Play MP4 as a last resort so the element is never left dead.
+  const attachHls = useCallback((index: number, video: HTMLVideoElement, item: Feed, isCurrentNow: boolean) => {
+    if (item.mediaType !== "video") return;
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = item.mediaUrl;
+      return;
+    }
+
+    if (!Hls.isSupported()) {
+      if (item.mp4Url) video.src = item.mp4Url;
+      return;
+    }
+
+    const hls = new Hls({
+      ...hlsBufferConfig(isCurrentNow),
+      // Start conservative rather than letting ABR guess high on the first
+      // segment — minimizes time-to-first-frame; normal ABR takes over for
+      // subsequent segments.
+      startLevel: 0,
+    });
+
+    // hls.js's own recommended error-handling pattern: retry recoverable
+    // network/media errors a bounded number of times, hard-fail (falling
+    // back to the Direct Play MP4 if there is one) on anything else so a
+    // broken stream doesn't retry forever against a dead element.
+    let networkRetries = 0;
+    let mediaRetries = 0;
+    const MAX_RETRIES = 3;
+    const fallbackToMp4 = () => {
+      hls.destroy();
+      delete hlsRefs.current[index];
+      if (item.mp4Url) video.src = item.mp4Url;
+    };
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (!data.fatal) return;
+      switch (data.type) {
+        case Hls.ErrorTypes.NETWORK_ERROR:
+          if (networkRetries++ < MAX_RETRIES) hls.startLoad();
+          else fallbackToMp4();
+          break;
+        case Hls.ErrorTypes.MEDIA_ERROR:
+          if (mediaRetries++ < MAX_RETRIES) hls.recoverMediaError();
+          else fallbackToMp4();
+          break;
+        default:
+          fallbackToMp4();
+          break;
+      }
+    });
+
+    hls.loadSource(item.mediaUrl);
+    hls.attachMedia(video);
+    hlsRefs.current[index] = hls;
+  }, []);
+
   // ── Stable per-index ref callbacks ──────────────────────────────────────
   // Cached so React doesn't detach/reattach every mounted item's ref on
   // every render (which an inline arrow function would otherwise cause).
@@ -908,11 +994,17 @@ function FeedContent({
     if (!cb) {
       cb = (el: HTMLVideoElement | null) => {
         videoRefs.current[index] = el;
+        if (el) {
+          const item = slotsRef.current[index]?.feed;
+          if (item) attachHls(index, el, item, index === currentIndexRef.current);
+        } else {
+          detachHls(index);
+        }
       };
       videoRefCallbacks.current.set(index, cb);
     }
     return cb;
-  }, []);
+  }, [attachHls, detachHls]);
 
   // ── Intersection Observer for feed visibility ────────────────────────────
   // Only recreated when the feed type changes; individual items self-register
@@ -1076,6 +1168,44 @@ function FeedContent({
   const setVideoPlaying = useCallback((index: number, playing: boolean) => {
     setPlayingMap((prev) => (prev[index] === playing ? prev : { ...prev, [index]: playing }));
   }, []);
+
+  // Reconfigures already-attached hls.js instances' buffer target when they
+  // flip between "current" and "preload neighbor" without a remount (e.g.
+  // scrolling from index 5 to 6 while 5 stays mounted as the new prev-
+  // neighbor), and sweeps any instance left outside VIDEO_ACTIVE_WINDOW as a
+  // defensive backstop — the primary teardown path is still the video
+  // element unmounting via getVideoRefCallback/detachHls above, since
+  // FeedCard only renders a <video> node for indices inside that window.
+  // Independent of and runs before the play/pause effect below; it only
+  // manages hls.js attachment, never touches play()/pause() itself.
+  useEffect(() => {
+    const lowIndex = currentIndex - VIDEO_ACTIVE_WINDOW;
+    const highIndex = currentIndex + VIDEO_ACTIVE_WINDOW;
+
+    Object.entries(hlsRefs.current).forEach(([key, hls]) => {
+      if (!hls) return;
+      const idx = Number(key);
+      if (idx < lowIndex || idx > highIndex) {
+        detachHls(idx);
+        return;
+      }
+      const isCurrentNow = idx === currentIndex;
+      hls.config.maxBufferLength = isCurrentNow ? 30 : 4;
+      hls.config.maxMaxBufferLength = isCurrentNow ? 60 : 8;
+    });
+  }, [currentIndex, slots, detachHls]);
+
+  // Belt-and-suspenders for component unmount: the per-index cleanup above
+  // handles indices leaving the video window during normal scrolling, but
+  // nothing else fires when FeedItem itself unmounts (e.g. navigating away),
+  // so any hls.js instances still alive at that point need an explicit
+  // teardown here too.
+  useEffect(() => {
+    const instances = hlsRefs.current;
+    return () => {
+      Object.keys(instances).forEach((key) => detachHls(Number(key)));
+    };
+  }, [detachHls]);
 
   // Drives play/pause for every mounted <video>, the single source of
   // truth for which one is actually decoding/playing. The old `autoPlay`
