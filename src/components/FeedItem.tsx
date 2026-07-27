@@ -317,6 +317,8 @@ const FeedCard = memo(function FeedCard({
               </div>
             )}
             <video
+            
+            
               // Current video gets a full preload since it's playing right
               // now; prev/next only preload metadata — just enough to
               // resume instantly once it becomes current, without pulling
