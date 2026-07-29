@@ -18,6 +18,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { saveAccounts } from "@/lib/utils";
 import { API_URL } from "@/lib/api";
 
@@ -68,6 +69,10 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             JSON.stringify({ token, user }),
           );
           setIsLoggedIn(true);
+          // See SigninComp's equivalent call — merges the guest cart into
+          // this account's backend cart. Not awaited: has its own error
+          // handling, shouldn't block the modal closing.
+          void useCartStore.getState().hydrateFromBackend();
           toast.success("Logged in successfully!", {
             duration: 3000,
           });

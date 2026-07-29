@@ -1,11 +1,11 @@
 "use client";
+import { globalUrl } from "@/api/api";
+import { API_URL, getBearerToken } from "@/lib/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import Spinner from "./Spinner";
 import { toast } from "sonner";
-import { API_URL, getBearerToken } from "@/lib/api";
-import { globalUrl } from "@/api/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import Spinner from "./Spinner";
 
 interface ShippingAdressProps {
   setIsadress?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -75,11 +75,14 @@ export default function ShippingAdressForm({
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  const [_states, _setStates] = useState<string[]>(nigeriaStates);
   const [selectedState, setSelectedState] = useState("Delta");
   const [selectedCountry, setSelectedCountry] = useState("Nigeria");
   const [loading, setLoading] = useState(false);
-  const { setIsLogisticsMode: _setIsLogisticsMode } = useCartStore();
+  // Not called anywhere yet — see the note in handleSubmit's logistics-status
+  // check. Kept (selector-scoped, not a whole-store destructure) so whoever
+  // wires it up doesn't also reintroduce a resubscribe-on-every-cart-change
+  // bug.
+  const _setIsLogisticsMode = useCartStore((s) => s.setIsLogisticsMode);
   const [showInitialSpinner, setShowInitialSpinner] = useState(false);
   const convertToLocalPhone = (phone: string) => {
     if (!phone) return "";
@@ -93,9 +96,18 @@ export default function ShippingAdressForm({
   };
 
   useEffect(() => {
+    // Guards the async fetch's .then/.catch below: if `existingAddress`
+    // changes again (or the component unmounts) before the request
+    // resolves, the stale response must not overwrite whatever the newer
+    // effect run (or synchronous existingAddress branch) already set.
+    let cancelled = false;
+
     // If existingAddress is passed (from GetshippingAddress edit icon)
     setShowInitialSpinner(true); // show spinner
-    setTimeout(() => setShowInitialSpinner(false), 700); // hide after 500ms
+    const spinnerTimeout = setTimeout(() => {
+      if (!cancelled) setShowInitialSpinner(false);
+    }, 700); // hide after 700ms
+
     if (existingAddress) {
       setFullName(existingAddress.fullName || "");
       setPhone(convertToLocalPhone(existingAddress.phone) || "");
@@ -107,25 +119,37 @@ export default function ShippingAdressForm({
     } else {
       // If no existingAddress passed, check backend
       const token = getBearerToken();
-      if (!token) return;
-
-      axios
-        .get(`${API_URL}/shipping-address`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          const data = res.data.message;
-          if (data && Object.keys(data).length > 0) {
-            // Prefill if address exists
-            setFullName(data.fullName || "");
-            setPhone(convertToLocalPhone(data.phone) || "");
-            setStreet(data.street || "");
-            setCity(data.city || "");
-            setPostalCode(data.postalCode || "");
-            setSelectedState(data.state || "Delta");
-            setSelectedCountry(data.country || "Nigeria");
-          } else {
-            // If backend returns empty, reset the form
+      if (token) {
+        axios
+          .get(`${API_URL}/shipping-address`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          .then((res) => {
+            if (cancelled) return;
+            const data = res.data.message;
+            if (data && Object.keys(data).length > 0) {
+              // Prefill if address exists
+              setFullName(data.fullName || "");
+              setPhone(convertToLocalPhone(data.phone) || "");
+              setStreet(data.street || "");
+              setCity(data.city || "");
+              setPostalCode(data.postalCode || "");
+              setSelectedState(data.state || "Delta");
+              setSelectedCountry(data.country || "Nigeria");
+            } else {
+              // If backend returns empty, reset the form
+              setFullName("");
+              setPhone("");
+              setStreet("");
+              setCity("");
+              setPostalCode("");
+              setSelectedState("Delta");
+              setSelectedCountry("Nigeria");
+            }
+          })
+          .catch((err) => {
+            if (cancelled) return;
+            console.error("❌ Error fetching address:", err);
             setFullName("");
             setPhone("");
             setStreet("");
@@ -133,77 +157,63 @@ export default function ShippingAdressForm({
             setPostalCode("");
             setSelectedState("Delta");
             setSelectedCountry("Nigeria");
-          }
-        })
-        .catch((err) => {
-          console.error("❌ Error fetching address:", err);
-          setFullName("");
-          setPhone("");
-          setStreet("");
-          setCity("");
-          setPostalCode("");
-          setSelectedState("Delta");
-          setSelectedCountry("Nigeria");
-        });
+          });
+      }
     }
+
+    return () => {
+      cancelled = true;
+      clearTimeout(spinnerTimeout);
+    };
   }, [existingAddress]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
     const token = getBearerToken();
     if (!token) {
       toast.error("User not authenticated. Please login to continue", {
         position: "top-right",
       });
-      setLoading(false);
+      return;
     }
+
     const phoneRegex = /^0\d{10}$/;
     if (!phoneRegex.test(phone)) {
       toast.error("Please enter a valid 11-digit Nigerian phone number", {
         position: "top-right",
       });
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
+
     // Convert to +234 format
     const formattedPhone = "+234" + phone.substring(1);
-    const data = {
-      shippingAdress: {
-        fullName,
-        phone: formattedPhone,
-        street,
-        city,
-        state: selectedState,
-        country: selectedCountry,
-        postalCode,
-      },
+    const shippingAddress = {
+      fullName,
+      phone: formattedPhone,
+      street,
+      city,
+      state: selectedState,
+      country: selectedCountry,
+      postalCode,
     };
 
     try {
-      const res = await axios.patch(
+      await axios.patch(
         `${globalUrl}/shipping-address`,
-        { shippingAddress: data.shippingAdress },
+        { shippingAddress },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (res.data) {
-        toast.success("Shipping address updated successfully", {
-          position: "top-right",
-        });
-      }
-      // checking if logistics is on
-      const req = await axios.get(`${globalUrl}/logisticsStatus`);
-      if (req.data.logisticsMode !== "auto") {
-        if (onContinue) onContinue();
-        if (onAddressUpdated) onAddressUpdated();
-
-        return;
-      }
-
-      if (onContinue) onContinue();
-      if (onAddressUpdated) onAddressUpdated();
+      toast.success("Shipping address updated successfully", {
+        position: "top-right",
+      });
     } catch (error: unknown) {
+      // The address genuinely wasn't saved — alert and stop here. Do not
+      // advance to the next step or fire onContinue/onAddressUpdated, and
+      // don't close the form via setIsadress either (that would hide the
+      // error and the retry option along with it).
       console.error("❌ Error updating address:", error);
 
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -215,16 +225,33 @@ export default function ShippingAdressForm({
       } else {
         toast.error("Network or unexpected error", { position: "top-right" });
       }
-    } finally {
-      setTimeout(() => {
-        setLoading(false);
-        if (!onContinue && setIsadress) {
-          setIsadress(false);
-        }
-      });
+      setTimeout(() => setLoading(false));
+      return;
     }
+
+    // The address is already saved at this point — everything below is
+    // best-effort and must not be reported as the submission having failed.
+    // (`logisticsMode` used to be read here to branch, but both branches
+    // did the exact same thing — call onContinue/onAddressUpdated — so
+    // there was no actual behavior difference. `_setIsLogisticsMode` above
+    // is presumably what this was meant to drive; left unwired rather than
+    // guessing at the intended behavior.)
+    try {
+      await axios.get(`${globalUrl}/logisticsStatus`);
+    } catch (error) {
+      console.error("⚠️ Could not fetch logistics status:", error);
+    }
+
+    if (onContinue) onContinue();
+    if (onAddressUpdated) onAddressUpdated();
+
+    setTimeout(() => {
+      setLoading(false);
+      if (!onContinue && setIsadress) {
+        setIsadress(false);
+      }
+    });
   };
-  console.log("selected state:", selectedState);
   return (
     <div className="fixed inset-0  bg-[#FFFFFF] flex lg:items-center items-start   lg:justify-center  z-50">
       {loading && <Spinner />}

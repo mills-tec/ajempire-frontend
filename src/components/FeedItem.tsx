@@ -25,10 +25,7 @@ import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
 import Hls from "hls.js";
 import {
   Heart,
-  LoaderCircle,
-  Pause,
-  Play, SendHorizonal, Volume2,
-  VolumeX
+  LoaderCircle, SendHorizonal
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,6 +39,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { HlsPlayer } from "./HLS";
 import ShareModal from "./ShareModal";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
@@ -282,7 +280,7 @@ const FeedCard = memo(function FeedCard({
               src={item.mediaUrl}
               alt={item.title}
               fill
-               sizes="(max-width: 640px) 50vw,
+              sizes="(max-width: 640px) 50vw,
          (max-width: 1024px) 50vw,
          50vw"
               className={`object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
@@ -311,35 +309,10 @@ const FeedCard = memo(function FeedCard({
           </div>
         ) : (
           <>
-            {!isLoaded && (
-              <div className="absolute inset-0 bg-gray-200 overflow-hidden">
-                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-              </div>
-            )}
-            <video
-            
-            
-              // Current video gets a full preload since it's playing right
-              // now; prev/next only preload metadata — just enough to
-              // resume instantly once it becomes current, without pulling
-              // down the full file in the background.
-              preload={isCurrent ? "auto" : "metadata"}
-              ref={registerVideoRef}
-              loop
-              muted={muted}
-              poster={item.image || undefined}
-              src={item.mediaUrl}
-              className={`w-full h-full object-cover cursor-pointer transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onCanPlay={handleMediaLoaded}
-              onError={handleMediaLoaded}
-              onClick={handleShowPlay}
-              onMouseMove={handleShowPlay}
-              playsInline
-            />
 
-            <div
+            <HlsPlayer src={item.mediaUrl} className=" object-cover h-full w-full"  controls={true}/>
+
+            {/* <div
               onClick={handleVideoClick}
               className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${showPlayOverlay
                 ? "opacity-100"
@@ -363,7 +336,7 @@ const FeedCard = memo(function FeedCard({
                   <Volume2 color="white" size={16} />
                 )}
               </span>
-            </div>
+            </div> */}
           </>
         )}
 

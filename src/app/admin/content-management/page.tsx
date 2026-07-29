@@ -5,8 +5,123 @@ import EmptyTable from '@/components/EmptyTable';
 import { Education } from '@/lib/admin-types';
 import { createEducation, deleteEducation, getEducation, updateEducation } from '@/lib/adminapi';
 import { uploadEducationVideoInBackground } from '@/lib/videoUploadManager';
-import { AlertCircle, ChevronLeft, ChevronRight, Edit2, Eye, Film, Filter, Loader2, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, Film, Filter, Loader2, Megaphone, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
+
+// Compact table-cell indicator for a content item's video transcoding state.
+// Module-level (not nested in ContentManagementPage) since it's purely
+// presentational — defining it inside the page component would give it a
+// new identity, and React would unmount/remount it, on every page render.
+const VideoStatusBadge = ({
+  status,
+  hasVideoUrl,
+}: {
+  status?: Education['videoStatus'];
+  hasVideoUrl?: boolean;
+}) => {
+  // A video that already has a playable URL but predates this field is
+  // effectively "finished" — don't make old content look unprocessed.
+  const effectiveStatus = status ?? (hasVideoUrl ? 'finished' : undefined);
+
+  if (!effectiveStatus) {
+    return <span className="text-xs text-gray-300">—</span>;
+  }
+
+  const config = {
+    processing: {
+      icon: Loader2,
+      spin: true,
+      className: 'bg-blue-50 text-blue-500 border-blue-100',
+      label: 'Processing',
+    },
+    finished: {
+      icon: CheckCircle2,
+      spin: false,
+      className: 'bg-green-50 text-green-500 border-green-100',
+      label: 'Ready',
+    },
+    failed: {
+      icon: AlertCircle,
+      spin: false,
+      className: 'bg-red-50 text-red-500 border-red-100',
+      label: 'Failed',
+    },
+  }[effectiveStatus];
+
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border whitespace-nowrap ${config.className}`}>
+      <Icon size={11} className={config.spin ? 'animate-spin' : ''} />
+      {config.label}
+    </span>
+  );
+};
+
+// Status-aware stand-in for the video preview iframe, shared by the View and
+// Edit modals: "processing"/"failed" replace the player with an explanatory
+// panel (the bunny embed has nothing to show yet, or never will for this
+// upload); anything else falls back to the existing iframe preview.
+const VideoStatusPanel = ({
+  status,
+  videoUrl,
+  videoLoaded,
+  onVideoLoad,
+  onReupload,
+  heightClassName = 'h-48',
+}: {
+  status?: Education['videoStatus'];
+  videoUrl?: string;
+  videoLoaded: boolean;
+  onVideoLoad: () => void;
+  onReupload?: () => void;
+  heightClassName?: string;
+}) => {
+  if (status === 'processing') {
+    return (
+      <div className={`${heightClassName} w-full rounded-lg bg-blue-50 border border-blue-100 flex flex-col items-center justify-center gap-2 text-blue-500 p-4 text-center`}>
+        <Loader2 size={24} className="animate-spin" />
+        <p className="text-xs font-medium">Video is processing — this can take a few minutes</p>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className={`${heightClassName} w-full rounded-lg bg-red-50 border border-red-100 flex flex-col items-center justify-center gap-2 text-red-500 p-4 text-center`}>
+        <AlertCircle size={24} />
+        <p className="text-xs font-medium">Video processing failed</p>
+        {onReupload && (
+          <button
+            type="button"
+            onClick={onReupload}
+            className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors"
+          >
+            <RefreshCw size={13} />
+            Reupload video
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!videoUrl) return null;
+
+  return (
+    <div className={`${heightClassName} relative w-full rounded-lg overflow-hidden bg-gray-100 border border-gray-200`}>
+      {!videoLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
+      <iframe
+        src={`${videoUrl}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
+        loading="lazy"
+        onLoad={onVideoLoad}
+        style={{
+          border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%',
+          opacity: videoLoaded ? 1 : 0, transition: 'opacity 300ms ease',
+        }}
+        allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+      />
+    </div>
+  );
+};
 
 const ContentManagementPage = () => {
   const toast = useToast();
@@ -37,18 +152,10 @@ const ContentManagementPage = () => {
     try {
       setContentLoading(true);
       const response = await getEducation();
-      console.log('API Response:', response); // Debug log
-
+      console.log(response);
       // Handle different response structures
-      if (response.message && Array.isArray(response.message)) {
-        setContent(response.message);
-      } else if (response.data && Array.isArray(response.data)) {
-        setContent(response.data);
-      } else if (Array.isArray(response)) {
-        setContent(response);
-      } else {
-        console.error('Unexpected response structure:', response);
-        setContent([]);
+      if (response.status) {
+        setContent(response.message!);
       }
     } catch (error) {
       console.error('Error fetching content:', error);
@@ -95,7 +202,7 @@ const ContentManagementPage = () => {
     try {
       setLoading(true);
       const response = await deleteEducation(selectedContent._id);
-      if (response.message) {
+      if (response.status) {
         // Refresh content list
         fetchContent();
         setShowDeleteModal(false);
@@ -212,13 +319,13 @@ const ContentManagementPage = () => {
 
       const response = await createEducation({ title: formData.title, description: formData.description });
 
-      if (response.message) {
+      if (response.status) {
         // The video is required at the form level (a file must be selected),
         // but its upload is NOT awaited here — it can take a while and
         // shouldn't hold up creating the content. It uploads in the
         // background and attaches itself to this record once done, the same
         // pattern used for product videos.
-        const newContentId = response.message._id;
+        const newContentId = response?.message?._id;
         if (formData.video && newContentId) {
           void uploadEducationVideoInBackground(formData.video, newContentId);
         }
@@ -260,7 +367,7 @@ const ContentManagementPage = () => {
         description: editFormData.description,
       });
 
-      if (response.message) {
+      if (response.status) {
         if (editFormData.video) {
           void uploadEducationVideoInBackground(editFormData.video, selectedContent._id);
         }
@@ -391,7 +498,7 @@ const ContentManagementPage = () => {
               <tr className="bg-gray-50/50">
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Title</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Category</th>
-                <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Linked Product</th>
+              
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Likes</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Comments</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Status</th>
@@ -402,19 +509,14 @@ const ContentManagementPage = () => {
             <tbody className="divide-y divide-gray-50">
               {contentLoading ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center">
+                  <td colSpan={8} className="p-8 text-center">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand_pink"></div>
                     </div>
                   </td>
                 </tr>
               ) : content.length === 0 ? (
-                <EmptyTable colSpan={9} tableType='Content' searchTerm={searchTerm} />
-                // <tr>
-                //   <td colSpan={9} className="p-8 text-center text-gray-500">
-                //     No content found. Click &quot;Add Content; to create your first content item.
-                //   </td>
-                // </tr>
+                <EmptyTable colSpan={8} tableType='Content' searchTerm={searchTerm} />
               ) : (
                 content.map((item, idx) => (
                   <tr
@@ -430,7 +532,7 @@ const ContentManagementPage = () => {
                       </div>
                     </td>
                     <td className="p-4 text-sm text-brand_gray_dark/80">{item.category || 'Education'}</td>
-                    <td className="p-4 text-sm text-brand_gray_dark/80">{item.linkedProduct || 'N/A'}</td>
+                   
                     <td className="p-4 text-sm font-bold text-brand_gray_dark/80 text-center">
                       {Array.isArray(item.likes) ? item.likes.length : (typeof item.likes === 'number' ? item.likes : 0)}
                     </td>
@@ -707,27 +809,21 @@ const ContentManagementPage = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {selectedContent.video && (
-                      <div className="h-40 relative w-full rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                        {!videoLoaded && (
-                          <div className="absolute inset-0 animate-pulse bg-gray-200" />
-                        )}
-                        <iframe
-                          src={`${selectedContent.video}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
-                          loading="lazy"
-                          onLoad={() => setVideoLoaded(true)}
-                          style={{
-                            border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%',
-                            opacity: videoLoaded ? 1 : 0, transition: 'opacity 300ms ease',
-                          }}
-                          allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
-                        />
-                      </div>
-                    )}
+                    <VideoStatusPanel
+                      status={selectedContent.videoStatus}
+                      videoUrl={selectedContent.video}
+                      videoLoaded={videoLoaded}
+                      onVideoLoad={() => setVideoLoaded(true)}
+                      heightClassName="h-40"
+                    />
 
                     <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600">
                       <Film size={16} className="text-brand_pink" />
-                      {selectedContent.video ? 'Replace video' : 'Upload video'}
+                      {selectedContent.videoStatus === 'failed'
+                        ? 'Reupload video'
+                        : selectedContent.video
+                          ? 'Replace video'
+                          : 'Upload video'}
                       <input
                         type="file"
                         name="video"
@@ -819,25 +915,25 @@ const ContentManagementPage = () => {
               </div>
 
 
-              {selectedContent.video && (
+              {(selectedContent.video || selectedContent.videoStatus) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Video</h3>
 
-                  <div className='h-48 relative w-full rounded-lg overflow-hidden bg-gray-100'>
-                    {!videoLoaded && (
-                      <div className="absolute inset-0 animate-pulse bg-gray-200" />
-                    )}
-                    <iframe
-                      src={`${selectedContent.video}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
-                      loading="lazy"
-                      onLoad={() => setVideoLoaded(true)}
-                      style={{
-                        border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%',
-                        opacity: videoLoaded ? 1 : 0, transition: 'opacity 300ms ease',
-                      }}
-                      allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
-                    />
-                  </div>
+                  <VideoStatusPanel
+                    status={selectedContent.videoStatus}
+                    videoUrl={selectedContent.video}
+                    videoLoaded={videoLoaded}
+                    onVideoLoad={() => setVideoLoaded(true)}
+                    heightClassName="h-48"
+                    onReupload={
+                      selectedContent.videoStatus === 'failed'
+                        ? () => {
+                          setShowViewModal(false);
+                          handleEditClick(selectedContent);
+                        }
+                        : undefined
+                    }
+                  />
                 </div>
               )}
             </div>

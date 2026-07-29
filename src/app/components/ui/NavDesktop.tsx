@@ -1,21 +1,22 @@
 "use client";
-import Link from "next/link";
 import Image from "next/image";
-import { useState, useRef } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
-import VideoIcon from "@/components/svgs/VideoIcon";
-import { UserIcon } from "@/components/svgs/UserIcon";
-import { SupportIcon } from "@/components/svgs/SupportIcon";
-import { CartIcon } from "@/components/svgs/CartIcon";
 import Logo from "@/assets/logo.png";
+import { CartIcon } from "@/components/svgs/CartIcon";
+import { SupportIcon } from "@/components/svgs/SupportIcon";
+import { UserIcon } from "@/components/svgs/UserIcon";
+import VideoIcon from "@/components/svgs/VideoIcon";
 
+import { useCartIcon } from "@/app/contextanimation/CartIconContext";
+import { getUpdates } from "@/lib/api";
+import { useSearchStore } from "@/lib/search-store";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { AnimatePresence, motion } from "framer-motion";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
 import Userpopup from "./Userpopup";
-import { useCartStore } from "@/lib/stores/cart-store";
-import { motion, AnimatePresence } from "framer-motion";
-import { useSearchStore } from "@/lib/search-store";
-import { useCartIcon } from "@/app/contextanimation/CartIconContext";
 
 type NavDesktopProps = {
   isLoggedIn: boolean;
@@ -34,6 +35,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   // store mutation (selectedItem, checkout step, logistics, ...).
   const items = useCartStore((s) => s.items);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [href, setHref] = useState<string | undefined>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const { cartRef } = useCartIcon();
 
@@ -57,6 +59,17 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
   const { clearSearch } = useSearchStore();
 
+  useEffect(() => {
+    (async () => {
+      // Only the id of the single most recent update is used (to build the
+      // "updates" nav link) — this used to request a full ITEMS_TO_APPEND
+      // (10-item) feed page, each with its own media/likes/comments/product
+      // payload, just to read data[0]._id. limit=1 asks for exactly what's
+      // used.
+      const req = await getUpdates("all", "", 1);
+      setHref(req?.data[0]?._id)
+    })()
+  }, [])
   return (
     <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
       {/* Logo */}
@@ -89,7 +102,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
         <li className="lg:block">
           <Link
-            href="/pages/update/all/"
+            href={"/pages/update/all/" + href}
             className={`flex items-center gap-1 opacity-80 ${isActive(
               "/pages/update",
             )} hover:text-[#FF008C] transition-all duration-300`}

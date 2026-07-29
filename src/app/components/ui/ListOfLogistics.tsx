@@ -8,79 +8,100 @@ interface Courier {
   courier_image: string;
   courier_name: string;
   delivery_eta: string;
-  delivery_eta_time: string; // add this
+  delivery_eta_time?: string;
   total: number;
 }
+
+const LOADING_SKELETON_ROWS = 4;
 
 export default function ListOfLogistics() {
   const [logistics, setLogistics] = useState<Courier[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { items, getSelectedItems, selectedLogistic, setSelectedLogistic } =
-    useCartStore();
-  console.log("Selected Logistic:", selectedLogistic);
+  // Selector-scoped subscriptions — a whole-store destructure here re-rendered
+  // this list on every cart-store mutation anywhere in the checkout flow
+  // (coupon applied, checkout step changing, an unrelated debounced sync
+  // completing), not just the ones that actually affect it.
+  const items = useCartStore((s) => s.items);
+  const getSelectedItems = useCartStore((s) => s.getSelectedItems);
+  const selectedLogistic = useCartStore((s) => s.selectedLogistic);
+  const setSelectedLogistic = useCartStore((s) => s.setSelectedLogistic);
+  const clearSelectedLogistic = useCartStore((s) => s.clearSelectedLogistic);
 
   useEffect(() => {
-    fetchLogistics();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
+    // Guards against out-of-order responses: `items` changing quickly (e.g.
+    // toggling several checkboxes in a row) can start more than one fetch
+    // before the first resolves. Without this, a slower, older response
+    // could resolve after a newer one and overwrite it with stale rates.
+    let cancelled = false;
 
-  const fetchLogistics = async () => {
-    const token = getBearerToken();
-    if (!token) {
-      console.error("No token found. Make sure you are logged in.");
-      setLoading(false);
-      return;
-    }
-
-    const selectedItems = getSelectedItems();
-    if (!selectedItems || selectedItems.length === 0) {
-      console.warn(
-        "No selected items available for shipping rate calculation.",
-      );
-      setLoading(false);
-      setLogistics([]);
-      return;
-    }
-
-    // Convert cart items into the package item structure expected by shipping API
-    const packageItems = selectedItems.map((item) => ({
-      name: item.name || "Unknown Product",
-      description: item.description || item.name || "No description",
-      // weight: (item as any).weight || 1, // Note: weight not available in Product interface
-      amount: item.price || 0,
-      quantity: item.quantity || 1,
-    }));
-
-    console.log("Shipping payload packageItems:", packageItems);
-
-    setLoading(true);
-    try {
-      const response = await getShippingRates();
-      console.log("🔥 RAW API RESPONSE:", response);
-
-      if (response?.message) {
-        console.log("Logistics fetched inside message:", response?.message);
-        setLogistics(response?.message?.couriers as Courier[]);
-        useCartStore
-          .getState()
-          .setRequestToken(response?.message?.request_token);
-        console.log(
-          "Request Token:",
-          response?.message?.couriers,
-          response?.message?.request_token,
-        );
-      } else {
-        console.log("⚠️ No 'message' property found in the response.");
+    const fetchLogistics = async () => {
+      const token = getBearerToken();
+      if (!token) {
+        console.error("No token found. Make sure you are logged in.");
+        setLoading(false);
+        return;
       }
-    } catch (err: unknown) {
-      const apiMessage = err instanceof Error ? err.message : "Unknown error";
-      console.error("🔥 Error fetching logistics API", apiMessage, err);
-      toast.error(`Logistics API failure: ${apiMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      const selectedItems = getSelectedItems();
+      if (!selectedItems || selectedItems.length === 0) {
+        console.warn(
+          "No selected items available for shipping rate calculation.",
+        );
+        setLoading(false);
+        setLogistics([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await getShippingRates();
+        if (cancelled) return;
+
+        if (response?.status) {
+          const couriers = response.message?.couriers ?? [];
+          setLogistics(couriers);
+          useCartStore
+            .getState()
+            .setRequestToken(response.message?.request_token ?? "");
+
+          // Pricing/ETA can shift when the cart changes, so a previously
+          // selected courier must be refreshed against the new rates (or
+          // cleared if it's no longer offered) rather than silently
+          // carrying forward a stale price into the order total.
+          const currentSelection = useCartStore.getState().selectedLogistic;
+          if (currentSelection) {
+            const stillOffered = couriers.find(
+              (c) => c.courier_id === currentSelection.courier_id,
+            );
+            if (stillOffered) {
+              setSelectedLogistic(stillOffered);
+            } else {
+              clearSelectedLogistic();
+            }
+          }
+        } else {
+          console.warn("Shipping rates request did not return a successful status.");
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const apiMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error("Error fetching logistics API:", apiMessage, err);
+        toast.error(`Logistics API failure: ${apiMessage}`);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchLogistics();
+
+    return () => {
+      cancelled = true;
+    };
+    // getSelectedItems/setSelectedLogistic/clearSelectedLogistic are stable
+    // zustand actions — listed for correctness, not because they ever
+    // actually change and cause a re-run.
+  }, [items, getSelectedItems, setSelectedLogistic, clearSelectedLogistic]);
 
   const formatPrice = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -89,11 +110,10 @@ export default function ListOfLogistics() {
     }).format(Math.round(amount));
   };
 
-  console.log("Logistics State:", logistics);
   return (
     <div className="flex flex-col gap-4">
       {loading &&
-        Array.from({ length: 4 }).map((_, i) => (
+        Array.from({ length: LOADING_SKELETON_ROWS }).map((_, i) => (
           <div key={i} className="h-10 bg-gray-100 animate-pulse rounded-md" />
         ))}
 

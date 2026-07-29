@@ -1,7 +1,7 @@
 "use client";
 
-import ListOfLogistics from "./ui/ListOfLogistics";
 import { useCartStore } from "@/lib/stores/cart-store";
+import ListOfLogistics from "./ui/ListOfLogistics";
 
 interface SelectLogisticsProps {
   onContinue: () => void;
