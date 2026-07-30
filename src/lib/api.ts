@@ -1,6 +1,9 @@
 import { postData } from "@/api/api";
 import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
+import { toast } from "sonner";
+import { useAuthStore } from "./stores/auth-store";
 import { CartItem } from "./stores/cart-store";
+import { useModalStore } from "./stores/modal-store";
 import {
   Category,
   Comment,
@@ -28,6 +31,31 @@ export const API_URL =
 export const BASE_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL;
 const DEFAULT_PRODUCTS_LIMIT = 20;
+
+// Session expired or token invalid on an endpoint that required a bearer
+// token to reach in the first place — log the user out and prompt them to
+// sign back in, instead of leaving the app stuck retrying with a dead token.
+function handleUnauthorized() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("ajempire_signin_user");
+    sessionStorage.clear();
+  }
+  useAuthStore.getState().setIsLoggedIn(false);
+  toast.error("Your session has expired. Please log in again.", {
+    position: "top-right",
+  });
+  useModalStore.getState().openModal("authwrapper");
+}
+
+// fetch wrapper for endpoints that require an authenticated session (they
+// already guard on getBearerToken() before calling this). A 401 here means
+// the token was rejected, not "never logged in", so it's safe to treat as
+// session expiry.
+async function authFetch(input: string, init?: RequestInit) {
+  const res = await fetch(input, init);
+  if (res.status === 401) handleUnauthorized();
+  return res;
+}
 
 export async function loginBackend(email: string, password: string) {
   const res = await fetch(API_URL + "/auth/login", {
@@ -365,7 +393,7 @@ export async function addToCart(products: CartItem[]) {
       : [],
   }));
 
-  const res = await fetch(API_URL + "/cart", {
+  const res = await authFetch(API_URL + "/cart", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -386,7 +414,7 @@ export async function removeCartItem(id: string) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(API_URL + "/cart/" + id, {
+  const res = await authFetch(API_URL + "/cart/" + id, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -401,7 +429,7 @@ export async function fetchFromCart() {
   const token = getBearerToken();
   if (!token) return false;
 
-  const res = await fetch(API_URL + "/cart", {
+  const res = await authFetch(API_URL + "/cart", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -423,7 +451,7 @@ export async function addToWishlistAPI(productId: string) {
 
   const _wishlistIDs = wishlist.message.map((item) => item.product._id);
 
-  const res = await fetch(`${API_URL}/wishlist`, {
+  const res = await authFetch(`${API_URL}/wishlist`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -442,14 +470,14 @@ export async function getUsersWishlist(): Promise<{
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/wishlist`, {
+  const res = await authFetch(`${API_URL}/wishlist`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
-
+  console.log(res.status);
   if (!res.ok) throw new Error("Failed to get to wishlist");
   return res.json();
 }
@@ -458,7 +486,7 @@ export async function removeFromWishlistAPI(productId: string) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/wishlist/${productId}`, {
+  const res = await authFetch(`${API_URL}/wishlist/${productId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -475,7 +503,7 @@ export async function fetchFeed() {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/feeds`, {
+  const res = await authFetch(`${API_URL}/feeds`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -491,7 +519,7 @@ export async function likeFeedPost(postId: string) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/feeds/${postId}/like`, {
+  const res = await authFetch(`${API_URL}/feeds/${postId}/like`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -507,7 +535,7 @@ export async function likeFeedCommentPost(postId: string) {
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/feeds/${postId}/comment/like`, {
+  const res = await authFetch(`${API_URL}/feeds/${postId}/comment/like`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -673,7 +701,7 @@ export async function getShippingRates(
   const token = getBearerToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${API_URL}/shippingRates`, {
+  const res = await authFetch(`${API_URL}/shippingRates`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
