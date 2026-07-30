@@ -1,6 +1,7 @@
 import type { SelectedVariant } from "@/lib/stores/cart-store";
 import { useVariantStore } from "@/lib/stores/variant-store";
 import type { Product } from "@/lib/types";
+import { getAvailableVariants, optionNameMatches } from "@/lib/variantMatching";
 import { useMemo } from "react";
 
 type SelectedOptions = Record<string, string>;
@@ -10,39 +11,6 @@ type SelectedOptions = Record<string, string>;
 // selections yet, defeating the useMemo below (its identity would never
 // match across renders even though nothing changed).
 const EMPTY_SELECTIONS: SelectedOptions = {};
-
-const normalizeVariantName = (value: string) =>
-  value.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-const optionNameMatches = (optionName: string, variantName: string) =>
-  optionName === variantName ||
-  normalizeVariantName(optionName) === normalizeVariantName(variantName);
-
-const getAvailableVariants = (product: Product) => {
-  const explicitVariants = (product.variants ?? []).filter(
-    (variant) => Array.isArray(variant.values) && variant.values.length > 0,
-  );
-
-  if (explicitVariants.length > 0) return explicitVariants;
-
-  const combos = product.variantCombinations ?? [];
-  const variantNameMap = new Map<string, Set<string>>();
-
-  combos.forEach((combo) => {
-    combo.options.forEach((option) => {
-      const existing = variantNameMap.get(option.name) ?? new Set<string>();
-      existing.add(option.value);
-      variantNameMap.set(option.name, existing);
-    });
-  });
-
-  if (variantNameMap.size === 0) return [];
-
-  return Array.from(variantNameMap.entries()).map(([name, values]) => ({
-    name,
-    values: Array.from(values),
-  }));
-};
 
 const matchesSelections = (product: Product, selections: SelectedOptions) => {
   const combinations = product.variantCombinations ?? [];
