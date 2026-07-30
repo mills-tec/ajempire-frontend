@@ -145,6 +145,7 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
     const inCart = useCartStore((s) => !!s.getItem(feed.product._id));
     const inWishlist = useWishlistStore((s) => s.isInWishlist(feed.product._id));
     const removeCartItem = useCartStore((s) => s.removeItem);
+    const addCartItem = useCartStore((s) => s.addItem);
     const addWishlistItem = useWishlistStore((s) => s.addItem);
     const removeWishlistItem = useWishlistStore((s) => s.removeItem);
 
@@ -189,6 +190,8 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
             e.stopPropagation();
             if (inCart) {
                 removeCartItem(feed.product._id);
+            } else {
+                
             }
             // Adding to cart from the gallery isn't wired up yet (pre-existing).
         },

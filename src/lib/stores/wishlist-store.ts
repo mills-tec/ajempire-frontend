@@ -55,7 +55,6 @@ export const useWishlistStore = create<WishlistStore>()(
         try {
           const data = await getUsersWishlist();
           if (!data) return;
-
           const products = data.message.map((item) => item.product);
 
           // data.items should be an array of products

@@ -21,6 +21,7 @@ import {
 } from "./components/pull-to-refresh/PullToRefreshProvider";
 import ScrollToTop from "./components/ui/ScrollToTop";
 import SearchBar from "./components/ui/SearchBar";
+import { DEFAULT_STALE_TIME } from "./provider";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -66,7 +67,6 @@ export default function Home() {
   const { data: heroData, isLoading: isHeroLoading } = useQuery({
     queryKey: ["hero-products"],
     queryFn: () => getProducts(`limit=10&cursor=`),
-    staleTime: 60_000,
   });
 
   const heroProducts = heroData?.message?.products ?? EMPTY_PRODUCTS;
@@ -160,7 +160,6 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
     },
     enabled: !!selectedCategory && isMounted,
     retry: false,
-    staleTime: 60_000,
   });
 
   const categoryProducts = categoryData ?? EMPTY_PRODUCTS;
@@ -281,6 +280,7 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
             <InfiniteFeed<Product>
               queryKey={infiniteQueryKey}
               queryFn={infiniteQueryFn}
+              staleTime={DEFAULT_STALE_TIME}
               getItemId={(p) => String(p._id)}
               renderItem={(product: Product, index: number) => (
                 <ProductItem product={product} index={index} />

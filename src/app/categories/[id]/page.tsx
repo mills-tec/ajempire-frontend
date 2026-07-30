@@ -58,7 +58,6 @@ export default function CategoryPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["products", slug],
     queryFn: () => getProductsByCategory(categoryName),
-    staleTime: Infinity,
   });
 
   // Subscribe only to `items` — the old whole-store subscription re-rendered

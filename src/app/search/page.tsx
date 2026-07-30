@@ -70,7 +70,6 @@ function SearchContent() {
   const { data: allCategories } = useQuery({
     queryKey: ["categories"],
     queryFn: () => getCategories(),
-    staleTime: 1000 * 60 * 5,
   });
 
   useEffect(() => { setQuery(query); }, [query, setQuery]);

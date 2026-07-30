@@ -63,6 +63,7 @@ export interface Product {
   __v?: number;
   averageRating?: number;
   video?: string;
+  videoThumbnail?: string;
   relatedProducts?: Product[];
 }
 
