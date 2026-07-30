@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import Logo from "@/assets/logo.png";
 import { CartIcon } from "@/components/svgs/CartIcon";
@@ -9,10 +9,12 @@ import { SupportIcon } from "@/components/svgs/SupportIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
 import VideoIcon from "@/components/svgs/VideoIcon";
 
+import { useUpdates } from "@/api/customHooks";
 import { useCartIcon } from "@/app/contextanimation/CartIconContext";
-import { getUpdates } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { updatesQueryKey } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
@@ -35,7 +37,6 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   // store mutation (selectedItem, checkout step, logistics, ...).
   const items = useCartStore((s) => s.items);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [href, setHref] = useState<string | undefined>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const { cartRef } = useCartIcon();
 
@@ -59,17 +60,20 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
   const { clearSearch } = useSearchStore();
 
-  useEffect(() => {
-    (async () => {
-      // Only the id of the single most recent update is used (to build the
-      // "updates" nav link) — this used to request a full ITEMS_TO_APPEND
-      // (10-item) feed page, each with its own media/likes/comments/product
-      // payload, just to read data[0]._id. limit=1 asks for exactly what's
-      // used.
-      const req = await getUpdates("all", "", 1);
-      setHref(req?.data[0]?._id)
-    })()
-  }, [])
+  // Only the id of the single most recent update is actually used here (to
+  // build the "updates" nav link), but this fetches the same
+  // limit=ITEMS_TO_APPEND first page FeedItem itself needs — under the same
+  // React Query key (updatesQueryKey) — so that when the user clicks through
+  // to /pages/update/all/:id, FeedItem's own initial-fetch effect can reuse
+  // this already-cached page via queryClient.fetchQuery instead of firing an
+  // identical second request. See FeedItem.tsx for the consuming side.
+  const { getFeeds } = useUpdates();
+  const { data: latestUpdatesPage } = useQuery({
+    queryKey: updatesQueryKey("all", ""),
+    queryFn: () => getFeeds("all", ""),
+  });
+  const latestUpdateId = latestUpdatesPage?.data?.[0]?._id;
+
   return (
     <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
       {/* Logo */}
@@ -102,7 +106,11 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
 
         <li className="lg:block">
           <Link
-            href={"/pages/update/all/" + href}
+            href={
+              latestUpdateId
+                ? `/pages/update/all/${latestUpdateId}`
+                : "/pages/update/all"
+            }
             className={`flex items-center gap-1 opacity-80 ${isActive(
               "/pages/update",
             )} hover:text-[#FF008C] transition-all duration-300`}

@@ -246,11 +246,19 @@ export interface Feed {
   mediaType: "image" | "video";
   type: "flashsale" | "education" | "gallery";
   image: string;
-  likes?: string[]; // user IDs
-  comments?: CommentData[];
+  // Authoritative engagement totals from the backend — NOT derivable from
+  // `likes`/`comments` below, which are capped previews (max 20 / max 10
+  // respectively). Display must read these, not `likes.length` /
+  // a recursive count over `comments`, or numbers silently cap out on any
+  // post more popular than the preview size.
+  likeCount?: number;
+  commentCount?: number;
+  likes?: string[]; // user IDs — capped preview, max 20, NOT the full like list
+  comments?: CommentData[]; // capped preview tree, max 10 top-level
   startDate?: string;
   endDate?: string;
   flashPrice?: number;
+  liked: boolean;
 }
 
 export interface Notification {

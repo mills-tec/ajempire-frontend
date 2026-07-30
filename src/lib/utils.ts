@@ -208,6 +208,17 @@ export async function compressImage(
 }
 
 export const ITEMS_TO_APPEND = 10;
+
+// Shared React Query key for a page of `/updates/:type`. NavDesktop
+// prefetches the first ("") page of the "all" feed purely to read its
+// newest item's id for a nav link; FeedItem separately owns fetching,
+// pagination, and all local feed state. Using this shared key/helper for
+// both means FeedItem's own initial-fetch effect can pull that same
+// already-cached page via queryClient.fetchQuery instead of firing an
+// identical second request — a plain string literal duplicated in both
+// files would silently stop working the moment one of them drifted.
+export const updatesQueryKey = (type: string, cursor: string) =>
+  ["updates", type, cursor] as const;
 export function shuffleArray<T>(array: T[]) {
   const arr = [...array]; // copy so original isn't mutated
   for (let i = arr.length - 1; i > 0; i--) {
