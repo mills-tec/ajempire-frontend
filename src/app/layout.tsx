@@ -14,6 +14,7 @@ import { SocketProvider } from "./components/providers/SocketProvider";
 import { CartIconProvider } from "./contextanimation/CartIconContext";
 import "./globals.css";
 import { Providers } from "./provider";
+export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ["latin"],

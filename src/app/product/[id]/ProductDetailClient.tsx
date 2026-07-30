@@ -68,7 +68,6 @@ export default function ProductDetailPage({
     queryFn: () => getProduct(id),
     enabled: !!id,
     retry: 2,
-    staleTime: 30_000,
     initialData,
   });
 
