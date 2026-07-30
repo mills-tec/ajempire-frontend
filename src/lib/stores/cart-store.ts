@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { addToCart, fetchFromCart, getBearerToken, removeCartItem } from "../api";
+import { buildCartItem, type AddCartItemInput } from "../cart/buildCartItem";
 import { Product } from "../types";
 import { calcDiscount } from "../utils";
 
@@ -105,7 +106,7 @@ type CartStore = {
   selectedItem: Product | null; // this stores the product for the product card that has been clicked on for the popup
   syncQueue: SyncAction[]; // item ids pending server sync
   setSelectedItem: (id: Product) => void; // this sets the id for the product card that has been clicked on for the popup
-  addItem: (items: CartItem[]) => void;
+  addItem: (items: AddCartItemInput[]) => void;
   setCartItems: (items: CartItem[]) => void;
   removeItem: (id: string) => void;
   removePurchasedItems: (ids: string[]) => void;
@@ -208,33 +209,13 @@ export const useCartStore = create<CartStore>()(
       addItem: (incoming) => {
         const validItems: CartItem[] = [];
 
-        for (const item of incoming) {
-          const hasVariants =
-            (item.variants && item.variants.length > 0) ||
-            (item.variantCombinations && item.variantCombinations.length > 0);
-
-          const requiredVariantCount = item.variants?.length
-            ? item.variants.length
-            : Array.from(
-                new Set(
-                  (item.variantCombinations ?? []).flatMap((combo) =>
-                    combo.options.map((option) => option.name),
-                  ),
-                ),
-              ).length;
-
-          if (
-            hasVariants &&
-            (!item.selectedVariants ||
-              item.selectedVariants.length !== requiredVariantCount)
-          ) {
-            toast.error(
-              `Please select all required variants for "${item.name}" before adding to cart`,
-            );
+        for (const input of incoming) {
+          const result = buildCartItem(input);
+          if (!result.ok) {
+            toast.error(result.error);
             continue;
           }
-
-          validItems.push(item);
+          validItems.push(result.item);
         }
 
         if (validItems.length === 0) return;
@@ -255,17 +236,20 @@ export const useCartStore = create<CartStore>()(
                   ? { ...i, quantity: i.quantity + item.quantity, synced: false }
                   : i,
               )
-            : [...current, { ...item, synced: false }];
+            // New cart entries always start selected — matches every
+            // add-to-cart / buy-again / buy-now call site in the app.
+            : [...current, { ...item, selected: true, synced: false }];
         }
 
         set({ items: current });
 
         if (!getBearerToken()) return;
-
+        console.log(validItems);
         addToCart(validItems).catch(() => {
           toast.error("Couldn't sync cart. Will retry.");
         });
       },
+
 
       setSelectedVariants: (id: string, variants: SelectedVariant[]) => {
         const items = get().items;

@@ -82,19 +82,9 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
 
     if (!cartItem) {
       addItem([{
-        ...item,
-        basePrice,
-        finalPrice,
-        discount: item.flashSales ? calcDiscountPrice(
-          basePrice,
-          item.flashSales.discountValue!,
-          item.flashSales.discountType!,
-        ) : 0,
-        // discount: 
-        stock: currentStock,
+        product: item,
         quantity: quantity || 1,
         selectedVariants: selectedVariantsArray,
-        selected: true,
       }]);
     }
 
@@ -408,19 +398,9 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                   cartElement: cartRef.current!,
                   addItemCallback: () =>
                     addItem([{
-                      ...item,
-                      basePrice,
-                      finalPrice,
-                      discount: item.flashSales ? calcDiscountPrice(
-                        basePrice,
-                        item.flashSales.discountValue!,
-                        item.flashSales.discountType!,
-                      ) : 0,
-                      // discount: 
-                      stock: currentStock,
+                      product: item,
                       quantity: quantity || 1,
                       selectedVariants: selectedVariantsArray,
-                      selected: true,
                     }]),
                 });
               }}

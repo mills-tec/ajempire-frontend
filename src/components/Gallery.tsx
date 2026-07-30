@@ -8,7 +8,7 @@ import { ITEMS_TO_APPEND } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { forwardRef, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HlsPlayer } from './HLS';
 import ShareModal from './ShareModal';
 import { CartRounded, Elipsis, ShareIconGallery, WishListAdd } from './svgs/Icons';
@@ -46,9 +46,27 @@ const PREFETCH_ROOT_MARGIN = "1000px 0px";
 const VIDEO_ROOT_MARGIN = "200px 0px";
 
 let slotCounter = 0;
-const nextSlotKey = (feedId: string) => `${feedId}::${slotCounter++}`;
 
-type GallerySlot = { key: string; feed: Feed };
+// A slot's column is decided once, at creation, and baked into the slot
+// itself — never recomputed from its position in `slots`. That's what makes
+// this immune to front-trimming: removing old slots from the front shifts
+// every remaining item's *array index*, so deriving column from index (e.g.
+// `index % 2`, or native CSS `columns-2`) would silently flip which column
+// survivors land in — which is exactly what reads to a user as "the feed
+// reordered itself" once recycling starts replaying already-seen cards.
+type GallerySlot = { key: string; feed: Feed; column: 0 | 1 };
+
+const mediaHeightForVariant = (variant: 0 | 1) => (variant === 0 ? 300 : 400);
+
+// Greedy shortest-column-first placement — mirrors real masonry layout
+// (better balanced than strict alternation) while still being a one-shot,
+// never-revisited decision per item, so already-placed cards are never
+// moved once a later batch is appended.
+function createSlot(feed: Feed, columnHeights: [number, number]): GallerySlot {
+    const column: 0 | 1 = columnHeights[0] <= columnHeights[1] ? 0 : 1;
+    columnHeights[column] += mediaHeightForVariant(heightVariantFor(feed._id));
+    return { key: `${feed._id}::${slotCounter++}`, feed, column };
+}
 
 // Pure Fisher-Yates over the whole array — distinct from lib/utils'
 // shuffleArray, which shuffles-then-slices a window for a different caller
@@ -191,11 +209,19 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
             if (inCart) {
                 removeCartItem(feed.product._id);
             } else {
-                
+                const selectedVariants = feed.product.variantCombinations?.[0]?.options ?? [];
+
+                addCartItem([
+                    {
+                        product: feed.product,
+                        quantity: 1,
+                        selectedVariants,
+                    },
+                ]);
             }
             // Adding to cart from the gallery isn't wired up yet (pre-existing).
         },
-        [inCart, removeCartItem, feed.product._id],
+        [inCart, removeCartItem, addCartItem, feed.product],
     );
     const handleToggleWishlist = useCallback(
         (e: React.MouseEvent) => {
@@ -221,7 +247,7 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
     // exact, it only prevents a visible jump the moment this card scrolls
     // into range; a card whose real content differs just reflows once, on
     // entry, same as any content-visibility: auto usage.
-    const mediaHeightPx = heightVariant === 0 ? 300 : 400;
+    const mediaHeightPx = mediaHeightForVariant(heightVariant);
 
     return (
         <div
@@ -337,11 +363,12 @@ export default function Gallery() {
     // fill, since both can legitimately be "in flight" at different times.
     const isAppendingRef = useRef(false);
     const consumeNextRef = useRef<() => void>(() => { });
-    // The actual last rendered card, not an auxiliary sentinel div — CSS
-    // multi-column layout (`columns-2`) balances content across columns, so
-    // a plain trailing sentinel can land short of the visual bottom and
-    // never intersect. Anchoring to real content is what the "reached the
-    // end" trigger below relies on.
+    // The actual last rendered card, not an auxiliary sentinel div — a
+    // trailing sentinel would live in only one of the two column flex
+    // containers and, depending on how the columns balance, can land short
+    // of the visual bottom and never intersect. Anchoring to real content
+    // (whichever card is last in creation order, see lastSlotKey below) is
+    // what the "reached the end" trigger relies on instead.
     const [lastItemEl, setLastItemEl] = useState<HTMLDivElement | null>(null);
     // Full set of every real (non-recycled) item fetched so far — recycling
     // reshuffles a window of these (same object references, nothing cloned)
@@ -359,6 +386,10 @@ export default function Gallery() {
     // instantly instead of waiting on a request the moment it's needed.
     const bufferRef = useRef<Feed[] | null>(null);
     const isPrefetchingRef = useRef(false);
+    // Running total height per column — persists across renders/trims so
+    // column placement for new slots always accounts for everything ever
+    // placed, not just what's currently mounted (see createSlot above).
+    const columnHeightsRef = useRef<[number, number]>([0, 0]);
     const [showOption, setShowOption] = useState<string | null>(null);
     const [showShare, setShowShare] = useState({
         show: false,
@@ -378,8 +409,12 @@ export default function Gallery() {
     // themselves, so this is already the right shape for the constraint.
     const appendSlots = useCallback((feeds: Feed[]) => {
         if (!feeds.length) return;
+        // Sequential — each createSlot call both reads and updates
+        // columnHeightsRef, so later feeds in the same batch see earlier
+        // ones' placement. That's required for greedy balancing to work.
+        const newSlots = feeds.map((feed) => createSlot(feed, columnHeightsRef.current));
         setSlots((prev) => {
-            const next = prev.concat(feeds.map((feed) => ({ key: nextSlotKey(feed._id), feed })));
+            const next = prev.concat(newSlots);
             if (next.length <= MAX_GALLERY_ITEMS) return next;
             return next.slice(next.length - MAX_GALLERY_ITEMS);
         });
@@ -462,7 +497,7 @@ export default function Gallery() {
     useEffect(() => {
         if (!data?.data || slots.length > 0) return;
         originalGalleryRef.current = data.data;
-        setSlots(data.data.map((feed) => ({ key: nextSlotKey(feed._id), feed })));
+        setSlots(data.data.map((feed) => createSlot(feed, columnHeightsRef.current)));
         setApiData({ nextCursor: data.nextCursor || "", hasMore: data.hasMore || false });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
@@ -534,22 +569,43 @@ export default function Gallery() {
         setShowShare((prev) => ({ ...prev, show: true, id: productId }));
     }, []);
 
+    // Split into the two columns each slot was already assigned to at
+    // creation (see createSlot). Deliberately NOT native CSS `columns-2` —
+    // multi-column layout rebalances which column every child lands in
+    // whenever content is appended, which silently relocates already-
+    // rendered cards. Two plain flex columns, each in stable append order,
+    // can't do that: a card's column and its position within that column
+    // are fixed the moment it's created.
+    const columns = useMemo(() => {
+        const col0: { slot: GallerySlot; flatIndex: number }[] = [];
+        const col1: { slot: GallerySlot; flatIndex: number }[] = [];
+        slots.forEach((slot, flatIndex) => {
+            (slot.column === 0 ? col0 : col1).push({ slot, flatIndex });
+        });
+        return [col0, col1];
+    }, [slots]);
+
+    const lastSlotKey = slots.length > 0 ? slots[slots.length - 1].key : null;
+
     return (
         <div className='h-screen overflow-y-auto' style={{ overflowAnchor: 'auto' }}>
-            {/* Masonry Layout using CSS Columns */}
-            <div className='columns-2 gap-4 p-5'>
-                {slots.map((slot, index) => (
-                    <GalleryCard
-                        key={slot.key}
-                        ref={index === slots.length - 1 ? setLastItemEl : undefined}
-                        feed={slot.feed}
-                        slotKey={slot.key}
-                        priority={index < 4}
-                        isOptionOpen={showOption === slot.key}
-                        onNavigate={handleNavigate}
-                        onToggleOption={handleToggleOption}
-                        onShare={handleShareOpen}
-                    />
+            <div className='grid grid-cols-2 gap-4 p-5'>
+                {columns.map((column, colIndex) => (
+                    <div key={colIndex} className='flex flex-col'>
+                        {column.map(({ slot, flatIndex }) => (
+                            <GalleryCard
+                                key={slot.key}
+                                ref={slot.key === lastSlotKey ? setLastItemEl : undefined}
+                                feed={slot.feed}
+                                slotKey={slot.key}
+                                priority={flatIndex < 4}
+                                isOptionOpen={showOption === slot.key}
+                                onNavigate={handleNavigate}
+                                onToggleOption={handleToggleOption}
+                                onShare={handleShareOpen}
+                            />
+                        ))}
+                    </div>
                 ))}
 
                 {isLoading && slots.length === 0 && <GallerySkeleton />}
