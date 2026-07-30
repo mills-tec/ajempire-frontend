@@ -1,5 +1,4 @@
 "use client";
-
 import { useUpdates } from "@/api/customHooks";
 import { useSocket } from "@/app/components/providers/SocketProvider";
 import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
@@ -21,14 +20,12 @@ import { bunnyLoader } from "@/lib/bunnyLoader";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { CommentData, Feed, IUpdateSocketFeed, IUpdateSocketFeedComment, Product } from "@/lib/types";
-import { getCountdown, ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { getCountdown, ITEMS_TO_APPEND, shuffleArray, updatesQueryKey } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import Hls from "hls.js";
 import {
   Heart,
-  LoaderCircle,
-  Pause,
-  Play, SendHorizonal, Volume2,
-  VolumeX
+  LoaderCircle, SendHorizonal
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,6 +39,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { HlsPlayer } from "./HLS";
 import ShareModal from "./ShareModal";
 
 // ─── FeedSkeleton ─────────────────────────────────────────────────────────────
@@ -153,6 +151,13 @@ const MAX_RENDERED_ITEMS = 40;
 // How many recycled items to splice in per extension, in either direction.
 const RECYCLE_BATCH = 6;
 
+// Matches the backend's own preview cap (GET /updates/:type returns at most
+// this many top-level comments per post). A live "feed:comment" created
+// event inserts directly into this local array — without re-capping after
+// each insert, a long-lived view of a very active post would let it grow
+// unbounded for the rest of the session.
+const COMMENT_PREVIEW_CAP = 10;
+
 let slotCounter = 0;
 // Globally unique per mounted card, even when the same underlying feed._id
 // is recycled multiple times — without this, React would confuse two
@@ -208,23 +213,14 @@ const FeedCard = memo(function FeedCard({
   item,
   index,
   isLoaded,
-  isPlaying,
   hasLiked,
   commentCount,
   itemInWishlist,
   isDescExpanded,
   isMediaActive,
-  isCurrent,
   isVideoActive,
   pull,
-  muted,
-  showPlayOverlay,
-  registerVideoRef,
   onMediaLoaded,
-  onVideoPlayStateChange,
-  onVideoClick,
-  onShowPlayTemporarily,
-  onToggleMute,
   onToggleDesc,
   onLike,
   onToggleComment,
@@ -232,22 +228,17 @@ const FeedCard = memo(function FeedCard({
   onWishlistToggle,
 }: FeedCardProps) {
   const handleMediaLoaded = useCallback(() => onMediaLoaded(index), [onMediaLoaded, index]);
-  const handlePlay = useCallback(() => onVideoPlayStateChange(index, true), [onVideoPlayStateChange, index]);
-  const handlePause = useCallback(() => onVideoPlayStateChange(index, false), [onVideoPlayStateChange, index]);
-  const handleVideoClick = useCallback(() => onVideoClick(index), [onVideoClick, index]);
-  const handleShowPlay = useCallback(() => onShowPlayTemporarily(index), [onShowPlayTemporarily, index]);
-  const handleToggleMute = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onToggleMute(index);
-    },
-    [onToggleMute, index],
-  );
+
   const handleToggleDesc = useCallback(() => onToggleDesc(index), [onToggleDesc, index]);
   const handleLike = useCallback(() => onLike(item._id), [onLike, item._id]);
   const handleWishlist = useCallback(() => {
     if (item.product) onWishlistToggle(item.product);
   }, [onWishlistToggle, item.product]);
+  // Gallery posts carry no engagement surface — gating on `item.likes`/
+  // `item.comments` being truthy doesn't work for this, since an empty
+  // array (`[]`, still truthy) renders the button anyway; this needs an
+  // explicit type check.
+  // const isGallery = item.type === "gallery";
 
   return (
     <>
@@ -282,7 +273,7 @@ const FeedCard = memo(function FeedCard({
               src={item.mediaUrl}
               alt={item.title}
               fill
-               sizes="(max-width: 640px) 50vw,
+              sizes="(max-width: 640px) 50vw,
          (max-width: 1024px) 50vw,
          50vw"
               className={`object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
@@ -311,33 +302,10 @@ const FeedCard = memo(function FeedCard({
           </div>
         ) : (
           <>
-            {!isLoaded && (
-              <div className="absolute inset-0 bg-gray-200 overflow-hidden">
-                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-              </div>
-            )}
-            <video
-              // Current video gets a full preload since it's playing right
-              // now; prev/next only preload metadata — just enough to
-              // resume instantly once it becomes current, without pulling
-              // down the full file in the background.
-              preload={isCurrent ? "auto" : "metadata"}
-              ref={registerVideoRef}
-              loop
-              muted={muted}
-              poster={item.image || undefined}
-              src={item.mediaUrl}
-              className={`w-full h-full object-cover cursor-pointer transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onCanPlay={handleMediaLoaded}
-              onError={handleMediaLoaded}
-              onClick={handleShowPlay}
-              onMouseMove={handleShowPlay}
-              playsInline
-            />
 
-            <div
+            <HlsPlayer src={item.mediaUrl} className=" object-cover h-full w-full"  controls={true}/>
+
+            {/* <div
               onClick={handleVideoClick}
               className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${showPlayOverlay
                 ? "opacity-100"
@@ -361,7 +329,7 @@ const FeedCard = memo(function FeedCard({
                   <Volume2 color="white" size={16} />
                 )}
               </span>
-            </div>
+            </div> */}
           </>
         )}
 
@@ -441,7 +409,7 @@ const FeedCard = memo(function FeedCard({
 
       {/* Action buttons */}
       <div className="flex flex-col gap-7 absolute right-3 bottom-24 md:relative md:right-0 md:bottom-auto md:text-black text-white">
-        {item.likes && (
+        { item.likes && (
           <div className="flex flex-col items-center gap-2">
             <div
               className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]"
@@ -450,12 +418,12 @@ const FeedCard = memo(function FeedCard({
               {hasLiked ? <HeartFill /> : <Heart size={26} />}
             </div>
             <p className="text-xs [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
-              {item.likes.length}
+              {item.likeCount ?? item.likes.length}
             </p>
           </div>
         )}
 
-        {item.comments && (
+        { item.comments && (
           <div className="flex flex-col items-center gap-2" onClick={onToggleComment}>
             <div className="w-10 h-10 bg-white rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100 text-[#FF81C6]">
               <CommentIcon />
@@ -473,7 +441,7 @@ const FeedCard = memo(function FeedCard({
           <ShareIcon />
         </div>
 
-        {item.product && (
+        { item.product && (
           <div
             className={`w-10 h-10 ${itemInWishlist ? "bg-primaryhover" : "bg-white"
               } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
@@ -566,11 +534,19 @@ function FeedContent({
     likeUpdateComment,
     deleteUpdateComment,
     getFeeds,
-    loading,
   } = useUpdates();
   const openModal = useModalStore((s) => s.openModal);
-  const { addItem, isInWishlist, removeItem } = useWishlistStore();
+  // Selector-scoped — a whole-store destructure re-rendered this (large,
+  // many-slots-mounted) component on every wishlist mutation anywhere in
+  // the app, not just ones relevant to a currently-mounted feed item.
+  const addItem = useWishlistStore((s) => s.addItem);
+  const isInWishlist = useWishlistStore((s) => s.isInWishlist);
+  const removeItem = useWishlistStore((s) => s.removeItem);
   const socket = useSocket();
+  // Stable reference from React Query's context — used (only for the
+  // initial-page fetch below) to reuse a page NavDesktop may have already
+  // prefetched under the same key, instead of always firing a fresh request.
+  const queryClient = useQueryClient();
 
   // useUpdates() returns new function references on every render (it isn't
   // memoized internally), so any useCallback listing them as a dependency
@@ -688,7 +664,18 @@ function FeedContent({
 
     const fetchInitialFeeds = async () => {
       try {
-        const result = await apiRef.current.getFeeds(type as string, "");
+        // NavDesktop prefetches this exact first page (same key, same
+        // type="all") purely to grab its newest item's id for a nav link.
+        // fetchQuery reuses that cached result when it's still fresh instead
+        // of firing an identical second request — a plain cache lookup, not
+        // a change to how this effect fetches/owns feed state otherwise.
+        // Pagination (extendForward/extendBackward) is untouched and still
+        // calls apiRef.current.getFeeds directly, since those cursors are
+        // never something NavDesktop could have prefetched.
+        const result = await queryClient.fetchQuery({
+          queryKey: updatesQueryKey(type as string, ""),
+          queryFn: () => apiRef.current.getFeeds(type as string, ""),
+        });
         originalFeedsRef.current = result.data;
         setSlots(result.data.map((feed: Feed) => ({ key: nextSlotKey(feed._id), feed })));
         setApiData({ nextCursor: result.nextCursor, hasMore: result.hasMore });
@@ -702,7 +689,7 @@ function FeedContent({
     };
 
     fetchInitialFeeds();
-  }, [type]);
+  }, [type, queryClient]);
 
   // ── Wait for the first item's media before revealing real content ───────
   useEffect(() => {
@@ -981,6 +968,17 @@ function FeedContent({
     let cb = itemRefCallbacks.current.get(index);
     if (!cb) {
       cb = (el: HTMLDivElement | null) => {
+        // Unobserve the outgoing element before dropping the reference to
+        // it — without this, every trim/recycle (MAX_RENDERED_ITEMS) left
+        // the IntersectionObserver still holding a reference to a now-
+        // detached DOM node, which keeps it (and everything it closes
+        // over) from ever being garbage collected for as long as this
+        // observer instance lives (i.e. the whole time this feed type is
+        // being viewed). getVideoRefCallback below already does the
+        // equivalent cleanup for hls.js instances; this was the one place
+        // it was missing.
+        const prevEl = itemRefs.current[index];
+        if (prevEl && prevEl !== el) observerRef.current?.unobserve(prevEl);
         itemRefs.current[index] = el;
         if (el) observerRef.current?.observe(el);
       };
@@ -1363,6 +1361,22 @@ function FeedContent({
     [],
   );
 
+  // Swaps a comment's temporary (optimistic) id for the real one the server
+  // assigned, once sendComment's request resolves — without this, liking or
+  // deleting a just-posted comment before the next refetch would target an
+  // id the backend has never heard of.
+  const replaceCommentId = useCallback(
+    (list: CommentData[], tempId: string, realId: string): CommentData[] =>
+      list.map((node) =>
+        node._id === tempId
+          ? { ...node, _id: realId }
+          : node.replies?.length
+            ? { ...node, replies: replaceCommentId(node.replies, tempId, realId) }
+            : node,
+      ),
+    [],
+  );
+
   // ── Socket.IO — feed room + live event syncing ───────────────────────────
   // Joins the room for whichever post is currently in view, applies live
   // like/unlike (feed:post) and comment activity (feed:comment) from other
@@ -1374,7 +1388,18 @@ function FeedContent({
   const activePostType = activeFeed?.type;
 
   useEffect(() => {
-    if (!socket || loading || !activePostId) return;
+    // `loading` was previously a dependency/guard here too. It comes from
+    // useUpdates(), whose `loading` flag is shared across every method on
+    // that one hook instance — getFeeds, addComments, likeUpdate,
+    // likeUpdateComment, deleteUpdateComment all flip the same boolean.
+    // With `loading` in this effect's deps, ANY of those unrelated calls
+    // (liking a post, adding a comment, paginating) tore this effect down
+    // and rebuilt it — leaving and rejoining the socket room every time.
+    // Beyond the wasted round trips, any feed:post/feed:comment broadcast
+    // arriving during that leave→rejoin gap was silently missed. Gating on
+    // `activePostId` alone is both correct and sufficient: it's already
+    // false until there's an actual post to join a room for.
+    if (!socket || !activePostId) return;
 
     // The shared socket also reconnects for reasons that have nothing to do
     // with the feed (e.g. SocketProvider re-authenticating after login), so
@@ -1401,8 +1426,16 @@ function FeedContent({
         const likes = payload.liked
           ? [...(feed.likes ?? []), payload.userId]
           : (feed.likes ?? []).filter((l) => l !== payload.userId);
+        // Preview array patched above for `hasLiked`'s fallback heuristic;
+        // likeCount (the actual displayed number) needs its own update —
+        // read fresh from `feed` so a concurrent local optimistic update
+        // isn't clobbered by this socket event or vice versa.
+        const likeCount = Math.max(
+          0,
+          (feed.likeCount ?? 0) + (payload.liked ? 1 : -1),
+        );
 
-        return { ...feed, likes };
+        return { ...feed, likes, likeCount };
       });
     };
     // Live comment activity from other users viewing this same post —
@@ -1415,15 +1448,32 @@ function FeedContent({
         const comment = payload.comment as CommentData;
         if (comment.user?._id === user?._id) return; // already added optimistically
 
-        updateFeedComments(payload.postId, (comments) =>
-          comment.parentId
-            ? addReplyRecursive(comments, comment.parentId, comment)
-            : [...comments, comment],
-        );
+        updateFeedById(payload.postId, (feed) => ({
+          ...feed,
+          commentCount: (feed.commentCount ?? 0) + 1,
+        }));
+        updateFeedComments(payload.postId, (comments) => {
+          if (comment.parentId) {
+            return addReplyRecursive(comments, comment.parentId, comment);
+          }
+          // Keep only the most recent COMMENT_PREVIEW_CAP top-level
+          // comments — matches the backend's own preview size, and stops
+          // this array growing unbounded over a long-lived view of an
+          // active post (replies aren't capped here; the contract only
+          // specifies a cap on the top-level preview).
+          const next = [...comments, comment];
+          return next.length > COMMENT_PREVIEW_CAP
+            ? next.slice(next.length - COMMENT_PREVIEW_CAP)
+            : next;
+        });
         return;
       }
 
       if (payload.action === "deleted") {
+        updateFeedById(payload.postId, (feed) => ({
+          ...feed,
+          commentCount: Math.max(0, (feed.commentCount ?? 0) - 1),
+        }));
         updateFeedComments(payload.postId, (comments) =>
           recursiveDeleteComment(comments, payload.commentId),
         );
@@ -1457,7 +1507,6 @@ function FeedContent({
     socket,
     activePostId,
     activePostType,
-    loading,
     user?._id,
     updateFeedById,
     updateFeedComments,
@@ -1496,48 +1545,67 @@ function FeedContent({
     async (parentId: string | null) => {
       if (!checkIfUserLoggedIn("send a comment")) return;
       if (!comment.commentText.trim()) return;
+      if (!id) return;
+
+      const feedType = originalFeedsRef.current.find((f) => f._id === id)?.type;
+      // Temporary id, swapped for the real one on success (see
+      // replaceCommentId) — needed so a like/delete on this comment before
+      // the request resolves targets something the backend recognizes.
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const newComment: CommentData = {
+        _id: tempId,
+        text: comment.commentText.trim(),
+        user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
+        parentId,
+        likes: [],
+        replies: [],
+        showReplies: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
       setAddCommentLoading(true);
 
+      // Optimistic per the backend contract: POST /updates/comment never
+      // returns updated counts, so the comment + commentCount are applied
+      // immediately rather than waiting on the round trip (previously this
+      // only updated local state AFTER the await resolved, so the comment
+      // box gave no feedback until then).
+      updateFeedById(id, (feed) => ({
+        ...feed,
+        commentCount: (feed.commentCount ?? 0) + 1,
+      }));
+      updateFeedComments(id, (comments) =>
+        parentId
+          ? addReplyRecursive(comments, parentId, newComment)
+          : [...comments, newComment],
+      );
+      setComment((prev) => ({
+        ...prev,
+        commentText: "",
+        parent: { parentId: "", fullname: "", email: "" },
+      }));
+
       try {
-        const newComment: CommentData = {
-          _id: "",
-          text: comment.commentText.trim(),
-          user: { _id: user!._id, fullname: user!.fullname, email: user!.email },
-          parentId,
-          likes: [],
-          replies: [],
-          showReplies: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        const feedType = originalFeedsRef.current.find((f) => f._id === id)?.type;
-
         const req = await apiRef.current.addComments({
-          feedId: id as string,
+          feedId: id,
           type: feedType as string,
           comment: newComment.text,
           parentId: parentId as string,
         });
-        newComment._id = req._id;
-
-        if (parentId) {
-          updateFeedComments(id!, (comments) =>
-            addReplyRecursive(comments, parentId, newComment),
-          );
-        } else {
-          updateFeedComments(id!, (comments) => [...comments, newComment]);
-        }
-
-        setComment((prev) => ({
-          ...prev,
-          commentText: "",
-          parent: { parentId: "", fullname: "", email: "" },
-        }));
+        updateFeedComments(id, (comments) =>
+          replaceCommentId(comments, tempId, req._id),
+        );
       } catch (err) {
         console.error("Failed to add comment:", err);
         toast.error("Failed to post comment");
+        updateFeedById(id, (feed) => ({
+          ...feed,
+          commentCount: Math.max(0, (feed.commentCount ?? 0) - 1),
+        }));
+        updateFeedComments(id, (comments) =>
+          recursiveDeleteComment(comments, tempId),
+        );
       } finally {
         setAddCommentLoading(false);
       }
@@ -1546,8 +1614,11 @@ function FeedContent({
       comment.commentText,
       user,
       id,
+      updateFeedById,
       updateFeedComments,
       addReplyRecursive,
+      recursiveDeleteComment,
+      replaceCommentId,
       checkIfUserLoggedIn,
     ],
   );
@@ -1559,13 +1630,26 @@ function FeedContent({
       const targetFeed = originalFeedsRef.current.find((f) => f._id === _id);
       if (!targetFeed) return;
 
-      const liked = targetFeed.likes?.some((l) => l === user!._id);
-      const newLikes = liked
-        ? targetFeed.likes!.filter((l) => l !== user!._id)
-        : [...(targetFeed.likes ?? []), user!._id];
+      // `liked` is the backend's own authoritative "did the current user
+      // like this" flag — read/write that directly rather than inferring
+      // it from whether the user's id happens to appear in the `likes`
+      // preview array (capped at 20; a real like from a heavy-engagement
+      // post could easily not be in that preview at all).
+      const wasLiked = targetFeed.liked;
+      const newLiked = !wasLiked;
       const previousLikes = targetFeed.likes;
 
-      updateFeedById(_id, (feed) => ({ ...feed, likes: newLikes }));
+      updateFeedById(_id, (feed) => {
+        const likes = newLiked
+          ? [...(feed.likes ?? []), user!._id]
+          : (feed.likes ?? []).filter((l) => l !== user!._id);
+        // likeCount is read fresh from `feed` here (not from the outer
+        // `targetFeed` snapshot), so this stays correct even if a socket
+        // event for this same post landed between the snapshot above and
+        // this update actually applying.
+        const likeCount = Math.max(0, (feed.likeCount ?? 0) + (newLiked ? 1 : -1));
+        return { ...feed, likes, likeCount, liked: newLiked };
+      });
 
       try {
         await apiRef.current.likeUpdate({
@@ -1573,7 +1657,12 @@ function FeedContent({
           type: targetFeed.type,
         });
       } catch (err) {
-        updateFeedById(_id, (feed) => ({ ...feed, likes: previousLikes }));
+        updateFeedById(_id, (feed) => ({
+          ...feed,
+          likes: previousLikes,
+          likeCount: Math.max(0, (feed.likeCount ?? 0) + (newLiked ? -1 : 1)),
+          liked: wasLiked,
+        }));
         console.error("Failed to like post:", err);
       }
     },
@@ -1587,6 +1676,12 @@ function FeedContent({
       const feed = originalFeedsRef.current.find((f) => f._id === id);
       if (!feed) return;
 
+      // Snapshot the whole tree rather than trying to compute the inverse
+      // toggle — this was previously missing a rollback entirely, so a
+      // failed request left the like applied locally forever with no way
+      // to reconcile back to server truth.
+      const previousComments = feed.comments;
+
       updateFeedComments(id!, (comments) =>
         addRecursiveLike(comments, _id, user!._id),
       );
@@ -1598,6 +1693,7 @@ function FeedContent({
           commentId: _id,
         });
       } catch (err) {
+        updateFeedComments(id!, () => previousComments ?? []);
         console.error("Failed to like comment:", err);
       }
     },
@@ -1609,6 +1705,16 @@ function FeedContent({
       const selectedFeed = originalFeedsRef.current.find((f) => f._id === id);
       if (!selectedFeed) return;
 
+      // Same snapshot-and-restore approach as likeComment — the comment
+      // tree is nested, so reconstructing "put it back at the right spot"
+      // from just the deleted node isn't reliable; restoring the whole
+      // pre-delete tree is.
+      const previousComments = selectedFeed.comments;
+
+      updateFeedById(id!, (feed) => ({
+        ...feed,
+        commentCount: Math.max(0, (feed.commentCount ?? 0) - 1),
+      }));
       updateFeedComments(id!, (comments) =>
         recursiveDeleteComment(comments, item._id),
       );
@@ -1619,11 +1725,16 @@ function FeedContent({
           type: selectedFeed.type,
         });
       } catch (err) {
+        updateFeedById(id!, (feed) => ({
+          ...feed,
+          commentCount: (feed.commentCount ?? 0) + 1,
+        }));
+        updateFeedComments(id!, () => previousComments ?? []);
         console.error("Failed to delete comment:", err);
         toast.error("Failed to delete comment");
       }
     },
-    [id, updateFeedComments, recursiveDeleteComment],
+    [id, updateFeedById, updateFeedComments, recursiveDeleteComment],
   );
 
   const handleWishlistToggle = useCallback(
@@ -1711,14 +1822,14 @@ function FeedContent({
             ) : (
               <div className="grid gap-3 animate-placeholderFromBottom">
                 {slots.map((slot, index) => {
+                
                   const item = slot.feed;
                   const isLoaded = loadedIndex.has(index);
                   const isPlaying = playingMap[index] ?? false;
-                  const hasLiked =
-                    item.likes?.some((l) => l === user?._id) ?? false;
-                  const commentCount = item.comments
-                    ? getNumberOfComments(item.comments)
-                    : 0;
+                  const hasLiked = item.liked; 
+                  const commentCount =
+                    item.commentCount ??
+                    (item.comments ? getNumberOfComments(item.comments) : 0);
                   const itemInWishlist = item.product
                     ? (wishlistMap[item.product._id] ??
                       isInWishlist(item.product._id))

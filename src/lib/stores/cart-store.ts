@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { addToCart, getBearerToken, removeCartItem } from "../api";
+import { addToCart, fetchFromCart, getBearerToken, removeCartItem } from "../api";
 import { Product } from "../types";
 import { calcDiscount } from "../utils";
 
@@ -60,6 +60,44 @@ type SyncAction =
 // Tracks pending debounced sync timeouts per item — cleared before each new schedule
 const pendingSyncTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
+type BackendCartItem = {
+  product: Product;
+  price: number;
+  discount: number;
+  finalPrice: number;
+  qty: number;
+  variants?: { options: SelectedVariant[] };
+};
+
+// Single in-flight guard shared across every caller (login handlers, the
+// one-time app-boot check) — whichever calls first actually hits the
+// network; anyone else calling while it's running gets the same promise
+// back instead of racing it with a second fetch/upload sequence.
+let hydrateInFlight: Promise<void> | null = null;
+
+function backendItemToCartItem(
+  backendItem: BackendCartItem,
+  localMatch: CartItem | undefined,
+): CartItem {
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+  const coverImage = backendItem.product.cover_image?.startsWith("/")
+    ? `${backendBase}${backendItem.product.cover_image}`
+    : backendItem.product.cover_image;
+
+  return {
+    ...(localMatch ?? {}),
+    ...backendItem.product,
+    cover_image: coverImage,
+    quantity: backendItem.qty,
+    selected: localMatch?.selected ?? true,
+    basePrice: backendItem.price,
+    discount: backendItem.discount,
+    finalPrice: backendItem.finalPrice,
+    selectedVariants: backendItem.variants?.options ?? [],
+    synced: true,
+  } as CartItem;
+}
+
 type CartStore = {
   isLogisticsMode: boolean;
   setIsLogisticsMode: (isLogisticsMode: boolean) => void;
@@ -110,7 +148,14 @@ type CartStore = {
   };
 
   retrySync: () => Promise<void>;
-  syncGuestCartOnLogin: () => Promise<void>;
+  // Fetches the backend cart and reconciles it with whatever's currently
+  // local. Local items already marked `synced` are assumed to already be
+  // reflected on the backend and are left alone; only unsynced items (the
+  // guest-cart case) get merged in — matching backend quantities summed,
+  // not duplicated — and uploaded. Idempotent and safe to call from
+  // multiple places (see `hydrateInFlight` above): call it once per login,
+  // plus once on app boot for an already-authenticated session.
+  hydrateFromBackend: () => Promise<void>;
   cartLoaded: boolean;
   setCartLoaded: (v: boolean) => void;
 };
@@ -446,24 +491,85 @@ export const useCartStore = create<CartStore>()(
         }
       },
 
-      syncGuestCartOnLogin: async () => {
+      hydrateFromBackend: async () => {
+        if (hydrateInFlight) return hydrateInFlight;
+
         const token = getBearerToken();
-        if (!token) return;
-
-        const items = get().items.filter((i) => !i.synced);
-
-        if (items.length === 0) return;
-
-        try {
-          await addToCart(items);
-
-          set({
-            items: get().items.map((i) => ({ ...i, synced: true })),
-            syncQueue: [],
-          });
-        } catch (error) {
-          console.error("Cart merge failed", error);
+        if (!token) {
+          // Guest: nothing to fetch — leave whatever's persisted locally
+          // alone rather than clearing it.
+          set({ cartLoaded: true });
+          return;
         }
+
+        hydrateInFlight = (async () => {
+          set({ cartLoaded: false });
+
+          try {
+            const initialRes = await fetchFromCart();
+            const backendItems: BackendCartItem[] =
+              initialRes?.message?.items ?? [];
+            const localItems = get().items;
+            const unsynced = localItems.filter((i) => !i.synced);
+
+            let finalItems = backendItems;
+
+            if (unsynced.length > 0) {
+              const toUpload = unsynced.map((local) => {
+                const match = backendItems.find(
+                  (bi) =>
+                    bi.product._id === local._id &&
+                    areVariantsEqual(
+                      bi.variants?.options,
+                      local.selectedVariants,
+                    ),
+                );
+                const summedQty = match
+                  ? match.qty + local.quantity
+                  : local.quantity;
+                const cap = local.stock || match?.product.stock;
+                return {
+                  ...local,
+                  quantity: cap ? Math.min(summedQty, cap) : summedQty,
+                };
+              });
+
+              await addToCart(toUpload);
+              // Re-fetch rather than assume the upload response mirrors the
+              // full cart shape — the backend is the single source of truth
+              // for the post-merge state (price/discount/finalPrice, etc.).
+              const refreshed = await fetchFromCart();
+              finalItems = refreshed?.message?.items ?? backendItems;
+            }
+
+            const merged = finalItems.map((bi) =>
+              backendItemToCartItem(
+                bi,
+                localItems.find(
+                  (li) =>
+                    li._id === bi.product._id &&
+                    areVariantsEqual(li.selectedVariants, bi.variants?.options),
+                ),
+              ),
+            );
+
+            // syncQueue is deliberately left untouched — it holds actions
+            // that failed to reach the backend (e.g. a removeItem dropped
+            // by a network blip) and is already retried independently via
+            // retrySync (see provider.tsx: on `online` + a 60s interval).
+            // Clearing it here would silently discard a pending action that
+            // never actually landed, just because we happened to re-fetch.
+            set({ items: merged });
+          } catch (error) {
+            console.error("Cart sync failed:", error);
+            toast.error("Couldn't sync your cart. It'll retry automatically.");
+          } finally {
+            set({ cartLoaded: true });
+            hydrateInFlight = null;
+          }
+        })();
+
+        return hydrateInFlight;
       },
     }),
     {

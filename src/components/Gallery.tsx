@@ -3,18 +3,23 @@ import { getUpdates } from '@/lib/api';
 import { bunnyLoader } from '@/lib/bunnyLoader';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { useWishlistStore } from '@/lib/stores/wishlist-store';
-import { Feed, Product } from '@/lib/types';
-import { ITEMS_TO_APPEND, shuffleArray } from '@/lib/utils';
+import { Feed } from '@/lib/types';
+import { ITEMS_TO_APPEND } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { forwardRef, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { HlsPlayer } from './HLS';
 import ShareModal from './ShareModal';
 import { CartRounded, Elipsis, ShareIconGallery, WishListAdd } from './svgs/Icons';
 
 // Once a media URL has finished loading once, it never shows a skeleton
 // again — module scope so the cache survives remounts (e.g. navigating away
 // and back) for the lifetime of the tab, not just this component instance.
+// Bounded by design, not a leak: recycling reuses the same underlying media
+// URLs over and over rather than introducing new ones, so this only grows
+// with the total size of the real (fetched) gallery, never with how long
+// the user keeps scrolling.
 const loadedMediaCache = new Set<string>();
 
 // Hard cap on how many cards stay mounted at once. Once the API runs out of
@@ -26,14 +31,61 @@ const loadedMediaCache = new Set<string>();
 // off-screen items above it are removed.
 const MAX_GALLERY_ITEMS = 60;
 
+// How far ahead of the visible viewport the "near the bottom" trigger fires
+// (IntersectionObserver rootMargin). This is what actually eliminates the
+// pause at the end of the list: a page fetch normally takes a few hundred
+// ms, and at typical scroll speeds a user can't cover ~1000px in that time,
+// so the buffer (see bufferRef below) is reliably full by the time they
+// physically arrive.
+const PREFETCH_ROOT_MARGIN = "1000px 0px";
+
+// How far ahead a video card's own visibility is checked before it's
+// allowed to mount a real HlsPlayer (see GalleryCard) — deliberately much
+// tighter than PREFETCH_ROOT_MARGIN, since this gates live video decoders,
+// not a cheap data fetch.
+const VIDEO_ROOT_MARGIN = "200px 0px";
+
 let slotCounter = 0;
 const nextSlotKey = (feedId: string) => `${feedId}::${slotCounter++}`;
 
 type GallerySlot = { key: string; feed: Feed };
 
-export function GallerySkeleton() {
+// Pure Fisher-Yates over the whole array — distinct from lib/utils'
+// shuffleArray, which shuffles-then-slices a window for a different caller
+// (FeedItem's pull-to-refresh). This one needs the *entire* shuffled order,
+// since it becomes the recycle order consumed a slice at a time below.
+function shuffleFull<T>(array: T[]): T[] {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+// Deterministic per-post height variant, derived from the post's own id —
+// replaces the old `index % 2`. Index is the item's *position in the
+// rendered array*, which shifts by a constant offset every time the front
+// gets trimmed (MAX_GALLERY_ITEMS), so every remaining mounted card used to
+// receive a "new" index — and therefore fail GalleryCard's memo() and fully
+// re-render — on every single trim. This is a property of the post, not of
+// where it currently sits in the list, so it never changes.
+function heightVariantFor(id: string): 0 | 1 {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+    return (hash & 1) as 0 | 1;
+}
+
+// A handful of placeholders for the rare "buffer wasn't ready yet" fallback
+// — see isWaitingForMore below. Deliberately smaller than the initial-load
+// skeleton count: with prefetching working, this path is the exception, not
+// the steady state, so there's no reason to mount as many animated shimmer
+// cards for it.
+const FALLBACK_SKELETON_COUNT = 4;
+
+export function GallerySkeleton({ count = ITEMS_TO_APPEND }: { count?: number }) {
     return (
-        Array.from({ length: ITEMS_TO_APPEND }).map((_, index) => (
+        Array.from({ length: count }).map((_, index) => (
             <div key={index} className='cursor-pointer mb-10 bg-gray-200 overflow-hidden p-4 rounded-lg relative'>
                 <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
                 <div
@@ -58,38 +110,66 @@ export function GallerySkeleton() {
 // ─── GalleryCard (memoized) ─────────────────────────────────────────────────
 // Extracted so toggling one card's option menu, cart state, or wishlist
 // state doesn't force every other mounted card in the masonry grid to
-// re-render.
+// re-render. Cart/wishlist membership is read here via per-card zustand
+// selectors (feed.product._id-scoped) rather than being computed by the
+// parent for all ~60 mounted cards and passed down — a mutation to one
+// product's cart/wishlist status now only re-renders the one card that
+// actually cares, instead of re-running Gallery's whole render (and all 60
+// child prop computations) on every unrelated cart/wishlist change anywhere
+// on the page.
 
 type GalleryCardProps = {
     feed: Feed;
     slotKey: string;
-    index: number;
+    priority: boolean;
     isOptionOpen: boolean;
-    inCart: boolean;
-    inWishlist: boolean;
     onNavigate: (productId: string) => void;
     onToggleOption: (slotKey: string) => void;
-    onToggleCart: (productId: string) => void;
-    onToggleWishlist: (product: Product) => void;
     onShare: (productId: string) => void;
 };
 
 const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function GalleryCard({
     feed,
     slotKey,
-    index,
+    priority,
     isOptionOpen,
-    inCart,
-    inWishlist,
     onNavigate,
     onToggleOption,
-    onToggleCart,
-    onToggleWishlist,
     onShare,
 }, ref) {
     // Seeded synchronously from the cache so a recycled/duplicate card whose
     // media URL was already loaded elsewhere never flashes a skeleton.
     const [isLoaded, setIsLoaded] = useState(() => loadedMediaCache.has(feed.mediaUrl));
+    const heightVariant = heightVariantFor(feed._id);
+
+    const inCart = useCartStore((s) => !!s.getItem(feed.product._id));
+    const inWishlist = useWishlistStore((s) => s.isInWishlist(feed.product._id));
+    const removeCartItem = useCartStore((s) => s.removeItem);
+    const addWishlistItem = useWishlistStore((s) => s.addItem);
+    const removeWishlistItem = useWishlistStore((s) => s.removeItem);
+
+    // Gates whether a video card mounts a real HlsPlayer (a live hls.js
+    // instance + <video> decoder) or just its static poster. Unlike images
+    // — which Next/Image already lazy-loads natively — nothing was
+    // previously limiting how many *videos* could be simultaneously
+    // decoding: with up to MAX_GALLERY_ITEMS cards mounted at once, a
+    // video-heavy gallery could have dozens of concurrent hls.js instances
+    // alive at a time. iOS Safari in particular has hard limits on
+    // concurrent video decoders and will kill the tab past them.
+    const [isVideoNearViewport, setIsVideoNearViewport] = useState(false);
+    const mediaWrapperRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (feed.mediaType !== "video") return;
+        const el = mediaWrapperRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => setIsVideoNearViewport(entry.isIntersecting),
+            { rootMargin: VIDEO_ROOT_MARGIN },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [feed.mediaType]);
 
     const handleLoaded = useCallback(() => {
         loadedMediaCache.add(feed.mediaUrl);
@@ -107,16 +187,23 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
     const handleToggleCart = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            onToggleCart(feed.product._id);
+            if (inCart) {
+                removeCartItem(feed.product._id);
+            }
+            // Adding to cart from the gallery isn't wired up yet (pre-existing).
         },
-        [onToggleCart, feed.product._id],
+        [inCart, removeCartItem, feed.product._id],
     );
     const handleToggleWishlist = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            onToggleWishlist(feed.product);
+            if (inWishlist) {
+                removeWishlistItem(feed.product._id);
+            } else {
+                addWishlistItem(feed.product);
+            }
         },
-        [onToggleWishlist, feed.product],
+        [inWishlist, removeWishlistItem, addWishlistItem, feed.product],
     );
     const handleShare = useCallback(
         (e: React.MouseEvent) => {
@@ -126,12 +213,33 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
         [onShare, feed.product._id],
     );
 
+    // Rough intrinsic-size hint for content-visibility below (media height +
+    // an estimate for the title/price block under it) — doesn't need to be
+    // exact, it only prevents a visible jump the moment this card scrolls
+    // into range; a card whose real content differs just reflows once, on
+    // entry, same as any content-visibility: auto usage.
+    const mediaHeightPx = heightVariant === 0 ? 300 : 400;
+
     return (
-        <div ref={ref} className='cursor-pointer mb-10'>
+        <div
+            ref={ref}
+            className='cursor-pointer mb-10'
+            style={{
+                // Skips layout/paint/style work entirely for cards currently
+                // off-screen — up to MAX_GALLERY_ITEMS (60) can be mounted at
+                // once, most of them scrolled well out of view at any given
+                // moment. This is what "DO NOT use a virtualization library"
+                // doesn't have to mean "no virtualization benefit" — the
+                // browser does the equivalent work for free here.
+                contentVisibility: 'auto',
+                containIntrinsicSize: `auto ${mediaHeightPx + 100}px`,
+            }}
+        >
             <div
+                ref={mediaWrapperRef}
                 onClick={handleNavigate}
                 className='relative overflow-hidden rounded-lg mb-4 break-inside-avoid shadow-sm'
-                style={{ height: index % 2 === 0 ? "300px" : "400px" }}
+                style={{ height: mediaHeightPx }}
             >
                 {!isLoaded && (
                     <div className="absolute inset-0 bg-gray-200 overflow-hidden">
@@ -140,16 +248,21 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
                 )}
 
                 {feed.mediaType === "video" ? (
-                    <video
-                        preload="none"
-                        src={feed.mediaUrl}
-                        muted
-                        loop
-                        playsInline
-                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"}`}
-                        onLoadedData={handleLoaded}
-                        onError={handleLoaded}
-                    />
+                    isVideoNearViewport ? (
+                        <HlsPlayer src={feed.mediaUrl} className='w-full h-full object-cover' />
+                    ) : (
+                        // Off-screen video: static poster only, zero decoders held.
+                        feed.image && (
+                            <Image
+                                src={feed.image}
+                                alt={feed.title}
+                                loader={bunnyLoader}
+                                fill
+                                sizes="(max-width: 768px) 50vw, 33vw"
+                                className="object-cover"
+                            />
+                        )
+                    )
                 ) : (
                     <Image
                         src={feed.mediaUrl}
@@ -160,7 +273,7 @@ const GalleryCard = memo(forwardRef<HTMLDivElement, GalleryCardProps>(function G
                         className={`object-cover transition-opacity duration-500 hover:scale-105 ${isLoaded ? "opacity-100" : "opacity-0"}`}
                         onLoad={handleLoaded}
                         onError={handleLoaded}
-                        priority={index < 4}
+                        priority={priority}
                     />
                 )}
 
@@ -201,8 +314,8 @@ export default function Gallery() {
         queryFn: () => getUpdates("gallery", "", ITEMS_TO_APPEND),
         // This query is only ever consumed once, to seed `slots` (see the
         // effect below, guarded by `slots.length > 0`) — every subsequent
-        // page comes from onLoadMore's direct getUpdates calls instead. With
-        // the default staleTime, remounting this component (e.g. navigating
+        // page comes from the buffered fetch logic below instead. With the
+        // default staleTime, remounting this component (e.g. navigating
         // away and back) would trigger a background refetch whose result the
         // seed guard can only ever throw away — pure wasted network traffic.
         staleTime: Infinity,
@@ -210,22 +323,17 @@ export default function Gallery() {
 
     const [slots, setSlots] = useState<GallerySlot[]>([]);
     const [apiData, setApiData] = useState({ nextCursor: "", hasMore: true });
-    // Selector subscriptions, not a whole-store destructure — Gallery only
-    // needs to react when wishlist/cart *items* change, but a whole-store
-    // subscription re-renders every mounted card (up to MAX_GALLERY_ITEMS)
-    // on any store field changing, including ones with nothing to do with
-    // this screen (checkout step, logistics, coupons, etc. on cart-store).
-    // Same fix already applied to NotificationWrapper for the same reason.
-    const addWishlistItem = useWishlistStore((s) => s.addItem);
-    const removeWishlistItem = useWishlistStore((s) => s.removeItem);
-    const isInWishlist = useWishlistStore((s) => s.isInWishlist);
-    useWishlistStore((s) => s.items); // subscribe: re-render when wishlist items actually change
-    const removeCartItem = useCartStore((s) => s.removeItem);
-    const getItem = useCartStore((s) => s.getItem);
-    useCartStore((s) => s.items); // subscribe: re-render when cart items actually change
+    // True only while a bottom-of-list append had to wait on a genuine
+    // network round trip because the buffer wasn't ready yet (see
+    // consumeNext) — the rare fallback path, not the steady state.
+    const [isWaitingForMore, setIsWaitingForMore] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const isFetchingRef = useRef(false);
-    const onLoadMoreRef = useRef<() => void>(() => { });
+    // Guards the on-demand append path specifically (draining the buffer,
+    // or the network fallback) against overlapping invocations — separate
+    // from isPrefetchingRef below, which guards the independent background
+    // fill, since both can legitimately be "in flight" at different times.
+    const isAppendingRef = useRef(false);
+    const consumeNextRef = useRef<() => void>(() => { });
     // The actual last rendered card, not an auxiliary sentinel div — CSS
     // multi-column layout (`columns-2`) balances content across columns, so
     // a plain trailing sentinel can land short of the visual bottom and
@@ -236,6 +344,18 @@ export default function Gallery() {
     // reshuffles a window of these (same object references, nothing cloned)
     // once the API has no more pages left.
     const originalGalleryRef = useRef<Feed[]>([]);
+    // One shuffled pass through the pool, consumed a slice at a time via
+    // recycleCursorRef, instead of a fresh O(n) shuffle of the whole pool on
+    // every single recycle call (see getNextRecycleBatch) — the previous
+    // approach re-shuffled the entire fetched history on every recycle
+    // batch, a cost that only grew as the session went on.
+    const recycleOrderRef = useRef<Feed[]>([]);
+    const recycleCursorRef = useRef(0);
+    // Holds one already-fetched-but-not-yet-appended batch, kept topped up
+    // in the background (see the effect below) so consumeNext can append
+    // instantly instead of waiting on a request the moment it's needed.
+    const bufferRef = useRef<Feed[] | null>(null);
+    const isPrefetchingRef = useRef(false);
     const [showOption, setShowOption] = useState<string | null>(null);
     const [showShare, setShowShare] = useState({
         show: false,
@@ -245,15 +365,95 @@ export default function Gallery() {
 
     // Appends new feeds as fresh slots, then trims from the front if the
     // fixed-size window is exceeded — the only place the mounted item count
-    // can grow, and it's always capped.
+    // can grow, and it's always capped. A ring-buffer/pointer structure was
+    // considered for this instead of the array copy below, but React's
+    // state model requires a new array reference to signal a change either
+    // way, and rendering still has to walk the window in visual order — so
+    // a pointer structure wouldn't avoid the O(60) copy, just relocate it.
+    // At a 60-item cap that copy (shallow — feed objects are reused, not
+    // cloned) is negligible next to the actual DOM/render cost of the cards
+    // themselves, so this is already the right shape for the constraint.
     const appendSlots = useCallback((feeds: Feed[]) => {
         if (!feeds.length) return;
         setSlots((prev) => {
-            const next = [...prev, ...feeds.map((feed) => ({ key: nextSlotKey(feed._id), feed }))];
+            const next = prev.concat(feeds.map((feed) => ({ key: nextSlotKey(feed._id), feed })));
             if (next.length <= MAX_GALLERY_ITEMS) return next;
             return next.slice(next.length - MAX_GALLERY_ITEMS);
         });
     }, []);
+
+    // Consumes a slice of the (lazily shuffled) recycle order, reshuffling
+    // only once every item in the pool has been used — turns an O(n)
+    // shuffle-per-recycle into an O(n) shuffle-per-full-pass plus an O(k)
+    // slice per call.
+    const getNextRecycleBatch = useCallback((count: number): Feed[] => {
+        const pool = originalGalleryRef.current;
+        if (!pool.length) return [];
+        if (recycleCursorRef.current >= recycleOrderRef.current.length) {
+            recycleOrderRef.current = shuffleFull(pool);
+            recycleCursorRef.current = 0;
+        }
+        const start = recycleCursorRef.current;
+        const end = Math.min(start + count, recycleOrderRef.current.length);
+        recycleCursorRef.current = end;
+        return recycleOrderRef.current.slice(start, end);
+    }, []);
+
+    // Pure "get the next batch of feeds" — fetch-or-recycle, same decision
+    // the old onLoadMore made, but deliberately *not* appending anything
+    // itself. Reused by both the background prefetch and the on-demand
+    // fallback below, so there's exactly one place that decides what the
+    // next batch looks like.
+    const fetchNextBatch = useCallback(async (): Promise<Feed[]> => {
+        if (apiData.hasMore) {
+            // A couple of retries here, mirroring what React Query already
+            // gives the initial fetch for free — a single dropped request
+            // shouldn't be the thing that stalls the whole feed.
+            let lastErr: unknown;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    const page = await getUpdates("gallery", apiData.nextCursor || "", ITEMS_TO_APPEND);
+                    if (!page) return [];
+                    originalGalleryRef.current = [...originalGalleryRef.current, ...page.data];
+                    setApiData({ nextCursor: page.nextCursor, hasMore: page.hasMore });
+                    return page.data;
+                } catch (err) {
+                    lastErr = err;
+                    if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+                }
+            }
+            console.error("Error fetching gallery page:", lastErr);
+            return [];
+        }
+        return getNextRecycleBatch(ITEMS_TO_APPEND);
+    }, [apiData.hasMore, apiData.nextCursor, getNextRecycleBatch]);
+    const fetchNextBatchRef = useRef(fetchNextBatch);
+    fetchNextBatchRef.current = fetchNextBatch;
+
+    // Background prefetch — fills the buffer ahead of actual need. Guarded
+    // against running again while already in flight or while a filled
+    // buffer is still waiting to be consumed.
+    const prefetchNext = useCallback(async () => {
+        if (isPrefetchingRef.current || bufferRef.current) return;
+        isPrefetchingRef.current = true;
+        try {
+            const feeds = await fetchNextBatchRef.current();
+            bufferRef.current = feeds.length ? feeds : null;
+        } catch (err) {
+            console.error("Gallery prefetch failed:", err);
+        } finally {
+            isPrefetchingRef.current = false;
+        }
+    }, []);
+
+    // Keeps the buffer topped up: fires once slots first exist, and again
+    // after every append (appendSlots changes slots.length) — prefetchNext's
+    // own guards make the redundant calls this produces (buffer already
+    // full, or a prefetch already running) cheap no-ops, so there's no need
+    // for separate "have I already primed this" bookkeeping.
+    useEffect(() => {
+        if (slots.length > 0) void prefetchNext();
+    }, [slots.length, prefetchNext]);
 
     // Seed the initial window once the first page resolves.
     useEffect(() => {
@@ -268,45 +468,55 @@ export default function Gallery() {
         setMounted(true);
     }, []);
 
-    // Both "fetch the next real page" and "recycle what we already have"
-    // live in a single onLoadMore, guarded by isFetchingRef so a fast
-    // re-intersection (e.g. re-observing after the last item changes)
-    // can't trigger overlapping/duplicate appends.
-    const onLoadMore = useCallback(async () => {
-        if (isFetchingRef.current) return;
-        isFetchingRef.current = true;
+    // Fires when the observer below decides the user is close enough to the
+    // end that more content will be needed soon. If the buffer's already
+    // filled, this is an instant, no-network append; the network fallback
+    // only runs if the user scrolled faster than one page's fetch time.
+    const consumeNext = useCallback(async () => {
+        if (isAppendingRef.current) return;
+        isAppendingRef.current = true;
         try {
-            if (apiData.hasMore) {
-                const newData = await getUpdates("gallery", apiData.nextCursor || "", ITEMS_TO_APPEND);
-                if (newData) {
-                    originalGalleryRef.current = [...originalGalleryRef.current, ...newData.data];
-                    appendSlots(newData.data);
-                    setApiData({ nextCursor: newData.nextCursor, hasMore: newData.hasMore });
-                }
-            } else if (originalGalleryRef.current.length) {
-                appendSlots(shuffleArray(originalGalleryRef.current));
+            if (bufferRef.current) {
+                const feeds = bufferRef.current;
+                bufferRef.current = null;
+                appendSlots(feeds);
+            } else {
+                setIsWaitingForMore(true);
+                const feeds = await fetchNextBatchRef.current();
+                appendSlots(feeds);
+                setIsWaitingForMore(false);
             }
-        } catch (err) {
-            console.error("Error loading more gallery items:", err);
         } finally {
-            isFetchingRef.current = false;
+            isAppendingRef.current = false;
         }
-    }, [apiData.hasMore, apiData.nextCursor, appendSlots]);
-    onLoadMoreRef.current = onLoadMore;
+    }, [appendSlots]);
+    consumeNextRef.current = consumeNext;
 
-    // Fires onLoadMore whenever the last rendered card scrolls into view —
-    // re-attached every time the last card changes (new page fetched, or a
-    // recycled batch appended), so it's always watching the true tail.
+    // Single observer instance, created once — retargeted (not recreated)
+    // whenever the last rendered card changes, via the effect below. The
+    // old version constructed a brand-new IntersectionObserver on every
+    // single page append/recycle, which during continuous fast scrolling
+    // could mean dozens of native observer objects allocated and thrown
+    // away per minute.
+    const observerRef = useRef<IntersectionObserver | null>(null);
     useEffect(() => {
-        if (!lastItemEl) return;
-        const observer = new IntersectionObserver(
+        observerRef.current = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) onLoadMoreRef.current();
+                if (entry.isIntersecting) consumeNextRef.current();
             },
-            { threshold: 0.1 },
+            { threshold: 0, rootMargin: PREFETCH_ROOT_MARGIN },
         );
+        return () => {
+            observerRef.current?.disconnect();
+            observerRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        const observer = observerRef.current;
+        if (!observer || !lastItemEl) return;
         observer.observe(lastItemEl);
-        return () => observer.disconnect();
+        return () => observer.unobserve(lastItemEl);
     }, [lastItemEl]);
 
     const handleNavigate = useCallback((productId: string) => {
@@ -316,21 +526,6 @@ export default function Gallery() {
     const handleToggleOption = useCallback((slotKey: string) => {
         setShowOption((prev) => (prev === slotKey ? null : slotKey));
     }, []);
-
-    const handleToggleCart = useCallback((productId: string) => {
-        if (getItem(productId)) {
-            removeCartItem(productId);
-        }
-        // Adding to cart from the gallery isn't wired up yet (pre-existing).
-    }, [getItem, removeCartItem]);
-
-    const handleToggleWishlist = useCallback((product: Product) => {
-        if (isInWishlist(product._id)) {
-            removeWishlistItem(product._id);
-        } else {
-            addWishlistItem(product);
-        }
-    }, [isInWishlist, removeWishlistItem, addWishlistItem]);
 
     const handleShareOpen = useCallback((productId: string) => {
         setShowShare((prev) => ({ ...prev, show: true, id: productId }));
@@ -346,23 +541,19 @@ export default function Gallery() {
                         ref={index === slots.length - 1 ? setLastItemEl : undefined}
                         feed={slot.feed}
                         slotKey={slot.key}
-                        index={index}
+                        priority={index < 4}
                         isOptionOpen={showOption === slot.key}
-                        inCart={mounted && !!getItem(slot.feed.product._id)}
-                        inWishlist={mounted && isInWishlist(slot.feed.product._id)}
                         onNavigate={handleNavigate}
                         onToggleOption={handleToggleOption}
-                        onToggleCart={handleToggleCart}
-                        onToggleWishlist={handleToggleWishlist}
                         onShare={handleShareOpen}
                     />
                 ))}
 
                 {isLoading && slots.length === 0 && <GallerySkeleton />}
 
-                <div>
-                    {apiData.hasMore && <GallerySkeleton />}
-                </div>
+                {/* Only shown for the rare "buffer wasn't ready" fallback —
+                    with prefetching working, this should almost never mount. */}
+                {isWaitingForMore && <GallerySkeleton count={FALLBACK_SKELETON_COUNT} />}
             </div>
 
             <ShareModal

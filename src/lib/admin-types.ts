@@ -335,11 +335,16 @@ export interface Education {
   thumbnail?: string;
   image?: string;
   video?: string;
+  // Bunny's transcoding pipeline status for `video`, set by the backend
+  // after the upload attaches — not the frontend's own upload-in-progress
+  // state (see useVideoUploadStore for that). "processing": uploaded, not
+  // yet playable. "finished": playable. "failed": transcoding failed, the
+  // admin needs to reupload.
+  videoStatus?: 'processing' | 'finished' | 'failed';
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
   category?: string;
-  linkedProduct?: string;
   likes?: Array<{ id: string; userId: string; createdAt: string }>;
   comments?: Array<{ id: string; userId: string; content: string; createdAt: string }>;
   status?: 'Published' | 'Draft' | 'Archived' | 'Scheduled';

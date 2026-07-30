@@ -59,5 +59,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const { id } = await params;
-  return <ProductDetailClient id={id} />;
+  // Keying on id forces a clean remount per product instead of reusing the
+  // instance across navigations — local state (quantity, selected cover
+  // image/video, image-load tracking) would otherwise silently carry over
+  // from the previous product.
+  return <ProductDetailClient key={id} id={id} />;
 }
