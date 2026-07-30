@@ -80,6 +80,7 @@ export default function VideoPlayer({ handleVideoPlay, item, video, playingMap, 
                     setPlayingMap((prev) => ({ ...prev, [item._id]: false }));
                 }}
                 onLoadedData={onLoadedData}
+                playsInline
 
             />}
             {/* <div onClick={() => handleVideoPlay(item._id)} className={`absolute w-full h-full top-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,_rgba(0,_0,_0,_0.2),_rgba(0,_0,_0,_0.6))] duration-300 ${!video.showPlay ? "hidden opacity-0" : "opacity-100"}`}>

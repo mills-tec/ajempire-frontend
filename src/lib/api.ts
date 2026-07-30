@@ -657,12 +657,14 @@ export async function getBanner(): Promise<{ message: Banner } | null> {
 export async function getShippingRates(
   
 ): Promise<{
+  status: boolean;
   message: {
     couriers: Array<{
       courier_id: string;
       courier_image: string;
       courier_name: string;
       delivery_eta: string;
+      delivery_eta_time?: string;
       total: number;
     }>;
     request_token: string;

@@ -12,6 +12,7 @@ import { loginBackend } from "@/lib/api";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useCartStore } from "@/lib/stores/cart-store";
 import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
 
@@ -69,6 +70,11 @@ export default function SigninComp({
           "ajempire_signin_user",
           JSON.stringify(res.message)
         );
+        // Merges whatever was added to the cart while browsing as a guest
+        // into this account's backend cart — see hydrateFromBackend for the
+        // merge strategy. Not awaited: it has its own error handling (a
+        // toast) and shouldn't hold up closing the login modal.
+        void useCartStore.getState().hydrateFromBackend();
       }
       console.log("res: ", res);
       setErrors({});
