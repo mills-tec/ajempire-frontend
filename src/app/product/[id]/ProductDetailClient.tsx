@@ -14,10 +14,9 @@ import { getBearerToken, getProduct } from "@/lib/api";
 import { bunnyLoader } from "@/lib/bunnyLoader";
 import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
-import type { ProductResponse } from "@/lib/types";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import type { ProductResponse } from "@/lib/types";
 import { useProductVariants } from "@/lib/useProductVariants";
-import { calcDiscountPrice } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -77,7 +76,6 @@ export default function ProductDetailPage({
   const {
     selectedVariantsArray,
     missingVariantName,
-    selectedCombination,
     currentStock,
     hasVariants,
     availableVariants,
@@ -156,19 +154,6 @@ export default function ProductDetailPage({
     return true;
   }, [hasVariants, missingVariantName, currentStock]);
 
-  const resolvedCartPrice =
-    item && selectedCombination
-      ? item.price + selectedCombination.additionalPrice
-      : (item?.price ?? 0);
-
-  const resolvedFinalPrice = item?.flashSales
-    ? calcDiscountPrice(
-      resolvedCartPrice,
-      item.flashSales.discountValue!,
-      item.flashSales.discountType!,
-    )
-    : resolvedCartPrice;
-  const resolvedDiscount = resolvedCartPrice - resolvedFinalPrice;
   const checkoutHandler = useCallback(() => {
     if (!ensureVariantSelection()) return;
 
@@ -195,32 +180,16 @@ export default function ProductDetailPage({
     if (!existingItem) {
       store.addItem([
         {
-          ...currentItem,
-          price: resolvedCartPrice,
-          basePrice: resolvedCartPrice,
-          finalPrice: resolvedFinalPrice,
-          discount: resolvedDiscount,
-          stock: currentStock,
+          product: currentItem,
           quantity,
           selectedVariants: selectedVariantsArray,
-          selected: true,
         },
       ]);
     }
 
     store.selectAllCartItems();
     openModal("checkout");
-  }, [
-    ensureVariantSelection,
-    data,
-    resolvedCartPrice,
-    resolvedFinalPrice,
-    resolvedDiscount,
-    currentStock,
-    quantity,
-    selectedVariantsArray,
-    openModal,
-  ]);
+  }, [ensureVariantSelection, data, quantity, selectedVariantsArray, openModal]);
 
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
 
@@ -576,14 +545,8 @@ export default function ProductDetailPage({
                     addItemCallback: () =>
                       addItem([
                         {
-                          ...item,
-                          price: resolvedCartPrice,
-                          basePrice: resolvedCartPrice,
-                          finalPrice: resolvedFinalPrice,
-                          discount: resolvedDiscount,
-                          stock: currentStock,
+                          product: item,
                           quantity,
-                          selected: false,
                           selectedVariants: selectedVariantsArray,
                         },
                       ]),

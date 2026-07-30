@@ -38,13 +38,9 @@ export default function OrdersContent({
   const handleBuyAgain = () => {
     addItem(
       items.map((item) => ({
-        ...item.product,
+        product: item.product,
         quantity: item.qty,
         selectedVariants: item.variants.options,
-        selected: true,
-        basePrice: item.price,
-        discount:  item.discountedPrice,
-        finalPrice: item.price -  item.discountedPrice,
       })),
     );
     toast.success("Items added to cart!");
