@@ -14,6 +14,7 @@ import { getBearerToken, getProduct } from "@/lib/api";
 import { bunnyLoader } from "@/lib/bunnyLoader";
 import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import type { ProductResponse } from "@/lib/types";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscountPrice } from "@/lib/utils";
@@ -24,7 +25,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export default function ProductDetailPage({ id }: { id: string }) {
+export default function ProductDetailPage({
+  id,
+  initialData,
+}: {
+  id: string;
+  initialData?: ProductResponse;
+}) {
   const router = useRouter();
   const cartRef = useRef<HTMLAnchorElement>(null);
 
@@ -62,6 +69,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
     enabled: !!id,
     retry: 2,
     staleTime: 30_000,
+    initialData,
   });
 
   // 🌀 Base variables
@@ -197,7 +205,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
           quantity,
           selectedVariants: selectedVariantsArray,
           selected: true,
-        } as any,
+        },
       ]);
     }
 
@@ -343,6 +351,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
 
                       alt={item.name}
                       fill
+                      priority
+                      fetchPriority="high"
                       className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
                         }`}
                       onLoad={() => {
@@ -382,7 +392,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
                         </button>
                       ))}
 
-                      {item.video && (
+                      {item.video && item.videoThumbnail && (
                         <button
                           type="button"
                           className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "video"
@@ -397,7 +407,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
                               a blank/broken thumbnail. Actual playback happens above
                               via HlsPlayer once this thumbnail is selected. */}
                           <Image
-                            src={item.cover_image || item.images?.[0] || "/placeholder.png"}
+                            src={item.videoThumbnail}
                             alt={`${item.name} video thumbnail`}
                             loader={bunnyLoader}
                             sizes="(max-width: 640px) 30vw,

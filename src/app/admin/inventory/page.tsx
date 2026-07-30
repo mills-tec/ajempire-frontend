@@ -347,28 +347,38 @@ const InventoryPage = () => {
                 setIsDeleting(true);
                 // Call delete product API
                 console.log('Deleting product:', selectedProduct.id);
-                await deleteProduct(selectedProduct.id);
+                const req = await deleteProduct(selectedProduct.id);
+                if (req.status) {
+                    // Remove from local state immediately
+                    setProducts(prev => {
+                        const updatedProducts = prev.filter(p => p.id !== selectedProduct.id);
+                        console.log('Products after deletion:', updatedProducts);
+                        return updatedProducts;
+                    });
 
-                // Remove from local state immediately
-                setProducts(prev => {
-                    const updatedProducts = prev.filter(p => p.id !== selectedProduct.id);
-                    console.log('Products after deletion:', updatedProducts);
-                    return updatedProducts;
-                });
+                    // Show success toast
+                    toast.success('Product deleted successfully');
 
-                // Show success toast
-                toast.success('Product deleted successfully');
+                    // Reset pagination and fetch fresh data to ensure consistency
+                    setNextCursor(null);
+                    setHasMore(true);
+                    fetchInventoryData();
 
-                // Reset pagination and fetch fresh data to ensure consistency
-                setNextCursor(null);
-                setHasMore(true);
-                fetchInventoryData();
+                    // Storefront's InfiniteFeed reads through React Query, which this
+                    // admin page never touches otherwise — without this, a storefront
+                    // tab open in the same session keeps showing the deleted product.
+                    queryClient.invalidateQueries({ queryKey: ["infinite-products"] });
+                    queryClient.invalidateQueries({ queryKey: ["category-products"] });
+                } else {
+                    // apiCall() (adminapi.ts) never rejects on a non-2xx response —
+                    // it catches its own thrown error internally and resolves with
+                    // { status: false, error } instead. This branch was missing
+                    // entirely, so a 400 from the backend silently did nothing: no
+                    // toast, no log — the modal just closed as if it had worked.
+                    console.error('Error deleting product:', req.error);
+                    toast.error(req.error || 'Failed to delete product');
+                }
 
-                // Storefront's InfiniteFeed reads through React Query, which this
-                // admin page never touches otherwise — without this, a storefront
-                // tab open in the same session keeps showing the deleted product.
-                queryClient.invalidateQueries({ queryKey: ["infinite-products"] });
-                queryClient.invalidateQueries({ queryKey: ["category-products"] });
             } catch (error) {
                 console.error('Error deleting product:', error);
                 // Show error toast
@@ -536,12 +546,23 @@ const InventoryPage = () => {
     const handleDeleteReview = async (user: string) => {
         try {
             setDeletingReviewId(user);
-            await deleteReview(selectedProduct!.id, user);
-            setSelectedProduct(prev => {
-                if (!prev) return prev;
-                return { ...prev, reviews: prev.reviews.filter(r => r.user._id !== user) };
-            });
-            toast.success('Review deleted successfully');
+            const req = await deleteReview(selectedProduct!.id, user);
+            // Same apiCall() contract as handleDeleteConfirm above: a failed
+            // request resolves with { status: false, error } rather than
+            // rejecting, so `req.status` has to be checked explicitly — this
+            // previously proceeded straight to the success branch regardless,
+            // showing "deleted successfully" and removing the review locally
+            // even when the backend had rejected the delete.
+            if (req.status) {
+                setSelectedProduct(prev => {
+                    if (!prev) return prev;
+                    return { ...prev, reviews: prev.reviews.filter(r => r.user._id !== user) };
+                });
+                toast.success('Review deleted successfully');
+            } else {
+                console.error('Error deleting review:', req.error);
+                toast.error(req.error || 'Failed to delete review');
+            }
         } catch (error) {
             console.error('Error deleting review:', error);
             toast.error('Failed to delete review');

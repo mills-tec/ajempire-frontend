@@ -1,16 +1,22 @@
 import { getProduct } from "@/lib/api";
 import type { Metadata } from "next";
+import { cache } from "react";
 import ProductDetailClient from "./ProductDetailClient";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
 
+// Wrapped in React's cache() so generateMetadata and the page component
+// below — both of which need the same product — dedupe to a single fetch
+// per request instead of two separate round trips to the backend.
+const getCachedProduct = cache((id: string) => getProduct(id));
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
   try {
-    const data = await getProduct(id);
+    const data = await getCachedProduct(id);
     const product = data?.message?.product;
 
     if (!product) {
@@ -59,9 +65,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const { id } = await params;
+  // Same fetch generateMetadata already made above — cache() dedupes it to
+  // one network call. Passed down as initialData so the client query has
+  // real data on its very first render (including the SSR pass), instead of
+  // rendering empty and only discovering the LCP image's src after
+  // hydration + a redundant client-side fetch. Falls back to undefined (the
+  // old behavior — ProductDetailClient fetches it client-side itself) if the
+  // server-side fetch fails, so a backend hiccup here can't take the page
+  // down the way an unhandled throw during render would.
+  const initialData = await getCachedProduct(id).catch(() => undefined);
   // Keying on id forces a clean remount per product instead of reusing the
   // instance across navigations — local state (quantity, selected cover
   // image/video, image-load tracking) would otherwise silently carry over
   // from the previous product.
-  return <ProductDetailClient key={id} id={id} />;
+  return <ProductDetailClient key={id} id={id} initialData={initialData} />;
 }
