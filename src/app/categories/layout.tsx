@@ -74,12 +74,12 @@ export default function CategoriesLayout({
               <h1 className="text-center font-poppins text-lg font-semibold">
                 click the view all categories button to see all categories
               </h1>
-              <a
+              <Link
                 className="text-center font-poppins text-sm text-white bg-primaryhover px-10 py-3 rounded-full mt-5"
                 href="/"
               >
                 view all categories
-              </a>
+              </Link>
             </div>
 
             {/* Mobile: side nav + products */}

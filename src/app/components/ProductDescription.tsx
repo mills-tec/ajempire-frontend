@@ -133,18 +133,16 @@ export default function ProductDescription({
 
     setCartItemQty(item._id, quantity);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quantity, item?._id]);
+  }, [quantity]);
 
   useEffect(() => {
-    // If the item no longer exists, do nothing
     if (!item) return;
 
-    // If the quantity in cart store diverges from this state, update local state
     if (item.quantity !== quantity) {
       setQuantity(item.quantity === 0 ? 1 : item.quantity);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.quantity]);
+  }, [item?._id, item?.quantity]);
 
   const basePrice =
     hasVariants && selectedCombination

@@ -308,7 +308,12 @@ export const useCartStore = create<CartStore>()(
                   ),
                 });
               })
-              .catch(() => {
+              .catch((err: Error) => {
+                if (err.message.includes("null")) {
+                  set({ items: get().items.filter((i) => i._id !== id) });
+                  toast.error("An item was removed from your cart because it no longer exists.");
+                  return;
+                }
                 set({
                   syncQueue: [
                     ...get().syncQueue,
@@ -425,10 +430,15 @@ export const useCartStore = create<CartStore>()(
               await addToCart([action.item]); // reuse API
             }
           } catch (err) {
+            if (err instanceof Error && err.message.includes("null")) {
+              const itemId = action.type === "remove" ? action.id : action.item._id;
+              set({ items: get().items.filter((i) => i._id !== itemId) });
+              toast.error("An item was removed from your cart because it no longer exists.");
+              continue;
+            }
             // If it's a validation error (missing variants), don't retry
             if (err instanceof Error && err.message.includes("requires")) {
               toast.error(`Failed to sync: ${err.message}`);
-              // Don't add to newQueue, remove the invalid action
               continue;
             }
             // Keep failed actions for next retry
