@@ -213,7 +213,7 @@ export default function OrderSummaryPage() {
         </p>
       </div>
       {/* Progress indicators */}
-      <div className="lg:hidden flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
+      <div className="lg:hidden w-full flex items-center gap-4 mb-5 overflow-x-auto whitespace-nowrap scrollbar-hide">
         <div className="flex items-center gap-1 flex-shrink-0">
           <svg
             width="24"

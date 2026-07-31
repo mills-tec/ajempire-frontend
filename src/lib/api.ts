@@ -26,10 +26,8 @@ export type Coupon = {
 };
 
 // lib/api.ts
-export const API_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
-export const BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL;
+export const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
+export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 const DEFAULT_PRODUCTS_LIMIT = 20;
 
 // Session expired or token invalid on an endpoint that required a bearer
@@ -682,9 +680,7 @@ export async function getBanner(): Promise<{ message: Banner } | null> {
 }
 
 // SHIPPING API
-export async function getShippingRates(
-  
-): Promise<{
+export async function getShippingRates(): Promise<{
   status: boolean;
   message: {
     couriers: Array<{

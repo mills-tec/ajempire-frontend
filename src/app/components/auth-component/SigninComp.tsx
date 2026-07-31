@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useCartStore } from "@/lib/stores/cart-store";
+import { saveAccounts } from "@/lib/utils";
 import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
 
@@ -70,6 +71,7 @@ export default function SigninComp({
           "ajempire_signin_user",
           JSON.stringify(res.message)
         );
+        saveAccounts({ email: res.message.user.email, token: res.message.token, user: res.message.user });
         // Merges whatever was added to the cart while browsing as a guest
         // into this account's backend cart — see hydrateFromBackend for the
         // merge strategy. Not awaited: it has its own error handling (a

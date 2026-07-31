@@ -10,7 +10,7 @@ import { useSearchStore } from "@/lib/search-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import type { Product } from "@/lib/types";
 import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import HomeHeroSlider from "./components/HomeHeroSlider";
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
@@ -27,13 +27,29 @@ import { DEFAULT_STALE_TIME } from "./provider";
 
 const EMPTY_PRODUCTS: Product[] = Object.freeze([]) as unknown as Product[];
 
+// Shared by the hero query below and makeProductQueryFn's first page (cursor
+// "") — same params (limit=ITEMS_TO_APPEND, no cursor), so routing both
+// through this key lets React Query's own request dedup collapse the two
+// into a single network call instead of firing an identical `getProducts`
+// request twice on every home page load.
+const HERO_PRODUCTS_QUERY_KEY = ["hero-products"] as const;
+
 // ── Query functions ───────────────────────────────────────────────────────────
 // Defined outside the component so their references are stable across renders.
 // If defined inside the component, a new function reference is created on every
 // render, causing InfiniteFeed to see a changed `queryFn` prop and re-initialize.
+// Takes queryClient as a parameter (like makeCategoryQueryFn below) rather than
+// reading it from a hook, so the module-level definition can stay hook-free.
 
-const productQueryFn = async (cursor: string) => {
-  const res = await getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
+const makeProductQueryFn = (queryClient: QueryClient) => async (cursor: string) => {
+  const fetchPage = () => getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
+  const res =
+    cursor === ""
+      ? await queryClient.fetchQuery({
+          queryKey: HERO_PRODUCTS_QUERY_KEY,
+          queryFn: fetchPage,
+        })
+      : await fetchPage();
   return {
     items: res?.message?.products ?? EMPTY_PRODUCTS,
     nextCursor: res?.message?.nextCursor ?? null,
@@ -63,10 +79,12 @@ export default function Home() {
   const { selectedCategory } = useCategoryStore();
 
   // Hero slider — separate small query, not part of the infinite feed.
-  // Uses its own query key so it never conflicts with the feed cache.
+  // Shares HERO_PRODUCTS_QUERY_KEY with makeProductQueryFn's first page, so
+  // whichever of the two fires first, the other reuses that same in-flight
+  // request instead of firing a second identical one.
   const { data: heroData, isLoading: isHeroLoading } = useQuery({
-    queryKey: ["hero-products"],
-    queryFn: () => getProducts(`limit=10&cursor=`),
+    queryKey: HERO_PRODUCTS_QUERY_KEY,
+    queryFn: () => getProducts(`limit=${ITEMS_TO_APPEND}&cursor=`),
   });
 
   const heroProducts = heroData?.message?.products ?? EMPTY_PRODUCTS;
@@ -140,6 +158,7 @@ interface HomeContentProps {
 }
 
 function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
+  const queryClient = useQueryClient();
   const { selectedCategory, setSelectedCategory } = useCategoryStore();
   const { searchedQuery, resetToken } = useSearchStore();
 
@@ -188,14 +207,13 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
   );
 
   // Stable per category — a new function is produced only when the category
-  // name actually changes. For all-products mode, productQueryFn is defined
-  // at module level (stable).
+  // name (or the queryClient, which never actually changes) changes.
   const infiniteQueryFn = useMemo(
     () =>
       selectedCategoryName
         ? makeCategoryQueryFn(selectedCategoryName)
-        : productQueryFn,
-    [selectedCategoryName],
+        : makeProductQueryFn(queryClient),
+    [selectedCategoryName, queryClient],
   );
 
   // ── Scroll restoration ──────────────────────────────────────────────────────
@@ -233,7 +251,7 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
             {/* Category strip */}
             <div className={searchActive ? "mt-[1rem]" : "mt-8"}>
               <Categories
-                cat="categories"
+                cat="Categories"
                 onCategorySelect={setSelectedCategory}
                 selectedCategoryId={selectedCategory?._id ?? null}
               />

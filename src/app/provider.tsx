@@ -42,6 +42,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: DEFAULT_STALE_TIME,
+            refetchOnMount: true,
+            refetchOnWindowFocus: true
           },
         },
       }),
