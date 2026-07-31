@@ -39,41 +39,11 @@ export default function RecentPurchases({ recentPurchases }: RecentPurchase) {
       setQuantity(product._id, cartItem.quantity + purchase.qty);
       toast.success("Item quantity incremented");
     } else {
-      const basePrice = purchase.product.price + (purchase.variants
-        ? (purchase.product.variantCombinations?.find(
-          vc => vc._id === purchase.variants?.combinedVariant
-        )?.additionalPrice ?? 0)
-        : 0);
-      const finalPrice = product.flashSales
-        ? calcDiscountPrice(
-          basePrice,
-          product.flashSales.discountValue,
-          product.flashSales.discountType,
-        )
-        : basePrice;
-
-      // Item not in cart → add fresh
-      // addItem({ quantity: purchase.qty, ...product! });
-
-      const selectedVariant = purchase.product.variantCombinations?.find(
-        vc => vc._id === purchase.variants?.combinedVariant
-      );
       addItem([
         {
-          ...product,
-          basePrice,
-          discount: product.flashSales
-            ? calcDiscountPrice(
-              basePrice,
-              product.flashSales.discountValue,
-              product.flashSales.discountType,
-            )
-            : 0,
-          stock: purchase.variants ? selectedVariant?.stock : product.stock,
+          product,
           quantity: purchase.qty,
-          selected: true,
           selectedVariants: purchase.variants ? purchase.variants.options : [],
-          finalPrice,
         },
       ]);
       toast.success("Item added to cart successfully");

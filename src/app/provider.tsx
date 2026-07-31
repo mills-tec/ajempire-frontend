@@ -18,11 +18,22 @@ const GOOGLE_CLIENT_ID =
 // Everything else (products, search, feeds) must always be fetched fresh, since
 // an admin deleting a product elsewhere has no way to reach into a customer's
 // localStorage to invalidate a persisted snapshot.
-const PERSISTABLE_QUERY_KEYS = new Set(["categories", "home-banner"]);
+const PERSISTABLE_QUERY_KEYS = new Set(["home-banner"]);
 
 // Bump this string whenever the shape of a persisted query changes (or on a
 // deploy where you want to force everyone's persisted cache to drop).
 const PERSIST_BUSTER = "v1";
+
+// Single staleTime for all catalog/browse data (products, categories,
+// banners, feeds) — the one knob to turn if data feels stale or the
+// backend is getting hit too often. Short enough that an admin edit
+// (product, category, banner) shows up on the customer side the next time
+// that query's component mounts or the tab regains focus, without
+// refetching on literally every render. Individual queries should only
+// deviate from this when they have a genuinely different freshness need
+// (e.g. Gallery's one-time seed query, which intentionally never refetches)
+// — not as an arbitrary per-page choice.
+export const DEFAULT_STALE_TIME = 30 * 1000; // 30s
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -30,7 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 mins — adjust per query if needed
+            staleTime: DEFAULT_STALE_TIME,
           },
         },
       }),

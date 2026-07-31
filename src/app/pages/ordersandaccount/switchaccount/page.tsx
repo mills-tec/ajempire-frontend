@@ -1,6 +1,7 @@
 "use client";
 import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { getInitials } from "@/lib/utils";
 import { Check, Plus } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,11 @@ export default function SwitchAccount() {
         email: account.email,
         name: account.user.fullname,
       });
+      // Any not-yet-synced item still sitting in the local cart (added just
+      // before switching) gets attributed to whichever account is now
+      // active — already-synced items are left alone since they belong to
+      // whichever account's cart the backend already reflects them in.
+      void useCartStore.getState().hydrateFromBackend();
     }
   };
 

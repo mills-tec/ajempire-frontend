@@ -1,5 +1,6 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
+import { PERMISSIONS } from '@/lib/admin-types'
 import { FileText, Folder, Gift, ImagePlay, LayoutDashboard, LogOut, Package, RotateCcw, Settings, ShoppingBag, Truck, Users, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -13,7 +14,6 @@ const Sidebar = ({ onClose }: SidebarProps) => {
     const pathname = usePathname();
     const router = useRouter();
     const { user, logout } = useAuth();
-    const isJunior = user?.role?.toLowerCase() === 'junior';
 
     const currentPath = (_path: string) => {
         if (_path === "/admin") {
@@ -32,67 +32,89 @@ const Sidebar = ({ onClose }: SidebarProps) => {
         onClose?.();
     };
 
-    const links = [
+    const links: {
+        href: string;
+        icon: React.ReactNode,
+        label: string;
+        permission: typeof PERMISSIONS[number]
+    }[] = [
         {
             href: "/admin",
             icon: <LayoutDashboard size={18} color={currentPath("/admin") ? "white" : "black"} />,
-            label: "Dashboard"
+            label: "Dashboard",
+            permission: "",
         },
         {
             href: "/admin/orders",
             icon: <ShoppingBag size={18} color={currentPath("/admin/orders") ? "white" : "black"} />,
-            label: "Orders"
+            label: "Orders",
+            permission: "manage_orders"
+
         },
         {
             href: "/admin/categories",
             icon: <Folder size={18} color={currentPath("/admin/categories") ? "white" : "black"} />,
-            label: "Categories"
+            label: "Categories",
+            permission: "manage_products"
         },
         {
             href: "/admin/inventory",
             icon: <Package size={18} color={currentPath("/admin/inventory") ? "white" : "black"} />,
-            label: "Inventory"
+            label: "Inventory",
+            permission: "manage_products"
+
         },
         {
             href: "/admin/customers",
             icon: <Users size={18} color={currentPath("/admin/customers") ? "white" : "black"} />,
-            label: "Customers"
+            label: "Customers",
+            permission: "manage_users"
+
         },
         {
             href: "/admin/returns",
             icon: <RotateCcw size={18} color={currentPath("/admin/returns") ? "white" : "black"} />,
-            label: "Return"
+            label: "Return",
+            permission: "manage_returns"
+
         },
         {
             href: "/admin/delivery",
             icon: <Truck size={18} color={currentPath("/admin/delivery") ? "white" : "black"} />,
-            label: "Delivery"
+            label: "Delivery",
+            permission: "manage_orders"
+
         },
         {
             href: "/admin/content-management",
             icon: <FileText size={18} color={currentPath("/admin/content-management") ? "white" : "black"} />,
-            label: "Content Management"
+            label: "Content Management",
+            permission: "manage_content"
+
+
         },
         {
             href: "/admin/promotions",
             icon: <Gift size={18} color={currentPath("/admin/promotions") ? "white" : "black"} />,
-            label: "Promotions"
+            label: "Promotions",
+            permission: "manage_promo"
+
         },
         {
             href: "/admin/banners",
             icon: <ImagePlay size={18} color={currentPath("/admin/banners") ? "white" : "black"} />,
-            label: "Banners"
+            label: "Banners",
+            permission: ""
         },
         {
             href: "/admin/settings",
             icon: <Settings size={18} color={currentPath("/admin/settings") ? "white" : "black"} />,
-            label: "Settings"
+            label: "Settings",
+            permission: ""
         },
     ]
 
-    const filteredLinks = isJunior
-        ? links.filter(link => link.href === "/admin" || link.href === "/admin/inventory")
-        : links;
+    
 
     return (
         <aside className='bg-white w-[240px] h-screen px-4 pt-4 flex flex-col'>
@@ -105,7 +127,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
                         fill
                         priority
                         className="object-contain"
-                         sizes="(max-width: 640px) 50vw,
+                        sizes="(max-width: 640px) 50vw,
          (max-width: 1024px) 33vw,
          25vw"
                     />
@@ -131,7 +153,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
             </div>
 
             <ul className='mt-6 flex flex-col gap-y-1'>
-                {filteredLinks.map((link, index) => (
+                {links.filter(link => user?.role === "super" || !link.permission || user?.permissions?.includes(link.permission!)).map((link, index) => (
                     <Link
                         key={index}
                         href={link.href}

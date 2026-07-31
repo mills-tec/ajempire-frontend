@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   onComplete?: () => void;
 }
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
+
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+
     // Show splash screen for 2.5 seconds
     const timer = setTimeout(() => {
       setIsVisible(false);
@@ -20,6 +22,8 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
     return () => clearTimeout(timer);
   }, [onComplete]);
 
+
+  
   return (
     <AnimatePresence>
       {isVisible && (
@@ -27,7 +31,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-50 flex items-center justify-center w-screen h-screen bg-gradient-to-br from-pink-500 to-purple-600"
+          className="fixed inset-0 z-[99999] flex items-center justify-center w-screen h-screen bg-gradient-to-br from-pink-500 to-purple-600 "
           style={{
             background: "linear-gradient(135deg, #FF008C 0%, #A600FF 100%)"
           }}
@@ -36,7 +40,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ 
+            transition={{
               duration: 0.8,
               delay: 0.3,
               ease: "easeOut"
@@ -50,13 +54,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               className="w-48 h-48 object-contain"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ 
+              transition={{
                 duration: 0.6,
                 delay: 0.5,
                 ease: "easeOut"
               }}
             />
-            
+
             {/* Subtle glow effect */}
             <motion.div
               className="absolute inset-0 rounded-full"
@@ -66,7 +70,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               }}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1.2 }}
-              transition={{ 
+              transition={{
                 duration: 1,
                 delay: 0.7,
                 ease: "easeOut"
@@ -86,7 +90,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                 key={index}
                 className="w-2 h-2 bg-white rounded-full"
                 initial={{ scale: 0.8, opacity: 0.4 }}
-                animate={{ 
+                animate={{
                   scale: [0.8, 1.2, 0.8],
                   opacity: [0.4, 1, 0.4]
                 }}
@@ -105,7 +109,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             className="absolute bottom-32 text-white"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ 
+            transition={{
               duration: 0.6,
               delay: 0.8,
               ease: "easeOut"

@@ -15,9 +15,12 @@ export default function SignOutConfirm() {
     closeModal();
 
     setTimeout(() => {
-      // ✅ Remove auth tokens only
+      // ✅ Remove auth tokens only — a blanket localStorage.clear() also wiped
+      // isPushTokenSet (persisted under "auth-storage"), which made every
+      // logout+login cycle look like a brand-new device and re-register a
+      // push token with the backend even though this device already had one.
       if (typeof window !== "undefined") {
-        localStorage.clear();
+        localStorage.removeItem("ajempire_signin_user");
         sessionStorage.clear();
         useAuthStore.setState({
           user: null,

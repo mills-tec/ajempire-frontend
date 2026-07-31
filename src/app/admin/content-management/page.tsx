@@ -3,10 +3,125 @@
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
 import { Education } from '@/lib/admin-types';
-import { createEducationWithFiles, deleteEducation, getEducation, updateEducation } from '@/lib/adminapi';
-import { AlertCircle, ChevronLeft, ChevronRight, Edit2, Eye, Filter, Loader2, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
-import Image from 'next/image';
+import { createEducation, deleteEducation, getEducation, updateEducation } from '@/lib/adminapi';
+import { uploadEducationVideoInBackground } from '@/lib/videoUploadManager';
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, Film, Filter, Loader2, Megaphone, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
+
+// Compact table-cell indicator for a content item's video transcoding state.
+// Module-level (not nested in ContentManagementPage) since it's purely
+// presentational — defining it inside the page component would give it a
+// new identity, and React would unmount/remount it, on every page render.
+const VideoStatusBadge = ({
+  status,
+  hasVideoUrl,
+}: {
+  status?: Education['videoStatus'];
+  hasVideoUrl?: boolean;
+}) => {
+  // A video that already has a playable URL but predates this field is
+  // effectively "finished" — don't make old content look unprocessed.
+  const effectiveStatus = status ?? (hasVideoUrl ? 'finished' : undefined);
+
+  if (!effectiveStatus) {
+    return <span className="text-xs text-gray-300">—</span>;
+  }
+
+  const config = {
+    processing: {
+      icon: Loader2,
+      spin: true,
+      className: 'bg-blue-50 text-blue-500 border-blue-100',
+      label: 'Processing',
+    },
+    finished: {
+      icon: CheckCircle2,
+      spin: false,
+      className: 'bg-green-50 text-green-500 border-green-100',
+      label: 'Ready',
+    },
+    failed: {
+      icon: AlertCircle,
+      spin: false,
+      className: 'bg-red-50 text-red-500 border-red-100',
+      label: 'Failed',
+    },
+  }[effectiveStatus];
+
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border whitespace-nowrap ${config.className}`}>
+      <Icon size={11} className={config.spin ? 'animate-spin' : ''} />
+      {config.label}
+    </span>
+  );
+};
+
+// Status-aware stand-in for the video preview iframe, shared by the View and
+// Edit modals: "processing"/"failed" replace the player with an explanatory
+// panel (the bunny embed has nothing to show yet, or never will for this
+// upload); anything else falls back to the existing iframe preview.
+const VideoStatusPanel = ({
+  status,
+  videoUrl,
+  videoLoaded,
+  onVideoLoad,
+  onReupload,
+  heightClassName = 'h-48',
+}: {
+  status?: Education['videoStatus'];
+  videoUrl?: string;
+  videoLoaded: boolean;
+  onVideoLoad: () => void;
+  onReupload?: () => void;
+  heightClassName?: string;
+}) => {
+  if (status === 'processing') {
+    return (
+      <div className={`${heightClassName} w-full rounded-lg bg-blue-50 border border-blue-100 flex flex-col items-center justify-center gap-2 text-blue-500 p-4 text-center`}>
+        <Loader2 size={24} className="animate-spin" />
+        <p className="text-xs font-medium">Video is processing — this can take a few minutes</p>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className={`${heightClassName} w-full rounded-lg bg-red-50 border border-red-100 flex flex-col items-center justify-center gap-2 text-red-500 p-4 text-center`}>
+        <AlertCircle size={24} />
+        <p className="text-xs font-medium">Video processing failed</p>
+        {onReupload && (
+          <button
+            type="button"
+            onClick={onReupload}
+            className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors"
+          >
+            <RefreshCw size={13} />
+            Reupload video
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (!videoUrl) return null;
+
+  return (
+    <div className={`${heightClassName} relative w-full rounded-lg overflow-hidden bg-gray-100 border border-gray-200`}>
+      {!videoLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
+      <iframe
+        src={`${videoUrl}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
+        loading="lazy"
+        onLoad={onVideoLoad}
+        style={{
+          border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%',
+          opacity: videoLoaded ? 1 : 0, transition: 'opacity 300ms ease',
+        }}
+        allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+      />
+    </div>
+  );
+};
 
 const ContentManagementPage = () => {
   const toast = useToast();
@@ -17,20 +132,18 @@ const ContentManagementPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState<Education | null>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [contentLoading, setContentLoading] = useState(true);
   const [content, setContent] = useState<Education[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'article' as 'video' | 'article' | 'tutorial',
-    image: null as File | null,
     video: null as File | null,
   });
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
-    image: null as File | null,
     video: null as File | null,
   });
 
@@ -39,18 +152,10 @@ const ContentManagementPage = () => {
     try {
       setContentLoading(true);
       const response = await getEducation();
-      console.log('API Response:', response); // Debug log
-
+      console.log(response);
       // Handle different response structures
-      if (response.message && Array.isArray(response.message)) {
-        setContent(response.message);
-      } else if (response.data && Array.isArray(response.data)) {
-        setContent(response.data);
-      } else if (Array.isArray(response)) {
-        setContent(response);
-      } else {
-        console.error('Unexpected response structure:', response);
-        setContent([]);
+      if (response.status) {
+        setContent(response.message!);
       }
     } catch (error) {
       console.error('Error fetching content:', error);
@@ -68,6 +173,7 @@ const ContentManagementPage = () => {
   // Handle view content
   const handleViewClick = (item: Education) => {
     setSelectedContent(item);
+    setVideoLoaded(false);
     setShowViewModal(true);
   };
 
@@ -80,10 +186,10 @@ const ContentManagementPage = () => {
   // Handle edit content
   const handleEditClick = (item: Education) => {
     setSelectedContent(item);
+    setVideoLoaded(false);
     setEditFormData({
       title: item.title || '',
       description: item.description || '',
-      image: null,
       video: null,
     });
     setShowEditModal(true);
@@ -96,7 +202,7 @@ const ContentManagementPage = () => {
     try {
       setLoading(true);
       const response = await deleteEducation(selectedContent._id);
-      if (response.message) {
+      if (response.status) {
         // Refresh content list
         fetchContent();
         setShowDeleteModal(false);
@@ -200,11 +306,7 @@ const ContentManagementPage = () => {
       return;
     }
 
-    if (!formData.image) {
-      toast.error('Image is required');
-      setLoading(false);
-      return;
-    }
+
 
     if (!formData.video) {
       toast.error('Video is required');
@@ -213,26 +315,25 @@ const ContentManagementPage = () => {
     }
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('description', formData.description);
-      // formDataToSend.append('type', formData.type);
 
-      // Image is compulsory
-      formDataToSend.append('image', formData.image);
 
-      // Video is now compulsory as well
-      formDataToSend.append('video', formData.video);
+      const response = await createEducation({ title: formData.title, description: formData.description });
 
-      const response = await createEducationWithFiles(formDataToSend);
+      if (response.status) {
+        // The video is required at the form level (a file must be selected),
+        // but its upload is NOT awaited here — it can take a while and
+        // shouldn't hold up creating the content. It uploads in the
+        // background and attaches itself to this record once done, the same
+        // pattern used for product videos.
+        const newContentId = response?.message?._id;
+        if (formData.video && newContentId) {
+          void uploadEducationVideoInBackground(formData.video, newContentId);
+        }
 
-      if (response.message) {
         // Reset form and close modal
         setFormData({
           title: '',
           description: '',
-          type: 'article',
-          image: null,
           video: null,
         });
         setShowAddModal(false);
@@ -258,26 +359,23 @@ const ContentManagementPage = () => {
     setLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', editFormData.title);
-      formDataToSend.append('description', editFormData.description);
+      // A newly-selected video is deliberately left out of this request — it
+      // uploads in the background and attaches itself via its own
+      // updateEducation call once done, so editing doesn't wait on it.
+      const response = await updateEducation(selectedContent._id, {
+        title: editFormData.title,
+        description: editFormData.description,
+      });
 
-      if (editFormData.image) {
-        formDataToSend.append('image', editFormData.image);
-      }
+      if (response.status) {
+        if (editFormData.video) {
+          void uploadEducationVideoInBackground(editFormData.video, selectedContent._id);
+        }
 
-      if (editFormData.video) {
-        formDataToSend.append('video', editFormData.video);
-      }
-
-      const response = await updateEducation(selectedContent._id, formDataToSend);
-
-      if (response.message) {
         // Reset form and close modal
         setEditFormData({
           title: '',
           description: '',
-          image: null,
           video: null,
         });
         setShowEditModal(false);
@@ -400,7 +498,7 @@ const ContentManagementPage = () => {
               <tr className="bg-gray-50/50">
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Title</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Category</th>
-                <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Linked Product</th>
+              
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Likes</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Comments</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Status</th>
@@ -411,19 +509,14 @@ const ContentManagementPage = () => {
             <tbody className="divide-y divide-gray-50">
               {contentLoading ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center">
+                  <td colSpan={8} className="p-8 text-center">
                     <div className="flex justify-center items-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand_pink"></div>
                     </div>
                   </td>
                 </tr>
               ) : content.length === 0 ? (
-                <EmptyTable colSpan={9} tableType='Content' searchTerm={searchTerm} />
-                // <tr>
-                //   <td colSpan={9} className="p-8 text-center text-gray-500">
-                //     No content found. Click &quot;Add Content; to create your first content item.
-                //   </td>
-                // </tr>
+                <EmptyTable colSpan={8} tableType='Content' searchTerm={searchTerm} />
               ) : (
                 content.map((item, idx) => (
                   <tr
@@ -439,7 +532,7 @@ const ContentManagementPage = () => {
                       </div>
                     </td>
                     <td className="p-4 text-sm text-brand_gray_dark/80">{item.category || 'Education'}</td>
-                    <td className="p-4 text-sm text-brand_gray_dark/80">{item.linkedProduct || 'N/A'}</td>
+                   
                     <td className="p-4 text-sm font-bold text-brand_gray_dark/80 text-center">
                       {Array.isArray(item.likes) ? item.likes.length : (typeof item.likes === 'number' ? item.likes : 0)}
                     </td>
@@ -581,31 +674,7 @@ const ContentManagementPage = () => {
                 </select>
               </div> */}
 
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image *
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    name="image"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand_pink file:text-white hover:file:bg-brand_pink/90"
-                  />
-                  {formData.image ? (
-                    <div className="mt-2 text-sm text-green-600">
-                      Selected: {formData.image.name}
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-sm text-gray-500">
-                      Please select an image (required)
-                    </div>
-                  )}
-                </div>
-              </div>
+
 
               {/* Video Upload */}
               <div>
@@ -709,56 +778,62 @@ const ContentManagementPage = () => {
                 />
               </div>
 
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Update Image (Optional)
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    name="image"
-                    onChange={handleEditFileChange}
-                    accept="image/*"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand_pink file:text-white hover:file:bg-brand_pink/90"
-                  />
-                  {editFormData.image && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      Selected: {editFormData.image.name}
-                    </div>
-                  )}
-                  {selectedContent.image && !editFormData.image && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      Current: Image uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
+
 
               {/* Video Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Update Video (Optional)
+                  Video
+                  <span className="ml-1 text-gray-400 font-normal">(optional — leave blank to keep the current one)</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    name="video"
-                    onChange={handleEditFileChange}
-                    accept="video/*"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand_pink file:text-white hover:file:bg-brand_pink/90"
-                  />
-                  {editFormData.video && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      Selected: {editFormData.video.name}
+
+                {editFormData.video ? (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-brand_pink/10 flex items-center justify-center">
+                      <Film size={18} className="text-brand_pink" />
                     </div>
-                  )}
-                  {selectedContent.video && !editFormData.video && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      Current: Video uploaded
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 truncate">{editFormData.video.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {(editFormData.video.size / (1024 * 1024)).toFixed(1)} MB
+                      </p>
                     </div>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditFormData(prev => ({ ...prev, video: null }))}
+                      className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Remove video"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <VideoStatusPanel
+                      status={selectedContent.videoStatus}
+                      videoUrl={selectedContent.video}
+                      videoLoaded={videoLoaded}
+                      onVideoLoad={() => setVideoLoaded(true)}
+                      heightClassName="h-40"
+                    />
+
+                    <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors text-sm text-gray-600">
+                      <Film size={16} className="text-brand_pink" />
+                      {selectedContent.videoStatus === 'failed'
+                        ? 'Reupload video'
+                        : selectedContent.video
+                          ? 'Replace video'
+                          : 'Upload video'}
+                      <input
+                        type="file"
+                        name="video"
+                        onChange={handleEditFileChange}
+                        accept="video/*"
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -839,29 +914,25 @@ const ContentManagementPage = () => {
                 </div>
               </div>
 
-              {selectedContent.image && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Image</h3>
-                  <div className='w-full h-48 relative'>
-                    <Image
-                      src={selectedContent.image}
-                      alt="Content preview"
-                      className=" object-cover rounded-lg"
-                      fill
 
-                    />
-                  </div>
-
-                </div>
-              )}
-
-              {selectedContent.video && (
+              {(selectedContent.video || selectedContent.videoStatus) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Video</h3>
-                  <video
-                    src={selectedContent.video}
-                    controls
-                    className="w-full h-48 rounded-lg"
+
+                  <VideoStatusPanel
+                    status={selectedContent.videoStatus}
+                    videoUrl={selectedContent.video}
+                    videoLoaded={videoLoaded}
+                    onVideoLoad={() => setVideoLoaded(true)}
+                    heightClassName="h-48"
+                    onReupload={
+                      selectedContent.videoStatus === 'failed'
+                        ? () => {
+                          setShowViewModal(false);
+                          handleEditClick(selectedContent);
+                        }
+                        : undefined
+                    }
                   />
                 </div>
               )}

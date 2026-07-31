@@ -1,4 +1,4 @@
-import { Promotion, PromotionFormValues, PromotionStats } from './types';
+import { Promotion, PromotionFormValues, PromotionPayload, PromotionStats } from './types';
 
 export const EMPTY_FORM_VALUES: PromotionFormValues = {
   title: '',
@@ -119,39 +119,38 @@ export function toFormValues(promotion: Promotion): PromotionFormValues {
   };
 }
 
+/**
+ * Builds the JSON body for createPromotion/updatePromotion. `bannerKey` is
+ * whatever should be sent for the banner field — the object key from a
+ * freshly-uploaded file, the existing banner URL if it wasn't changed, or an
+ * empty string to clear it. The raw File itself never passes through here;
+ * uploading it to storage happens separately, before this is called.
+ */
 export function buildPromotionPayload(
   values: PromotionFormValues,
-  bannerFile: File | null,
-): FormData {
-  const payload = new FormData();
-  payload.append('title', values.title.trim());
-  payload.append('description', values.description.trim());
-  payload.append('promotionType', values.promotionType);
-  payload.append('discountType', values.discountType);
-  payload.append('discountValue', String(Number(values.discountValue) || 0));
-  payload.append('applyTo', values.applyTo);
+  bannerKey: string,
+): PromotionPayload {
+  const payload: PromotionPayload = {
+    title: values.title.trim(),
+    description: values.description.trim(),
+    promotionType: values.promotionType,
+    discountType: values.discountType,
+    discountValue: Number(values.discountValue) || 0,
+    applyTo: values.applyTo,
+    applyToId: values.applyToId,
+    // Coupon codes only make sense for coupon promotions; sending an empty
+    // value tells the API to clear any previously saved code.
+    couponCode: values.promotionType === 'coupon' && values.couponCode.trim() ? values.couponCode.trim() : '',
+  };
 
-  values.applyToId.forEach((id) => payload.append('applyToId', id));
-
-  if (bannerFile) {
-    payload.append('banner', bannerFile);
-  } else if (values.banner) {
-    payload.append('banner', values.banner);
+  if (bannerKey) {
+    payload.banner = bannerKey;
   }
-
   if (values.startDate) {
-    payload.append('startDate', new Date(values.startDate).toISOString());
+    payload.startDate = new Date(values.startDate).toISOString();
   }
   if (values.endDate) {
-    payload.append('endDate', new Date(values.endDate).toISOString());
-  }
-
-  // Coupon codes only make sense for coupon promotions; sending an empty
-  // value tells the API to clear any previously saved code.
-  if (values.promotionType === 'coupon' && values.couponCode.trim()) {
-    payload.append('couponCode', values.couponCode.trim());
-  } else {
-    payload.append('couponCode', '');
+    payload.endDate = new Date(values.endDate).toISOString();
   }
 
   return payload;

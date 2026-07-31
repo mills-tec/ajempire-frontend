@@ -70,21 +70,9 @@ export default function ProductDescription({
     if (!existingItem) {
       addItem([
         {
-          ...product,
-          basePrice,
-          finalPrice,
-          discount: product.flashSales
-            ? calcDiscountPrice(
-                basePrice,
-                product.flashSales.discountValue!,
-                product.flashSales.discountType!,
-              )
-            : 0,
-          // discount:
-          stock: currentStock,
+          product,
           quantity: quantity || 1,
           selectedVariants: selectedVariantsArray,
-          selected: true,
         },
       ]);
     }
@@ -144,18 +132,6 @@ export default function ProductDescription({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?._id, item?.quantity]);
 
-  const basePrice =
-    hasVariants && selectedCombination
-      ? product.price + selectedCombination.additionalPrice
-      : product.price;
-
-  const finalPrice = product.flashSales
-    ? calcDiscountPrice(
-        basePrice,
-        product.flashSales.discountValue,
-        product.flashSales.discountType,
-      )
-    : basePrice;
 
   const filledStar = (
     <svg
@@ -519,20 +495,9 @@ export default function ProductDescription({
 
                   addItem([
                     {
-                      ...product,
-                      basePrice,
-                      discount: product.flashSales
-                        ? calcDiscountPrice(
-                            basePrice,
-                            product.flashSales.discountValue,
-                            product.flashSales.discountType,
-                          )
-                        : 0,
-                      stock: currentStock,
+                      product,
                       quantity,
-                      selected: true,
                       selectedVariants: selectedVariantsArray,
-                      finalPrice,
                     },
                   ]);
                 }}

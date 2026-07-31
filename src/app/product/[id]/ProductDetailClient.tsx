@@ -6,25 +6,31 @@ import RefreshWrapper from "@/app/components/RefreshWrapper";
 import DraggableCartButton from "@/app/components/ui/DraggableCartButton";
 import ScrollToTop from "@/app/components/ui/ScrollToTop";
 import ProductDetailSkeleton from "@/app/pages/ordersandaccount/components/ProductDetailSkeleton";
+import { HlsPlayer } from "@/components/HLS";
 import RelatedProducts from "@/components/RelatedProducts";
 import { Checkbox } from "@/components/ui/checkbox";
-import VideoPlayer from "@/components/VideoPlayer";
 import { animateToCart } from "@/lib/animateToCart";
 import { getBearerToken, getProduct } from "@/lib/api";
 import { bunnyLoader } from "@/lib/bunnyLoader";
 import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import type { ProductResponse } from "@/lib/types";
 import { useProductVariants } from "@/lib/useProductVariants";
-import { calcDiscountPrice } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export default function ProductDetailPage({ id }: { id: string }) {
+export default function ProductDetailPage({
+  id,
+  initialData,
+}: {
+  id: string;
+  initialData?: ProductResponse;
+}) {
   const router = useRouter();
   const cartRef = useRef<HTMLAnchorElement>(null);
 
@@ -39,43 +45,37 @@ export default function ProductDetailPage({ id }: { id: string }) {
   };
 
   // ✅ All hooks must be at the top and unconditional
-  const {
-    items,
-    decreaseQuantity,
-    increaseQuantity,
-    toggleItemSelect,
-    deselectAllCartItems,
-    selectAllCartItems,
-    addItem,
-    removeItem,
-  } = useCartStore();
-  const {
-    addItem: addWishlistItem,
-    removeItem: removeWishlistItem,
-    isInWishlist,
-  } = useWishlistStore();
+  // Selector-based reads: each hook subscribes only to the slice it reads,
+  // so this page no longer re-renders on unrelated cart-store activity
+  // (checkout step changes, coupon apply, logistics selection, etc.) the
+  // way a whole-store destructure would.
+  const items = useCartStore((s) => s.items);
+  const decreaseQuantity = useCartStore((s) => s.decreaseQuantity);
+  const increaseQuantity = useCartStore((s) => s.increaseQuantity);
+  const toggleItemSelect = useCartStore((s) => s.toggleItemSelect);
+  const deselectAllCartItems = useCartStore((s) => s.deselectAllCartItems);
+  const selectAllCartItems = useCartStore((s) => s.selectAllCartItems);
+  const addItem = useCartStore((s) => s.addItem);
+  const removeItem = useCartStore((s) => s.removeItem);
 
-  // const { addProductToBrowsingHistory } = useExploreInterest();
+  const addWishlistItem = useWishlistStore((s) => s.addItem);
+  const removeWishlistItem = useWishlistStore((s) => s.removeItem);
+  const isInWishlist = useWishlistStore((s) => s.isInWishlist);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProduct(id),
     enabled: !!id,
-    retry: false,
+    retry: 2,
+    initialData,
   });
 
   // 🌀 Base variables
   const item = data?.message?.product ?? null;
 
-  useEffect(() => {
-    if (item?._id && getBearerToken()) {
-      // addProductToBrowsingHistory(item._id);
-    }
-  }, [item?._id]);
   const {
     selectedVariantsArray,
     missingVariantName,
-    selectedCombination,
     currentStock,
     hasVariants,
     availableVariants,
@@ -109,13 +109,36 @@ export default function ProductDetailPage({ id }: { id: string }) {
   // Only used for the pre-cart "Add to Cart" quantity. Once in cart the store is the source of truth.
   const [quantity, setQuantity] = useState(1);
 
-  const [currentCoverItem, setCurrentCoverItem] = useState<{
+  // The cover shown before the user picks a thumbnail — derived from
+  // `item`, not stored, so there's no effect needed to "sync" it in and no
+  // extra render pass while state catches up after the product loads.
+  const defaultCoverItem = useMemo<{ src: string; type: "image" | "video" }>(
+    () =>
+      item
+        ? {
+          src:
+            item.video ||
+            item.cover_image ||
+            item.images?.[0] ||
+            "/placeholder.png",
+          type: item.video ? "video" : "image",
+        }
+        : { src: "", type: "image" },
+    [item],
+  );
+  // Explicit user selection (thumbnail click) overrides the default.
+  // Resets to null for free on product navigation since the whole
+  // component remounts per id (see page.tsx's `key={id}`) — no reset
+  // effect needed here.
+  const [coverOverride, setCoverOverride] = useState<{
     src: string;
     type: "image" | "video";
-  }>({
-    src: "",
-    type: "image",
-  });
+  } | null>(null);
+  const currentCoverItem = coverOverride ?? defaultCoverItem;
+  const handleSelectCover = useCallback(
+    (src: string, type: "image" | "video") => setCoverOverride({ src, type }),
+    [],
+  );
 
   const openModal = useModalStore((s) => s.openModal);
 
@@ -131,19 +154,6 @@ export default function ProductDetailPage({ id }: { id: string }) {
     return true;
   }, [hasVariants, missingVariantName, currentStock]);
 
-  const resolvedCartPrice =
-    item && selectedCombination
-      ? item.price + selectedCombination.additionalPrice
-      : (item?.price ?? 0);
-
-  const resolvedFinalPrice = item?.flashSales
-    ? calcDiscountPrice(
-      resolvedCartPrice,
-      item.flashSales.discountValue!,
-      item.flashSales.discountType!,
-    )
-    : resolvedCartPrice;
-  const resolvedDiscount = resolvedCartPrice - resolvedFinalPrice;
   const checkoutHandler = useCallback(() => {
     if (!ensureVariantSelection()) return;
 
@@ -170,52 +180,18 @@ export default function ProductDetailPage({ id }: { id: string }) {
     if (!existingItem) {
       store.addItem([
         {
-          ...currentItem,
-          price: resolvedCartPrice,
-          basePrice: resolvedCartPrice,
-          finalPrice: resolvedFinalPrice,
-          discount: resolvedDiscount,
-          stock: currentStock,
+          product: currentItem,
           quantity,
           selectedVariants: selectedVariantsArray,
-          selected: true,
-        } as any,
+        },
       ]);
     }
 
     store.selectAllCartItems();
     openModal("checkout");
-  }, [
-    ensureVariantSelection,
-    data,
-    resolvedCartPrice,
-    currentStock,
-    quantity,
-    selectedVariantsArray,
-    openModal,
-  ]);
+  }, [ensureVariantSelection, data, quantity, selectedVariantsArray, openModal]);
 
-  const [video, setVideo] = useState({
-    showPlay: true,
-    muted: true,
-  });
-
-  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-
-  const [playingMap, setPlayingMap] = useState<Record<string, boolean>>({});
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
-  const handleVideoPlay = useCallback((id: string) => {
-    setPlayingMap((prev) => ({ ...prev, [id]: !prev[id] }));
-    setVideo((prev) => ({ ...prev, showPlay: true }));
-    const videoEl = videoRefs.current[id];
-    if (videoEl?.paused) {
-      videoEl.play();
-    } else {
-      videoEl?.pause();
-    }
-  }, []);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const markMediaLoaded = useCallback((src: string) => {
     if (!src) return;
@@ -229,26 +205,6 @@ export default function ProductDetailPage({ id }: { id: string }) {
         },
     );
   }, []);
-
-
-  useEffect(() => {
-    if (!item) return;
-
-    setCurrentCoverItem({
-      src:
-        item.video ||
-        item.cover_image ||
-        item.images?.[0] ||
-        "/placeholder.png",
-      type: item.video ? "video" : "image",
-    });
-    setVideo({
-      showPlay: true,
-      muted: true,
-    });
-    setPlayingMap({});
-    setLoadedMedia({});
-  }, [item]);
 
   if (isLoading) return <ProductDetailSkeleton />;
 
@@ -348,11 +304,9 @@ export default function ProductDetailPage({ id }: { id: string }) {
           <div className="lg:flex lg:space-x-20">
             <div className="lg:w-1/2 h-full space-y-8">
               <div className="space-y-4">
+
                 <div
-                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip ${!isCurrentMediaLoaded
-                    ? "bg-gray-200 animate-fast-pulse"
-                    : ""
-                    }`}
+                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip `}
                 >
                   {currentCoverItem.type === "image" ? (
                     <Image
@@ -365,6 +319,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
 
                       alt={item.name}
                       fill
+                      priority
+                      fetchPriority="high"
                       className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
                         }`}
                       onLoad={() => {
@@ -372,26 +328,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
                       }}
                     />
                   ) : (
-                    <div
-                      className={`absolute w-full h-full transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                        }`}
-                    >
-                      <VideoPlayer
-                        handleVideoPlay={handleVideoPlay}
-                        item={item}
-                        video={video}
-                        playingMap={playingMap}
-                        videoRefs={videoRefs}
-                        src={currentCoverItem.src}
-                        setPlayingMap={setPlayingMap}
-                        handleSetVideo={(data) =>
-                          setVideo((prev) => ({ ...prev, ...data }))
-                        }
-                        onLoadedData={() => {
-                          markMediaLoaded(currentCoverItem.src);
-                        }}
-                      />
-                    </div>
+                    <HlsPlayer src={item.video!} className=" object-cover h-full w-full"
+                    />
                   )}
                 </div>
                 <div className="flex gap-2 lg:gap-5 flex-wrap">
@@ -406,18 +344,13 @@ export default function ProductDetailPage({ id }: { id: string }) {
                             ? "border-brand_pink"
                             : "border-transparent"
                             }`}
-                          onClick={() => {
-                            setCurrentCoverItem({
-                              src: image,
-                              type: "image",
-                            });
-                          }}
+                          onClick={() => handleSelectCover(image, "image")}
                         >
                           <Image
                             src={image}
                             alt={`${item.name} thumbnail ${key + 1}`}
                             loader={bunnyLoader}
-                             sizes="(max-width: 640px) 30vw,
+                            sizes="(max-width: 640px) 30vw,
          (max-width: 1024px) 30vw,
          30vw"
 
@@ -427,36 +360,29 @@ export default function ProductDetailPage({ id }: { id: string }) {
                         </button>
                       ))}
 
-                      {item.video && (
+                      {item.video && item.videoThumbnail && (
                         <button
                           type="button"
                           className={`size-[3rem] lg:size-[6rem] overflow-clip relative rounded-xl cursor-pointer border-2 ${currentCoverItem.type === "video"
                             ? "border-brand_pink"
                             : "border-transparent"
                             }`}
-                          onClick={() => {
-                            setCurrentCoverItem({
-                              src: item.video!,
-                              type: "video",
-                            });
-                          }}
+                          onClick={() => handleSelectCover(item.video!, "video")}
                         >
-                          <video
-                            preload="metadata"
-                            ref={videoRef}
-                            src={item.video}
-                            className="absolute object-cover h-full w-full"
-                            onLoadedMetadata={(e) => {
-                              e.currentTarget.currentTime = 0;
-                            }}
-                            muted
-                            onMouseEnter={() => {
-                              void videoRef.current?.play();
-                            }}
-                            onMouseLeave={() => {
-                              videoRef.current?.pause();
-                            }}
-                            playsInline
+                          {/* Static poster, not a live <video>: item.video is an HLS
+                              manifest, and a bare <video src="…m3u8"> only plays
+                              natively in Safari — everywhere else this used to render
+                              a blank/broken thumbnail. Actual playback happens above
+                              via HlsPlayer once this thumbnail is selected. */}
+                          <Image
+                            src={item.videoThumbnail}
+                            alt={`${item.name} video thumbnail`}
+                            loader={bunnyLoader}
+                            sizes="(max-width: 640px) 30vw,
+         (max-width: 1024px) 30vw,
+         30vw"
+                            fill
+                            className="absolute object-cover"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                             <svg
@@ -481,35 +407,23 @@ export default function ProductDetailPage({ id }: { id: string }) {
               <div className="lg:hidden">
                 {data?.message && (
                   <ProductDescription
-                    handleSelectCover={(
-                      src: string,
-                      type: "image" | "video",
-                    ) => {
-                      setCurrentCoverItem({
-                        src,
-                        type,
-                      });
-                    }}
+                    handleSelectCover={handleSelectCover}
                     product_data={data}
                   />
                 )}
               </div>
 
-              <div className="lg:hidden h-[200px] overflow-y-auto ">
+              {/* Single mounted copy — the mobile/desktop split used to be two
+                  separate ProductReview+CommentCard trees toggled with
+                  `lg:hidden`/`hidden lg:block`, which (a) mounted every comment
+                  twice and (b) actually rendered the comment list twice
+                  simultaneously on mobile (the desktop copy's CommentCard map
+                  wasn't wrapped by the `hidden` div guarding its ProductReview
+                  sibling). One instance, responsive container instead. */}
+              <div className="h-[200px] overflow-y-auto lg:h-auto lg:overflow-visible">
                 {data?.message && (
                   <ProductReview product={data?.message.product} />
                 )}
-                {data?.message &&
-                  data.message.product.reviews?.map((review) => (
-                    <CommentCard key={review._id} review={review} />
-                  ))}
-              </div>
-              <div>
-                <div className="hidden lg:block">
-                  {data?.message && (
-                    <ProductReview product={data?.message.product} />
-                  )}
-                </div>
                 {data?.message &&
                   data.message.product.reviews?.map((review) => (
                     <CommentCard key={review._id} review={review} />
@@ -520,12 +434,7 @@ export default function ProductDetailPage({ id }: { id: string }) {
               {data?.message && (
                 <ProductDescription
                   product_data={data}
-                  handleSelectCover={(src: string, type: "image" | "video") => {
-                    setCurrentCoverItem({
-                      src,
-                      type,
-                    });
-                  }}
+                  handleSelectCover={handleSelectCover}
                 />
               )}
             </div>
@@ -559,21 +468,21 @@ export default function ProductDetailPage({ id }: { id: string }) {
                     />
                     <p>Select all ({items.length})</p>
                   </div>
-                  {items.map((item, key) => (
+                  {items.map((lineItem) => (
                     <div
                       className="w-[8rem] mx-auto flex flex-col relative items-center"
-                      key={key}
+                      key={lineItem._id}
                     >
                       <Checkbox
-                        checked={item?.selected}
+                        checked={lineItem?.selected}
                         onCheckedChange={() => {
-                          toggleItemSelect(item._id);
+                          toggleItemSelect(lineItem._id);
                         }}
                         className="absolute z-30 bg-white border !border-brand_pink !rounded-full left-2 top-2"
                       />
                       <div className="h-[8rem] w-[8rem] overflow-clip relative rounded-lg bg-gray-300">
                         <Image
-                          src={item.cover_image ?? ""}
+                          src={lineItem.cover_image ?? ""}
                           alt="product image"
                           fill
                           sizes="100px"
@@ -582,18 +491,18 @@ export default function ProductDetailPage({ id }: { id: string }) {
                       </div>
                       <div className="space-y-1">
                         <h1 className="text-sm text-black font-medium w-[8rem] truncate">
-                          {item.name}
+                          {lineItem.name}
                         </h1>
                         <div className="flex gap-2 items-center justify-end">
                           <div
-                            onClick={() => decreaseQuantity(item._id)}
+                            onClick={() => decreaseQuantity(lineItem._id)}
                             className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                           >
                             -
                           </div>
-                          <div>{item?.quantity}</div>
+                          <div>{lineItem?.quantity}</div>
                           <div
-                            onClick={() => increaseQuantity(item._id)}
+                            onClick={() => increaseQuantity(lineItem._id)}
                             className="border size-[1.5rem] flex justify-center items-center text-xs rounded-md border-black/40"
                           >
                             +
@@ -636,14 +545,8 @@ export default function ProductDetailPage({ id }: { id: string }) {
                     addItemCallback: () =>
                       addItem([
                         {
-                          ...item,
-                          price: resolvedCartPrice,
-                          basePrice: resolvedCartPrice,
-                          finalPrice: resolvedFinalPrice,
-                          discount: resolvedDiscount,
-                          stock: currentStock,
+                          product: item,
                           quantity,
-                          selected: false,
                           selectedVariants: selectedVariantsArray,
                         },
                       ]),

@@ -9,7 +9,9 @@ export default function SignOut() {
   const router = useRouter();
 
   useEffect(() => {
-    localStorage.clear();
+    // Only drop the session credential — see NotificationWrapper's push-token
+    // effect: a blanket clear also wiped the persisted isPushTokenSet flag.
+    localStorage.removeItem("ajempire_signin_user");
     sessionStorage.clear();
     setIsLoggedIn(false);
     router.push("/");

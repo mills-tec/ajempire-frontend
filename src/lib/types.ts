@@ -63,6 +63,7 @@ export interface Product {
   __v?: number;
   averageRating?: number;
   video?: string;
+  videoThumbnail?: string;
   relatedProducts?: Product[];
 }
 
@@ -239,14 +240,26 @@ export interface Feed {
   price?: number;
   product: Product;
   mediaUrl: string;
+  // Direct Play MP4 URL for this post, if Bunny Stream has one available.
+  // Used by FeedItem as the HLS fallback for browsers with neither native
+  // HLS nor MSE/hls.js support, so a video element is never left dead.
+  mp4Url?: string;
   mediaType: "image" | "video";
   type: "flashsale" | "education" | "gallery";
   image: string;
-  likes?: string[]; // user IDs
-  comments?: CommentData[];
+  // Authoritative engagement totals from the backend — NOT derivable from
+  // `likes`/`comments` below, which are capped previews (max 20 / max 10
+  // respectively). Display must read these, not `likes.length` /
+  // a recursive count over `comments`, or numbers silently cap out on any
+  // post more popular than the preview size.
+  likeCount?: number;
+  commentCount?: number;
+  likes?: string[]; // user IDs — capped preview, max 20, NOT the full like list
+  comments?: CommentData[]; // capped preview tree, max 10 top-level
   startDate?: string;
   endDate?: string;
   flashPrice?: number;
+  liked: boolean;
 }
 
 export interface Notification {

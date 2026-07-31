@@ -9,6 +9,7 @@ import {
     Legend,
     Filler
 } from "chart.js";
+import { memo } from "react";
 import { Line } from "react-chartjs-2";
 import { aggregateOrdersByDate } from '@/lib/dashboard-utils';
 
@@ -27,7 +28,7 @@ interface WebsiteTrafficChartProps {
     orders?: any[];
 }
 
-const WebsiteTrafficChart = ({ orders = [] }: WebsiteTrafficChartProps) => {
+const WebsiteTrafficChart = memo(function WebsiteTrafficChart({ orders = [] }: WebsiteTrafficChartProps) {
     const chartData = aggregateOrdersByDate(orders);
 
     const maxValue = Math.max(
@@ -173,6 +174,6 @@ const WebsiteTrafficChart = ({ orders = [] }: WebsiteTrafficChartProps) => {
             </div>
         </div>
     );
-};
+});
 
 export default WebsiteTrafficChart;

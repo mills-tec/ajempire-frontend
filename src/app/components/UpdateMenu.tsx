@@ -1,13 +1,57 @@
 "use client"
-import SearchBar from "./ui/SearchBar";
+import { useUpdates } from "@/api/customHooks";
+import { updatesQueryKey } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function UpdateMenu() {
   const pathname = usePathname();
+
+  // One useUpdates() instance per type rather than sharing one — getFeeds
+  // gates re-entrant calls on a single `loading` flag internal to whichever
+  // hook instance it came from, so three fetches sharing one instance would
+  // share that flag too. Isolating them costs nothing and removes any doubt.
+  const { getFeeds: getAllFeeds } = useUpdates();
+  const { getFeeds: getFlashsaleFeeds } = useUpdates();
+  const { getFeeds: getEducationFeeds } = useUpdates();
+  const { getFeeds: getGalleryFeeds } = useUpdates();
+
+  // Same shared cache key FeedItem's own initial fetch reads from (see
+  // NavDesktop/FeedItem) — whichever of these four the user clicks,
+  // FeedItem reuses this prefetch instead of firing an identical request.
+  const { data: latestAllPage } = useQuery({
+    queryKey: updatesQueryKey("all", ""),
+    queryFn: () => getAllFeeds("all", ""),
+  });
+  const { data: latestFlashsalePage } = useQuery({
+    queryKey: updatesQueryKey("flashsale", ""),
+    queryFn: () => getFlashsaleFeeds("flashsale", ""),
+  });
+  const { data: latestEducationPage } = useQuery({
+    queryKey: updatesQueryKey("education", ""),
+    queryFn: () => getEducationFeeds("education", ""),
+  });
+  const { data: latestGalleryPage } = useQuery({
+    queryKey: updatesQueryKey("gallery", ""),
+    queryFn: () => getGalleryFeeds("gallery", ""),
+  });
+
+  const latestAllId = latestAllPage?.data?.[0]?._id;
+  const latestFlashsaleId = latestFlashsalePage?.data?.[0]?._id;
+  const latestEducationId = latestEducationPage?.data?.[0]?._id;
+  const latestGalleryId = latestGalleryPage?.data?.[0]?._id;
   const links = [
     {
-      href: "/pages/update/all", label: "All", icon: <svg
+      // basePath (stable, type-only) drives the active-tab highlight below;
+      // href (id-suffixed when available) is the actual navigation target.
+      // These must stay separate: FeedItem rewrites the URL via
+      // history.replaceState as the user scrolls past the first post, so an
+      // id baked into the active-tab check would stop matching the moment
+      // they scroll — basePath keeps the tab highlighted for the whole type.
+      basePath: "/pages/update/all",
+      href: latestAllId ? `/pages/update/all/${latestAllId}` : "/pages/update/all",
+      label: "All", icon: <svg
         width="30"
         height="30"
         viewBox="0 0 30 30"
@@ -24,7 +68,9 @@ export default function UpdateMenu() {
       </svg>
     },
     {
-      href: "/pages/update/flashsale", label: "Flashsale", icon: <svg
+      basePath: "/pages/update/flashsale",
+      href: latestFlashsaleId ? `/pages/update/flashsale/${latestFlashsaleId}` : "/pages/update/flashsale",
+      label: "Flashsale", icon: <svg
         width="28"
         height="28"
         viewBox="0 0 28 28"
@@ -62,7 +108,9 @@ export default function UpdateMenu() {
       </svg>
     },
     {
-      href: "/pages/update/education", label: "Education", icon: <svg
+      basePath: "/pages/update/education",
+      href: latestEducationId ? `/pages/update/education/${latestEducationId}` : "/pages/update/education",
+      label: "Education", icon: <svg
         width="31"
         height="32"
         viewBox="0 0 31 32"
@@ -79,7 +127,9 @@ export default function UpdateMenu() {
       </svg>
     },
     {
-      href: "/pages/update/gallery", label: "Gallery", icon: <svg
+      basePath: "/pages/update/gallery",
+      href: latestGalleryId ? `/pages/update/gallery/${latestGalleryId}` : "/pages/update/gallery",
+      label: "Gallery", icon: <svg
         width="27"
         height="27"
         viewBox="0 0 27 27"
@@ -113,10 +163,10 @@ export default function UpdateMenu() {
   ]
   return (
     <div className="px-4 md:px-8 space-y-8 md:py-20 py-5">
-      <SearchBar showCam={false} />
+      {/* <SearchBar showCam={false} /> */}
       <div className="text-sm flex md:block justify-between items-center">
         {links.map((link, index) => (
-          <Link href={link.href} key={index} className={`${pathname.includes(link.href) ? "md:bg-transparent border-[#00000080]  bg-[#FF008C24] rounded-xl md:rounded-none    md:opacity-100" : "md:opacity-30"}  border-[0.5px] md:border-none`}>
+          <Link href={link.href} key={index} className={`${pathname.includes(link.basePath) ? "md:bg-transparent border-[#00000080]  bg-[#FF008C24] rounded-xl md:rounded-none    md:opacity-100" : "md:opacity-30"}  border-[0.5px] md:border-none`}>
             <div className="flex cursor-pointer items-center gap-3 md:py-4 py-2 px-2 md:px-0 text-black md:text-brand_pink">
               <div className="hidden md:block">
                 {link.icon}
