@@ -370,7 +370,7 @@ const FeedCard = memo(function FeedCard({
         )}
 
         {/* Overlay info */}
-        <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+        <div className="absolute top-[85%]  left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
           <div onClick={handleToggleDesc} className="w-[80%]">
             <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
               {item.title}
@@ -1945,7 +1945,7 @@ function FeedContent({
                       key={slot.key}
                       id={`feed-${index}`}
                       ref={getItemRefCallback(index)}
-                      className={`flex gap-4 relative items-center duration-300 h-[75vh] md:h-[88vh] w-full ${comment.show
+                      className={`flex gap-4 relative items-center duration-300 h-[85vh] md:h-[88vh] w-full ${comment.show
                         ? "md:justify-start md:pl-[10%]"
                         : "md:justify-center"
                         } section`}
@@ -1982,7 +1982,7 @@ function FeedContent({
                   );
                 })}
 
-                <div className="h-[30vh] md:h-[10vh]" />
+                {/* <div className="h-[30vh] md:h-[10vh]" /> */}
               </div>
             )}
           </div>

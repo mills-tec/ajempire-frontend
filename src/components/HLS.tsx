@@ -53,9 +53,11 @@ function HlsPlayerImpl({
   const acquireHold = useVideoControlsStore((s) => s.acquireHold);
   const releaseHold = useVideoControlsStore((s) => s.releaseHold);
 
-  // While THIS player is the displayed one and paused, hold the chrome
-  // visible with no countdown — a paused video with no play button reads as
-  // broken. Standby players (active=false) are paused too but never hold.
+  // While THIS player is the displayed one and paused, suspend the global
+  // countdown so the chrome — once the user has revealed it — stays up (a
+  // paused video whose play button melts away reads as broken). It never
+  // reveals anything by itself, and standby players (active=false) are
+  // paused too but never hold.
   useEffect(() => {
     if (!controls || !active || isPlaying) return;
     acquireHold();

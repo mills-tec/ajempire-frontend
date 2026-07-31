@@ -6,9 +6,10 @@ import { create } from "zustand";
 // scrolling to the next video inherits the current hidden/shown state rather
 // than resetting it (TikTok/Reels/Shorts behavior).
 //
-// Visibility only ever comes back through a real user interaction (pointer
-// movement, tapping the video, pressing a control) — never because a new
-// player mounted or autoplay started.
+// The chrome starts HIDDEN and only ever appears through a real user
+// interaction (pointer movement, tapping the video, pressing a control) —
+// never because a new player mounted, autoplay started, or a video paused.
+// The countdown starts from that interaction.
 
 export const CONTROLS_HIDE_DELAY_MS = 3000;
 
@@ -34,13 +35,16 @@ type VideoControlsStore = {
   show: () => void;
   /** Immediate hide (e.g. pointer left the player). No-op while held. */
   hide: () => void;
-  /** Keep the chrome visible with no countdown (displayed player is paused). */
+  /**
+   * Suspend the countdown (displayed player is paused). Does NOT reveal the
+   * chrome by itself — it only keeps it up once the user has shown it.
+   */
   acquireHold: () => void;
   /** Release a hold; when the last one goes, the countdown restarts. */
   releaseHold: () => void;
 };
 
-export const useVideoControlsStore = create<VideoControlsStore>((set) => {
+export const useVideoControlsStore = create<VideoControlsStore>((set, get) => {
   const startCountdown = () => {
     clearTimer();
     hideTimer = setTimeout(() => {
@@ -50,7 +54,7 @@ export const useVideoControlsStore = create<VideoControlsStore>((set) => {
   };
 
   return {
-    visible: true,
+    visible: false,
 
     show: () => {
       set({ visible: true });
@@ -66,12 +70,11 @@ export const useVideoControlsStore = create<VideoControlsStore>((set) => {
     acquireHold: () => {
       holds++;
       clearTimer();
-      set({ visible: true });
     },
 
     releaseHold: () => {
       holds = Math.max(0, holds - 1);
-      if (holds === 0) startCountdown();
+      if (holds === 0 && get().visible) startCountdown();
     },
   };
 });
