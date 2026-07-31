@@ -1,3 +1,4 @@
+import { useVideoControlsStore } from "@/lib/stores/video-controls-store";
 import Hls from "hls.js";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -6,15 +7,60 @@ interface HlsPlayerProps {
   src: string;
   className?: string;
   controls?: boolean;
+  /**
+   * Reels-style orchestration. true (default): buffer normally and autoplay.
+   * false: warm standby — load the manifest and a few seconds of the lowest
+   * rendition, then hold PAUSED. Flipping to true on a warm player starts
+   * playback in milliseconds instead of re-running the whole manifest chain,
+   * and standby players' capped buffers stop them stealing bandwidth from
+   * the video actually being watched.
+   */
+  active?: boolean;
+  /** Shown instantly while the first frame loads (e.g. Bunny thumbnail). */
+  poster?: string;
 }
 
-function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
+// Buffer targets for the playing video vs. a warm standby neighbor.
+const applyBufferProfile = (hls: Hls, active: boolean) => {
+  hls.config.maxBufferLength = active ? 15 : 5;
+  hls.config.maxMaxBufferLength = active ? 30 : 10;
+};
+
+function HlsPlayerImpl({
+  src,
+  className,
+  controls = false,
+  active = true,
+  poster,
+}: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
+
+  // Chrome visibility is GLOBAL (one inactivity countdown for the whole
+  // feed, see video-controls-store): a freshly mounted player inherits the
+  // current hidden/shown state instead of resetting it, so scrolling from
+  // video to video never makes the controls reappear on their own. Only real
+  // user interactions (pointer movement, tapping, control presses) show them.
+  const controlsVisible = useVideoControlsStore((s) => s.visible);
+  const showControls = useVideoControlsStore((s) => s.show);
+  const hideControls = useVideoControlsStore((s) => s.hide);
+  const acquireHold = useVideoControlsStore((s) => s.acquireHold);
+  const releaseHold = useVideoControlsStore((s) => s.releaseHold);
+
+  // While THIS player is the displayed one and paused, hold the chrome
+  // visible with no countdown — a paused video with no play button reads as
+  // broken. Standby players (active=false) are paused too but never hold.
+  useEffect(() => {
+    if (!controls || !active || isPlaying) return;
+    acquireHold();
+    return releaseHold;
+  }, [controls, active, isPlaying, acquireHold, releaseHold]);
 
   const attemptPlay = useCallback((video: HTMLVideoElement) => {
     video.play().catch(() => {
@@ -59,21 +105,14 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
       if (!cancelled) setIsLoading(true);
     };
 
+    // Reels pattern: call play() the moment the manifest is parsed instead of
+    // waiting for canplay — the browser queues the request and starts on the
+    // first appended frame (attemptPlay's canplay retry still covers autoplay-
+    // policy rejections). Standby players (active=false) skip this entirely:
+    // they buffer a capped few seconds and hold paused, first frame visible.
     const startPlaybackWhenReady = () => {
-      if (cancelled) return;
-      if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-        setIsLoading(false);
-        attemptPlay(video);
-      } else {
-        const onCanPlay = () => {
-          if (!cancelled) {
-            setIsLoading(false);
-            attemptPlay(video);
-          }
-          video.removeEventListener("canplay", onCanPlay);
-        };
-        video.addEventListener("canplay", onCanPlay, { once: true });
-      }
+      if (cancelled || !activeRef.current) return;
+      attemptPlay(video);
     };
 
     const onPlay = () => {
@@ -92,10 +131,18 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 15,
-        startLevel: -1,
+        // Lowest rendition first — the single biggest time-to-first-frame win
+        // for short-form video; ABR upshifts within a couple of segments.
+        startLevel: 0,
+        // Fetch the first fragment concurrently with the level playlist
+        // instead of sequentially.
+        startFragPrefetch: true,
+        // Never pull renditions larger than the element actually displays.
+        capLevelToPlayerSize: true,
+        maxBufferLength: activeRef.current ? 15 : 5,
+        maxMaxBufferLength: activeRef.current ? 30 : 10,
         enableWorker: true,
-        backBufferLength: 30,
+        backBufferLength: 10,
       });
       hlsRef.current = hls;
 
@@ -119,7 +166,9 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
       hls.attachMedia(video);
       hls.loadSource(src);
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari native HLS
+      // Safari native HLS — let the active player buffer ahead, keep
+      // standbys at metadata-only.
+      video.preload = activeRef.current ? "auto" : "metadata";
       video.src = src;
       const onLoadedMetadata = () => startPlaybackWhenReady();
       safariListener = onLoadedMetadata;
@@ -143,7 +192,28 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
     };
   }, [src, attemptPlay]);
 
+  // Active-state transitions live OUTSIDE the main effect on purpose: putting
+  // `active` in that effect's deps would destroy and rebuild the hls session
+  // on every flip — the exact cold start this component exists to avoid. A
+  // warm standby flipping active just raises its buffer target and plays.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const hls = hlsRef.current;
+    if (hls) applyBufferProfile(hls, active);
+    if (active) {
+      video.preload = "auto";
+      attemptPlay(video);
+    } else {
+      video.preload = "metadata";
+      if (!video.paused) video.pause();
+    }
+  }, [active, attemptPlay]);
+
   const handleVideoClick = useCallback(() => {
+    // A tap is a user interaction — reveal the chrome and restart the
+    // global countdown regardless of whether the toggle below goes through.
+    showControls();
     const video = videoRef.current;
     if (!video || video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return;
     if (video.paused) {
@@ -151,35 +221,50 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
     } else {
       video.pause();
     }
-  }, []);
+  }, [showControls]);
 
-  const handleToggleMute = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent triggering play/pause
-    setMuted((prev) => !prev);
-  }, []);
+  const handleToggleMute = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation(); // prevent triggering play/pause
+      showControls();
+      setMuted((prev) => !prev);
+    },
+    [showControls],
+  );
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      className="relative h-full w-full"
+      onMouseMove={controls ? showControls : undefined}
+      onMouseLeave={controls ? hideControls : undefined}
+    >
       <video
         ref={videoRef}
         preload="metadata"
         playsInline
         muted={muted}
         loop
+        poster={poster}
         className={className}
       />
-      {isLoading && (
+      {/* With a poster the cover art is already on screen at 0ms — the gray
+          pulse is only a fallback for posterless sources. */}
+      {isLoading && !poster && (
         <div className="absolute inset-0 bg-gray-200 animate-fast-pulse" />
       )}
 
       {controls && !isLoading && (
         <>
-          {/* Full-area click target for play/pause */}
+          {/* Full-area click target for play/pause. Stays interactive even
+              while the chrome is faded out — tapping a clean playing video
+              pauses it (which also brings the chrome back), exactly like
+              Reels. Only the visuals fade. */}
           <div
             role="button"
             aria-label={isPlaying ? "Pause video" : "Play video"}
             onClick={handleVideoClick}
-            className="absolute inset-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,rgba(0,0,0,0.2),rgba(0,0,0,0.6))]"
+            className={`absolute inset-0 flex items-center justify-center cursor-pointer bg-[radial-gradient(circle,rgba(0,0,0,0.2),rgba(0,0,0,0.6))] transition-opacity duration-300 ${controlsVisible ? "opacity-100" : "opacity-0"
+              }`}
           >
             <div className="w-20 h-20 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center backdrop-blur-sm transition-colors">
               {isPlaying ? (
@@ -190,11 +275,14 @@ function HlsPlayerImpl({ src, className, controls = false }: HlsPlayerProps) {
             </div>
           </div>
 
-          {/* Mute button — sibling so it stays visible and clickable */}
+          {/* Mute button — sibling so it stays clickable over the click
+              target; unclickable while invisible so a hidden button can't
+              swallow taps meant for play/pause. */}
           <button
             type="button"
             aria-label={muted ? "Unmute video" : "Mute video"}
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-colors"
+            className={`absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all duration-300 ${controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
             onClick={handleToggleMute}
           >
             {muted ? (

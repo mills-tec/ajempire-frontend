@@ -9,7 +9,7 @@ import { getProducts, getProductsByCategory } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import type { Product } from "@/lib/types";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import HomeHeroSlider from "./components/HomeHeroSlider";
@@ -308,7 +308,6 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
               endlessLoaderComponent={(ref) => (
                 <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
               )}
-              shuffle={shuffleArray}
               scrollRestorationKey="home-scroll-y"
               gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"
               className="mt-8"

@@ -20,7 +20,7 @@ import { bunnyLoader } from "@/lib/bunnyLoader";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { CommentData, Feed, IUpdateSocketFeed, IUpdateSocketFeedComment, Product } from "@/lib/types";
-import { getCountdown, ITEMS_TO_APPEND, shuffleArray, updatesQueryKey } from "@/lib/utils";
+import { getCountdown, ITEMS_TO_APPEND, updatesQueryKey } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import Hls from "hls.js";
 import {
@@ -148,8 +148,34 @@ const VIDEO_ACTIVE_WINDOW = 1;
 // Memory stays bounded no matter how many times Next/Previous is clicked.
 const MAX_RENDERED_ITEMS = 40;
 
-// How many recycled items to splice in per extension, in either direction.
+// How many recycled items to splice in per extension, in either direction —
+// the one knob for how far each Next/Previous edge-extension reaches.
 const RECYCLE_BATCH = 6;
+
+// Ids barred from reappearing immediately after a shuffle-bag epoch boundary.
+const RECENT_GUARD = 4;
+
+// Full-length Fisher–Yates (unlike utils' shuffleArray, which shuffles then
+// slices a random window — fine for its other callers, but here it would
+// silently truncate the recycle pool).
+const fisherYates = <T,>(arr: T[]): T[] => {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+};
+
+// Recycled items are served from an epoch shuffle bag (same engine as
+// InfiniteFeed): shuffle the deduped pool once, consume it batch by batch in
+// both directions, reshuffle only when exhausted. Guarantees no repeats within
+// an epoch, no same-item adjacency across a reshuffle seam (recent guard), and
+// costs one O(n) shuffle per full pass instead of one per batch.
+type ShuffleBag = { pool: Feed[]; cursor: number; recent: string[] };
+const EMPTY_BAG = (): ShuffleBag => ({ pool: [], cursor: 0, recent: [] });
 
 // Matches the backend's own preview cap (GET /updates/:type returns at most
 // this many top-level comments per post). A live "feed:comment" created
@@ -218,6 +244,7 @@ const FeedCard = memo(function FeedCard({
   itemInWishlist,
   isDescExpanded,
   isMediaActive,
+  isCurrent,
   isVideoActive,
   pull,
   onMediaLoaded,
@@ -303,7 +330,16 @@ const FeedCard = memo(function FeedCard({
         ) : (
           <>
 
-            <HlsPlayer src={item.mediaUrl} className=" object-cover h-full w-full"  controls={true}/>
+            {/* Reels pattern: only the current card plays; prev/next stay
+                mounted as warm standbys (manifest + a few seconds buffered,
+                paused) so becoming current starts in milliseconds. */}
+            <HlsPlayer
+              src={item.mediaUrl}
+              className=" object-cover h-full w-full"
+              controls={true}
+              active={isCurrent}
+              poster={item.image || undefined}
+            />
 
             {/* <div
               onClick={handleVideoClick}
@@ -469,7 +505,9 @@ export default function FeedItem() {
       )
         return;
 
-      const shuffled = shuffleArray([...feedsForRefreshRef.current]);
+      // Full-length shuffle — utils' shuffleArray slices a random window,
+      // which permanently truncated the master pool on every refresh.
+      const shuffled = fisherYates(feedsForRefreshRef.current);
       setFeedsExternallyRef.current(shuffled);
     } catch (error) {
       console.error("Pull-to-refresh error (feed):", error);
@@ -526,6 +564,9 @@ function FeedContent({
   // e.g. a fast burst of Next clicks, or a click racing the
   // IntersectionObserver's own edge-reached trigger for the same edge.
   const navLockRef = useRef(false);
+  // Shared epoch shuffle bag — serves recycled batches for BOTH directions,
+  // so Next and Previous consume the same no-repeats-within-an-epoch stream.
+  const bagRef = useRef<ShuffleBag>(EMPTY_BAG());
 
   // ── Custom hooks ────────────────────────────────────────────────────────
   const {
@@ -639,6 +680,7 @@ function FeedContent({
   useEffect(() => {
     setFeedsExternallyRef.current = (shuffled: Feed[]) => {
       originalFeedsRef.current = shuffled;
+      bagRef.current = EMPTY_BAG();
       setSlots(
         shuffled
           .slice(0, RECYCLE_BATCH * 3)
@@ -677,6 +719,7 @@ function FeedContent({
           queryFn: () => apiRef.current.getFeeds(type as string, ""),
         });
         originalFeedsRef.current = result.data;
+        bagRef.current = EMPTY_BAG();
         setSlots(result.data.map((feed: Feed) => ({ key: nextSlotKey(feed._id), feed })));
         setApiData({ nextCursor: result.nextCursor, hasMore: result.hasMore });
         setCurrentIndex(0);
@@ -829,6 +872,65 @@ function FeedContent({
     return newSlots;
   }, [captureAnchor]);
 
+  // Rebuilds the bag's pool from the LATEST master pool, deduped by _id, so
+  // pages fetched since the last epoch flow into future batches automatically
+  // (like/comment patches are picked up per-draw in drawBatch). The recent-
+  // guard swap keeps just-served posts out of the first few slots of the new
+  // epoch, so the same post never lands on both sides of a reshuffle seam.
+  const refillBag = useCallback(() => {
+    const bag = bagRef.current;
+    const seen = new Set<string>();
+    const fresh: Feed[] = [];
+    for (const feed of originalFeedsRef.current) {
+      if (!seen.has(feed._id)) {
+        seen.add(feed._id);
+        fresh.push(feed);
+      }
+    }
+    const pool = fisherYates(fresh);
+    const g = Math.min(RECENT_GUARD, pool.length >> 2);
+    if (g > 0 && bag.recent.length > 0) {
+      const recent = new Set(bag.recent);
+      for (let i = 0; i < g; i++) {
+        if (!recent.has(pool[i]._id)) continue;
+        for (let j = pool.length - 1; j >= g; j--) {
+          if (!recent.has(pool[j]._id)) {
+            const tmp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = tmp;
+            break;
+          }
+        }
+      }
+    }
+    bag.pool = pool;
+    bag.cursor = 0;
+  }, []);
+
+  const drawBatch = useCallback((n: number): Feed[] => {
+    const bag = bagRef.current;
+    // First draw ever: seed `recent` with the window's edge so the recycle
+    // seam doesn't immediately repeat what the user just scrolled past.
+    if (bag.pool.length === 0 && bag.recent.length === 0) {
+      bag.recent = slotsRef.current.slice(-RECENT_GUARD).map((s) => s.feed._id);
+    }
+    const out: Feed[] = [];
+    for (let i = 0; i < n; i++) {
+      if (bag.cursor >= bag.pool.length) refillBag();
+      if (bag.pool.length === 0) break;
+      const drawn = bag.pool[bag.cursor++];
+      // Resolve against the master pool at draw time: updateFeedById patches
+      // it immutably, so the epoch snapshot may hold pre-like/comment
+      // versions of a post.
+      const latest =
+        originalFeedsRef.current.find((f) => f._id === drawn._id) ?? drawn;
+      out.push(latest);
+      bag.recent.push(latest._id);
+      if (bag.recent.length > RECENT_GUARD) bag.recent.shift();
+    }
+    return out;
+  }, [refillBag]);
+
   // Extends the feed forward: fetches the next real API page if one exists,
   // otherwise recycles a shuffled batch from the master pool. Shared by
   // goNext (button, at the end of the window) and the IntersectionObserver
@@ -849,7 +951,7 @@ function FeedContent({
         setApiData({ nextCursor: page.nextCursor, hasMore: page.hasMore });
         feeds = page.data;
       } else if (originalFeedsRef.current.length) {
-        feeds = shuffleArray(originalFeedsRef.current).slice(0, RECYCLE_BATCH);
+        feeds = drawBatch(RECYCLE_BATCH);
       } else {
         feeds = [];
       }
@@ -863,7 +965,7 @@ function FeedContent({
     } finally {
       navLockRef.current = false;
     }
-  }, [type, appendSlots]);
+  }, [type, appendSlots, drawBatch]);
 
   // Backward counterpart. Always synchronous/recycled — the API only
   // paginates forward, so there's no "earlier real page" to fetch; going
@@ -876,13 +978,13 @@ function FeedContent({
     if (!originalFeedsRef.current.length) return [];
     navLockRef.current = true;
     try {
-      const created = prependSlots(shuffleArray(originalFeedsRef.current).slice(0, RECYCLE_BATCH));
+      const created = prependSlots(drawBatch(RECYCLE_BATCH));
       if (opts?.autoScroll && created.length) pendingTargetKeyRef.current = created[created.length - 1].key;
       return created;
     } finally {
       navLockRef.current = false;
     }
-  }, [prependSlots]);
+  }, [prependSlots, drawBatch]);
 
   // ── HLS.js attach/detach ─────────────────────────────────────────────────
   // Buffer target for the currently-playing video vs. its prev/next preload

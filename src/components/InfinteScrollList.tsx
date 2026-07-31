@@ -3,7 +3,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -35,17 +34,22 @@ export interface InfiniteFeedProps<T> {
   gridClassName?: string;
   skeletonCount?: number;
   /**
-   * Maximum number of items kept in the DOM during recycle mode.
-   * When exceeded, the oldest items are trimmed from the top.
-   * CSS Scroll Anchoring keeps the visible viewport stable during trims.
-   * Lower = less memory on iOS Safari. 60 ≈ 6 mobile screens at 2 cols.
+   * Soft cap on items kept in the DOM. The window may briefly exceed it when
+   * trimming would cut too close to the viewport (trims never remove content
+   * within TRIM_GUARD_PX of the visible area).
    */
   maxRendered?: number;
+  /**
+   * Items added to the window per extension: recycled batches, window
+   * re-expansion, and top refills all move in steps of this size. Increase for
+   * fewer/larger appends, decrease for smaller/more frequent ones.
+   */
+  batchSize?: number;
+  /** Must return a same-length permutation; invalid results fall back to Fisher–Yates. */
   shuffle?: <U>(arr: U[]) => U[];
   scrollRestorationKey?: string;
   disabled?: boolean;
   blockLoadMoreRef?: React.RefObject<boolean>;
-  onRefresh?: () => Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -66,48 +70,74 @@ const DEFAULT_SHUFFLE = <T,>(arr: T[]): T[] => {
   return out;
 };
 
-// Items appended to the bottom of displayItems on each recycle trigger.
-const APPEND_BATCH = 20;
+// Sentinels trigger while still this far outside the viewport.
+const PUMP_MARGIN_PX = 600;
+// Trims never remove content within this distance of the viewport.
+const TRIM_GUARD_PX = 800;
+// Recycled-entry descriptors kept above the window for exact scroll-up
+// reconstruction. Beyond this, the oldest fold into permanent spacer height.
+const EXTRAS_KEEP_MAX = 600;
+// Ids barred from reappearing immediately after a shuffle-bag epoch boundary.
+const RECENT_GUARD = 4;
 
-// TEMPORARILY DISABLED
-// Recycle mode paused while investigating performance issues.
-// Re-enable this block once performance has been optimized.
-// Flipping this back to `true` restores the sliding-window/shuffle/append
-// behaviour below with no other code changes needed.
-const RECYCLE_MODE_ENABLED = false;
-
-// ── Internal item shape ────────────────────────────────────────────────────────
-
-interface SlottedItem<T> {
+interface FeedEntry<T> {
   item: T;
-  // Globally monotonic key — guarantees React never confuses two different
-  // items even when the same source product recurs in a later loop.
   key: string;
+}
+
+// Window over the virtual sequence [apiEntries…, droppedExtras(gone)…, extras…].
+// All indices are absolute sequence positions, so dropping old extras from the
+// front never renumbers anything (extrasDropped grows to compensate).
+interface WindowState<T> {
+  extras: FeedEntry<T>[];
+  extrasDropped: number;
+  winStart: number;
+  winEnd: number; // exclusive; 0 = "unset", render derives an initial window
+  topSpacerPx: number; // exact pixel height of trimmed content above winStart
+  pendingUpInsert: number | null; // entries just inserted at top, awaiting height measurement
+}
+
+const INITIAL_WINDOW: WindowState<never> = {
+  extras: [],
+  extrasDropped: 0,
+  winStart: 0,
+  winEnd: 0,
+  topSpacerPx: 0,
+  pendingUpInsert: null,
+};
+
+interface ShuffleBag<T> {
+  pool: T[];
+  cursor: number;
+  recent: string[]; // last few served ids, for the epoch boundary guard
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 //
-// Recycle-mode architecture — sliding window with CSS Scroll Anchoring
-// ────────────────────────────────────────────────────────────────────
-// displayItems is a bounded array that slides forward through an infinite
-// circular source:
+// Architecture — one sequence, one bidirectional sliding window
+// ─────────────────────────────────────────────────────────────
+// API pages and recycled batches form a single conceptual sequence rendered
+// through a bounded window, so the API→recycle transition is just "more
+// entries appended" — no remount, no reshuffle, invisible to the user.
 //
-//   1. A sentinel element lives BELOW the grid.
-//   2. When the sentinel enters the viewport (with a 600px rootMargin buffer),
-//      appendBatch() fires:
-//        a. Pulls APPEND_BATCH items from the circular source (mod wrap).
-//        b. Pushes them onto the END of displayItems.
-//        c. If displayItems now exceeds maxRendered, trims the FRONT.
-//   3. CSS Scroll Anchoring (on by default in Chrome 56+, Firefox 66+,
-//      Safari 16+) automatically adjusts scrollTop when items are removed
-//      above the viewport — the visible area never jumps.
-//   4. Each item carries a monotonically increasing key. React treats
-//      append as "create new DOM at bottom" and trim as "destroy old DOM
-//      at top". Browser reclaims image bitmap memory for destroyed nodes.
+// Scroll stability comes from exact pixel accounting, NOT CSS Scroll Anchoring
+// (which iOS Safari does not implement):
+//   • Front trim (scrolling down): the removed block's height is measured
+//     BEFORE the commit (both endpoints are in the DOM), then the removal and
+//     the spacer growth land in one state update — net-zero layout shift,
+//     no scrollTop writes, so iOS momentum scrolling is never interrupted.
+//     Trims are column-count multiples so remaining items never change lanes.
+//   • Top refill (scrolling up): previous entries are re-inserted, their real
+//     height is measured in useLayoutEffect, and the spacer shrinks by exactly
+//     that much in the same pre-paint pass.
+//   • Teleports into the spacer (iOS status-bar tap, scroll-to-top button)
+//     reset the window to the sequence start at scrollY 0.
 //
-// Memory bound: max(maxRendered, source.length) DOM nodes. Constant.
-// No absolute positioning. No measurement. No fixed-height containers.
-// Normal CSS grid layout controlled entirely by gridClassName.
+// A single "pump" drives everything: IntersectionObserver, scroll, and
+// post-commit effects all funnel into it; it inspects sentinel positions and
+// extends/trims/fetches as needed, so missed IO callbacks can never stall the
+// feed. Memory is bounded: DOM ≤ ~maxRendered items, recycled descriptors are
+// front-capped, and everything else is numbers in refs.
 
 export function InfiniteFeed<T>({
   queryKey,
@@ -123,209 +153,428 @@ export function InfiniteFeed<T>({
   gridClassName = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6",
   skeletonCount = 10,
   maxRendered = 60,
+  batchSize = 10,
   shuffle = DEFAULT_SHUFFLE,
   scrollRestorationKey = "feed-scroll-y",
   disabled = false,
   blockLoadMoreRef,
-  onRefresh,
   children,
 }: InfiniteFeedProps<T>) {
-
   // ── Infinite Query ───────────────────────────────────────────────────────────
   const {
     data,
-    dataUpdatedAt,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-    refetch,
     error,
   } = useInfiniteQuery<FeedPage<T>, Error, FeedPage<T>>({
     queryKey,
     queryFn: ({ pageParam = "" }) => queryFn(pageParam as string),
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore === false ? undefined : lastPage.nextCursor ?? undefined,
     staleTime,
   });
 
   const sourceItems = useMemo<T[]>(
     () => data?.pages?.flatMap((p) => p.items ?? []) ?? [],
-    [data?.pages]
+    [data?.pages],
   );
 
-
-  // TEMPORARILY DISABLED: gated by RECYCLE_MODE_ENABLED (see top of file).
-  // With the flag off, isRecycleMode is always false, so every recycle-only
-  // effect/branch below (seeding, appendBatch, the recycle sentinel observer,
-  // and the recycle render path) short-circuits and never runs. Once the API
-  // runs out of pages, the component simply falls through to the plain API
-  // pagination render path and stops — no shuffling, no appending, no trimming.
-  const isRecycleMode = RECYCLE_MODE_ENABLED && !hasNextPage && sourceItems.length > 0;
-
-  // ── Stable refs ──────────────────────────────────────────────────────────────
+  // ── Prop mirrors (stable access from event callbacks) ────────────────────────
+  const getItemIdRef = useRef(getItemId);
+  getItemIdRef.current = getItemId;
   const shuffleRef = useRef(shuffle);
   shuffleRef.current = shuffle;
   const maxRenderedRef = useRef(maxRendered);
   maxRenderedRef.current = maxRendered;
+  const batchSizeRef = useRef(batchSize);
+  batchSizeRef.current = Math.max(1, batchSize);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+  const hasNextPageRef = useRef(hasNextPage);
+  hasNextPageRef.current = hasNextPage;
+  const isFetchingRef = useRef(isFetchingNextPage);
+  isFetchingRef.current = isFetchingNextPage;
+  const fetchNextPageRef = useRef(fetchNextPage);
+  fetchNextPageRef.current = fetchNextPage;
+  const sourceItemsRef = useRef(sourceItems);
+  sourceItemsRef.current = sourceItems;
 
-  // ── Recycle state ─────────────────────────────────────────────────────────────
-  const [displayItems, setDisplayItems] = useState<SlottedItem<T>[]>([]);
-  const [isSeeded, setIsSeeded] = useState(false);
-
-  // Circular cursor into the shuffled source array.
-  const cursorRef = useRef(0);
-  // Global counter — appended to keys for permanent uniqueness.
-  const counterRef = useRef(0);
-  // Shuffled snapshot of sourceItems, fixed at seed time.
-  const shuffledSrcRef = useRef<T[]>([]);
-
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const apiLoadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  // ── Reseed on fresh data ───────────────────────────────────────────────────────
-  // A completed refetch (e.g. the automatic staleTime:0 mount refetch, or a
-  // pull-to-refresh) replaces `data`, but once recycle mode has already seeded
-  // once it otherwise never looks at `data` again — so a product deleted after
-  // seeding would stay visible forever. Un-seed whenever the query resolves with
-  // a newer `dataUpdatedAt`, which lets the seed effect below rebuild the
-  // recycle pool from the fresh source items.
-  const seededAtRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!isRecycleMode) return;
-    if (seededAtRef.current === dataUpdatedAt) return;
-    seededAtRef.current = dataUpdatedAt;
-    setIsSeeded(false);
-  }, [isRecycleMode, dataUpdatedAt]);
-
-  // ── Seed ─────────────────────────────────────────────────────────────────────
-  // Fires once when the API has no more pages.
-  // Shuffles source items, fills displayItems up to maxRendered.
-  useEffect(() => {
-    if (!isRecycleMode || isSeeded) return;
-
-    // --- FIX: Validate the shuffle result ---
-    let shuffled = shuffleRef.current([...sourceItems]);
-    // If the shuffle function does not preserve the input length, fall back to
-    // the built‑in DEFAULT_SHUFFLE which is known to work.
-    if (!Array.isArray(shuffled) || shuffled.length !== sourceItems.length) {
-      console.warn(
-        "[InfiniteFeed] Custom shuffle returned invalid array (length mismatch). Falling back to default shuffle."
-      );
-      shuffled = DEFAULT_SHUFFLE([...sourceItems]);
-    }
-    // ---------------------------------------
-
-    shuffledSrcRef.current = shuffled;
-    cursorRef.current = 0;
-    counterRef.current = 0;
-
-    const cap = Math.min(shuffled.length, maxRenderedRef.current);
-    const initial: SlottedItem<T>[] = [];
-    for (let i = 0; i < cap; i++) {
-      initial.push({ item: shuffled[i], key: `feed-${counterRef.current++}` });
-    }
-    cursorRef.current = cap % shuffled.length;
-
-    setDisplayItems(initial);
-    setIsSeeded(true);
-  // sourceItems is stable by this point (hasNextPage just became false).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecycleMode, isSeeded]);
-
-  // ── Append batch ──────────────────────────────────────────────────────────────
-  // Pulls APPEND_BATCH items from the circular source, pushes them onto the end
-  // of displayItems, then trims the front to stay within maxRendered.
-  //
-  // Front-trimming is safe because CSS Scroll Anchoring compensates scrollTop
-  // automatically — the browser selects a visible element as its anchor point
-  // and preserves its viewport position when content above it is removed.
-  const appendBatch = useCallback(() => {
-    const src = shuffledSrcRef.current;
-    if (!src.length) return;
-
-    const newItems: SlottedItem<T>[] = [];
-    for (let i = 0; i < APPEND_BATCH; i++) {
-      newItems.push({
-        item: src[cursorRef.current],
-        key: `feed-${counterRef.current++}`,
-      });
-      cursorRef.current = (cursorRef.current + 1) % src.length;
-    }
-
-    setDisplayItems((prev) => {
-      const combined = [...prev, ...newItems];
-      const cap = maxRenderedRef.current;
-      // Keep only the most-recent `cap` items. The front (oldest, above the
-      // viewport) is discarded. Scroll Anchoring keeps the screen stable.
-      if (combined.length > cap) {
-        return combined.slice(combined.length - cap);
-      }
-      return combined;
+  // ── Sequence: API entries (derived) ──────────────────────────────────────────
+  // Keys are item ids, deduped by occurrence so a server that repeats an id
+  // across pages can't produce duplicate React keys.
+  const apiEntries = useMemo<FeedEntry<T>[]>(() => {
+    const seen = new Map<string, number>();
+    return sourceItems.map((item) => {
+      const id = getItemIdRef.current(item);
+      const n = seen.get(id) ?? 0;
+      seen.set(id, n + 1);
+      return { item, key: n === 0 ? id : `${id}~${n}` };
     });
-  }, []);
+  }, [sourceItems]);
+  const apiEntriesRef = useRef(apiEntries);
+  apiEntriesRef.current = apiEntries;
 
-  // ── Sentinel observer ─────────────────────────────────────────────────────────
-  // Observes a 1px sentinel placed after the grid. The 600px rootMargin fires
-  // appendBatch while the user is still ~2 screens above the true bottom,
-  // giving React time to commit new items before they scroll into view.
+  // ── Window state ─────────────────────────────────────────────────────────────
+  const [win, setWin] = useState<WindowState<T>>(INITIAL_WINDOW);
+
+  const seqLen = apiEntries.length + win.extrasDropped + win.extras.length;
+  // winEnd === 0 means "unset": derive an initial window so the first success
+  // render paints content immediately (no empty-grid frame before the pump runs).
+  const effWinEnd =
+    win.winEnd > 0 ? Math.min(win.winEnd, seqLen) : Math.min(seqLen, maxRendered);
+  const effWinStart = Math.min(win.winStart, effWinEnd);
+
+  const windowRef = useRef<WindowState<T>>(win);
+  windowRef.current = { ...win, winStart: effWinStart, winEnd: effWinEnd };
+
+  const renderedEntries = useMemo<FeedEntry<T>[]>(() => {
+    const apiLen = apiEntries.length;
+    const out: FeedEntry<T>[] = [];
+    for (let i = effWinStart; i < effWinEnd; i++) {
+      if (i < apiLen) {
+        out.push(apiEntries[i]);
+      } else {
+        const j = i - apiLen - win.extrasDropped;
+        if (j >= 0 && j < win.extras.length) out.push(win.extras[j]);
+      }
+    }
+    return out;
+  }, [apiEntries, win.extras, win.extrasDropped, effWinStart, effWinEnd]);
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────────
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // ── Shuffle bag ──────────────────────────────────────────────────────────────
+  const bagRef = useRef<ShuffleBag<T>>({ pool: [], cursor: 0, recent: [] });
+  const keyCounterRef = useRef(0);
+  const warnedShuffleRef = useRef(false);
+
+  // Rebuilds the pool from the LATEST source snapshot each epoch, so background
+  // refetches (focus/mount) flow into future batches without ever touching
+  // what's already on screen.
+  const refillBag = () => {
+    const getId = getItemIdRef.current;
+    const seen = new Set<string>();
+    const fresh: T[] = [];
+    for (const item of sourceItemsRef.current) {
+      const id = getId(item);
+      if (!seen.has(id)) {
+        seen.add(id);
+        fresh.push(item);
+      }
+    }
+    let pool = shuffleRef.current(fresh.slice());
+    if (!Array.isArray(pool) || pool.length !== fresh.length) {
+      if (!warnedShuffleRef.current) {
+        warnedShuffleRef.current = true;
+        console.warn(
+          "[InfiniteFeed] shuffle prop must return a same-length permutation; using internal shuffle.",
+        );
+      }
+      pool = DEFAULT_SHUFFLE(fresh);
+    }
+    // Epoch boundary guard: keep just-served ids out of the first few slots so
+    // the same product never appears on both sides of a reshuffle seam.
+    const bag = bagRef.current;
+    const g = Math.min(RECENT_GUARD, pool.length >> 2);
+    if (g > 0 && bag.recent.length > 0) {
+      const recent = new Set(bag.recent);
+      for (let i = 0; i < g; i++) {
+        if (!recent.has(getId(pool[i]))) continue;
+        for (let j = pool.length - 1; j >= g; j--) {
+          if (!recent.has(getId(pool[j]))) {
+            const tmp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = tmp;
+            break;
+          }
+        }
+      }
+    }
+    bag.pool = pool;
+    bag.cursor = 0;
+  };
+
+  const drawBatch = (n: number): FeedEntry<T>[] => {
+    const bag = bagRef.current;
+    const getId = getItemIdRef.current;
+    // First draw ever: seed `recent` with the API tail so the recycle seam
+    // doesn't immediately repeat what the user just scrolled past.
+    if (bag.pool.length === 0 && bag.recent.length === 0) {
+      bag.recent = apiEntriesRef.current
+        .slice(-RECENT_GUARD)
+        .map((e) => getId(e.item));
+    }
+    const out: FeedEntry<T>[] = [];
+    for (let i = 0; i < n; i++) {
+      if (bag.cursor >= bag.pool.length) refillBag();
+      if (bag.pool.length === 0) break;
+      const item = bag.pool[bag.cursor++];
+      out.push({ item, key: `r${keyCounterRef.current++}` });
+      bag.recent.push(getId(item));
+      if (bag.recent.length > RECENT_GUARD) bag.recent.shift();
+    }
+    return out;
+  };
+
+  // ── Window operations ────────────────────────────────────────────────────────
+
+  const columnCount = (grid: HTMLElement): number =>
+    getComputedStyle(grid).gridTemplateColumns.split(" ").length || 1;
+
+  const resetToTop = (scroll: boolean) => {
+    setWin(INITIAL_WINDOW);
+    if (scroll) window.scrollTo(0, 0);
+  };
+
+  // Extends the window downward: re-expose existing entries below it, else
+  // fetch the next API page, else append a recycled batch. Then front-trims
+  // (column-aligned, pre-measured) in the SAME commit. Returns true if it
+  // acted, so the pump doesn't run a second operation on stale state.
+  const handleBottom = (): boolean => {
+    const st = windowRef.current;
+    const apiLen = apiEntriesRef.current.length;
+    const totalLen = apiLen + st.extrasDropped + st.extras.length;
+    const grid = gridRef.current;
+    if (!grid) return false;
+
+    // Data shrank under the window (rare refetch edge) — start over.
+    if (st.winStart > 0 && st.winStart >= totalLen) {
+      resetToTop(true);
+      return true;
+    }
+
+    let newExtras = st.extras;
+    let newWinEnd = st.winEnd;
+
+    if (st.winEnd < totalLen) {
+      newWinEnd = Math.min(totalLen, st.winEnd + batchSizeRef.current);
+    } else if (hasNextPageRef.current === true) {
+      if (!isFetchingRef.current) fetchNextPageRef.current();
+      return true;
+    } else if (hasNextPageRef.current === false) {
+      // The feed never visually ends: with fewer source items than a batch,
+      // the bag simply refills mid-batch (duplicates are intentional).
+      const batch = drawBatch(batchSizeRef.current);
+      if (batch.length === 0) return false;
+      newExtras = [...st.extras, ...batch];
+      newWinEnd = st.winEnd + batch.length;
+    } else {
+      return false; // hasNextPage undefined: initial load still settling
+    }
+
+    // Front trim. Both measurement endpoints are in the current DOM, so the
+    // removal and the spacer growth commit together — net-zero layout shift
+    // above the viewport, no scroll compensation needed on any browser.
+    let newWinStart = st.winStart;
+    let newSpacer = st.topSpacerPx;
+    let newDropped = st.extrasDropped;
+    const excess = newWinEnd - st.winStart - maxRenderedRef.current;
+    if (excess > 0) {
+      const kids = grid.children;
+      const renderedCount = st.winEnd - st.winStart;
+      let safe = 0;
+      while (
+        safe < renderedCount &&
+        safe < kids.length &&
+        kids[safe].getBoundingClientRect().bottom < -TRIM_GUARD_PX
+      ) {
+        safe++;
+      }
+      const cols = columnCount(grid);
+      const k = Math.floor(Math.min(excess, safe) / cols) * cols;
+      if (k > 0 && k < kids.length) {
+        const h =
+          (kids[k] as HTMLElement).offsetTop -
+          (kids[0] as HTMLElement).offsetTop;
+        newWinStart = st.winStart + k;
+        newSpacer = st.topSpacerPx + h;
+      }
+    }
+
+    // Cap retained recycled descriptors above the window; the oldest fold into
+    // permanent spacer height. Keeps the JS heap constant on endless sessions.
+    if (newWinStart > apiLen) {
+      const keptAbove = newWinStart - apiLen - newDropped;
+      if (keptAbove > EXTRAS_KEEP_MAX) {
+        const drop = keptAbove - EXTRAS_KEEP_MAX;
+        newExtras = newExtras.slice(drop);
+        newDropped += drop;
+      }
+    }
+
+    if (
+      newWinEnd === st.winEnd &&
+      newWinStart === st.winStart &&
+      newExtras === st.extras
+    ) {
+      return false;
+    }
+    setWin({
+      extras: newExtras,
+      extrasDropped: newDropped,
+      winStart: newWinStart,
+      winEnd: newWinEnd,
+      topSpacerPx: newSpacer,
+      pendingUpInsert: null,
+    });
+    return true;
+  };
+
+  // Extends the window upward by re-inserting the entries the user scrolled
+  // past (exact same content). Height is unknown until rendered, so the commit
+  // sets pendingUpInsert and the layout effect below settles the spacer before
+  // paint. Bottom rows far below the viewport are trimmed in the same commit
+  // (bottom removal needs no compensation).
+  const handleTop = () => {
+    const st = windowRef.current;
+    const apiLen = apiEntriesRef.current.length;
+    const grid = gridRef.current;
+    if (!grid || st.winStart <= 0) return;
+
+    const recoverableStart =
+      st.winStart <= apiLen ? 0 : apiLen + st.extrasDropped;
+    let k = Math.min(batchSizeRef.current, st.winStart - recoverableStart);
+    if (k <= 0) return; // only permanently-dropped extras above; teleport reset covers it
+    const cols = columnCount(grid);
+    const aligned = Math.floor(k / cols) * cols;
+    // Column-aligned so existing items keep their lanes; the sub-column
+    // remainder only occurs at the very top of the sequence, where the final
+    // layout is the feed's true start anyway.
+    if (aligned > 0) k = aligned;
+
+    let bottomTrim = 0;
+    const kids = grid.children;
+    const renderedCount = st.winEnd - st.winStart;
+    const excess = renderedCount + k - maxRenderedRef.current;
+    if (excess > 0) {
+      const viewportBottom = window.innerHeight + TRIM_GUARD_PX;
+      while (bottomTrim < excess) {
+        const idx = renderedCount - 1 - bottomTrim;
+        if (idx < 0 || idx >= kids.length) break;
+        if (kids[idx].getBoundingClientRect().top > viewportBottom) bottomTrim++;
+        else break;
+      }
+    }
+
+    setWin({
+      ...st,
+      winStart: st.winStart - k,
+      winEnd: st.winEnd - bottomTrim,
+      pendingUpInsert: k,
+    });
+  };
+
+  // Settles a top refill: measure the inserted block's real height and shrink
+  // the spacer by exactly that much. Runs pre-paint, so the user never sees an
+  // intermediate frame. If the spacer can't absorb it all (measurement drift),
+  // the remainder is compensated with a one-off scrollBy.
+  useLayoutEffect(() => {
+    const k = win.pendingUpInsert;
+    if (!k) return;
+    const grid = gridRef.current;
+    if (!grid || grid.children.length <= k) {
+      setWin((prev) => ({ ...prev, pendingUpInsert: null }));
+      return;
+    }
+    const h =
+      (grid.children[k] as HTMLElement).offsetTop -
+      (grid.children[0] as HTMLElement).offsetTop;
+    const deficit = h - win.topSpacerPx;
+    setWin((prev) => ({
+      ...prev,
+      topSpacerPx: Math.max(0, prev.topSpacerPx - h),
+      pendingUpInsert: null,
+    }));
+    if (deficit > 0) window.scrollBy(0, deficit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [win.pendingUpInsert]);
+
+  // ── The pump ─────────────────────────────────────────────────────────────────
+  // Single driver for all window movement. Anything that might leave a sentinel
+  // in range calls it; it checks real DOM positions, so a missed IO callback
+  // (e.g. a sentinel that stays intersecting) can never stall the feed.
+  const pump = () => {
+    if (disabledRef.current || blockLoadMoreRef?.current) return;
+    if (windowRef.current.pendingUpInsert) return;
+    const viewportH = window.innerHeight;
+
+    const bottom = bottomSentinelRef.current;
+    if (bottom) {
+      const r = bottom.getBoundingClientRect();
+      if (r.top < viewportH + PUMP_MARGIN_PX && handleBottom()) return;
+    }
+    const top = topSentinelRef.current;
+    if (top && windowRef.current.winStart > 0) {
+      const r = top.getBoundingClientRect();
+      if (r.bottom > -PUMP_MARGIN_PX) handleTop();
+    }
+  };
+  const pumpRef = useRef(pump);
+  pumpRef.current = pump;
+
+  const showFeed = !isLoading && !error && sourceItems.length > 0;
+
+  // Wake the pump on sentinel proximity (scroll-driven).
   useEffect(() => {
-    if (!isSeeded) return;
-    const el = sentinelRef.current;
-    if (!el) return;
-
+    if (!showFeed) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) appendBatch(); },
-      { rootMargin: "600px 0px", threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-    // appendBatch is stable (no deps). isSeeded flips true once and stays.
-  }, [isSeeded, appendBatch]);
-
-  // ── API pagination observer ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (isRecycleMode || !hasNextPage || isFetchingNextPage || disabled) return;
-    if (blockLoadMoreRef?.current) return;
-    const el = apiLoadMoreRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        fetchNextPage();
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) pumpRef.current();
       },
-      { rootMargin: "100px", threshold: 0 }
+      { rootMargin: `${PUMP_MARGIN_PX}px 0px`, threshold: 0 },
     );
-    observer.observe(el);
+    if (topSentinelRef.current) observer.observe(topSentinelRef.current);
+    if (bottomSentinelRef.current) observer.observe(bottomSentinelRef.current);
     return () => observer.disconnect();
-  }, [isRecycleMode, hasNextPage, isFetchingNextPage, fetchNextPage, disabled, blockLoadMoreRef]);
+  }, [showFeed]);
 
-  // ── Refresh ───────────────────────────────────────────────────────────────────
-  const handleRefresh = useCallback(async () => {
-    setDisplayItems([]);
-    setIsSeeded(false);
-    cursorRef.current = 0;
-    counterRef.current = 0;
-    shuffledSrcRef.current = [];
-    await refetch();
-    await onRefresh?.();
-  }, [refetch, onRefresh]);
-  void handleRefresh;
-
-  // ── Scroll restoration ────────────────────────────────────────────────────────
+  // Wake the pump after every commit that could leave a sentinel in range
+  // (new page landed, window moved, fetch settled, block released).
   useEffect(() => {
-    if (!scrollRestorationKey) return;
+    if (!showFeed) return;
+    pumpRef.current();
+  }, [showFeed, win, apiEntries.length, hasNextPage, isFetchingNextPage, disabled]);
+
+  // ── Reset when the feed identity changes (e.g. category switch) ──────────────
+  const queryKeyStr = queryKey.join("|");
+  const prevKeyRef = useRef(queryKeyStr);
+  useEffect(() => {
+    if (prevKeyRef.current === queryKeyStr) return;
+    prevKeyRef.current = queryKeyStr;
+    bagRef.current = { pool: [], cursor: 0, recent: [] };
+    keyCounterRef.current = 0;
+    setWin(INITIAL_WINDOW);
+  }, [queryKeyStr]);
+
+  // ── Scroll: restoration save + teleport recovery + pump wake ─────────────────
+  useEffect(() => {
     let raf = 0;
-    const save = () => {
+    const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        sessionStorage.setItem(scrollRestorationKey, String(window.scrollY));
+        if (scrollRestorationKey) {
+          sessionStorage.setItem(scrollRestorationKey, String(window.scrollY));
+        }
+        // Teleport into the spacer (iOS status-bar tap, scroll-to-top button):
+        // the viewport sits entirely above the grid → land at the true start.
+        const st = windowRef.current;
+        if (st.topSpacerPx > 0 && gridRef.current) {
+          if (gridRef.current.getBoundingClientRect().top > window.innerHeight) {
+            resetToTop(true);
+            return;
+          }
+        }
+        pumpRef.current();
       });
     };
-    window.addEventListener("scroll", save, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", save);
+      window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(raf);
     };
   }, [scrollRestorationKey]);
@@ -375,30 +624,6 @@ export function InfiniteFeed<T>({
     );
   }
 
-  // ── Recycle mode ──────────────────────────────────────────────────────────────
-  // TEMPORARILY DISABLED: unreachable while RECYCLE_MODE_ENABLED is false,
-  // since isRecycleMode can never be true. Left intact for a quick re-enable.
-  if (isRecycleMode && isSeeded) {
-    return (
-      <div className={className}>
-        {children}
-        <div className={gridClassName}>
-          {displayItems.map(({ item, key }, index) => (
-            <div key={key} data-product-id={getItemId(item)}>
-              {renderItem(item, index)}
-            </div>
-          ))}
-        </div>
-        {/*
-          Sentinel: a 1px element below the grid.
-          IntersectionObserver fires when it comes within 600px of the viewport,
-          triggering appendBatch() before the user actually reaches the bottom.
-        */}
-        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
-      </div>
-    );
-  }
-
   // ── Empty ─────────────────────────────────────────────────────────────────────
   if (sourceItems.length === 0) {
     return (
@@ -420,28 +645,26 @@ export function InfiniteFeed<T>({
     );
   }
 
-
-  // ── API pagination mode ───────────────────────────────────────────────────────
+  // ── Feed ──────────────────────────────────────────────────────────────────────
+  // overflow-anchor: none — the window does its own exact pixel accounting;
+  // native scroll anchoring (absent on iOS anyway) must not double-compensate.
   return (
-    <div className={className}>
+    <div className={className} style={{ overflowAnchor: "none" }}>
       {children}
 
-      <div className={gridClassName}>
-        {sourceItems.map((item, index) => {
-          const isLast = index === sourceItems.length - 1;
-          
-          return (
-            <div
-              key={`api-${getItemId(item)}-${index}`}
-              data-product-id={getItemId(item)}
-              ref={isLast ? apiLoadMoreRef : undefined}
-            >
-              {renderItem(item, index)}
-            </div>
-          );
-        })}
+      <div style={{ height: win.topSpacerPx }} aria-hidden="true" />
+      <div ref={topSentinelRef} style={{ height: 1 }} aria-hidden="true" />
+
+      <div className={gridClassName} ref={gridRef}>
+        {renderedEntries.map(({ item, key }, i) => (
+          <div key={key} data-product-id={getItemId(item)}>
+            {renderItem(item, effWinStart + i)}
+          </div>
+        ))}
         {isFetchingNextPage && renderSkeletons("fetch")}
       </div>
+
+      <div ref={bottomSentinelRef} style={{ height: 1 }} aria-hidden="true" />
 
       {hasNextPage &&
         (typeof endlessLoaderComponent === "function"
@@ -464,7 +687,7 @@ export function useInfiniteFeed<T>(
     | "errorComponent"
     | "skeletonComponent"
     | "endlessLoaderComponent"
-  >
+  >,
 ) {
   return options;
 }

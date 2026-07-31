@@ -7,11 +7,11 @@ import { bunnyLoader } from '@/lib/bunnyLoader';
 import { compressImage } from '@/lib/utils';
 import { uploadProductVideoInBackground } from '@/lib/videoUploadManager';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Edit2, Eye, Film, Filter, Folder, LayoutGrid, Loader2, Package, Plus, Search, ShoppingCart, Trash2, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Edit2, Eye, Film, Filter, Folder, LayoutGrid, Loader2, Package, Plus, RefreshCw, Search, ShoppingCart, Trash2, UploadCloud, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // ─── Media preview card ───────────────────────────────────────────────────────
 
@@ -37,6 +37,120 @@ const PreviewCard = ({ src, name, onRemove }: PreviewCardProps) => (
         </span>
     </div>
 );
+
+// ─── Video status (mirrors admin/content-management's VideoStatusBadge /
+// VideoStatusPanel for Education, ported to Product's videoStatus) ─────────
+// Module-level, not nested in InventoryPage: nesting would give these a new
+// identity — and React would unmount/remount them — on every page render.
+
+const VideoStatusBadge = ({
+    status,
+    hasVideoUrl,
+}: {
+    status?: Product['videoStatus'];
+    hasVideoUrl?: boolean;
+}) => {
+    // A video that already has a playable URL but predates this field is
+    // effectively "finished" — don't make old content look unprocessed.
+    const effectiveStatus = status ?? (hasVideoUrl ? 'finished' : undefined);
+
+    if (!effectiveStatus) return null;
+
+    const config = {
+        processing: {
+            icon: Loader2,
+            spin: true,
+            className: 'bg-blue-50 text-blue-500 border-blue-100',
+            label: 'Processing',
+        },
+        finished: {
+            icon: CheckCircle2,
+            spin: false,
+            className: 'bg-green-50 text-green-500 border-green-100',
+            label: 'Ready',
+        },
+        failed: {
+            icon: AlertCircle,
+            spin: false,
+            className: 'bg-red-50 text-red-500 border-red-100',
+            label: 'Failed',
+        },
+    }[effectiveStatus];
+
+    const Icon = config.icon;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border whitespace-nowrap ${config.className}`}>
+            <Icon size={10} className={config.spin ? 'animate-spin' : ''} />
+            {config.label}
+        </span>
+    );
+};
+
+// Status-aware stand-in for the video preview iframe, shared by the View and
+// Edit modals: "processing"/"failed" replace the player with an explanatory
+// panel (the bunny embed has nothing to show yet, or never will for this
+// upload); anything else falls back to the existing iframe preview.
+const VideoStatusPanel = ({
+    status,
+    videoUrl,
+    videoLoaded,
+    onVideoLoad,
+    onReupload,
+    heightClassName = 'h-48',
+}: {
+    status?: Product['videoStatus'];
+    videoUrl?: string;
+    videoLoaded: boolean;
+    onVideoLoad: () => void;
+    onReupload?: () => void;
+    heightClassName?: string;
+}) => {
+    if (status === 'processing') {
+        return (
+            <div className={`${heightClassName} w-full rounded-lg bg-blue-50 border border-blue-100 flex flex-col items-center justify-center gap-2 text-blue-500 p-4 text-center`}>
+                <Loader2 size={24} className="animate-spin" />
+                <p className="text-xs font-medium">Video is processing — this can take a few minutes</p>
+            </div>
+        );
+    }
+
+    if (status === 'failed') {
+        return (
+            <div className={`${heightClassName} w-full rounded-lg bg-red-50 border border-red-100 flex flex-col items-center justify-center gap-2 text-red-500 p-4 text-center`}>
+                <AlertCircle size={24} />
+                <p className="text-xs font-medium">Video processing failed</p>
+                {onReupload && (
+                    <button
+                        type="button"
+                        onClick={onReupload}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors"
+                    >
+                        <RefreshCw size={13} />
+                        Reupload video
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    if (!videoUrl) return null;
+
+    return (
+        <div className={`${heightClassName} relative w-full rounded-lg overflow-hidden bg-gray-100 border border-gray-200`}>
+            {!videoLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200" />}
+            <iframe
+                src={`${videoUrl}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
+                loading="lazy"
+                onLoad={onVideoLoad}
+                style={{
+                    border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%',
+                    opacity: videoLoaded ? 1 : 0, transition: 'opacity 300ms ease',
+                }}
+                allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+            />
+        </div>
+    );
+};
 
 interface MappedProduct {
     id: string;
@@ -78,6 +192,11 @@ const InventoryPage = () => {
     const [reviewsLoading] = useState(false);
     const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
     const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [videoLoaded, setVideoLoaded] = useState(false);
+    // Hidden input triggered by VideoStatusPanel's "Reupload video" button
+    // in the edit modal (the panel only exposes an onClick callback, not a
+    // file input of its own).
+    const editVideoReuploadInputRef = useRef<HTMLInputElement>(null);
 
     // ── Edit modal media state ────────────────────────────────────────────────
     const [editCoverImage, setEditCoverImage] = useState<
@@ -318,6 +437,7 @@ const InventoryPage = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleEditClick = (product: any) => {
         setSelectedProduct(product);
+        setVideoLoaded(false);
         setEditIsTimedSpecialOffer(product?.fullProduct?.isTimedSpecialOffer === true);
         setEditSpecialOfferDate(product?.fullProduct?.specialOfferDate || '');
         setEditSpecialOfferTime(product?.fullProduct?.specialOfferTime || '');
@@ -332,6 +452,7 @@ const InventoryPage = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleViewClick = (product: any) => {
         setSelectedProduct(product);
+        setVideoLoaded(false);
         setShowViewModal(true);
     };
 
@@ -346,13 +467,11 @@ const InventoryPage = () => {
             try {
                 setIsDeleting(true);
                 // Call delete product API
-                console.log('Deleting product:', selectedProduct.id);
                 const req = await deleteProduct(selectedProduct.id);
                 if (req.status) {
                     // Remove from local state immediately
                     setProducts(prev => {
                         const updatedProducts = prev.filter(p => p.id !== selectedProduct.id);
-                        console.log('Products after deletion:', updatedProducts);
                         return updatedProducts;
                     });
 
@@ -717,7 +836,10 @@ const InventoryPage = () => {
                                                         <div className="w-10 h-10 bg-brand_pink/5 rounded-lg flex-shrink-0 flex items-center justify-center">
                                                             <ShoppingCart size={16} className="text-brand_pink/20" />
                                                         </div>
-                                                        <span className="font-semibold text-sm text-brand_gray_dark">{product.name.slice(0, 20)}...</span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-semibold text-sm text-brand_gray_dark">{product.name.slice(0, 20)}...</span>
+                                                            
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-sm font-medium text-brand_gray_dark/80">{product.id.slice(0, 5)}...</td>
@@ -960,15 +1082,22 @@ const InventoryPage = () => {
                                                     </button>
                                                 </div>
                                             ) : editVideo?.type === 'existing' ? (
-                                                <div className="relative h-80">
-
-                                                    <iframe
-                                                        src={`${editVideo.url}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
-                                                        loading="lazy"
-                                                        style={{ border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%' }}
-                                                        allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
+                                                <div className="relative">
+                                                    <VideoStatusPanel
+                                                        status={selectedProduct?.fullProduct?.videoStatus}
+                                                        videoUrl={editVideo.url}
+                                                        videoLoaded={videoLoaded}
+                                                        onVideoLoad={() => setVideoLoaded(true)}
+                                                        onReupload={() => editVideoReuploadInputRef.current?.click()}
+                                                        heightClassName="h-80"
                                                     />
-                                                    {/* <video src={editVideo.url} controls className="w-full max-h-48 rounded-lg border border-gray-200" /> */}
+                                                    <input
+                                                        ref={editVideoReuploadInputRef}
+                                                        type="file"
+                                                        accept="video/*"
+                                                        onChange={handleEditVideoChange}
+                                                        className="hidden"
+                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={removeEditVideo}
@@ -1246,18 +1375,24 @@ const InventoryPage = () => {
                                                     </div>
                                                 )}
 
-                                                {selectedProduct?.fullProduct?.video && (
-                                                    <div >
+                                                {(selectedProduct?.fullProduct?.video || selectedProduct?.fullProduct?.videoStatus) && (
+                                                    <div>
                                                         <p className="text-sm text-gray-500 mb-2">Video</p>
-                                                        <div className="relative w-full aspect-video bg-slate-300">
-                                                            <iframe
-                                                                src={`${selectedProduct.fullProduct.video}?autoplay=true&loop=false&muted=true&preload=true&responsive=true`}
-                                                                loading="lazy"
-                                                                style={{ border: 0, position: 'absolute', inset: 0, height: '100%', width: '100%' }}
-                                                                allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen;"
-                                                            />
-                                                        </div>
-
+                                                        <VideoStatusPanel
+                                                            status={selectedProduct?.fullProduct?.videoStatus}
+                                                            videoUrl={selectedProduct?.fullProduct?.video}
+                                                            videoLoaded={videoLoaded}
+                                                            onVideoLoad={() => setVideoLoaded(true)}
+                                                            heightClassName="aspect-video"
+                                                            onReupload={
+                                                                selectedProduct?.fullProduct?.videoStatus === 'failed'
+                                                                    ? () => {
+                                                                        setShowViewModal(false);
+                                                                        handleEditClick(selectedProduct);
+                                                                    }
+                                                                    : undefined
+                                                            }
+                                                        />
                                                     </div>
                                                 )}
                                             </div>

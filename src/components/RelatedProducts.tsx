@@ -3,7 +3,7 @@
 import BannerPlaceholder from "@/app/components/BannerPlaceholder";
 import { getRelatedProducts } from "@/lib/api";
 import type { Product } from "@/lib/types";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import EndlessScrollLoading from "./EndlessScrollLoading";
 import { InfiniteFeed } from "./InfinteScrollList";
@@ -52,7 +52,6 @@ export default function RelatedProducts({ category }: { category: string }) {
         endlessLoaderComponent={(ref) => (
           <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
         )}
-        shuffle={shuffleArray}
         staleTime={Infinity}
         scrollRestorationKey="related-scroll-y"
         gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"

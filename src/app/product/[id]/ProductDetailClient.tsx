@@ -192,6 +192,9 @@ export default function ProductDetailPage({
   }, [ensureVariantSelection, data, quantity, selectedVariantsArray, openModal]);
 
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
+  // The last layer that was actually displayable — kept on screen while a
+  // first-time image decodes, so a thumbnail click never blanks the panel.
+  const lastVisibleSrcRef = useRef<string | null>(null);
 
   const markMediaLoaded = useCallback((src: string) => {
     if (!src) return;
@@ -232,8 +235,37 @@ export default function ProductDetailPage({
       ...(item.cover_image ? [item.cover_image] : []),
     ]),
   );
-  const currentMediaSrc = currentCoverItem.src || "/placeholder.png";
-  const isCurrentMediaLoaded = Boolean(loadedMedia[currentMediaSrc]);
+  // Every main-size media layer stays mounted for the whole page life —
+  // thumbnail clicks only toggle which layer is visible. Nothing remounts,
+  // nothing re-fetches, and the HLS session survives image↔video switches
+  // (warm standby via HlsPlayer's `active` prop instead of unmounting).
+  const mediaLayers: { src: string; type: "image" | "video" }[] = [
+    ...thumbnailImages.map((src) => ({ src, type: "image" as const })),
+    ...(item.video ? [{ src: item.video, type: "video" as const }] : []),
+  ];
+  if (
+    currentCoverItem.src &&
+    !mediaLayers.some((layer) => layer.src === currentCoverItem.src)
+  ) {
+    // Cover sources outside the gallery (e.g. a variant-image selector)
+    // get their own layer on demand.
+    mediaLayers.push(currentCoverItem);
+  }
+  if (mediaLayers.length === 0) {
+    mediaLayers.push({ src: "/placeholder.png", type: "image" });
+  }
+
+  const selectedSrc = currentCoverItem.src || mediaLayers[0].src;
+  // Video is displayable immediately (its poster paints at once); an image
+  // is displayable once decoded. Until the selected layer is displayable,
+  // the previously shown layer stays visible — no blank frame between
+  // thumbnail click and the new media appearing.
+  const selectedReady =
+    currentCoverItem.type === "video" || Boolean(loadedMedia[selectedSrc]);
+  const visibleSrc = selectedReady
+    ? selectedSrc
+    : lastVisibleSrcRef.current ?? selectedSrc;
+  if (selectedReady) lastVisibleSrcRef.current = selectedSrc;
 
   return (
     <RefreshWrapper
@@ -305,32 +337,37 @@ export default function ProductDetailPage({
             <div className="lg:w-1/2 h-full space-y-8">
               <div className="space-y-4">
 
-                <div
-                  className={`relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip `}
-                >
-                  {currentCoverItem.type === "image" ? (
-                    <Image
-                      src={currentMediaSrc}
-                      loader={bunnyLoader}
-
-                      sizes="(max-width: 640px) 50vw,
-         (max-width: 1024px) 50vw,
-         50vw"
-
-                      alt={item.name}
-                      fill
-                      priority
-                      fetchPriority="high"
-                      className={`absolute object-cover transition-opacity duration-200 ${isCurrentMediaLoaded ? "opacity-100" : "opacity-0"
-                        }`}
-                      onLoad={() => {
-                        markMediaLoaded(currentMediaSrc);
-                      }}
-                    />
-                  ) : (
-                    <HlsPlayer src={item.video!} className=" object-cover h-full w-full"
-                    />
-                  )}
+                <div className="relative w-full h-[20rem] lg:h-[38rem] rounded-sm overflow-clip bg-gray-100">
+                  {mediaLayers.map((layer) => {
+                    const isVisible = layer.src === visibleSrc;
+                    return layer.type === "image" ? (
+                      <Image
+                        key={layer.src}
+                        src={layer.src}
+                        loader={bunnyLoader}
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        alt={item.name}
+                        fill
+                        priority={layer.src === defaultCoverItem.src}
+                        className={`object-cover transition-opacity duration-150 ${isVisible ? "opacity-100" : "opacity-0"
+                          }`}
+                        onLoad={() => markMediaLoaded(layer.src)}
+                      />
+                    ) : (
+                      <div
+                        key={layer.src}
+                        className={`absolute inset-0 transition-opacity duration-150 ${isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+                          }`}
+                      >
+                        <HlsPlayer
+                          src={layer.src}
+                          className="object-cover h-full w-full"
+                          active={isVisible}
+                          poster={item.videoThumbnail || undefined}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="flex gap-2 lg:gap-5 flex-wrap">
                   {thumbnailImages.length > 0 || item.video ? (

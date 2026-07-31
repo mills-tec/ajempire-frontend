@@ -83,7 +83,7 @@ function ProductCard({
           src={`${product.cover_image}`}
           loader={bunnyLoader}
           alt="product image"
-           sizes="(max-width: 640px) 50vw,
+          sizes="(max-width: 640px) 50vw,
          (max-width: 1024px) 33vw,
          25vw"
           fill
@@ -101,7 +101,7 @@ function ProductCard({
         </p>
 
         <p className="text-[0.65rem] text-brand_purple">
-          Only {product.stock} left
+          {product.stock! <= 10 && "Only"} {product.stock} left
         </p>
 
         <div className="flex items-center gap-2">

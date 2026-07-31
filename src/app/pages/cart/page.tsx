@@ -1,43 +1,125 @@
 "use client";
-import AuthWrapper from "@/app/components/auth-component/AuthWrapper";
 import CartCard from "@/app/components/CartCard";
 import CartCardSkeleton from "@/app/components/CartCardSkeleton";
 import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
+import { CartItem, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import clsx from "clsx";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
- const formatPrice = (amount: number) => {
+
+// Only ever rendered if the user hits the "log in to checkout" path from
+// *this* page's own signIn state (see below) — lazy-loaded so its JS isn't
+// part of the cart route's initial bundle/parse cost.
+const AuthWrapper = dynamic(
+  () => import("@/app/components/auth-component/AuthWrapper"),
+  { ssr: false },
+);
+
+const formatPrice = (amount: number) => {
   return Number(amount).toLocaleString("en-ng", {
     style: "currency",
     currency: "NGN",
   });
 };
+
+// A cart line's real identity is _id + selectedVariants (see areVariantsEqual
+// in cart-store.ts — two lines can share the same _id with different
+// variants). Used as the React key below instead of array index, so
+// removing/reordering one line doesn't cause React to misattribute every
+// subsequent CartCard's identity (and with it, CartCard's internal state)
+// to the wrong item.
+const cartLineKey = (item: CartItem) =>
+  `${item._id}::${(item.selectedVariants ?? [])
+    .map((v) => `${v.name}:${v.value}`)
+    .sort()
+    .join(",")}`;
+
+type CartAmountEntry = { total: number; discount: number; _id: string };
+
+// Extracted so an individual thumbnail's image `onLoad` only re-renders that
+// one thumbnail instead of the whole CartPage (which previously held
+// per-image loaded state in a single Record, so every image load touched
+// page-level state).
+const SelectedItemThumbnail = memo(function SelectedItemThumbnail({
+  item,
+  amount,
+}: {
+  item: CartItem;
+  amount: CartAmountEntry | undefined;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <div className="transition-all duration-300">
+      <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
+        {isLoaded && <SelectedItemSkeleton />}
+
+        <Image
+          src={item.cover_image || "/placeholder.png"}
+          alt="product image"
+          fill
+          className={clsx(
+            "object-cover transition-opacity duration-500",
+            isLoaded ? "opacity-100" : "opacity-0",
+          )}
+          onLoad={() => setIsLoaded(true)}
+        />
+      </div>
+
+      <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
+        {formatPrice(
+          amount?.discount && amount.discount > 0
+            ? amount.total - amount.discount
+            : (amount?.total ?? 0),
+        )}
+        <span className="text-brand_pink"> x{item.quantity}</span>
+      </p>
+    </div>
+  );
+});
+
 export default function CartPage() {
-  const {
-    items,
-    deselectAllCartItems,
-    selectAllCartItems,
-    selectedItem,
-    cartLoaded,
-  } = useCartStore();
+  // Individual selectors instead of a whole-store destructure — each of
+  // these actions is a stable reference for the store's lifetime, so
+  // subscribing to them individually never re-renders this page on its
+  // own. `items`/`selectedItem` are the only real state read here, so
+  // they're the only things that can now trigger a re-render from this
+  // hook (previously ANY cart-store field change — coupon, logistics,
+  // checkout step — re-rendered the whole page and, transitively, every
+  // CartCard in the list).
+  const items = useCartStore((s) => s.items);
+  const deselectAllCartItems = useCartStore((s) => s.deselectAllCartItems);
+  const selectAllCartItems = useCartStore((s) => s.selectAllCartItems);
+  const selectedItem = useCartStore((s) => s.selectedItem);
+  const cartLoaded = useCartStore((s) => s.cartLoaded);
 
   const [expand, setExpand] = useState(false);
   const [signIn, setSingin] = useState(false);
   const [isLoading, setIsLoading] = useState(!cartLoaded);
-  const selectedItems = items.filter((item) => item.selected);
+  // items only gets a new array reference when it actually changes (add/
+  // remove/quantity/select — see cart-store.ts), so this only recomputes
+  // when there's something real to recompute.
+  const selectedItems = useMemo(
+    () => items.filter((item) => item.selected),
+    [items],
+  );
   const selectedCount = selectedItems.length;
   const openModal = useModalStore((s) => s.openModal);
-  const [cartAmount, setCartAmount] = useState<
-    { total: number; discount: number; _id: string }[]
-  >([]);
+  const [cartAmount, setCartAmount] = useState<CartAmountEntry[]>([]);
+
+  // Lets handleUpdateCartTotal below read the current items without
+  // needing `items` in its dependency array — keeps that callback's
+  // reference permanently stable, which is what actually lets
+  // React.memo(CartCard) skip re-renders.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const checkoutHandler = () => {
     const token = getBearerToken();
@@ -71,10 +153,44 @@ export default function CartPage() {
     }, 300);
   };
 
-  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
-  const handleImageLoad = (id: string) => {
-    setLoadedImages((prev) => ({ ...prev, [id]: true }));
-  };
+  // Stable for the component's entire lifetime (empty deps + itemsRef) —
+  // previously a brand-new closure was created on every render, inside the
+  // items.map() below, for every single CartCard, which alone would have
+  // defeated React.memo(CartCard) regardless of any other prop stability.
+  const handleUpdateCartTotal = useCallback(
+    ({ total, discount, _id }: { total: number; discount: number; _id: string }) => {
+      const isSelected = itemsRef.current.find((i) => i._id === _id)?.selected;
+      setCartAmount((prev) => {
+        if (!isSelected) {
+          return prev.filter((i) => i._id !== _id);
+        }
+        const existing = prev.find((i) => i._id === _id);
+        if (existing) {
+          return prev.map((i) =>
+            i._id === _id ? { ...i, total, discount } : i,
+          );
+        }
+        return [...prev, { total, discount, _id }];
+      });
+    },
+    [],
+  );
+
+  // O(1) lookups for the order-summary thumbnails below instead of an
+  // O(n) .find() per selected item (O(n*m) total for the panel).
+  const cartAmountById = useMemo(
+    () => new Map(cartAmount.map((entry) => [entry._id, entry])),
+    [cartAmount],
+  );
+
+  // Computed once and reused everywhere below instead of the same three
+  // cartAmount.reduce() calls being run again for the mobile collapsed
+  // summary (6 reduce passes over the same array per render → 2).
+  const { itemsTotal, itemsDiscount, finalTotal } = useMemo(() => {
+    const itemsTotal = cartAmount.reduce((acc, i) => acc + i.total, 0);
+    const itemsDiscount = cartAmount.reduce((acc, i) => acc + i.discount, 0);
+    return { itemsTotal, itemsDiscount, finalTotal: itemsTotal - itemsDiscount };
+  }, [cartAmount]);
 
   // Show skeleton while loading
 
@@ -182,37 +298,13 @@ export default function CartPage() {
               />
             </svg>
           </div>
-          {items.map((item, i) => {
-            return (
-              <CartCard
-                item={item}
-                selectedItems={selectedItems}
-                key={i}
-                handleUpdateCartTotal={({
-                  total,
-                  discount,
-                  _id,
-                }: {
-                  total: number;
-                  discount: number;
-                  _id: string;
-                }) => {
-                  setCartAmount((prev) => {
-                    if (!item.selected) {
-                      return prev.filter((i) => i._id !== _id);
-                    }
-                    const existing = prev.find((i) => i._id === _id);
-                    if (existing) {
-                      return prev.map((i) =>
-                        i._id === _id ? { ...i, total, discount } : i,
-                      );
-                    }
-                    return [...prev, { total, discount, _id }];
-                  });
-                }}
-              />
-            );
-          })}
+          {items.map((item) => (
+            <CartCard
+              item={item}
+              key={cartLineKey(item)}
+              handleUpdateCartTotal={handleUpdateCartTotal}
+            />
+          ))}
         </div>
         {!selectedItem && (
           <div className="lg:h-{calc(100vh-8rem)}">
@@ -281,63 +373,24 @@ export default function CartPage() {
                 ))}
             </div> */}
               <div className="flex gap-2 min-h-[5rem] transition-all duration-300">
-                {selectedItems.map((item, i) => {
-                  const isLoaded = loadedImages[item._id];
-                  const cartItemAmount: {
-                    total: number;
-                    discount: number;
-                    _id: string;
-                  } = cartAmount.find((i) => i._id === item._id)!;
-                  return (
-                    <div key={i} className="transition-all duration-300">
-                      <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
-                        {isLoaded && <SelectedItemSkeleton />}
-
-                        <Image
-                          src={item.cover_image!}
-                          alt="product image"
-                          fill
-                          className={clsx(
-                            "object-cover transition-opacity duration-500",
-                            isLoaded ? "opacity-100" : "opacity-0",
-                          )}
-                          onLoad={() => handleImageLoad(item._id)}
-                        />
-                      </div>
-
-                      <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
-                        {formatPrice(
-                          cartItemAmount?.discount > 0
-                            ? cartItemAmount?.total - cartItemAmount?.discount
-                            : cartItemAmount?.total,
-                        )}
-                        <span className="text-brand_pink">
-                          {" "}
-                          x{item.quantity}
-                        </span>
-                      </p>
-                    </div>
-                  );
-                })}
+                {selectedItems.map((item) => (
+                  <SelectedItemThumbnail
+                    key={cartLineKey(item)}
+                    item={item}
+                    amount={cartAmountById.get(item._id)}
+                  />
+                ))}
               </div>
 
               <hr className="mt-4" />
               <div className="text-sm space-y-6 py-3 ">
                 <div className="flex justify-between items-center">
                   <p>Item(s) total:</p>
-                  <p className="font-medium">
-                    {formatPrice(
-                      cartAmount.reduce((acc, i) => acc + i.total, 0),
-                    )}
-                  </p>
+                  <p className="font-medium">{formatPrice(itemsTotal)}</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p>Item(s) discount:</p>
-                  <p className="text-brand_pink">
-                    {formatPrice(
-                      cartAmount.reduce((acc, i) => acc + i.discount, 0),
-                    )}
-                  </p>
+                  <p className="text-brand_pink">{formatPrice(itemsDiscount)}</p>
                 </div>
               </div>
               <hr />
@@ -348,14 +401,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-sm items-center">
                   <p>Total:</p>
-                  <p className="font-semibold">
-                    {formatPrice(
-                      cartAmount.reduce(
-                        (acc, i) => acc + i.total - i.discount,
-                        0,
-                      ),
-                    )}
-                  </p>
+                  <p className="font-semibold">{formatPrice(finalTotal)}</p>
                 </div>
               </div>
               <button
@@ -408,15 +454,9 @@ export default function CartPage() {
                 </p>
                 <div className="flex justify-between items-end">
                   <div>
-                    <h3 className="font-medium">
-                      {formatPrice(
-                        cartAmount.reduce((acc, i) => acc + i.total, 0),
-                      )}
-                    </h3>
+                    <h3 className="font-medium">{formatPrice(itemsTotal)}</h3>
                     <p className="text-xs text-brand_pink">
-                      {formatPrice(
-                        cartAmount.reduce((acc, i) => acc + i.discount, 0),
-                      )}
+                      {formatPrice(itemsDiscount)}
                       discount applied
                     </p>
                   </div>

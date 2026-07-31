@@ -2,6 +2,7 @@ import { Product } from "@/lib/types";
 import { calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { memo } from "react";
 
 const RecentlyViewedMobile = ({
   products,
@@ -73,4 +74,4 @@ const RecentlyViewedMobile = ({
   );
 };
 
-export default RecentlyViewedMobile;
+export default memo(RecentlyViewedMobile);
