@@ -2,6 +2,7 @@
 import { API_URL, getBearerToken } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
+import type { Product } from "@/lib/types";
 import axios, { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -619,6 +620,20 @@ export const useExploreInterest = () => {
 
   return { loading, getExploreInterest };
 };
+
+// Plain fetcher (not a hook) for the "Recently Viewed" preview strip on the
+// mobile account page — used as a React Query queryFn so the result is
+// cached across mounts/back-navigation instead of living in component state.
+export async function getBrowsingHistoryPreview(limit: number): Promise<Product[]> {
+  const token = getBearerToken();
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  const req = await getData(`/browsing-history?limit=${limit}&cursor=`, config);
+  const browsingHistory: { products: { product: Product }[] }[] =
+    req.data.message.browsingHistory ?? [];
+  return browsingHistory.flatMap((item) =>
+    (item.products ?? []).map((product) => product.product),
+  );
+}
 
 export const useBrowsingHistory = () => {
   let config = {};

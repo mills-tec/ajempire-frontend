@@ -6,13 +6,19 @@ import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import CartPopup from "./CartPopup";
+
+const formatPrice = (amount: number) => {
+  return Number(amount).toLocaleString("en-ng", {
+    style: "currency",
+    currency: "NGN",
+  });
+};
 
 function CartCard({
   item,
   handleUpdateCartTotal,
-  selectedItems,
 }: {
   item: CartItem;
   handleUpdateCartTotal: ({
@@ -24,20 +30,24 @@ function CartCard({
     discount: number;
     _id: string;
   }) => void;
-  selectedItems: CartItem[];
 }) {
-  const {
-    removeItem,
-    decreaseQuantity,
-    increaseQuantity,
-    toggleItemSelect,
-    setSelectedItem,
-    selectedItem,
-    resetSelectedItem,
-  } = useCartStore();
+  // Individual selectors instead of a whole-store destructure: every one of
+  // these actions is a stable reference for the store's lifetime, so
+  // subscribing to them individually never triggers a re-render on its own.
+  // `selectedItem` is the only piece of actual state read here, so it's the
+  // only thing that can cause this card to re-render from this hook —
+  // whole-store destructuring used to re-render *every* CartCard on *any*
+  // cart-store change (coupon, logistics, checkout step, other cards'
+  // quantity/selection, etc.), not just the ones that matter to this card.
+  const removeItem = useCartStore((s) => s.removeItem);
+  const decreaseQuantity = useCartStore((s) => s.decreaseQuantity);
+  const increaseQuantity = useCartStore((s) => s.increaseQuantity);
+  const toggleItemSelect = useCartStore((s) => s.toggleItemSelect);
+  const setSelectedItem = useCartStore((s) => s.setSelectedItem);
+  const selectedItem = useCartStore((s) => s.selectedItem);
+  const resetSelectedItem = useCartStore((s) => s.resetSelectedItem);
   const cartItem = item;
 
-  console.log(cartItem);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
@@ -64,14 +74,15 @@ function CartCard({
       discount: unitDiscount * cartItem!.quantity,
       _id: item._id,
     });
+  // item.selected replaces the old selectedItems.length dependency — this
+  // effect only needs to re-report when THIS card's own price-relevant
+  // inputs change, not whenever selection changes anywhere else in the
+  // cart. Same eventual cartAmount state, far fewer redundant effect runs
+  // (previously every card re-ran this on every other card's selection
+  // toggle).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCombination, selectedItems.length, cartItem?.quantity]);
-  const formatPrice = (amount: number) => {
-  return Number(amount).toLocaleString("en-ng", {
-    style: "currency",
-    currency: "NGN",
-  });
-};
+  }, [selectedCombination, item.selected, cartItem?.quantity]);
+
   return (
     <section className="w-full">
       {selectedItem && <CartPopup />}
@@ -282,4 +293,12 @@ function CartCard({
   );
 }
 
-export default CartCard;
+// Memoized so a re-render of CartPage (or a sibling CartCard) doesn't force
+// this card to re-render too — the cart-store's own mutation functions
+// (toggleItemSelect, setQuantity, removeItem, ...) already only produce a
+// new object reference for the *changed* item, leaving every other item's
+// reference untouched (confirmed in cart-store.ts: they're all .map()/
+// .filter() over the items array). That per-item stability is what makes
+// this memo() actually skip work, not just look like it does — combined
+// with a stable `handleUpdateCartTotal` reference from the parent.
+export default memo(CartCard);

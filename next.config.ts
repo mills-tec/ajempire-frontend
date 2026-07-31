@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next 15 defaults the client Router Cache staleTime for dynamic routes to
+  // 0s, forcing a full remount + refetch on every back/forward navigation.
+  // Restoring a short reuse window makes back-nav feel instant app-wide.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
+
   images: {
     remotePatterns: [
       {

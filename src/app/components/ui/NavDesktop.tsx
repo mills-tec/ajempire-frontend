@@ -9,12 +9,9 @@ import { SupportIcon } from "@/components/svgs/SupportIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
 import VideoIcon from "@/components/svgs/VideoIcon";
 
-import { useUpdates } from "@/api/customHooks";
 import { useCartIcon } from "@/app/contextanimation/CartIconContext";
 import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { updatesQueryKey } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import AuthWrapper from "../auth-component/AuthWrapper";
 import SearchBar from "./SearchBar";
@@ -25,6 +22,7 @@ type NavDesktopProps = {
   isActive: (path: string) => string;
   showIntro: boolean;
   setShowIntro: (val: boolean) => void;
+  updateId: string;
 };
 
 const NavDesktop: React.FC<NavDesktopProps> = ({
@@ -32,6 +30,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   isActive,
   showIntro,
   setShowIntro,
+  updateId
 }) => {
   // Selector — whole-store destructure re-rendered the nav on every cart
   // store mutation (selectedItem, checkout step, logistics, ...).
@@ -67,12 +66,7 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
   // to /pages/update/all/:id, FeedItem's own initial-fetch effect can reuse
   // this already-cached page via queryClient.fetchQuery instead of firing an
   // identical second request. See FeedItem.tsx for the consuming side.
-  const { getFeeds } = useUpdates();
-  const { data: latestUpdatesPage } = useQuery({
-    queryKey: updatesQueryKey("all", ""),
-    queryFn: () => getFeeds("all", ""),
-  });
-  const latestUpdateId = latestUpdatesPage?.data?.[0]?._id;
+
 
   return (
     <div className="w-full flex items-center gap-9 h-[100px] lg:px-[30px] text-[14px] font-poppins">
@@ -107,8 +101,8 @@ const NavDesktop: React.FC<NavDesktopProps> = ({
         <li className="lg:block">
           <Link
             href={
-              latestUpdateId
-                ? `/pages/update/all/${latestUpdateId}`
+              updateId
+                ? `/pages/update/all/${updateId}`
                 : "/pages/update/all"
             }
             className={`flex items-center gap-1 opacity-80 ${isActive(

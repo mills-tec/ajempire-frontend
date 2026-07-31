@@ -1,7 +1,10 @@
 "use client";
+import { useUpdates } from "@/api/customHooks";
 import { useAuthStore } from "@/lib/stores/auth-store";
-import { useState } from "react";
+import { updatesQueryKey } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import NavDesktop from "./ui/NavDesktop";
 import NavResponsive from "./ui/NavResponsive";
 
@@ -23,6 +26,12 @@ const Navbar = () => {
   };
 
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const { getFeeds } = useUpdates();
+  const { data: latestUpdatesPage } = useQuery({
+    queryKey: updatesQueryKey("all", ""),
+    queryFn: () => getFeeds("all", ""),
+  });
+  const latestUpdateId = latestUpdatesPage?.data?.[0]?._id;
 
   return (
     <div className=" w-full text-[14px] font-poppins">
@@ -33,6 +42,7 @@ const Navbar = () => {
           isActive={isActive}
           showIntro={showIntro}
           setShowIntro={setShowIntro}
+          updateId={latestUpdateId}
         />
       </div>
 
@@ -41,6 +51,7 @@ const Navbar = () => {
           isLoggedIn={isLoggedIn}
           isActive={isActive}
           showIntro={showIntro}
+          updateId={latestUpdateId}
           setShowIntro={setShowIntro}
         />
       </div>

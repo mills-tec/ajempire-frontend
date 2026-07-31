@@ -11,8 +11,9 @@ import ShippingIcon from "@/components/svgs/ShippingIcon"
 import WishListIcon from "@/components/svgs/WishListIcon"
 import Link from "next/link"
 
-export default function MobileAccountLinks() {
-    const Accountlinks = [
+// Static, has no dependency on props/state — hoisted so it isn't rebuilt
+// (including its JSX icon elements) on every render.
+const Accountlinks = [
         {
             title: "All Orders",
             url: "/pages/ordersandaccount/orders/all",
@@ -68,8 +69,9 @@ export default function MobileAccountLinks() {
             url: "/pages/ordersandaccount/wishlist",
             icon: <WishListIcon className="text-primaryhover" />
         },
-    ]
+]
 
+export default function MobileAccountLinks() {
     return (
         <div className="space-y-4 font-poppins">
             {/* Row 1 */}
