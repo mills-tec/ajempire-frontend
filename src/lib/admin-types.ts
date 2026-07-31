@@ -75,6 +75,12 @@ export interface Product {
   images?: string[];
   cover_image?: string;
   video?: string;
+  // Bunny's transcoding pipeline status for `video`, set by the backend
+  // after the upload attaches — not the frontend's own upload-in-progress
+  // state (see useVideoUploadStore for that). "processing": uploaded, not
+  // yet playable. "finished": playable. "failed": transcoding failed, the
+  // admin needs to reupload. Mirrors Education['videoStatus'].
+  videoStatus?: 'processing' | 'finished' | 'failed';
   stock: number;
   weight?: number;
   sku?: string;

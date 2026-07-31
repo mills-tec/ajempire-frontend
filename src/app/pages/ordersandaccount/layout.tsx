@@ -2,14 +2,17 @@
 
 import { useNotification } from "@/api/customHooks";
 import ExploreInterest from "@/app/components/ExploreInterest";
+import { getBearerToken } from "@/lib/api";
 import { useNotificationStore } from "@/lib/stores/notification-store";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
-import BreadCrumb from "./components/BreadCrumb";
-import SideNav from "./components/SideNav";
 import { SideBarItem, sidebarItems } from "./data/sidebarData";
 
-import { getBearerToken } from "@/lib/api";
+// Desktop-only chrome (hidden lg:block) — split into its own chunk so mobile
+// users don't download/parse/hydrate it as part of this layout's bundle.
+const BreadCrumb = dynamic(() => import("./components/BreadCrumb"));
+const SideNav = dynamic(() => import("./components/SideNav"));
 
 interface LayoutProps {
   children: ReactNode;

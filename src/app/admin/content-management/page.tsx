@@ -205,12 +205,14 @@ const ContentManagementPage = () => {
       if (response.status) {
         // Refresh content list
         fetchContent();
-        setShowDeleteModal(false);
-        setSelectedContent(null);
-        console.log('Content deleted successfully');
+
       } else {
+        toast.error(response.error || 'Failed to delete product');
         console.error('Error deleting content:', response.message);
       }
+
+      setShowDeleteModal(false);
+      setSelectedContent(null);
     } catch (error) {
       console.error('Error deleting content:', error);
     } finally {
@@ -498,7 +500,7 @@ const ContentManagementPage = () => {
               <tr className="bg-gray-50/50">
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Title</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Category</th>
-              
+
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Likes</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider text-center">Comments</th>
                 <th className="p-4 text-xs font-bold text-brand_gray_dark uppercase tracking-wider">Status</th>
@@ -532,7 +534,7 @@ const ContentManagementPage = () => {
                       </div>
                     </td>
                     <td className="p-4 text-sm text-brand_gray_dark/80">{item.category || 'Education'}</td>
-                   
+
                     <td className="p-4 text-sm font-bold text-brand_gray_dark/80 text-center">
                       {Array.isArray(item.likes) ? item.likes.length : (typeof item.likes === 'number' ? item.likes : 0)}
                     </td>

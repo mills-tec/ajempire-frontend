@@ -1,11 +1,5 @@
 "use client";
 import { CategoryCardSkeleton } from "@/app/components/CategoryCardSkeleton";
-import ProductCard from "@/app/components/ProductCard";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { getProductsByCategory } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { useCartStore } from "@/lib/stores/cart-store";
@@ -136,7 +130,7 @@ export default function CategoryPage() {
                             : product.name}
                         </p>
                         <p className="text-[0.65rem] text-brand_purple">
-                          Only {product.stock} left
+                          {product.stock! <= 10 && "Only"} {product.stock} left
                         </p>
                         <div className="flex items-center gap-1">
                           <div className="flex">

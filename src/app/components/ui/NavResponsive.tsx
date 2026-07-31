@@ -1,25 +1,27 @@
-import { HomeIcon } from "@/components/svgs/HomeIcon";
-import Link from "next/link";
+import { CartIcon } from "@/components/svgs/CartIcon";
 import { CategoryIcon } from "@/components/svgs/CategoryIcon";
 import { CustomImgLogo } from "@/components/svgs/CustomImgLogo";
-import { CartIcon } from "@/components/svgs/CartIcon";
+import { HomeIcon } from "@/components/svgs/HomeIcon";
 import { UserIcon } from "@/components/svgs/UserIcon";
-import { useCartStore } from "@/lib/stores/cart-store";
 import { useSearchStore } from "@/lib/search-store";
-import { useRef } from "react";
+import { useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
+import Link from "next/link";
+import { useRef } from "react";
 
 type NavResponsiveProps = {
   isLoggedIn: boolean;
   isActive: (path: string) => string;
   showIntro: boolean;
   setShowIntro: (val: boolean) => void;
+  updateId: string;
 };
 const NavResponsive = ({
   isLoggedIn,
   isActive,
   showIntro: _showIntro,
   setShowIntro: _setShowIntro,
+  updateId
 }: NavResponsiveProps) => {
   // Selectors — the whole-store destructures re-rendered the always-mounted
   // nav on every cart/search store mutation (e.g. clicking any product card).
@@ -56,7 +58,11 @@ const NavResponsive = ({
         <li>
           {isActive("/pages/update/all") ? (
             <Link
-              href="/pages/update/all"
+              href={
+                updateId
+                  ? `/pages/update/all/${updateId}`
+                  : "/pages/update/all"
+              }
               className={`${clickzome} flex flex-col items-center ${isActive(
                 "/pages/update/all"
               )}`}

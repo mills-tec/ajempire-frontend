@@ -6,7 +6,7 @@ import ProductItem from "@/components/ProductItem";
 import Skeleton from "@/components/Skeleton";
 import { getExploreInterest } from "@/lib/api";
 import { Product } from "@/lib/types";
-import { ITEMS_TO_APPEND, shuffleArray } from "@/lib/utils";
+import { ITEMS_TO_APPEND } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import BannerPlaceholder from "./BannerPlaceholder";
 
@@ -55,7 +55,6 @@ export default function ExploreInterest() {
         endlessLoaderComponent={(ref) => (
           <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
         )}
-        shuffle={shuffleArray}
         staleTime={Infinity}
         scrollRestorationKey="explore-interest-scroll-y"
         gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"

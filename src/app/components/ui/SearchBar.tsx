@@ -32,8 +32,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
   const [placeholderClass, setPlaceholderClass] = useState(
     "placeholder:animate-placeholderFromBottom",
   );
-
-  const { searchByImage, searchByImageLoading } = useProduct();
+  const [searchByImageLoading, setSearchByImageLoading] = useState<boolean>(false);
+  const { searchByImage } = useProduct();
 
   // Selected individually rather than destructuring the whole store, so this
   // component only re-renders when these specific fields change — not on
@@ -126,6 +126,7 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
     if (!file) return;
     const generation = ++searchGenerationRef.current;
     try {
+      setSearchByImageLoading(true)
       const data: Product[] | undefined = await searchByImage(file);
       // A newer search (another image upload, or a text search) started
       // while this request was in flight, or the request itself failed —
@@ -136,6 +137,8 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
       router.push(`/search?type=image`);
     } catch (err) {
       console.error(err);
+    }finally{
+      setSearchByImageLoading(false);
     }
   };
 
@@ -174,11 +177,11 @@ const SearchBar = ({ showCam = true }: { showCam?: boolean }) => {
                 {/* Mobile: CameraSnap, Desktop: CameraIcon */}
                 <CameraSnap
                   className="w-6 lg:hidden cursor-pointer"
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() =>  !searchByImageLoading && fileRef.current?.click()}
                 />
                 <CameraIcon
                   className="w-6 cursor-pointer hidden lg:block"
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() => !searchByImageLoading && fileRef.current?.click()}
                 />
               </>
             )}
