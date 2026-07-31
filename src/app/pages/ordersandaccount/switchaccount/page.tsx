@@ -5,15 +5,17 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { getInitials } from "@/lib/utils";
 import { Check, Plus } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function SwitchAccount() {
-  const savedAccounts =
-    typeof window !== "undefined"
-      ? localStorage.getItem("savedAccounts")
-      : null;
-  const accounts = savedAccounts ? JSON.parse(savedAccounts) : [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("savedAccounts");
+    setAccounts(raw ? JSON.parse(raw) : []);
+  }, [showIntro]); // re-read on mount and after the add-account modal closes
   const { setUser, user } = useAuthStore();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
