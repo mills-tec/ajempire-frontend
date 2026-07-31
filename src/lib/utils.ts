@@ -50,24 +50,49 @@ export function getRatingStats(arr: Review[]) {
   return { counts, normalized };
 }
 
+export type StoredUser = {
+  id: string;
+  fullname: string;
+  email: string;
+};
+
+export type SavedAccount = {
+  token: string;
+  user: StoredUser;
+  email: string;
+};
+
+type RawBackendUser = {
+  _id?: string;
+  id?: string;
+  fullname: string;
+  email: string;
+};
+
 export const saveAccounts = (account: {
   token: string;
-  user: { id: string; name: string; email: string };
+  user: RawBackendUser;
   email: string;
 }) => {
-  if (localStorage.getItem("savedAccounts")) {
-    const savedAccounts: { token: string; user: { id: string; name: string; email: string }; email: string }[] =
-      JSON.parse(localStorage.getItem("savedAccounts")!);
-    if (
-      !savedAccounts.some((savedAccount) => savedAccount.email == account.email)
-    ) {
-      localStorage.setItem(
-        "savedAccounts",
-        JSON.stringify([...savedAccounts, account]),
-      );
+  const normalizedUser: StoredUser = {
+    id: account.user._id ?? account.user.id ?? "",
+    fullname: account.user.fullname,
+    email: account.user.email,
+  };
+  const normalizedAccount: SavedAccount = {
+    token: account.token,
+    user: normalizedUser,
+    email: account.email.toLowerCase(),
+  };
+
+  const raw = localStorage.getItem("savedAccounts");
+  if (raw) {
+    const savedAccounts: SavedAccount[] = JSON.parse(raw);
+    if (!savedAccounts.some((a) => a.email.toLowerCase() === normalizedAccount.email)) {
+      localStorage.setItem("savedAccounts", JSON.stringify([...savedAccounts, normalizedAccount]));
     }
   } else {
-    localStorage.setItem("savedAccounts", JSON.stringify([account]));
+    localStorage.setItem("savedAccounts", JSON.stringify([normalizedAccount]));
   }
 };
 
