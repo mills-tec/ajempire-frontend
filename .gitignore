@@ -20,6 +20,9 @@
 # production
 /build
 
+# load testing
+load-test.js
+
 # misc
 .DS_Store
 *.pem

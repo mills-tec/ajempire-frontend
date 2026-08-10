@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
+import Link from "next/link";
 
 const faqData = [
   {
@@ -11,12 +12,12 @@ const faqData = [
       {
         question: "How do I place an order?",
         answer:
-          "Browse products, add items to your cart, proceed to checkout, enter your shipping details, and complete payment securely.",
+          "Browse the shop or tap Categories to find what you want. Tap the item, then add it to your cart. When you’re ready, open your cart and tap checkout. Enter your delivery address, choose how you want to pay, and confirm. You’ll get a message confirming your order. It’s that simple. ",
       },
       {
         question: "Can I track my order?",
         answer:
-          "Yes. Once your order is confirmed, you can track its status from your Orders page inside your account.",
+          "Yes. Go to your Profile and tap “All Orders” to see everything you’ve bought. You can also tap Processing, Shipped, or Delivered to see the stage your order is at. Once we send your order out, we’ll send you a tracking link by email or SMS so you can follow it till it reaches you.",
       },
     ],
   },
@@ -26,12 +27,12 @@ const faqData = [
       {
         question: "What payment methods are supported?",
         answer:
-          "We currently support secure payments via Paystack. More payment options will be added over time to give you greater flexibility.",
+          "We accept payment through Paystack, which is safe and secure. You can pay with your debit or credit card, by bank transfer, straight from your bank, or with USSD on your phone. All prices are in Naira. We do not accept payment on delivery.",
       },
       {
         question: "Why was my payment declined?",
         answer:
-          "Payments may fail due to insufficient funds, incorrect details, or bank restrictions. Please confirm your details or contact your bank.",
+          "A payment can fail for a few normal reasons: not enough money in the account, a wrong card detail, your bank blocking the payment, or a weak network. It’s usually nothing to worry about. Check your details and try again, or use another method like bank transfer or USSD. If money left your account but your order didn’t confirm, contact us and we’ll sort it out.",
       },
     ],
   },
@@ -41,12 +42,22 @@ const faqData = [
       {
         question: "How do refunds work?",
         answer:
-          "Refunds are processed once your return is approved. Funds are returned to your original payment method within a few business days.",
+          "If something is wrong with your order — it came damaged, faulty, or we sent the wrong item — you can ask for a refund or replacement. Once we receive the item back and check it, we send your money back the same way you paid. Card and transfer refunds usually take a few working days. Bank delays can sometimes make it take a little longer.",
       },
       {
         question: "What is the Return & Refund Policy?",
         answer:
-          "You may request a return within the allowed return window. Items must meet eligibility conditions before refunds are processed.",
+          "You have 24 hours after delivery to report a problem and ask to return an item. Use the “Returns” button in your Profile to start. The item should be unused and in its original pack. If the fault is ours, we cover the return delivery cost and give you a replacement or refund. Some items can’t be returned once opened, like nail polish, used kits, and sealed cosmetics, for hygiene reasons — unless they came to you damaged. Tap to read the full policy.",
+      },
+    ],
+  },
+  {
+    category: "COOKIES & TRACKING",
+    questions: [
+      {
+        question: "Do you use cookies? ",
+        answer:
+          "Yes. Cookies are small files that help our website remember you — like keeping items in your cart and helping the site load faster. Some cookies help us see what people like so we can improve. You can control or turn off cookies in your browser settings anytime. Tap to read the full policy.",
       },
     ],
   },
@@ -56,7 +67,7 @@ const faqData = [
       {
         question: "How does shipping work?",
         answer:
-          "Shipping timelines depend on your location and selected delivery method. Estimated delivery time is shown at checkout.",
+          "We deliver to all 36 states and Abuja. After you pay, we prepare your order within 24 hours. Delivery inside Nigeria usually takes 2 to 3 working days, depending on where you are. Your delivery fee is shown at checkout before you pay. Once we send it out, you get a tracking link to follow your package.",
       },
     ],
   },
@@ -66,7 +77,7 @@ const faqData = [
       {
         question: "How is my account protected?",
         answer:
-          "We use secure authentication systems and encrypted transactions to protect your account and personal information.",
+          "Your account is protected with encryption, so your details stay private. Your password is stored in a scrambled way that even we cannot read. Please keep your password to yourself and never share it. If you ever notice something strange on your account, tell us at once and we’ll help you secure it.",
       },
     ],
   },
@@ -77,12 +88,12 @@ const faqData = [
       {
         question: "What are the Community Standards?",
         answer:
-          "Users must engage respectfully and comply with platform rules to maintain a safe marketplace environment.",
+          "We want everyone to be honest and respectful. Don’t post fake reviews, don’t harass other people, and don’t use bad or offensive language. Treat other shoppers and our staff well. Anyone who abuses the platform may have their account removed.",
       },
       {
         question: "What is the Acceptable Use Policy?",
         answer:
-          "The platform must not be used for fraudulent, abusive, or illegal activities.",
+          "This is simply the list of things you must not do on our platform. Don’t use it for fraud or anything illegal, don’t open many accounts to cheat promotions, don’t try to hack or damage the site, and don’t sell fake products. Use the platform honestly and you’re fine.",
       },
     ],
   },
@@ -92,7 +103,7 @@ const faqData = [
       {
         question: "What is the Privacy Policy?",
         answer:
-          "Our Privacy Policy explains how we collect, use, and protect your personal information.",
+          "This explains how we handle your personal information. We collect only what we need to serve you — like your name, address, and order details — and we keep it safe. We don’t sell your data to anyone. You can ask to see your data or have it deleted at any time.",
       },
       {
         question: "What are the Terms & Conditions?",
@@ -102,7 +113,7 @@ const faqData = [
       {
         question: "What Legal Agreements apply?",
         answer:
-          "Legal Agreements include dispute resolution terms, compliance obligations, and user responsibilities.",
+          "These are all our official policies put together — our Terms, Privacy Policy, Refund Policy, Shipping Policy, and more. They also explain what to do if there’s a disagreement and how we follow Nigerian consumer law. Tap to view them all.",
       },
     ],
   },
@@ -244,9 +255,12 @@ export default function SupportPage() {
                 Understand how Aj‑Empire collects, stores, and protects your
                 personal data in compliance with applicable regulations.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                Read Privacy Policy
-              </button>
+              <Link
+                href="/pages/support/privacy-policy"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                Read Privacy Policy →
+              </Link>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -257,9 +271,12 @@ export default function SupportPage() {
                 Review the rules and guidelines governing the use of Aj‑Empire
                 services, purchases, and platform access.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                Read Terms & Conditions
-              </button>
+              <Link
+                href="/pages/support/terms-conditions"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                Read Terms &amp; Conditions →
+              </Link>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -270,9 +287,12 @@ export default function SupportPage() {
                 Access information about dispute resolution, compliance
                 standards, refund obligations, and platform policies.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                View Legal Agreements
-              </button>
+              <Link
+                href="/pages/support/legal-agreements"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                View Legal Agreements →
+              </Link>
             </div>
           </div>
 
@@ -323,8 +343,11 @@ export default function SupportPage() {
             Our support team is here to assist you with orders, payments,
             refunds, legal questions, and more.
           </p>
-          <button className="bg-white text-[#FF008C] px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition">
-            Start Live Chat (Coming Soon)
+          <button
+            onClick={() => (window as any).Tawk_API?.maximize?.()}
+            className="bg-white text-[#FF008C] px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition"
+          >
+            Start Live Chat
           </button>
         </div>
       </div>

@@ -1,11 +1,11 @@
 "use client";
-import { globalUrl } from "@/api/api";
-import { API_URL, getBearerToken } from "@/lib/api";
-import { useCartStore } from "@/lib/stores/cart-store";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import Spinner from "./Spinner";
+import { toast } from "sonner";
+import { API_URL, getBearerToken } from "@/lib/api";
+import { globalUrl } from "@/api/api";
+import { useCartStore } from "@/lib/stores/cart-store";
 
 interface ShippingAdressProps {
   setIsadress?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -216,12 +216,17 @@ export default function ShippingAdressForm({
       // error and the retry option along with it).
       console.error("❌ Error updating address:", error);
 
-      const axiosError = error as { response?: { data?: { message?: string } } };
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
       if (axiosError.response) {
         console.log("🧾 Server says:", axiosError.response.data);
-        toast.error(axiosError.response.data?.message || "Something went wrong!", {
-          position: "top-right",
-        });
+        toast.error(
+          axiosError.response.data?.message || "Something went wrong!",
+          {
+            position: "top-right",
+          },
+        );
       } else {
         toast.error("Network or unexpected error", { position: "top-right" });
       }
