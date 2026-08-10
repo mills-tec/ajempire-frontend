@@ -8,10 +8,14 @@ export function buildFeedMetadata(
         mediaUrl?: string;
         mediaType?: string;
         thumbnailUrl?: string;
+        image?: string;
     },
     url: string,
 ): Metadata {
-    const image = feed.mediaType === "video" ? feed.thumbnailUrl : feed.mediaUrl;
+    // `image` is the backend's thumbnail/cover for every post type (including
+    // videos). `thumbnailUrl` was never part of the Feed type so it was always
+    // undefined, producing an empty OG image array for every video post.
+    const image = feed.image ?? (feed.mediaType === "video" ? feed.thumbnailUrl : feed.mediaUrl);
     const description = feed.description?.slice(0, 155);
 
     return {
