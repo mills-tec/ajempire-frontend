@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
+import Link from "next/link";
 
 const faqData = [
   {
@@ -47,6 +48,16 @@ const faqData = [
         question: "What is the Return & Refund Policy?",
         answer:
           "You have 24 hours after delivery to report a problem and ask to return an item. Use the “Returns” button in your Profile to start. The item should be unused and in its original pack. If the fault is ours, we cover the return delivery cost and give you a replacement or refund. Some items can’t be returned once opened, like nail polish, used kits, and sealed cosmetics, for hygiene reasons — unless they came to you damaged. Tap to read the full policy.",
+      },
+    ],
+  },
+  {
+    category: "COOKIES & TRACKING",
+    questions: [
+      {
+        question: "Do you use cookies? ",
+        answer:
+          "Yes. Cookies are small files that help our website remember you — like keeping items in your cart and helping the site load faster. Some cookies help us see what people like so we can improve. You can control or turn off cookies in your browser settings anytime. Tap to read the full policy.",
       },
     ],
   },
@@ -244,9 +255,12 @@ export default function SupportPage() {
                 Understand how Aj‑Empire collects, stores, and protects your
                 personal data in compliance with applicable regulations.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                Read Privacy Policy
-              </button>
+              <Link
+                href="/pages/support/privacy-policy"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                Read Privacy Policy →
+              </Link>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -257,9 +271,12 @@ export default function SupportPage() {
                 Review the rules and guidelines governing the use of Aj‑Empire
                 services, purchases, and platform access.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                Read Terms & Conditions
-              </button>
+              <Link
+                href="/pages/support/terms-conditions"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                Read Terms &amp; Conditions →
+              </Link>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition">
@@ -270,9 +287,12 @@ export default function SupportPage() {
                 Access information about dispute resolution, compliance
                 standards, refund obligations, and platform policies.
               </p>
-              <button className="text-[#FF008C] text-sm font-medium hover:underline">
-                View Legal Agreements
-              </button>
+              <Link
+                href="/pages/support/legal-agreements"
+                className="text-[#FF008C] text-sm font-medium hover:underline"
+              >
+                View Legal Agreements →
+              </Link>
             </div>
           </div>
 
@@ -323,8 +343,11 @@ export default function SupportPage() {
             Our support team is here to assist you with orders, payments,
             refunds, legal questions, and more.
           </p>
-          <button className="bg-white text-[#FF008C] px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition">
-            Start Live Chat (Coming Soon)
+          <button
+            onClick={() => (window as any).Tawk_API?.maximize?.()}
+            className="bg-white text-[#FF008C] px-6 py-3 rounded-full text-sm font-medium hover:opacity-90 transition"
+          >
+            Start Live Chat
           </button>
         </div>
       </div>
