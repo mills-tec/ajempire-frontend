@@ -51,7 +51,7 @@ export function FeedSkeleton() {
     <>
       {Array.from({ length: ITEMS_TO_APPEND }).map((_, i) => (
         <div
-          className="space-y-1 h-screen bg-gray-200 flex flex-col relative md:rounded-2xl overflow-hidden"
+          className="space-y-1 h-[calc(100dvh-160px)] md:h-screen bg-gray-200 flex flex-col relative md:rounded-2xl overflow-hidden"
           key={i}
         >
           <div
@@ -370,7 +370,7 @@ const FeedCard = memo(function FeedCard({
         )}
 
         {/* Overlay info */}
-        <div className="absolute top-[85%]  left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
+        <div className="absolute bottom-20 md:top-[85%] md:bottom-auto left-0 right-0 bg-gradient-to-t px-5 text-white flex flex-col gap-4">
           <div onClick={handleToggleDesc} className="w-[80%]">
             <p className="text-xl md:text-sm font-medium mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
               {item.title}
@@ -1902,23 +1902,23 @@ function FeedContent({
     <>
       <PullToRefreshHeader />
 
-      <PullToRefreshContainer>
-        <section className="md:flex w-full pb-10">
+      <PullToRefreshContainer className="h-full">
+        <section className="h-full md:flex w-full md:pb-10">
           {/* Feed scroll container */}
           <div
             ref={containerRef}
-            className="w-full h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
+            className="w-full h-full md:h-screen grid gap-3 overflow-y-auto no-scrollbar md:overflow-y-hidden"
             style={{ scrollSnapType: "y mandatory" }}
           >
             {showSkeleton ? (
-              <div className="w-full h-screen flex flex-col justify-center items-center gap-3 overflow-y-hidden no-scrollbar">
-                <div className="w-full md:w-[40%] h-full">
+              <div className="w-full h-[calc(100dvh-160px)] md:h-screen flex flex-col justify-center items-center gap-3 overflow-y-hidden no-scrollbar">
+                <div className="w-full md:w-[40%] h-[calc(100dvh-160px)] md:h-full">
                   <FeedSkeleton />
                 </div>
 
               </div>
             ) : slots.length === 0 ? (
-              <div className="h-screen flex items-center justify-center text-sm text-gray-500">
+              <div className="h-[calc(100dvh-160px)] md:h-screen flex items-center justify-center text-sm text-gray-500">
                 No feeds available
               </div>
             ) : (
@@ -1945,7 +1945,7 @@ function FeedContent({
                       key={slot.key}
                       id={`feed-${index}`}
                       ref={getItemRefCallback(index)}
-                      className={`flex gap-4 relative items-center duration-300 h-[85vh] md:h-[88vh] w-full ${comment.show
+                      className={`flex gap-4 relative items-center duration-300 h-[calc(100dvh-160px)] md:h-[88vh] w-full ${comment.show
                         ? "md:justify-start md:pl-[10%]"
                         : "md:justify-center"
                         } section`}
