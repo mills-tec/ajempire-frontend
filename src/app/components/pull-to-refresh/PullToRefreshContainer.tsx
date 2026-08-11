@@ -4,13 +4,16 @@ import { usePullToRefresh } from "./PullToRefreshProvider";
 
 export default function PullToRefreshContainer({
     children,
+    className = "",
 }: {
     children: React.ReactNode;
+    className?: string;
 }) {
     const { pull, refreshing } = usePullToRefresh();
 
     return (
         <div
+            className={className}
             style={{
                 transform: `translateY(${pull}px)`,
                 // transition: refreshing ? "transform 0.25s ease" : "none",

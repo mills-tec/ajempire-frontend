@@ -29,8 +29,7 @@ export default async function Page({
 }) {
     const { type } = await params;
     return (
-        <div>
-
+        <div className="h-full">
             {type !== "gallery" ? <FeedItem /> : <Gallery />}
         </div>
     );
