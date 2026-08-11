@@ -1,4 +1,5 @@
 import NotificationWrapper from "@/components/NotificationWrapper";
+import TawkToWidget from "@/components/TawkToWidget";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -107,6 +108,7 @@ export default function RootLayout({
           </SocketProvider>
         </Providers>
         <SpeedInsights />
+        <TawkToWidget />
       </body>
     </html>
   );
