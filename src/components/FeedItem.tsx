@@ -24,6 +24,7 @@ import { getCountdown, ITEMS_TO_APPEND, updatesQueryKey } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import Hls from "hls.js";
 import {
+  Bookmark,
   Heart,
   LoaderCircle, SendHorizonal
 } from "lucide-react";
@@ -213,6 +214,7 @@ type FeedCardProps = {
   isLoaded: boolean;
   isPlaying: boolean;
   hasLiked: boolean;
+  hasWatchlisted: boolean;
   commentCount: number;
   itemInWishlist: boolean;
   isDescExpanded: boolean;
@@ -233,6 +235,7 @@ type FeedCardProps = {
   onToggleComment: () => void;
   onShare: () => void;
   onWishlistToggle: (product: Product) => void;
+  onWatchlistToggle: (id: string) => void;
 };
 
 const FeedCard = memo(function FeedCard({
@@ -240,6 +243,7 @@ const FeedCard = memo(function FeedCard({
   index,
   isLoaded,
   hasLiked,
+  hasWatchlisted,
   commentCount,
   itemInWishlist,
   isDescExpanded,
@@ -253,6 +257,7 @@ const FeedCard = memo(function FeedCard({
   onToggleComment,
   onShare,
   onWishlistToggle,
+  onWatchlistToggle,
 }: FeedCardProps) {
   const handleMediaLoaded = useCallback(() => onMediaLoaded(index), [onMediaLoaded, index]);
 
@@ -261,11 +266,16 @@ const FeedCard = memo(function FeedCard({
   const handleWishlist = useCallback(() => {
     if (item.product) onWishlistToggle(item.product);
   }, [onWishlistToggle, item.product]);
+  const handleWatchlist = useCallback(() => onWatchlistToggle(item._id), [onWatchlistToggle, item._id]);
   // Gallery posts carry no engagement surface — gating on `item.likes`/
   // `item.comments` being truthy doesn't work for this, since an empty
   // array (`[]`, still truthy) renders the button anyway; this needs an
   // explicit type check.
   // const isGallery = item.type === "gallery";
+  // Watchlist is backed by a dedicated {user, mediaId, mediaType} collection
+  // whose mediaType enum is only ["flashsale", "education"] — gallery posts
+  // have nowhere to be recorded there, so the button is hidden for them.
+  const canWatchlist = item.type !== "gallery";
 
   return (
     <>
@@ -486,6 +496,20 @@ const FeedCard = memo(function FeedCard({
             <Favorite fill={itemInWishlist ? "#FFF" : "#FF81C6"} />
           </div>
         )}
+
+        {canWatchlist && (
+          <div
+            className={`w-10 h-10 ${hasWatchlisted ? "bg-yellow-400" : "bg-white"
+              } rounded-full flex cursor-pointer items-center justify-center duration-300 scale-90 hover:scale-100`}
+            onClick={handleWatchlist}
+          >
+            <Bookmark
+              size={22}
+              color={hasWatchlisted ? "#FFF" : "#FF81C6"}
+              fill={hasWatchlisted ? "#FFF" : "none"}
+            />
+          </div>
+        )}
       </div>
     </>
   );
@@ -574,6 +598,8 @@ function FeedContent({
     likeUpdate,
     likeUpdateComment,
     deleteUpdateComment,
+    addToWatchlist,
+    removeFromWatchlist,
     getFeeds,
   } = useUpdates();
   const openModal = useModalStore((s) => s.openModal);
@@ -597,8 +623,8 @@ function FeedContent({
   // every card in the list to re-render on every unrelated state change.
   // Mirroring the latest functions in a ref keeps the callbacks that use
   // them stable across renders instead of recreating every time.
-  const apiRef = useRef({ addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, getFeeds });
-  apiRef.current = { addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, getFeeds };
+  const apiRef = useRef({ addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, addToWatchlist, removeFromWatchlist, getFeeds });
+  apiRef.current = { addComments, likeUpdate, likeUpdateComment, deleteUpdateComment, addToWatchlist, removeFromWatchlist, getFeeds };
 
   // ── State ───────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true);
@@ -1771,6 +1797,40 @@ function FeedContent({
     [checkIfUserLoggedIn, user, updateFeedById],
   );
 
+  // Same optimistic-update/rollback shape as likePost, against the
+  // dedicated /watchlist endpoint (separate add/remove calls rather than a
+  // single toggle, since that's the backend's own contract for it).
+  const toggleWatchlist = useCallback(
+    async (_id: string) => {
+      if (!checkIfUserLoggedIn("manage your watchlist")) return;
+
+      const targetFeed = originalFeedsRef.current.find((f) => f._id === _id);
+      if (!targetFeed) return;
+
+      const wasWatchlisted = targetFeed.addedToWatchlist;
+      const newWatchlisted = !wasWatchlisted;
+
+      updateFeedById(_id, (feed) => ({
+        ...feed,
+        addedToWatchlist: newWatchlisted,
+      }));
+
+      try {
+        if (newWatchlisted) {
+          await apiRef.current.addToWatchlist({ feedId: _id, type: targetFeed.type });
+          toast.success("Added to watchlist", { position: "bottom-right" });
+        } else {
+          await apiRef.current.removeFromWatchlist({ feedId: _id, type: targetFeed.type });
+          toast.success("Removed from watchlist", { position: "bottom-right" });
+        }
+      } catch (err) {
+        updateFeedById(_id, (feed) => ({ ...feed, addedToWatchlist: wasWatchlisted }));
+        console.error("Failed to update watchlist:", err);
+      }
+    },
+    [checkIfUserLoggedIn, updateFeedById],
+  );
+
   const likeComment = useCallback(
     async (_id: string) => {
       if (!checkIfUserLoggedIn("like comments")) return;
@@ -1924,11 +1984,11 @@ function FeedContent({
             ) : (
               <div className="grid gap-3 animate-placeholderFromBottom">
                 {slots.map((slot, index) => {
-                
                   const item = slot.feed;
                   const isLoaded = loadedIndex.has(index);
                   const isPlaying = playingMap[index] ?? false;
-                  const hasLiked = item.liked; 
+                  const hasLiked = item.liked;
+                  const hasWatchlisted = item.addedToWatchlist;
                   const commentCount =
                     item.commentCount ??
                     (item.comments ? getNumberOfComments(item.comments) : 0);
@@ -1957,6 +2017,7 @@ function FeedContent({
                         isLoaded={isLoaded}
                         isPlaying={isPlaying}
                         hasLiked={hasLiked}
+                        hasWatchlisted={hasWatchlisted}
                         commentCount={commentCount}
                         itemInWishlist={itemInWishlist}
                         isDescExpanded={expandedDesc.has(index)}
@@ -1977,6 +2038,7 @@ function FeedContent({
                         onToggleComment={toggleCommentPanel}
                         onShare={openShare}
                         onWishlistToggle={handleWishlistToggle}
+                        onWatchlistToggle={toggleWatchlist}
                       />
                     </div>
                   );
