@@ -59,7 +59,7 @@ export default function PaymentConfirmation() {
                   />
                 </svg>
               </div>
-              <p className="mb-4 font-poppins">We've received your payment request and are currently awaiting confirmation. You'll receive a notification as soon as it has been confirmed.</p>
+              <p className="mb-4 font-poppins">{"We've received your payment request and are currently awaiting confirmation. You'll receive a notification as soon as it has been confirmed."}</p>
             </div>
             <button
               onClick={() =>
