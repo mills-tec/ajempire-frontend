@@ -475,7 +475,6 @@ export async function getUsersWishlist(): Promise<{
       Authorization: `Bearer ${token}`,
     },
   });
-  console.log(res.status);
   if (!res.ok) throw new Error("Failed to get to wishlist");
   return res.json();
 }

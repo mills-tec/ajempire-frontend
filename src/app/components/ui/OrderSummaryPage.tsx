@@ -12,8 +12,7 @@ import { toast } from "sonner";
 import Spinner from "../Spinner";
 
 export default function OrderSummaryPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCartSynced, setIsCartSynced] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   // Selectors — the whole-store destructure re-rendered this page on every
   // cart-store mutation (item sync flags, checkout step, selected item, ...).
   const getSelectedItems = useCartStore((s) => s.getSelectedItems);
@@ -21,84 +20,6 @@ export default function OrderSummaryPage() {
   const requestToken = useCartStore((s) => s.requestToken);
   const [isLogisticsMode, setIsLogisticsMode] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const syncCart = async () => {
-      setIsLoading(true);
-      const token = getBearerToken();
-
-      if (!token) {
-        if (isMounted) {
-          setIsCartSynced(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      const selectedItems = getSelectedItems();
-      if (!selectedItems || selectedItems.length === 0) {
-        toast.error("No selected items to sync for checkout.");
-        if (isMounted) {
-          setIsCartSynced(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const itemsPayload = selectedItems.map((item) => ({
-          productId: item._id,
-          qty: item.quantity,
-          variants: item.selectedVariants?.length
-            ? item.selectedVariants.map((variant) => ({
-                name: variant.name,
-                value: variant.value,
-              }))
-            : [],
-        }));
-        
-
-        // await axios.delete(
-        //   process.env.NEXT_PUBLIC_BACKEND_URL +  "/api/cart/",
-        //   {
-        //     headers: {
-        //       Authorization: `Bearer ${token}`,
-        //       "Content-Type": "application/json",
-        //     },
-        //     data: { items: itemsPayload },
-        //   },
-        // );
-
-        // await axios.post(
-        //   process.env.NEXT_PUBLIC_BACKEND_URL + "/api/cart/",
-        //   { items: itemsPayload },
-        //   {
-        //     headers: {
-        //       Authorization: `Bearer ${token}`,
-        //       "Content-Type": "application/json",
-        //     },
-        //   },
-        // );
-
-      } catch (error) {
-        console.error("Error syncing cart:", error);
-        toast.error("Failed to sync cart session.");
-      } finally {
-        if (isMounted) {
-          setIsCartSynced(true);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    syncCart();
-
-    return () => {
-      isMounted = false;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const initiateCheckout = useCallback(async (couponCode: string) => {
     setIsLoading(true);
     const token = getBearerToken();
@@ -141,12 +62,12 @@ export default function OrderSummaryPage() {
           paymentMethod,
           logistics: isLogisticsMode
             ? {
-                request_token: requestToken,
-                courier_id: selectedLogistic?.courier_id,
-                service_code: selectedLogistic?.courier_id,
-              }
+              request_token: requestToken,
+              courier_id: selectedLogistic?.courier_id,
+              service_code: selectedLogistic?.courier_id,
+            }
             : null,
-            couponCode
+          couponCode
         },
         {
           headers: {
@@ -350,16 +271,10 @@ export default function OrderSummaryPage() {
             </div>
           )}
         </div>
-        {isCartSynced ? (
-          <CheckoutSummeryCard
-            initiateCheckout={(couponCode)=> initiateCheckout(couponCode)}
-            logisticsStatus={isLogisticsMode}
-          />
-        ) : (
-          <div className="w-full p-20 font-poppins text-[14px] border border-gray-200 rounded-md flex flex-col justify-center items-center gap-4 text-gray-400">
-            <p className="animate-pulse">Syncing checkout session...</p>
-          </div>
-        )}
+        <CheckoutSummeryCard
+          initiateCheckout={(couponCode) => initiateCheckout(couponCode)}
+          logisticsStatus={isLogisticsMode}
+        />
       </div>
     </div>
   );

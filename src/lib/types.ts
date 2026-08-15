@@ -234,6 +234,7 @@ export interface CommentData {
 }
 
 export interface Feed {
+  addedToWatchlist: boolean;
   _id: string;
   title: string;
   description: string;
@@ -260,6 +261,15 @@ export interface Feed {
   endDate?: string;
   flashPrice?: number;
   liked: boolean;
+}
+
+// One row from GET /watchlist — `mediaType` here is the watchlisted post's
+// own category (flashsale/education), NOT `media.mediaType` (image/video).
+export interface WatchlistEntry {
+  _id: string;
+  mediaType: "flashsale" | "education";
+  addedAt: string;
+  media: Feed;
 }
 
 export interface Notification {

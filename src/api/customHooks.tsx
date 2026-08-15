@@ -2,7 +2,7 @@
 import { API_URL, getBearerToken } from "@/lib/api";
 import { useSearchStore } from "@/lib/search-store";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
-import type { Product } from "@/lib/types";
+import type { Product, WatchlistEntry } from "@/lib/types";
 import axios, { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -451,6 +451,83 @@ export const useUpdates = () => {
       }
     }
   };
+
+  const addToWatchlist = async (data: { feedId: string; type: string }) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        await postData(
+          `/watchlist`,
+          { mediaId: data.feedId, mediaType: data.type },
+          config,
+        );
+
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const removeFromWatchlist = async (data: { feedId: string; type: string }) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        await deleteData(
+          `/watchlist?mediaId=${data.feedId}&mediaType=${data.type}`,
+          config,
+        );
+
+        return true;
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const getWatchlist = async (cursor: string, limit: number) => {
+    if (!loading) {
+      setLoading(true);
+      try {
+        const req = await getData(
+          `/watchlist?cursor=${cursor}&limit=${limit}`,
+          config,
+        );
+        return req.data.message as {
+          data: WatchlistEntry[];
+          cursor: string | null;
+          hasMore: boolean;
+        };
+      } catch (err: unknown) {
+        let message;
+        if (err instanceof AxiosError) {
+          message = err.response?.data?.error || "Request failed";
+        } else {
+          message = "Something went wrong.";
+        }
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   return {
     getFeeds,
     loading,
@@ -458,6 +535,9 @@ export const useUpdates = () => {
     likeUpdate,
     likeUpdateComment,
     deleteUpdateComment,
+    addToWatchlist,
+    removeFromWatchlist,
+    getWatchlist,
   };
 };
 
