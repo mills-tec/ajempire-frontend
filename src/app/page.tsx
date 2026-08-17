@@ -10,7 +10,11 @@ import { useSearchStore } from "@/lib/search-store";
 import { useCategoryStore } from "@/lib/stores/category-store";
 import type { Product } from "@/lib/types";
 import { ITEMS_TO_APPEND } from "@/lib/utils";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import HomeHeroSlider from "./components/HomeHeroSlider";
 import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
@@ -41,40 +45,41 @@ const HERO_PRODUCTS_QUERY_KEY = ["hero-products"] as const;
 // Takes queryClient as a parameter (like makeCategoryQueryFn below) rather than
 // reading it from a hook, so the module-level definition can stay hook-free.
 
-const makeProductQueryFn = (queryClient: QueryClient) => async (cursor: string) => {
-  const fetchPage = () => getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
-  const res =
-    cursor === ""
-      ? await queryClient.fetchQuery({
-          queryKey: HERO_PRODUCTS_QUERY_KEY,
-          queryFn: fetchPage,
-        })
-      : await fetchPage();
-  return {
-    items: res?.message?.products ?? EMPTY_PRODUCTS,
-    nextCursor: res?.message?.nextCursor ?? null,
-    hasMore: res?.message?.hasMore ?? !!res?.message?.nextCursor,
+const makeProductQueryFn =
+  (queryClient: QueryClient) => async (cursor: string) => {
+    const fetchPage = () =>
+      getProducts(`limit=${ITEMS_TO_APPEND}&cursor=${cursor}`);
+    const res =
+      cursor === ""
+        ? await queryClient.fetchQuery({
+            queryKey: HERO_PRODUCTS_QUERY_KEY,
+            queryFn: fetchPage,
+          })
+        : await fetchPage();
+    return {
+      items: res?.message?.products ?? EMPTY_PRODUCTS,
+      nextCursor: res?.message?.nextCursor ?? null,
+      hasMore: res?.message?.hasMore ?? !!res?.message?.nextCursor,
+    };
   };
-};
 
 // Category feeds have no server-side pagination — one page, no cursor.
 // We return hasMore:false so InfiniteFeed immediately enters recycle mode,
 // which shuffles and re-appends the category products for endless scroll.
-const makeCategoryQueryFn = (categoryName: string) => async (_cursor: string) => {
-  const res = await getProductsByCategory(categoryName);
+const makeCategoryQueryFn =
+  (categoryName: string) => async (_cursor: string) => {
+    const res = await getProductsByCategory(categoryName);
 
-  return {
-    items: res ?? EMPTY_PRODUCTS,
-    nextCursor: null,
-    hasMore: false,
+    return {
+      items: res ?? EMPTY_PRODUCTS,
+      nextCursor: null,
+      hasMore: false,
+    };
   };
-};
 
 // ── Root component ────────────────────────────────────────────────────────────
 
 export default function Home() {
-
-
   const queryClient = useQueryClient();
   const { selectedCategory } = useCategoryStore();
 
@@ -115,10 +120,7 @@ export default function Home() {
 
   return (
     <PullToRefreshProvider onRefresh={handleRefresh}>
-      <HomeContent
-        heroProducts={heroProducts}
-        isHeroLoading={isHeroLoading}
-      />
+      <HomeContent heroProducts={heroProducts} isHeroLoading={isHeroLoading} />
     </PullToRefreshProvider>
   );
 }
@@ -167,11 +169,15 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
 
   // SSR mount guard — prevents sessionStorage / window access during SSR/PPR
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Category products — used only for the count badge in the filter bar.
   // The actual feed data comes from InfiniteFeed's own internal query.
-  const { data: categoryData, isLoading: isCategoryLoading } = useQuery<Product[]>({
+  const { data: categoryData, isLoading: isCategoryLoading } = useQuery<
+    Product[]
+  >({
     queryKey: ["category-products", selectedCategory?.name],
     queryFn: () => {
       if (!selectedCategory) throw new Error("No category selected");
@@ -235,15 +241,17 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
               re-render only this small bar, not the whole page. */}
           <MobileSearchBar isMounted={isMounted} />
 
-          <div className="mt-[0rem] lg:mt-0 px-[20px] lg:px-10">
-
+          <div className="mt-[0rem] lg:mt-0  lg:px-10">
             {/* Hero slider — only shown when not searching */}
             {!searchActive && (
-              <div className="mx-auto rounded-xl lg:rounded-3xl overflow-hidden mt-6">
+              <div className="mx-auto px-[11px]  rounded-xl lg:rounded-3xl overflow-hidden mt-6">
                 {isHeroLoading ? (
                   <div className="w-full lg:h-[379px] h-[150px] bg-gray-200 animate-pulse rounded-xl lg:rounded-3xl" />
                 ) : (
-                  <HomeHeroSlider products={heroProducts} loading={isHeroLoading} />
+                  <HomeHeroSlider
+                    products={heroProducts}
+                    loading={isHeroLoading}
+                  />
                 )}
               </div>
             )}
@@ -309,7 +317,7 @@ function HomeContent({ heroProducts, isHeroLoading }: HomeContentProps) {
                 <EndlessScrollLoading infiniteRef={ref} hasNextPage={true} />
               )}
               scrollRestorationKey="home-scroll-y"
-              gridClassName="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-2 lg:gap-6"
+              gridClassName="grid px-[10px]  grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-1 lg:gap-6"
               className="mt-8"
             />
           </div>
