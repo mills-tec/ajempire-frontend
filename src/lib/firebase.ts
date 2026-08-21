@@ -35,11 +35,11 @@ export let messaging: Messaging | null = null;
 export const messagingReady: Promise<Messaging | null> =
   typeof window !== "undefined"
     ? isSupported().then((supported) => {
-        if (supported) {
-          messaging = getMessaging(app);
-        }
-        return messaging;
-      })
+      if (supported) {
+        messaging = getMessaging(app);
+      }
+      return messaging;
+    })
     : Promise.resolve(null);
 
 /**
