@@ -110,7 +110,7 @@ export default function Status() {
       try {
         const data = await getOrder(orderId);
         setOrder(data.message as any)
-   
+
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load order");
@@ -124,7 +124,7 @@ export default function Status() {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
 

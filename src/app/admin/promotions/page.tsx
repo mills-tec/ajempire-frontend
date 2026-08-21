@@ -292,7 +292,7 @@ const PromotionsPage = () => {
         let bannerKey = "";
 
         if (bannerFile) {
-     
+
           bannerKey = await uploadImageFileToStorage(bannerFile);
         }
 
@@ -301,7 +301,7 @@ const PromotionsPage = () => {
           ? await updatePromotion(selectedPromotion!._id!, payload)
           : await createPromotion(payload);
 
-        if (response.message) {
+        if (response.status) {
           closeModal();
           refreshCurrentPage();
         } else {

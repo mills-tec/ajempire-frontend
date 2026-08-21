@@ -27,8 +27,21 @@ export type CartItem = Product & {
   selectedVariants: SelectedVariant[];
   selected: boolean;
   synced?: boolean;
-  basePrice: number; 
-  discount: number; 
+  // True once the backend has confirmed it knows about this exact line
+  // item under this account (set alongside synced:true everywhere that
+  // happens). hydrateFromBackend uses this — not just `synced` — to tell
+  // "this item has never existed on the backend before (e.g. added as a
+  // guest), so its quantity should be ADDED to whatever the backend
+  // already has for a matching product" apart from "the backend already
+  // knows this item, this is just a pending edit that hasn't landed yet,
+  // so its quantity should REPLACE the backend's value". Conflating the
+  // two used to double quantities: a normal addItem() upload left `synced`
+  // false forever (no success handler flipped it), so the next hydrate on
+  // any later refresh treated the already-uploaded item as brand new and
+  // summed it with the backend's copy of itself.
+  everSyncedFromBackend?: boolean;
+  basePrice: number;
+  discount: number;
   finalPrice: number
 };
 type AppliedCoupon = {
@@ -96,6 +109,7 @@ function backendItemToCartItem(
     finalPrice: backendItem.finalPrice,
     selectedVariants: backendItem.variants?.options ?? [],
     synced: true,
+    everSyncedFromBackend: true,
   } as CartItem;
 }
 
@@ -244,10 +258,23 @@ export const useCartStore = create<CartStore>()(
         set({ items: current });
 
         if (!getBearerToken()) return;
-        console.log(validItems);
-        addToCart(validItems).catch(() => {
-          toast.error("Couldn't sync cart. Will retry.");
-        });
+        addToCart(validItems)
+          .then(() => {
+            set({
+              items: get().items.map((i) =>
+                validItems.some(
+                  (v) =>
+                    v._id === i._id &&
+                    areVariantsEqual(v.selectedVariants, i.selectedVariants),
+                )
+                  ? { ...i, synced: true, everSyncedFromBackend: true }
+                  : i,
+              ),
+            });
+          })
+          .catch(() => {
+            toast.error("Couldn't sync cart. Will retry.");
+          });
       },
 
 
@@ -282,7 +309,7 @@ export const useCartStore = create<CartStore>()(
               .then(() => {
                 set({
                   items: get().items.map((i) =>
-                    i._id === id ? { ...i, synced: true } : i,
+                    i._id === id ? { ...i, synced: true, everSyncedFromBackend: true } : i,
                   ),
                 });
               })
@@ -333,7 +360,7 @@ export const useCartStore = create<CartStore>()(
               .then(() => {
                 set({
                   items: get().items.map((i) =>
-                    i._id === id ? { ...i, synced: true } : i,
+                    i._id === id ? { ...i, synced: true, everSyncedFromBackend: true } : i,
                   ),
                 });
               })
@@ -453,10 +480,26 @@ export const useCartStore = create<CartStore>()(
           try {
             if (action.type === "add") {
               await addToCart([action.item]);
+              set({
+                items: get().items.map((i) =>
+                  i._id === action.item._id &&
+                  areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
+                    ? { ...i, synced: true, everSyncedFromBackend: true }
+                    : i,
+                ),
+              });
             } else if (action.type === "remove") {
               await removeCartItem(action.id);
             } else if (action.type === "update") {
               await addToCart([action.item]); // reuse API
+              set({
+                items: get().items.map((i) =>
+                  i._id === action.item._id &&
+                  areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
+                    ? { ...i, synced: true, everSyncedFromBackend: true }
+                    : i,
+                ),
+              });
             }
           } catch (err) {
             if (err instanceof Error && err.message.includes("null")) {
@@ -518,13 +561,21 @@ export const useCartStore = create<CartStore>()(
                       local.selectedVariants,
                     ),
                 );
-                const summedQty = match
-                  ? match.qty + local.quantity
-                  : local.quantity;
+                // Only genuinely-new local items (never confirmed on the
+                // backend under this account — e.g. added as a guest)
+                // get added on top of a matching backend quantity. An
+                // item that's already backend-known just has a pending
+                // local edit that hasn't landed yet, so local.quantity is
+                // already the intended absolute value — summing it with
+                // the backend's (stale) copy of itself would double it.
+                const targetQty =
+                  match && !local.everSyncedFromBackend
+                    ? match.qty + local.quantity
+                    : local.quantity;
                 const cap = local.stock || match?.product.stock;
                 return {
                   ...local,
-                  quantity: cap ? Math.min(summedQty, cap) : summedQty,
+                  quantity: cap ? Math.min(targetQty, cap) : targetQty,
                 };
               });
 

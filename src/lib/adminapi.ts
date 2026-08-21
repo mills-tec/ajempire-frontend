@@ -8,6 +8,8 @@ import { PromotionPayload } from '@/app/admin/promotions/types';
 import {
   AddressValidation,
   Admin,
+  AdminNotificationPayload,
+  AdminNotificationRecord,
   AdminNotificationSettings,
   AdminProfile,
   AdminSecuritySettings,
@@ -393,7 +395,32 @@ export const updateAdminPushNotification = (token: string): Promise<ApiResponse<
   body: JSON.stringify({ token }),
 });
 
-export const updateAdminProfile = (data: {name: string}): Promise<ApiResponse<AdminProfile>> =>
+// Fetches the admin's notification list — the REST counterpart to the
+// "get:adminNotifications" / "adminNotifications" socket events AdminNotificationWrapper
+// listens for.
+export const getAdminNotification = (): Promise<ApiResponse<AdminNotificationRecord[]>> =>
+  apiCall('/admin/adminNotifications');
+
+export const markAdminNotificationAsRead = (id: string): Promise<ApiResponse<void>> =>
+  apiCall(`/admin/adminNotifications/${id}/markAsRead`, {
+    method: 'POST',
+  });
+
+export const markAllAdminNotificationsAsRead = (): Promise<ApiResponse<void>> =>
+  apiCall('/admin/adminNotifications/read-all', {
+    method: 'PATCH',
+  });
+
+// Creates a notification for all admins — the counterpart to
+// getAdminNotification's list, and a different endpoint/payload from
+// sendUserNotification (which targets customers, not admins).
+export const sendAdminNotification = (payload: AdminNotificationPayload): Promise<ApiResponse<AdminNotificationRecord>> =>
+  apiCall('/admin/adminNotifications', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateAdminProfile = (data: { name: string }): Promise<ApiResponse<AdminProfile>> =>
   apiCall('/admin/settings/profile', {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -506,7 +533,7 @@ export const deleteBanner = (id: string): Promise<ApiResponse<void>> =>
 
 // Export all interfaces for use in components (re-export from types file)
 export type {
-  Address, AddressValidation, ApiResponse, Banner,
+  Address, AddressValidation, AdminNotificationRecord, ApiResponse, Banner,
   BannerImage, Category, Coupon, CreateCategoryData, CreateCouponData, CreateEducationData, CreateFlashSaleData, CreateProductData, CreateShippingFeeData, Education, FlashSale, LoginCredentials,
   LoginResponse, LogisticsSettings, Order,
   OrderItem, Product, ReturnItem, ReturnRequest, Review, ShippingFee, SystemNotification, UpdateCategoryData, UpdateLogisticsData, UpdateOrderData, UpdateProductData, UpdateReturnData, UpdateShippingFeeData

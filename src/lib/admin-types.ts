@@ -589,6 +589,33 @@ export interface SystemNotification {
   sendPush?: boolean;
 }
 
+// A notification delivered TO an admin (REST list + live socket push) —
+// the receiving-side counterpart to SystemNotification, which is what an
+// admin sends OUT to a user.
+export interface AdminNotificationRecord {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  createdAt: string;
+  link?: string;
+  // Matches AdminNotificationModel's schema — keyed by adminId, not userId
+  // (the user-side Notification model's readBy shape).
+  readBy?: { adminId: string; readAt?: string }[];
+}
+
+// Payload for creating a new admin notification (POST) — matches the
+// backend's addAdminNotification() service signature, which is a different
+// shape from SystemNotification (the admin -> customer send payload).
+export interface AdminNotificationPayload {
+  title: string;
+  message: string;
+  type?: string;
+  priority?: string;
+  metadata?: Record<string, unknown>;
+  expiresAt?: string;
+}
+
 // Banner interfaces
 export interface BannerImage {
   url: string;

@@ -73,6 +73,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
+    // Same nudge as login() — makes SocketProvider drop the admin auth and
+    // reconnect immediately instead of leaving the shared socket
+    // authenticated as the just-logged-out admin.
+    useAuthStore.getState().bumpAdminTokenTick();
     router.push('/admin-login');
   }, [router]);
 
