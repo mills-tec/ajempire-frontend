@@ -23,10 +23,16 @@ const firebaseConfig = {
   measurementId: "G-TXVDN58E4F",
 };
 
+const VAPID_KEY =
+  "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg";
+
 const app = initializeApp(firebaseConfig);
 export let messaging: Messaging | null = null;
 
-const messagingReady: Promise<Messaging | null> =
+// Exported so callers can await FCM support being resolved instead of
+// reading the `messaging` binding above synchronously — on a cold load
+// that binding is still null while isSupported() is in flight.
+export const messagingReady: Promise<Messaging | null> =
   typeof window !== "undefined"
     ? isSupported().then((supported) => {
         if (supported) {
@@ -36,9 +42,52 @@ const messagingReady: Promise<Messaging | null> =
       })
     : Promise.resolve(null);
 
-export const generateToken = async () => {
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return null;
+/**
+ * The browser's current permission, or null when the Notification API
+ * isn't available at all (SSR, insecure origin, unsupported browser).
+ *
+ * "default" means the browser holds no permission for this origin — so
+ * there is no live push subscription on this device, whatever we may have
+ * recorded server-side previously.
+ */
+export const getNotificationPermission = (): NotificationPermission | null => {
+  if (typeof window === "undefined" || !("Notification" in window)) return null;
+  return window.Notification.permission;
+};
+
+/**
+ * Reads the FCM token WITHOUT ever showing a permission prompt.
+ *
+ * Returns null unless permission is already granted, so this is the safe
+ * call to make on every mount: it's a local read of Firebase's cached
+ * token, which is what lets a token *rotation* be noticed without
+ * bothering the user. Asking for permission is the other function's job.
+ */
+export const getExistingPushToken = async (): Promise<string | null> => {
+  if (getNotificationPermission() !== "granted") return null;
+
+  const m = await messagingReady;
+  if (!m) return null;
+
+  try {
+    return await getToken(m, { vapidKey: VAPID_KEY });
+  } catch (err) {
+    console.error("Failed to read FCM token:", err);
+    return null;
+  }
+};
+
+/**
+ * Shows the browser's permission prompt, then returns the token if granted.
+ *
+ * Only call this when the device has nothing registered yet — it is the one
+ * path that can put a prompt in front of the user. FCM support is confirmed
+ * *before* prompting, so we never ask for a permission this browser can't
+ * actually deliver on (the previous version prompted first and only then
+ * discovered messaging was unsupported).
+ */
+export const requestPushPermissionAndToken = async (): Promise<string | null> => {
+  if (getNotificationPermission() === null) return null;
 
   const m = await messagingReady;
   if (!m) {
@@ -46,12 +95,11 @@ export const generateToken = async () => {
     return null;
   }
 
+  const permission = await window.Notification.requestPermission();
+  if (permission !== "granted") return null;
+
   try {
-    const token = await getToken(m, {
-      vapidKey:
-        "BOiu5BhVBfLOqYVGwldGoURG45XxqmB2ttp0K90dXleQxFANcqfzDvLjqEJ23ROExB9Xd7Z4ljAvrs5kY9EyjVg",
-    });
-    return token;
+    return await getToken(m, { vapidKey: VAPID_KEY });
   } catch (err) {
     console.error("Failed to get FCM token:", err);
     return null;

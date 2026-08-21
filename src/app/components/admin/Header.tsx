@@ -2,12 +2,13 @@
 
 import { HomeIcon } from '@/components/svgs/HomeIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { AdminNotification, buildAdminNotifications } from '@/lib/admin-notifications';
-import { getProducts, getReturns, getUserOrders } from '@/lib/adminapi';
+import { AdminNotification } from '@/lib/admin-notifications';
+import { markAdminNotificationAsRead, markAllAdminNotificationsAsRead } from '@/lib/adminapi';
+import { useAdminNotificationStore } from '@/lib/stores/admin-notification-store';
 import { Bell, LogOut, Menu, Package, RotateCcw, ShoppingBag, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface HeaderProps {
     onMenuClick?: () => void;
@@ -18,67 +19,51 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     const router = useRouter();
     const { user, logout } = useAuth();
     const adminRole = user?.role || 'Administrator';
-    const [notifications, setNotifications] = useState<AdminNotification[]>([]);
-    const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+    // Fed by AdminNotificationWrapper — REST fetch on mount + live socket
+    // push into useAdminNotificationStore (src/app/components/admin/AdminNotificationWrapper.tsx).
+    const realNotifications = useAdminNotificationStore((s) => s.notifications);
+    const storeMarkAsRead = useAdminNotificationStore((s) => s.markAsRead);
+    const storeMarkAllAsRead = useAdminNotificationStore((s) => s.markAllAsRead);
+
+    const notifications = useMemo<AdminNotification[]>(
+        () =>
+            realNotifications
+                .map((n) => ({
+                    id: n._id,
+                    title: n.title,
+                    message: n.message,
+                    type: n.type,
+                    createdAt: n.createdAt,
+                    link: n.link,
+                    readBy: n.readBy,
+                }))
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        [realNotifications]
+    );
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const stored = localStorage.getItem('readAdminNotifications');
-        if (stored) {
-            try {
-                setReadNotificationIds(JSON.parse(stored));
-            } catch {
-                setReadNotificationIds([]);
-            }
-        }
-    }, []);
+    const isNotificationUnread = (notification: AdminNotification) =>
+        !!user?.id && !(notification.readBy ?? []).some((r) => r.adminId === user.id);
 
+    // Optimistic — the store updates immediately so the dropdown feels
+    // instant, and the API call persists it server-side.
     const markAsRead = (id: string) => {
-        if (!readNotificationIds.includes(id)) {
-            const updated = [...readNotificationIds, id];
-            setReadNotificationIds(updated);
-            localStorage.setItem('readAdminNotifications', JSON.stringify(updated));
-        }
+        if (!user?.id) return;
+        storeMarkAsRead(id, user.id);
+        markAdminNotificationAsRead(id).then((res) => {
+            if (!res.status) console.error('Failed to persist notification read state:', res.error);
+        });
     };
 
     const markAllAsRead = () => {
-        const allIds = notifications.map(n => n.id);
-        const updated = Array.from(new Set([...readNotificationIds, ...allIds]));
-        setReadNotificationIds(updated);
-        localStorage.setItem('readAdminNotifications', JSON.stringify(updated));
+        if (!user?.id) return;
+        storeMarkAllAsRead(user.id);
+        markAllAdminNotificationsAsRead().then((res) => {
+
+            if (!res.status) console.error('Failed to persist notifications read state:', res.error);
+        });
     };
-
-    useEffect(() => {
-        const loadNotifications = async () => {
-            try {
-                const [ordersRes, returnsRes, productsRes] = await Promise.all([
-                    getUserOrders(),
-                    getReturns(),
-                    getProducts(),
-                ]);
-
-                const orders = Array.isArray(ordersRes.message) ? ordersRes.message : [];
-                const returns = Array.isArray(returnsRes.message)
-                    ? returnsRes.message
-                    : Array.isArray(returnsRes.data)
-                        ? returnsRes.data
-                        : [];
-
-                const productsData = productsRes.message as unknown as { products?: unknown[] };
-                const products = productsData?.products
-                    ? productsData.products
-                    : Array.isArray(productsRes.message)
-                        ? productsRes.message
-                        : [];
-
-                setNotifications(buildAdminNotifications(orders, returns, products));
-            } catch {
-                setNotifications([]);
-            }
-        };
-        loadNotifications();
-    }, []);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -121,7 +106,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
     const pageTitle = getPageTitle();
     const breadcrumbs = getBreadcrumbs();
-    const unreadCount = notifications.filter(n => !readNotificationIds.includes(n.id)).length;
+    const unreadCount = notifications.filter(isNotificationUnread).length;
 
     const notificationIcon = (type: AdminNotification['type']) => {
         switch (type) {
@@ -170,7 +155,10 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <div className='flex items-center gap-3'>
                 <div className='relative' ref={notificationRef}>
                     <button
-                        onClick={() => setShowNotifications(!showNotifications)}
+                        onClick={() => {
+                            setShowNotifications(!showNotifications);
+                            markAllAsRead();
+                        }}
                         className='bg-gray-50 p-2 rounded-xl border relative hover:bg-gray-100 transition-colors'
                         aria-label="Notifications"
                     >
@@ -203,21 +191,16 @@ const Header = ({ onMenuClick }: HeaderProps) => {
                             </div>
                             <div className='max-h-72 overflow-y-auto divide-y divide-gray-50'>
                                 {notifications.length === 0 ? (
-                                    <p className='px-4 py-6 text-sm text-gray-400 text-center'>No notifications</p>
+                                    <p className='px-4 py-6 text-sm text-gray-400 text-center'>No New notifications</p>
                                 ) : (
                                     notifications.map((notification) => {
-                                        const isUnread = !readNotificationIds.includes(notification.id);
+                                        const isUnread = isNotificationUnread(notification);
                                         return (
                                             <button
                                                 key={notification.id}
-                                                onClick={() => {
-                                                    markAsRead(notification.id);
-                                                    setShowNotifications(false);
-                                                    if (notification.link) router.push(notification.link);
-                                                }}
-                                                className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-50 text-left transition-colors relative ${
-                                                    isUnread ? 'bg-brand_pink/[0.01]' : 'opacity-70 hover:opacity-100'
-                                                }`}
+
+                                                className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-50 text-left transition-colors relative ${isUnread ? 'bg-brand_pink/[0.01]' : 'opacity-70 hover:opacity-100'
+                                                    }`}
                                             >
                                                 <div className='mt-0.5 p-1.5 bg-gray-50 rounded-lg'>
                                                     {notificationIcon(notification.type)}
@@ -259,7 +242,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
                 <div className='hidden sm:flex bg-gray-50 p-1.5 pr-12 rounded-2xl border gap-2 items-center'>
                     <div className='rounded-full w-10 h-10 bg-black/10 flex items-center justify-center text-white' >
-                    <User/>
+                        <User />
                     </div>
                     <div className='flex-col'>
                         <h2 className='font-semibold text-xs'>Administrator</h2>

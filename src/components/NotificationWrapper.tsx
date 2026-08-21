@@ -3,7 +3,12 @@
 import { useNotification } from "@/api/customHooks";
 import { useSocket } from "@/app/components/providers/SocketProvider";
 import { updateAdminPushNotification } from "@/lib/adminapi";
-import { generateToken, messaging } from "@/lib/firebase";
+import {
+  getExistingPushToken,
+  getNotificationPermission,
+  messagingReady,
+  requestPushPermissionAndToken,
+} from "@/lib/firebase";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useNotificationStore } from "@/lib/stores/notification-store";
@@ -41,21 +46,35 @@ export default function NotificationWrapper() {
   const pathname = usePathname();
   const isAdminRoute = pathname.includes("admin");
 
-  // Firebase foreground message handler
+  // Firebase foreground message handler.
+  //
+  // Awaits messagingReady rather than reading the module-level `messaging`
+  // binding synchronously: that binding is only assigned once the async
+  // isSupported() check resolves, so on a cold load this effect used to see
+  // null, bail, and — with its empty dep array — never attach the handler
+  // at all. Foreground pushes were silently dropped as a result.
   useEffect(() => {
-    if (!messaging) return;
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
 
-    const unsubscribe = onMessage(messaging, (payload) => {
-      if (typeof window === "undefined") return;
-      if (window.Notification?.permission === "granted") {
-        new window.Notification(payload.notification?.title || "Notification", {
-          body: payload.notification?.body,
-          icon: payload.notification?.icon || "/favicon.ico",
-        });
-      }
+    void messagingReady.then((m) => {
+      if (!m || cancelled) return;
+
+      unsubscribe = onMessage(m, (payload) => {
+        if (typeof window === "undefined") return;
+        if (window.Notification?.permission === "granted") {
+          new window.Notification(payload.notification?.title || "Notification", {
+            body: payload.notification?.body,
+            icon: payload.notification?.icon || "/favicon.ico",
+          });
+        }
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   // Push token registration.
@@ -63,12 +82,18 @@ export default function NotificationWrapper() {
   // `ownerKey` identifies *who* the token would be registered for — the
   // account, not the device. It's null whenever there's no one to register
   // for yet (logged out / no admin session), which is the only thing that
-  // should ever fully block an attempt. The token itself is intentionally
-  // NOT gated on route/mount/render churn: generateToken() is a cheap local
-  // read of Firebase's own cached token (no network call to our backend),
-  // so calling it often is fine — it's what lets a real token *rotation* be
-  // noticed. The backend is only ever contacted after comparing the result
-  // against what's already stored for this exact owner.
+  // should ever fully block an attempt.
+  //
+  // The user is only ever *prompted* when this device has no live push
+  // permission yet ("default"). Once permission is granted the token is
+  // re-read silently on each run — no prompt, no UI, but it's still what
+  // lets a real token *rotation* be noticed. A hard "denied" stops
+  // everything: the browser suppresses the prompt at that point anyway, so
+  // asking again would only waste a call. The backend is only ever
+  // contacted after comparing the token against what's already stored for
+  // this exact owner, which is what makes remounts, route changes, Strict
+  // Mode, rehydration, and plain re-renders no-ops rather than duplicate
+  // registrations.
   useEffect(() => {
     const ownerKey = isAdminRoute
       ? (() => {
@@ -81,21 +106,30 @@ export default function NotificationWrapper() {
 
     if (!ownerKey || isUpdatingToken.current) return;
 
+    const permission = getNotificationPermission();
+
+    // No Notification API here, or the user has explicitly blocked us.
+    if (permission === null || permission === "denied") return;
+
+    // "default" means the browser holds no permission for this origin, so
+    // there is definitively nothing registered on this device — prompt.
+    // Anything we persisted for this owner previously can't still be live,
+    // so it deliberately isn't consulted to suppress the prompt here.
+    const needsPrompt = permission === "default";
+
     const registerPushToken = async () => {
       isUpdatingToken.current = true;
 
       try {
-        const token = await generateToken();
+        const token = needsPrompt
+          ? await requestPushPermissionAndToken()
+          : await getExistingPushToken();
 
-        if (!token) {
-          console.warn("Failed to generate FCM token");
-          return;
-        }
+        // Dismissed/blocked the prompt, or the token couldn't be read.
+        if (!token) return;
 
         // Same token, same owner as last time we told the backend — nothing
-        // changed, so there's nothing to send. This is what makes remounts,
-        // route changes, Strict Mode, rehydration, and plain re-renders all
-        // no-ops instead of duplicate registrations.
+        // changed, so there's nothing to send.
         if (
           registeredPushToken?.token === token &&
           registeredPushToken?.ownerKey === ownerKey
@@ -129,23 +163,26 @@ export default function NotificationWrapper() {
     adminTokenTick,
   ]);
 
-  // Socket.IO — user notifications (non-admin routes only)
+  // Socket.IO — user notifications (non-admin routes only).
+  //
   // Consumes the single shared connection from SocketProvider instead of
   // opening its own — the provider re-authenticates that same socket
   // whenever `user` changes, which is what triggers the "connect" below.
+  //
+  // Mirrors the backend contract: the client emits `get:userNotifications`
+  // and the server replies on `userNotifications` with the full list, then
+  // pushes individual new ones on `new-notification`. The emit is wired to
+  // "connect" (not just fired once) because the provider disconnects and
+  // reconnects the socket to re-auth on login, so at effect time it is
+  // usually still connecting — the `socket.connected` call below only
+  // covers the already-connected case.
   useEffect(() => {
     if (isAdminRoute || !user || !socket) return;
 
-    const requestNotifications = () => {
-      socket.emit("get:userNotifications");
-    };
-
-    const handleUserNotifications = ({ notifications }: { notifications: AppNotification[]; unreadCount: number }) => {
-      setNotifications(notifications);
-    };
 
     // Live push from server (e.g. new order, flash sale)
     const handleNewNotification = (notification: AppNotification) => {
+      // console.log(notification.message);
       updateNotifications(notification);
     };
 
@@ -153,16 +190,14 @@ export default function NotificationWrapper() {
       console.error("Socket connection error:", err.message);
     };
 
-    if (socket.connected) requestNotifications();
-    socket.on("connect", requestNotifications);
-    socket.on("userNotifications", handleUserNotifications);
-    socket.on("new-notification", handleNewNotification);
+
+    // socket.on("userNotifications", handleUserNotifications);
+    socket.on("get:userNotifications", handleNewNotification);
     socket.on("connect_error", handleConnectError);
 
     return () => {
-      socket.off("connect", requestNotifications);
-      socket.off("userNotifications", handleUserNotifications);
-      socket.off("new-notification", handleNewNotification);
+      // socket.off("userNotifications", handleUserNotifications);
+      socket.off("get:userNotifications", handleNewNotification);
       socket.off("connect_error", handleConnectError);
     };
   }, [user, isAdminRoute, socket, setNotifications, updateNotifications]);

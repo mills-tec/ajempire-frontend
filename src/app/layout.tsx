@@ -1,7 +1,7 @@
 import NotificationWrapper from "@/components/NotificationWrapper";
-import TawkToWidget from "@/components/TawkToWidget";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import SplashScreenWrapper from "@/components/SplashScreenWrapper";
+import TawkToWidget from "@/components/TawkToWidget";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
@@ -85,14 +85,19 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`${poppins.variable} antialiased`}>
+      <body className={`${poppins.variable} overflow-hidden antialiased`}>
         {/* System UI */}
         <Toaster />
-        <NotificationWrapper />
         <PWAInstallPrompt />
 
         <Providers>
           <SocketProvider>
+            {/* Must live INSIDE SocketProvider — it consumes the shared
+                connection via useSocket(). As a sibling of <Providers> it
+                only ever saw SocketContext's default value (null), so its
+                socket effect bailed immediately and user notifications
+                never arrived over the wire. */}
+            <NotificationWrapper />
             <TooltipProvider>
               <CartIconProvider>
                 <NetworkStatus />

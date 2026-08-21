@@ -640,10 +640,7 @@ const AddProductPage = () => {
                         {/* Special Offer + Variants */}
                         <Section title="Special Offer">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="col-span-2 flex items-center gap-4">
-                                    <Toggle checked={isTimedSpecialOffer} onChange={setIsTimedSpecialOffer} />
-                                    <label className="text-xs font-medium text-gray-700">Timed Special Offer</label>
-                                </div>
+
 
                                 {isTimedSpecialOffer && (
                                     <div className="col-span-2 grid grid-cols-2 gap-4">
