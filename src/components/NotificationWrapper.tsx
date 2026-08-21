@@ -62,12 +62,26 @@ export default function NotificationWrapper() {
 
       unsubscribe = onMessage(m, (payload) => {
         if (typeof window === "undefined") return;
-        if (window.Notification?.permission === "granted") {
-          new window.Notification(payload.notification?.title || "Notification", {
-            body: payload.notification?.body,
-            icon: payload.notification?.icon || "/favicon.ico",
-          });
-        }
+        if (window.Notification?.permission !== "granted") return;
+
+        // Read both shapes: the backend currently sends a `notification`
+        // payload, but data-only is what the service worker prefers (see
+        // firebase-messaging-sw.js) and this keeps working through that
+        // switch instead of silently rendering "Notification" with no body.
+        const data = payload.data ?? {};
+
+        new window.Notification(
+          payload.notification?.title ?? data.title ?? "Notification",
+          {
+            body: payload.notification?.body ?? data.body,
+            // /favicon.ico doesn't exist in this project — only favicon.png.
+            icon: payload.notification?.icon ?? data.icon ?? "/favicon.png",
+            // FCM delivers a foreground message to EVERY visible tab, so
+            // without a shared tag someone with three tabs open gets three
+            // copies of it. Same tag replaces rather than stacks.
+            tag: data.tag ?? data.notificationId ?? "ajempire-notification",
+          },
+        );
       });
     });
 
