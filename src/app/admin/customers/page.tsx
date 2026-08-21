@@ -1,11 +1,12 @@
 'use client'
 
+import SendNotificationModal from '@/app/components/admin/SendNotificationModal';
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
 import EmptyTable from '@/components/EmptyTable';
-import { deleteCustomer, getCustomers, toggleCustomerStatus, updateCustomerStatus } from '@/lib/adminapi';
+import { deleteCustomer, getCustomers, sendUserNotification, toggleCustomerStatus } from '@/lib/adminapi';
 import { getPeriodStartDate } from '@/lib/dashboard-utils';
-import { AlertCircle, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Search, Trash2, TrendingUp, UserCheck, Users, UserX, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { AlertCircle, Bell, ChevronLeft, ChevronRight, Eye, Filter, Loader2, Search, Trash2, TrendingUp, UserCheck, Users, UserX, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const CustomersPage = () => {
   const toast = useToast();
@@ -26,6 +27,8 @@ const CustomersPage = () => {
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [customerFilter, setCustomerFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -53,7 +56,6 @@ const CustomersPage = () => {
       setError(null);
       const response = await getCustomers();
 
-      console.log("response", response);
 
       // Handle different response structures with type assertions
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,62 +185,105 @@ const CustomersPage = () => {
     setCustomerToToggle(null);
   };
 
-  const _handleUpdateStatus = async (customerId: string, newStatus: string) => {
+  const handleOpenNotifyModal = () => {
+    setShowNotifyModal(true);
+  };
+
+  const cancelNotify = () => {
+    setShowNotifyModal(false);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allCustomerIds = useMemo(
+    () => customers.map((c: any) => c.user?._id || c._id).filter(Boolean),
+    [customers],
+  );
+
+  const confirmSendNotification = async (title: string, message: string) => {
+    if (!title.trim() || !message.trim()) {
+      toast.error('Please enter a title and message');
+      return;
+    }
+    if (allCustomerIds.length === 0) {
+      toast.error('No customers to notify');
+      return;
+    }
+
     try {
-      const response = await updateCustomerStatus(customerId, newStatus);
-      if (response.message) {
-        toast.success('Customer status updated successfully');
-        fetchCustomers(); // Refresh list
+      setIsSendingNotification(true);
+      const response = await sendUserNotification({
+        title: title.trim(),
+        message: message.trim(),
+        type: 'info',
+        targetUsers: allCustomerIds,
+      });
+
+      if (response.status) {
+        toast.success(`Notification sent to ${allCustomerIds.length} customer${allCustomerIds.length !== 1 ? 's' : ''}`);
+        cancelNotify();
       } else {
-        toast.error(response.error || 'Failed to update customer status');
+        toast.error(response.error || 'Failed to send notification');
       }
     } catch (error: unknown) {
-      console.error('Error updating customer status:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update customer status');
+      console.error('Error sending notification:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send notification');
+    } finally {
+      setIsSendingNotification(false);
     }
   };
 
+
   // Filter customers by selected period (with fallback to include customers with missing dates)
-  const periodFilteredCustomers = customers.filter(customer => {
-    const dateValue = customer.user?.createdAt || customer.user?.joinedDate || customer.createdAt;
-    if (!dateValue) return true; // Fallback: if no date is available, display the customer
+  // Memoized so an unrelated re-render (e.g. a toast update) doesn't re-run
+  // these filters/stats over the whole customer list every time.
+  const periodFilteredCustomers = useMemo(
+    () =>
+      customers.filter(customer => {
+        const dateValue = customer.user?.createdAt || customer.user?.joinedDate || customer.createdAt;
+        if (!dateValue) return true; // Fallback: if no date is available, display the customer
 
-    try {
-      const start = getPeriodStartDate(selectedPeriod);
-      return new Date(dateValue) >= start;
-    } catch {
-      return true;
-    }
-  });
+        try {
+          const start = getPeriodStartDate(selectedPeriod);
+          return new Date(dateValue) >= start;
+        } catch {
+          return true;
+        }
+      }),
+    [customers, selectedPeriod],
+  );
 
-  const filteredCustomers = periodFilteredCustomers.filter(customer => {
-    const matchesSearch = !searchTerm ||
-      (customer.user && customer.user.fullname && customer.user.fullname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.user && customer.user.email && customer.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.user && customer.user.phone && customer.user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (customer.user && customer.user._id && customer.user._id.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredCustomers = useMemo(
+    () =>
+      periodFilteredCustomers.filter(customer => {
+        const matchesSearch = !searchTerm ||
+          (customer.user && customer.user.fullname && customer.user.fullname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (customer.user && customer.user.email && customer.user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (customer.user && customer.user.phone && customer.user.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (customer.user && customer.user._id && customer.user._id.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (!matchesSearch) return false;
+        if (!matchesSearch) return false;
 
-    if (customerFilter === 'active') {
-      return customer.user?.active === true;
-    }
-    if (customerFilter === 'inactive') {
-      return customer.user?.active === false;
-    }
-    if (customerFilter === 'vip') {
-      return (customer.totalSpent || 0) >= 100000;
-    }
-    if (customerFilter === 'new') {
-      const joinedDate = customer.user && (customer.user.createdAt || customer.user.joinedDate) ? new Date(customer.user.createdAt || customer.user.joinedDate) : null;
-      if (!joinedDate) return false;
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return joinedDate > thirtyDaysAgo;
-    }
+        if (customerFilter === 'active') {
+          return customer.user?.active === true;
+        }
+        if (customerFilter === 'inactive') {
+          return customer.user?.active === false;
+        }
+        if (customerFilter === 'vip') {
+          return (customer.totalSpent || 0) >= 100000;
+        }
+        if (customerFilter === 'new') {
+          const joinedDate = customer.user && (customer.user.createdAt || customer.user.joinedDate) ? new Date(customer.user.createdAt || customer.user.joinedDate) : null;
+          if (!joinedDate) return false;
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          return joinedDate > thirtyDaysAgo;
+        }
 
-    return true;
-  });
+        return true;
+      }),
+    [periodFilteredCustomers, searchTerm, customerFilter],
+  );
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -250,16 +295,19 @@ const CustomersPage = () => {
   };
 
   // Calculate statistics
-  const totalCustomers = periodFilteredCustomers.length;
-  const activeCustomers = periodFilteredCustomers.filter(c => c.user && c.user.active).length;
-  const inactiveCustomers = periodFilteredCustomers.filter(c => c.user && !c.user.active).length;
-  const newCustomers = periodFilteredCustomers.filter(c => {
-    const joinedDate = c.user && (c.user.createdAt || c.user.joinedDate) ? new Date(c.user.createdAt || c.user.joinedDate) : null;
-    if (!joinedDate) return false;
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return joinedDate > thirtyDaysAgo;
-  }).length;
+  const { totalCustomers, activeCustomers, inactiveCustomers, newCustomers } = useMemo(() => {
+    const totalCustomers = periodFilteredCustomers.length;
+    const activeCustomers = periodFilteredCustomers.filter(c => c.user && c.user.active).length;
+    const inactiveCustomers = periodFilteredCustomers.filter(c => c.user && !c.user.active).length;
+    const newCustomers = periodFilteredCustomers.filter(c => {
+      const joinedDate = c.user && (c.user.createdAt || c.user.joinedDate) ? new Date(c.user.createdAt || c.user.joinedDate) : null;
+      if (!joinedDate) return false;
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return joinedDate > thirtyDaysAgo;
+    }).length;
+    return { totalCustomers, activeCustomers, inactiveCustomers, newCustomers };
+  }, [periodFilteredCustomers]);
 
   return (
     <main className="w-full min-h-screen bg-gray-50/30 font-poppins pr-5">
@@ -387,6 +435,13 @@ const CustomersPage = () => {
             />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto relative">
+            <button
+              onClick={handleOpenNotifyModal}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-brand_pink text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-brand_pink/90 transition-colors"
+            >
+              <Bell size={16} />
+              Send Notification
+            </button>
             <button
               onClick={toggleFilterDropdown}
               className={`flex-1 md:flex-none flex items-center justify-center gap-2 border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${customerFilter !== 'all'
@@ -806,8 +861,8 @@ const CustomersPage = () => {
                 onClick={confirmToggleStatus}
                 disabled={isTogglingStatus}
                 className={`flex-1 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${customerToToggle?.user?.active
-                    ? 'bg-red-500 hover:bg-red-600'
-                    : 'bg-green-500 hover:bg-green-600'
+                  ? 'bg-red-500 hover:bg-red-600'
+                  : 'bg-green-500 hover:bg-green-600'
                   }`}
               >
                 {isTogglingStatus ? (
@@ -822,6 +877,17 @@ const CustomersPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Send Notification Modal */}
+      {showNotifyModal && (
+        <SendNotificationModal
+          recipientCount={allCustomerIds.length}
+          recipientLabel="customer"
+          sending={isSendingNotification}
+          onClose={cancelNotify}
+          onSend={confirmSendNotification}
+        />
       )}
 
       {/* Toast Container */}

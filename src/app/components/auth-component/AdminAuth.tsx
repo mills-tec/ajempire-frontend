@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 type AdminAuthProps = {
     onProceed: () => void;
 }
@@ -7,14 +8,16 @@ export default function AdminAuth({ onProceed }: AdminAuthProps) {
     return (
         <div className=" h-[50%] font-poppins bg-white text-center flex flex-col items-center gap-6 p-10 rounded-lg shadow-lg justify-between">
             <div className="flex flex-col items-center gap-6">
-                <Image
-                    src="/favicon.png"   // path from /public
-                    alt="Company Logo"
-                    width={67}
-                    height={56}
-                    priority
-                    className="object-contain"
-                />
+                <Link href={"/"}>
+                    <Image
+                        src="/favicon.png"   // path from /public
+                        alt="Company Logo"
+                        width={67}
+                        height={56}
+                        priority
+                        className="object-contain"
+                    />
+                </Link>
                 <div>
                     <p className="text-[20px] font-medium">Admin dashboard</p>
                     <p className="text-[14px] font-normal text-[#8B8D97]">Please click the button below to proceed.</p>

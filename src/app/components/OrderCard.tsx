@@ -39,7 +39,7 @@ export default function OrderCard({
         <div className="text-xs font-light grid md:grid-cols-3  gap-4 w-[200px]">
           <div className="md:col-span-2 flex justify-between">
             <p className="font-semibold">
-              {Number((discount ? discount : price).toFixed(2)).toLocaleString(
+              {Number(((price - discount)).toFixed(2)).toLocaleString(
                 "en-NG",
                 { style: "currency", currency: "NGN" },
               )}

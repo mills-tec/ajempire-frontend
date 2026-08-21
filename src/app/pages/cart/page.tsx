@@ -204,7 +204,7 @@ export default function CartPage() {
         prev.filter((item) => items.some((i) => i._id === item._id)),
       );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
   if (isLoading) {

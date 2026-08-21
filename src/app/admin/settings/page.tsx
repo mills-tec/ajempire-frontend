@@ -1,5 +1,6 @@
 'use client'
 
+import SendNotificationModal from '@/app/components/admin/SendNotificationModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { PickupAddress } from '@/lib/admin-types';
 import {
@@ -12,6 +13,7 @@ import {
   getAllAdmins,
   getLogisticsSettings,
   getWalletBalance,
+  sendAdminNotification,
   updateAdminNotificationSettings, updateAdminPermission, updateAdminProfile, updateAdminSecuritySettings,
   updateLogisticsSettings,
   updateLogisticsShippingAddress
@@ -98,6 +100,8 @@ const SettingsPage = () => {
   const [showDeleteAdminModal, setShowDeleteAdminModal] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
+  const [showNotifyAdminsModal, setShowNotifyAdminsModal] = useState(false);
+  const [isSendingAdminNotification, setIsSendingAdminNotification] = useState(false);
 
   // New admin's role-based default permissions, toggleable on/off
   const [newAdminDefaultPermissions, setNewAdminDefaultPermissions] = useState<string[]>([]);
@@ -478,7 +482,7 @@ const SettingsPage = () => {
               </div>
             </div>
 
-          
+
           </form>
         </div>
 
@@ -605,6 +609,33 @@ const SettingsPage = () => {
       }
     };
 
+    const confirmSendAdminNotification = async (title: string, message: string) => {
+      if (!title.trim() || !message.trim()) {
+        showToast('Please enter a title and message', 'error');
+        return;
+      }
+
+      try {
+        setIsSendingAdminNotification(true);
+        const response = await sendAdminNotification({
+          title: title.trim(),
+          message: message.trim(),
+        });
+
+        if (response.status) {
+          showToast('Notification sent to all admins', 'success');
+          setShowNotifyAdminsModal(false);
+        } else {
+          showToast(response.error || 'Failed to send notification', 'error');
+        }
+      } catch (error: unknown) {
+        console.error('Error sending admin notification:', error);
+        showToast(error instanceof Error ? error.message : 'Failed to send notification', 'error');
+      } finally {
+        setIsSendingAdminNotification(false);
+      }
+    };
+
     const togglePermission = (permission: string) => {
       setEditPermissions(prev =>
         prev.includes(permission)
@@ -644,13 +675,22 @@ const SettingsPage = () => {
             <h3 className="text-lg font-medium text-brand_gray_dark mb-2">Admin Users & Permissions</h3>
             <p className="text-gray-600">Manage admin accounts and their access permissions</p>
           </div>
-          <button
-            onClick={() => setShowAddAdminModal(true)}
-            className="flex items-center gap-2 bg-brand_pink text-white px-4 py-2 rounded-lg hover:bg-brand_pink/90 transition-colors"
-          >
-            <Plus size={16} />
-            Add Admin
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNotifyAdminsModal(true)}
+              className="flex items-center gap-2 bg-gray-50 border border-gray-200 text-brand_gray_dark px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Bell size={16} />
+              Send Notification
+            </button>
+            <button
+              onClick={() => setShowAddAdminModal(true)}
+              className="flex items-center gap-2 bg-brand_pink text-white px-4 py-2 rounded-lg hover:bg-brand_pink/90 transition-colors"
+            >
+              <Plus size={16} />
+              Add Admin
+            </button>
+          </div>
         </div>
 
         {/* Admins Table */}
@@ -967,6 +1007,18 @@ const SettingsPage = () => {
               </form>
             </div>
           </div>,
+          document.body
+        )}
+
+        {/* Send Notification Modal */}
+        {showNotifyAdminsModal && createPortal(
+          <SendNotificationModal
+            recipientCount={admins.length}
+            recipientLabel="admin"
+            sending={isSendingAdminNotification}
+            onClose={() => setShowNotifyAdminsModal(false)}
+            onSend={confirmSendAdminNotification}
+          />,
           document.body
         )}
       </div>

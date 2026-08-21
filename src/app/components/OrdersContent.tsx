@@ -46,7 +46,7 @@ export default function OrdersContent({
     toast.success("Items added to cart!");
   };
 
-  
+
   const pathname = usePathname();
   const [showIssueModal, setShowIssueModal] = useState<boolean>(false);
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
@@ -126,10 +126,8 @@ export default function OrdersContent({
                 ₦
                 {Number(
                   items.reduce(
-                    (prev, item: { price: number; discountedPrice: number }) =>
-                      item.discountedPrice
-                        ? item?.discountedPrice + prev
-                        : item?.price + prev,
+                    (prev, item: { price: number; discountedPrice: number; qty: number }) =>
+                      (item.price - item.discountedPrice) * item.qty + prev,
                     0,
                   ),
                 ).toLocaleString()}

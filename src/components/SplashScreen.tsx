@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   onComplete?: () => void;
+  showSplash: boolean
 }
 
-export default function SplashScreen({ onComplete }: SplashScreenProps) {
+export default function SplashScreen({ onComplete, showSplash }: SplashScreenProps) {
 
   const [isVisible, setIsVisible] = useState(true);
 
@@ -23,7 +24,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   }, [onComplete]);
 
 
-  
+  useEffect(() => {
+    if (!isVisible) {
+      document.body.style.overflow = "auto"
+    }
+  }, [isVisible])
+
+
   return (
     <AnimatePresence>
       {isVisible && (

@@ -21,11 +21,12 @@ export default function SplashScreenWrapper({ children }: { children: React.Reac
   // Content underneath is no longer display:none'd away (see below), so
   // without this it's scrollable/interactive behind the overlay while the
   // splash is up.
- 
+
 
   const handleSplashComplete = () => {
     setShowSplash(false);
   };
+
 
   return (
     <>
@@ -34,7 +35,7 @@ export default function SplashScreenWrapper({ children }: { children: React.Reac
           display:none used to block the real page from painting (and its
           images from being requested) for the full splash duration on every
           first visit, which is exactly when Lighthouse/CWV measure LCP. */}
-      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <SplashScreen onComplete={handleSplashComplete} showSplash={showSplash} />
       {/* <SplashScreen onComplete={handleSplashComplete} /> */}
       {children}
     </>
