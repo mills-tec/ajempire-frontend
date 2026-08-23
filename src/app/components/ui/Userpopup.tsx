@@ -11,6 +11,7 @@ export default function Userpopup() {
     return (
         <div className="">
             <div className=" mt-6 h-full flex items-start justify-end z-50">
+
                 <div className="bg-white  px-5 py-5 font-poppins size-full h-[400px] w-[20rem] shadow-xl rounded-md ">
 
                     <Link href={'/pages/ordersandaccount/settings/profile'}>
