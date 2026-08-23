@@ -1,5 +1,6 @@
 'use client';
 
+import { handleEnableNotifications } from '@/app/pages/ordersandaccount/data/sidebarData';
 import { HomeIcon } from '@/components/svgs/HomeIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminNotification } from '@/lib/admin-notifications';
@@ -155,8 +156,9 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             <div className='flex items-center gap-3'>
                 <div className='relative' ref={notificationRef}>
                     <button
-                        onClick={() => {
+                        onClick={(e) => {
                             setShowNotifications(!showNotifications);
+                            handleEnableNotifications(e);
                             markAllAsRead();
                         }}
                         className='bg-gray-50 p-2 rounded-xl border relative hover:bg-gray-100 transition-colors'
