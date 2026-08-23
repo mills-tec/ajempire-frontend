@@ -9,8 +9,7 @@ import { DocumentIcon } from "@/components/svgs/DocumentIcon";
 import MyUsageIcon from "@/components/svgs/MyUsageIcon";
 import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
 import {
-  describePushOutcome,
-  registerPushToken,
+  registerPushToken
 } from "@/lib/pushNotifications";
 import React, { ReactNode } from "react";
 
@@ -44,18 +43,8 @@ export const handleEnableNotifications = async (e: React.MouseEvent) => {
   // browser still only draws a dialog while permission is "default"; once
   // granted or blocked it answers instantly and no site can re-ask, which is
   // what the "denied" toast below exists to explain.)
-  const outcome = await registerPushToken({ prompt: "if-needed" });
-  const feedback = describePushOutcome(outcome);
-  if (!feedback) return;
+  await registerPushToken({ prompt: "if-needed" });
 
-  const notify =
-    feedback.type === "success"
-      ? toast.success
-      : feedback.type === "error"
-        ? toast.error
-        : toast.info;
-
-  notify(feedback.message, { position: "top-right" });
 };
 
 const handleShareApp = async () => {
