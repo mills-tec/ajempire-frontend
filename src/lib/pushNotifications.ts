@@ -1,8 +1,8 @@
 "use client";
 
 import { postData } from "@/api/api";
-import { getBearerToken } from "@/lib/api";
 import { updateAdminPushNotification } from "@/lib/adminapi";
+import { getBearerToken } from "@/lib/api";
 import {
   getExistingPushToken,
   getNotificationPermission,
