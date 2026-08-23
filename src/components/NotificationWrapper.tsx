@@ -1,21 +1,15 @@
 "use client";
 
-import { useNotification } from "@/api/customHooks";
 import { useSocket } from "@/app/components/providers/SocketProvider";
-import { updateAdminPushNotification } from "@/lib/adminapi";
-import {
-  getExistingPushToken,
-  getNotificationPermission,
-  messagingReady,
-  requestPushPermissionAndToken,
-} from "@/lib/firebase";
+import { messagingReady } from "@/lib/firebase";
+import { registerPushToken } from "@/lib/pushNotifications";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import type { Notification as AppNotification } from "@/lib/types";
 import { onMessage } from "firebase/messaging";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export default function NotificationWrapper() {
   // Selector subscriptions — the old whole-store destructures re-rendered this
@@ -23,26 +17,16 @@ export default function NotificationWrapper() {
   const user = useAuthStore((s) => s.user);
   const userId = user?.id;
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  // Read only to re-run the registration effect once a save lands; the token
+  // itself is compared inside registerPushToken.
   const registeredPushToken = useAuthStore((s) => s.registeredPushToken);
-  const setRegisteredPushToken = useAuthStore((s) => s.setRegisteredPushToken);
   // Bumped by AuthContext.login() — admin auth lives in a React context this
-  // component isn't nested under, so localStorage.getItem('adminToken') below
-  // is otherwise only re-checked on the next mount/full page load.
+  // component isn't nested under, so the admin token is otherwise only
+  // re-checked on the next mount/full page load.
   const adminTokenTick = useAuthStore((s) => s.adminTokenTick);
-  const { updatePushToken } = useNotification();
-  // useNotification returns a new function reference on every render; going
-  // through a ref keeps the push-token effect from re-running per render.
-  const updatePushTokenRef = useRef(updatePushToken);
-  updatePushTokenRef.current = updatePushToken;
   const setNotifications = useNotificationStore((s) => s.setNotifications);
   const updateNotifications = useNotificationStore((s) => s.updateNotifications);
   const socket = useSocket();
-  // Guards against re-entrant registration attempts (e.g. Strict Mode's
-  // dev-only double-invoke of a fresh effect, or two dependency changes
-  // landing before the previous async attempt has resolved). Set
-  // synchronously before the first `await` below, so the second of two
-  // back-to-back invocations always sees it and bails immediately.
-  const isUpdatingToken = useRef(false);
   const pathname = usePathname();
   const isAdminRoute = pathname.includes("admin");
 
@@ -91,91 +75,17 @@ export default function NotificationWrapper() {
     };
   }, []);
 
-  // Push token registration.
-  //
-  // `ownerKey` identifies *who* the token would be registered for — the
-  // account, not the device. It's null whenever there's no one to register
-  // for yet (logged out / no admin session), which is the only thing that
-  // should ever fully block an attempt.
-  //
-  // The user is only ever *prompted* when this device has no live push
-  // permission yet ("default"). Once permission is granted the token is
-  // re-read silently on each run — no prompt, no UI, but it's still what
-  // lets a real token *rotation* be noticed. A hard "denied" stops
-  // everything: the browser suppresses the prompt at that point anyway, so
-  // asking again would only waste a call. The backend is only ever
-  // contacted after comparing the token against what's already stored for
-  // this exact owner, which is what makes remounts, route changes, Strict
-  // Mode, rehydration, and plain re-renders no-ops rather than duplicate
-  // registrations.
+  // Automatic push registration on load. All of the actual work — permission,
+  // token, backend save, recording what was saved — lives in
+  // registerPushToken (src/lib/pushNotifications.ts), shared with the manual
+  // "Notifications" control in the account sidebar. It no-ops cheaply when
+  // there's nobody signed in, when permission is blocked, or when the backend
+  // already holds this exact token, so re-running it on these dependencies is
+  // safe; it also serialises internally, so this can't race the sidebar
+  // button into showing two prompts.
   useEffect(() => {
-    const ownerKey = isAdminRoute
-      ? (() => {
-        const adminToken = localStorage.getItem("adminToken");
-        return adminToken ? `admin:${adminToken}` : null;
-      })()
-      : isLoggedIn && userId
-        ? `user:${userId}`
-        : null;
-
-    if (!ownerKey || isUpdatingToken.current) return;
-
-    const permission = getNotificationPermission();
-
-    // No Notification API here, or the user has explicitly blocked us.
-    if (permission === null || permission === "denied") return;
-
-    // "default" means the browser holds no permission for this origin, so
-    // there is definitively nothing registered on this device — prompt.
-    // Anything we persisted for this owner previously can't still be live,
-    // so it deliberately isn't consulted to suppress the prompt here.
-    const needsPrompt = permission === "default";
-
-    const registerPushToken = async () => {
-      isUpdatingToken.current = true;
-
-      try {
-        const token = needsPrompt
-          ? await requestPushPermissionAndToken()
-          : await getExistingPushToken();
-
-        // Dismissed/blocked the prompt, or the token couldn't be read.
-        if (!token) return;
-
-        // Same token, same owner as last time we told the backend — nothing
-        // changed, so there's nothing to send.
-        if (
-          registeredPushToken?.token === token &&
-          registeredPushToken?.ownerKey === ownerKey
-        ) {
-          return;
-        }
-
-        const success = isAdminRoute
-          ? (await updateAdminPushNotification(token)).status
-          : await updatePushTokenRef.current(token);
-
-        if (success) {
-          setRegisteredPushToken({ token, ownerKey });
-        } else {
-          console.warn("Server rejected push token update");
-        }
-      } catch (error) {
-        console.error("Push token registration failed:", error);
-      } finally {
-        isUpdatingToken.current = false;
-      }
-    };
-
-    registerPushToken();
-  }, [
-    isLoggedIn,
-    userId,
-    isAdminRoute,
-    registeredPushToken,
-    setRegisteredPushToken,
-    adminTokenTick,
-  ]);
+    void registerPushToken({ isAdmin: isAdminRoute });
+  }, [isLoggedIn, userId, isAdminRoute, registeredPushToken, adminTokenTick]);
 
   // Socket.IO — user notifications (non-admin routes only).
   //
