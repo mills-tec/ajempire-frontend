@@ -612,40 +612,16 @@ export const useNotification = () => {
     }
   };
 
-  const updatePushToken = async (pushToken: string): Promise<boolean> => {
-    // Re-entrancy is the caller's responsibility (NotificationWrapper already
-    // serializes calls via its own ref-based lock) — gating on `loading` here
-    // too just meant a call arriving while one was already in flight got
-    // silently dropped and returned `undefined`, which the caller reads as
-    // "server rejected it" and never marks the token as registered, so it
-    // keeps retrying indefinitely instead of the attempt just being skipped.
-    setLoading(true);
-    try {
-      await postData(
-        `/notification/savePushToken`,
-        { token: pushToken },
-        config,
-      );
-      return true;
-    } catch (err) {
-      let message;
-      if (err instanceof AxiosError) {
-        message = err.response?.data?.error || "Request failed";
-      } else {
-        message = "Something went wrong.";
-      }
-      toast.error(message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
+  // `updatePushToken` used to live here. Saving a push token is only ever one
+  // step of enabling notifications (permission → token → save → record what
+  // was saved), and having it callable on its own let that sequence be
+  // half-performed. It now lives with the rest of that flow in
+  // src/lib/pushNotifications.ts — call registerPushToken() instead.
   return {
     loading,
     getNotifications,
     deleteNotificationFromDb,
     markAsReadFromDb,
-    updatePushToken,
   };
 };
 

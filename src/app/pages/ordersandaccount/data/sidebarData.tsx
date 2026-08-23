@@ -8,7 +8,11 @@ import { CouponsIcon } from "@/components/svgs/CouponsIcon";
 import { DocumentIcon } from "@/components/svgs/DocumentIcon";
 import MyUsageIcon from "@/components/svgs/MyUsageIcon";
 import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
-import { ReactNode } from "react";
+import {
+  describePushOutcome,
+  registerPushToken,
+} from "@/lib/pushNotifications";
+import React, { ReactNode } from "react";
 
 
 import HelpIcon from "@/components/svgs/HelpIcon";
@@ -23,6 +27,35 @@ export type SideBarItem = {
   children?: SideBarItem[];
   onClick?: () => void;
   action?: "logout";
+};
+
+// Turning on push notifications from the account sidebar. The whole
+// permission → token → save flow lives in one place (see
+// src/lib/pushNotifications.ts), shared with the automatic registration in
+// NotificationWrapper, so this only has to decide what to say afterwards.
+const handleEnableNotifications = async (e: React.MouseEvent) => {
+  // The icon sits inside the "Notifications" nav link — don't navigate away
+  // while the browser's permission prompt is up.
+  e.preventDefault();
+  e.stopPropagation();
+
+  // "always" — this is an explicit tap on Notifications, so go through the
+  // permission request every time rather than only when undecided. (The
+  // browser still only draws a dialog while permission is "default"; once
+  // granted or blocked it answers instantly and no site can re-ask, which is
+  // what the "denied" toast below exists to explain.)
+  const outcome = await registerPushToken({ prompt: "if-needed" });
+  const feedback = describePushOutcome(outcome);
+  if (!feedback) return;
+
+  const notify =
+    feedback.type === "success"
+      ? toast.success
+      : feedback.type === "error"
+        ? toast.error
+        : toast.info;
+
+  notify(feedback.message, { position: "top-right" });
 };
 
 const handleShareApp = async () => {
@@ -79,7 +112,16 @@ export const sidebarItems: SideBarItem[] = [
   { title: "My Usage", route: "/pages/ordersandaccount/myuseage", icon: <MyUsageIcon className="text-primaryhover" /> },
   { title: "Wish List", route: "/pages/ordersandaccount/wishlist", icon: <WishListIcon className="text-primaryhover" /> },
   {
-    title: "Notifications", route: "/pages/ordersandaccount/notifications/all", icon: <NotificationsIcon className="text-primaryhover" />,
+    title: "Notifications",
+    route: "/pages/ordersandaccount/notifications/all",
+    icon: (
+      <NotificationsIcon
+        className="text-primaryhover cursor-pointer"
+        role="button"
+        aria-label="Enable push notifications"
+        onClick={handleEnableNotifications}
+      />
+    ),
     children: [
       {
         title: "All",
