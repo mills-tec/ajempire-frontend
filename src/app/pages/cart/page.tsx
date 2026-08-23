@@ -5,14 +5,19 @@ import RefreshWrapper from "@/app/components/RefreshWrapper";
 import SelectedItemSkeleton from "@/app/components/SelectedItemSkeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBearerToken } from "@/lib/api";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import {
+  CartItem,
+  getLineTotals,
+  getSelectedTotals,
+  useCartStore,
+} from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import clsx from "clsx";
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Only ever rendered if the user hits the "log in to checkout" path from
@@ -42,20 +47,19 @@ const cartLineKey = (item: CartItem) =>
     .sort()
     .join(",")}`;
 
-type CartAmountEntry = { total: number; discount: number; _id: string };
-
 // Extracted so an individual thumbnail's image `onLoad` only re-renders that
 // one thumbnail instead of the whole CartPage (which previously held
 // per-image loaded state in a single Record, so every image load touched
 // page-level state).
 const SelectedItemThumbnail = memo(function SelectedItemThumbnail({
   item,
-  amount,
 }: {
   item: CartItem;
-  amount: CartAmountEntry | undefined;
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  // Priced off the line itself via the shared helper, so this can't disagree
+  // with the summary totals beside it.
+  const { net } = getLineTotals(item);
   return (
     <div className="transition-all duration-300">
       <div className="size-[4rem] rounded-md overflow-hidden relative bg-gray-200">
@@ -74,11 +78,7 @@ const SelectedItemThumbnail = memo(function SelectedItemThumbnail({
       </div>
 
       <p className="text-xs text-black/75 mt-1 transition-opacity duration-300">
-        {formatPrice(
-          amount?.discount && amount.discount > 0
-            ? amount.total - amount.discount
-            : (amount?.total ?? 0),
-        )}
+        {formatPrice(net)}
         <span className="text-brand_pink"> x{item.quantity}</span>
       </p>
     </div>
@@ -112,14 +112,6 @@ export default function CartPage() {
   );
   const selectedCount = selectedItems.length;
   const openModal = useModalStore((s) => s.openModal);
-  const [cartAmount, setCartAmount] = useState<CartAmountEntry[]>([]);
-
-  // Lets handleUpdateCartTotal below read the current items without
-  // needing `items` in its dependency array — keeps that callback's
-  // reference permanently stable, which is what actually lets
-  // React.memo(CartCard) skip re-renders.
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
 
   const checkoutHandler = () => {
     const token = getBearerToken();
@@ -153,59 +145,21 @@ export default function CartPage() {
     }, 300);
   };
 
-  // Stable for the component's entire lifetime (empty deps + itemsRef) —
-  // previously a brand-new closure was created on every render, inside the
-  // items.map() below, for every single CartCard, which alone would have
-  // defeated React.memo(CartCard) regardless of any other prop stability.
-  const handleUpdateCartTotal = useCallback(
-    ({ total, discount, _id }: { total: number; discount: number; _id: string }) => {
-      const isSelected = itemsRef.current.find((i) => i._id === _id)?.selected;
-      setCartAmount((prev) => {
-        if (!isSelected) {
-          return prev.filter((i) => i._id !== _id);
-        }
-        const existing = prev.find((i) => i._id === _id);
-        if (existing) {
-          return prev.map((i) =>
-            i._id === _id ? { ...i, total, discount } : i,
-          );
-        }
-        return [...prev, { total, discount, _id }];
-      });
-    },
-    [],
+  // Derived straight from the store rather than assembled from what each
+  // CartCard reports upward. That old mechanism kept a `cartAmount` array
+  // keyed by `_id` alone, but a cart line is identified by `_id` + variants —
+  // so the same product added in two variants collided on one entry and the
+  // second card silently overwrote the first, undercounting the total. It
+  // also duplicated buildCartItem's pricing rules in a third place.
+  const { itemsTotal, itemsDiscount, finalTotal } = useMemo(
+    () => getSelectedTotals(items),
+    [items],
   );
-
-  // O(1) lookups for the order-summary thumbnails below instead of an
-  // O(n) .find() per selected item (O(n*m) total for the panel).
-  const cartAmountById = useMemo(
-    () => new Map(cartAmount.map((entry) => [entry._id, entry])),
-    [cartAmount],
-  );
-
-  // Computed once and reused everywhere below instead of the same three
-  // cartAmount.reduce() calls being run again for the mobile collapsed
-  // summary (6 reduce passes over the same array per render → 2).
-  const { itemsTotal, itemsDiscount, finalTotal } = useMemo(() => {
-    const itemsTotal = cartAmount.reduce((acc, i) => acc + i.total, 0);
-    const itemsDiscount = cartAmount.reduce((acc, i) => acc + i.discount, 0);
-    return { itemsTotal, itemsDiscount, finalTotal: itemsTotal - itemsDiscount };
-  }, [cartAmount]);
 
   // Show skeleton while loading
-
   useEffect(() => {
     if (cartLoaded) setIsLoading(false);
   }, [cartLoaded]);
-
-  useEffect(() => {
-    if (cartAmount.length > 0) {
-      setCartAmount((prev) =>
-        prev.filter((item) => items.some((i) => i._id === item._id)),
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
 
   if (isLoading) {
     return (
@@ -299,11 +253,7 @@ export default function CartPage() {
             </svg>
           </div>
           {items.map((item) => (
-            <CartCard
-              item={item}
-              key={cartLineKey(item)}
-              handleUpdateCartTotal={handleUpdateCartTotal}
-            />
+            <CartCard item={item} key={cartLineKey(item)} />
           ))}
         </div>
         {!selectedItem && (
@@ -374,11 +324,7 @@ export default function CartPage() {
             </div> */}
               <div className="flex gap-2 min-h-[5rem] transition-all duration-300">
                 {selectedItems.map((item) => (
-                  <SelectedItemThumbnail
-                    key={cartLineKey(item)}
-                    item={item}
-                    amount={cartAmountById.get(item._id)}
-                  />
+                  <SelectedItemThumbnail key={cartLineKey(item)} item={item} />
                 ))}
               </div>
 
