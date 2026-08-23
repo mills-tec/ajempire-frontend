@@ -1,9 +1,12 @@
 "use client";
 import CountdownTimer from "@/components/CountDownTimer";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CartItem, useCartStore } from "@/lib/stores/cart-store";
+import {
+  areVariantsEqual,
+  CartItem,
+  useCartStore,
+} from "@/lib/stores/cart-store";
 import { useProductVariants } from "@/lib/useProductVariants";
-import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { memo, useEffect, useState } from "react";
@@ -16,21 +19,7 @@ const formatPrice = (amount: number) => {
   });
 };
 
-function CartCard({
-  item,
-  handleUpdateCartTotal,
-}: {
-  item: CartItem;
-  handleUpdateCartTotal: ({
-    total,
-    discount,
-    _id,
-  }: {
-    total: number;
-    discount: number;
-    _id: string;
-  }) => void;
-}) {
+function CartCard({ item }: { item: CartItem }) {
   // Individual selectors instead of a whole-store destructure: every one of
   // these actions is a stable reference for the store's lifetime, so
   // subscribing to them individually never triggers a re-render on its own.
@@ -46,42 +35,44 @@ function CartCard({
   const setSelectedItem = useCartStore((s) => s.setSelectedItem);
   const selectedItem = useCartStore((s) => s.selectedItem);
   const resetSelectedItem = useCartStore((s) => s.resetSelectedItem);
+  const setCartSelectedVariants = useCartStore((s) => s.setSelectedVariants);
   const cartItem = item;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => resetSelectedItem(), []);
   const router = useRouter();
 
-  const { selectedOptions, selectOption, isValidOption, selectedCombination } =
-    useProductVariants(item);
+  const {
+    selectedOptions,
+    selectOption,
+    isValidOption,
+    hasVariants,
+    availableVariants,
+    selectedVariantsArray,
+  } = useProductVariants(item);
 
   const [_remove, setRemove] = useState(false);
 
+  // Push a variant change here back into the cart line, the same way the cart
+  // popup does. Selecting a variant only writes to the variant store, so
+  // without this the line kept the price of whatever combination it was added
+  // with while this card displayed the newly selected one — the card and the
+  // cart total disagreed. setSelectedVariants re-prices the line, which is
+  // what makes item.basePrice/finalPrice below stay correct.
   useEffect(() => {
-    const unitPrice = Number(
-      item.price + (selectedCombination?.additionalPrice ?? 0),
-    );
-    const unitDiscount = item.flashSales
-      ? calcDiscount(
-          unitPrice,
-          item.flashSales?.discountValue ?? 0,
-          item.flashSales?.discountType ?? "percent",
-        )
-      : 0;
+    if (!hasVariants) return;
+    if (selectedVariantsArray.length !== availableVariants.length) return;
+    if (areVariantsEqual(item.selectedVariants, selectedVariantsArray)) return;
 
-    handleUpdateCartTotal({
-      total: unitPrice * cartItem!.quantity,
-      discount: unitDiscount * cartItem!.quantity,
-      _id: item._id,
-    });
-  // item.selected replaces the old selectedItems.length dependency — this
-  // effect only needs to re-report when THIS card's own price-relevant
-  // inputs change, not whenever selection changes anywhere else in the
-  // cart. Same eventual cartAmount state, far fewer redundant effect runs
-  // (previously every card re-ran this on every other card's selection
-  // toggle).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCombination, item.selected, cartItem?.quantity]);
+    setCartSelectedVariants(item._id, selectedVariantsArray);
+  }, [
+    hasVariants,
+    availableVariants.length,
+    selectedVariantsArray,
+    item._id,
+    item.selectedVariants,
+    setCartSelectedVariants,
+  ]);
 
   return (
     <section className="w-full">
@@ -111,7 +102,7 @@ function CartCard({
               alt="product image"
               fill
               className="transition-transform duration-300 ease-in-out group-hover:scale-110 object-cover"
-               sizes="(max-width: 640px) 50vw,
+              sizes="(max-width: 640px) 50vw,
          (max-width: 1024px) 33vw,
          25vw"
             />
@@ -137,18 +128,17 @@ function CartCard({
                         return (
                           <div
                             className={`relative  ${variant.name.toLowerCase().includes("color") ? "rounded-full" : "rounded-sm"} size-[1.2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
-                                  ${
-                                    isSelected
-                                      ? variant.name
-                                          .toLowerCase()
-                                          .includes("color")
-                                        ? "outline outline-1 outline-offset-2  outline-purple-600 "
-                                        : "outline outline-1 outline-offset-2 outline-purple-600"
-                                      : ""
-                                  } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
+                                  ${isSelected
+                                ? variant.name
+                                  .toLowerCase()
+                                  .includes("color")
+                                  ? "outline outline-1 outline-offset-2  outline-purple-600 "
+                                  : "outline outline-1 outline-offset-2 outline-purple-600"
+                                : ""
+                              } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if(isValid){
+                              if (isValid) {
 
                                 selectOption(variant.name, value);
                               }
@@ -161,8 +151,8 @@ function CartCard({
                                 style={{ backgroundColor: value }}
                               />
                             ) : !variant.name
-                                .toLowerCase()
-                                .includes("color") ? (
+                              .toLowerCase()
+                              .includes("color") ? (
                               value.toUpperCase()
                             ) : (
                               ""
@@ -180,18 +170,7 @@ function CartCard({
                   <div className="flex text-[0.6rem] w-max items-center gap-3 justify-between">
                     <p className="text-brand_pink font-semibold">
                       Save{" "}
-                      {Number(
-                        item.basePrice -
-                          calcDiscountPrice(
-                            item.basePrice,
-                            item.flashSales?.discountValue ?? 0,
-                            item.flashSales?.discountType ?? "percent",
-                          ),
-                      ).toLocaleString("en-NG", {
-                        style: "currency",
-                        currency: "NGN",
-                      })}{" "}
-                      extra
+                      {formatPrice(item.basePrice - item.finalPrice)} extra
                     </p>
                     <p className=" border border-brand_pink text-brand_pink rounded-sm px-1">
                       <CountdownTimer endTime={item.flashSales?.endDate} />
@@ -204,34 +183,20 @@ function CartCard({
               <div className="flex items-center gap-1">
                 {item.flashSales ? (
                   <>
+                    {/* Both read the line's own resolved prices rather than
+                        re-deriving from price + additionalPrice, so this card
+                        can never show a different number than the cart total
+                        computed from the same two fields. */}
                     <p className="text-black/60 text-xs line-through">
-                      {Number(
-                        item.price +
-                          (selectedCombination?.additionalPrice ?? 0),
-                      ).toLocaleString("en-NG", {
-                        style: "currency",
-                        currency: "NGN",
-                      })}
+                      {formatPrice(item.basePrice)}
                     </p>
                     <p className="text-brand_pink">
-                      {Number(
-                        calcDiscountPrice(
-                          item.price +
-                            (selectedCombination?.additionalPrice ?? 0),
-                          item.flashSales?.discountValue,
-                          item.flashSales?.discountType,
-                        ),
-                      ).toLocaleString("en-NG", {
-                        style: "currency",
-                        currency: "NGN",
-                      })}
+                      {formatPrice(item.finalPrice)}
                     </p>
                   </>
                 ) : (
                   <p className="text-brand_pink">
-                    {formatPrice(
-                      item.price + (selectedCombination?.additionalPrice ?? 0),
-                    )}
+                    {formatPrice(item.basePrice)}
                   </p>
                 )}
               </div>

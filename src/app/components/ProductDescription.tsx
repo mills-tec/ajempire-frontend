@@ -5,6 +5,7 @@ import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import { ProductResponse } from "@/lib/types";
+import { useHasMounted } from "@/lib/useHasMounted";
 import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscount, calcDiscountPrice } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -31,6 +32,13 @@ export default function ProductDescription({
     removeItem: removeWishlistItem,
     isInWishlist,
   } = useWishlistStore();
+  // The wishlist store is persisted to localStorage and rehydrates
+  // synchronously on the client, so it knows the item is wishlisted before
+  // React has hydrated — while the server, with no localStorage, rendered the
+  // "not wishlisted" heart. Holding the server's answer for the first client
+  // render is what keeps the two in agreement.
+  const hasMounted = useHasMounted();
+  const showWishlisted = hasMounted && isInWishlist(product._id);
   const {
     selectedOptions,
     selectOption,
@@ -105,6 +113,14 @@ export default function ProductDescription({
     product._id,
     selectedVariantsArray,
   ]);
+  // Same hydration concern as the wishlist heart below: the cart store is
+  // persisted too, so on the client this product may already be in the cart
+  // before React hydrates, while the server — with no localStorage — rendered
+  // the "Add to Cart" button. Rendering off this instead of `item` keeps the
+  // first client render identical to the server's. Only the markup is gated;
+  // the effects and handlers below still use the live `item`.
+  const cartItemForRender = hasMounted ? item : undefined;
+
   const [quantity, setQuantity] = useState(() =>
     item ? (item.quantity === 0 ? 1 : item.quantity) : 1,
   );
@@ -486,7 +502,7 @@ export default function ProductDescription({
 
         <div className="hidden lg:block w-[80%] space-y-4 pt-8">
           <div className="flex gap-4 items-center">
-            {!item ? (
+            {!cartItemForRender ? (
               <button
                 onClick={() => {
                   if (!ensureVariantSelection()) {
@@ -511,14 +527,14 @@ export default function ProductDescription({
                 className="h-[2rem] lg:h-[2.5rem] flex font-bold justify-between text-xs border-2 items-center border-brand_pink text-brand_gray_dark rounded-full w-[8rem] overflow-clip"
               >
                 <button
-                  onClick={() => decreaseQuantity(item._id)}
+                  onClick={() => decreaseQuantity(cartItemForRender._id)}
                   className="size-[2.5rem] rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
                 >
                   -
                 </button>
-                {item?.quantity}
+                {cartItemForRender.quantity}
                 <button
-                  onClick={() => increaseQuantity(item._id)}
+                  onClick={() => increaseQuantity(cartItemForRender._id)}
                   className="size-[2.5rem] rounded-full border flex items-center text-brand_pink font-semibold justify-center border-brand_pink"
                 >
                   +
@@ -532,7 +548,7 @@ export default function ProductDescription({
                 else addWishlistItem(product);
               }}
             >
-              {isInWishlist(product._id) ? (
+              {showWishlisted ? (
                 <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
                   <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
                   <path

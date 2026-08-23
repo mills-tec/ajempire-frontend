@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 import { addToCart, fetchFromCart, getBearerToken, removeCartItem } from "../api";
 import { buildCartItem, type AddCartItemInput } from "../cart/buildCartItem";
 import { Product } from "../types";
-import { calcDiscount } from "../utils";
+import { useVariantStore } from "./variant-store";
 
 export const areVariantsEqual = (
   v1?: SelectedVariant[] | null,
@@ -21,6 +21,35 @@ export type SelectedVariant = {
   name: string;
   value: string;
 };
+
+// ── Money: one formula, one place ────────────────────────────────────────
+// `basePrice` (variant-adjusted) and `finalPrice` (after a flash sale) are
+// resolved exactly once per line — by buildCartItem when it's added locally,
+// and by the backend on hydrate. Every total in the app derives from those
+// two fields via the helpers below.
+//
+// Nothing downstream should re-derive money from `price + additionalPrice`:
+// doing that in the display layer is how the cart page, CartCard and the
+// product page were each computing their own answer and drifting apart.
+export const getLineTotals = (item: CartItem) => {
+  const gross = item.basePrice * item.quantity;
+  const discount = (item.basePrice - item.finalPrice) * item.quantity;
+  return { gross, discount, net: gross - discount };
+};
+
+export const getSelectedTotals = (items: CartItem[]) =>
+  items.reduce(
+    (acc, item) => {
+      if (!item.selected) return acc;
+      const line = getLineTotals(item);
+      return {
+        itemsTotal: acc.itemsTotal + line.gross,
+        itemsDiscount: acc.itemsDiscount + line.discount,
+        finalTotal: acc.finalTotal + line.net,
+      };
+    },
+    { itemsTotal: 0, itemsDiscount: 0, finalTotal: 0 },
+  );
 
 export type CartItem = Product & {
   quantity: number;
@@ -288,11 +317,30 @@ export const useCartStore = create<CartStore>()(
         )
           return;
 
-        const updatedItems = items.map((i) =>
-          i._id === id
-            ? { ...i, selectedVariants: variants, synced: false }
-            : i,
-        );
+        const updatedItems = items.map((i) => {
+          if (i._id !== id) return i;
+
+          // Re-resolve price/stock for the newly chosen combination. Without
+          // this the line kept the price of the variant it was added with
+          // while the UI showed the new selection, so the cart total and the
+          // card's own displayed price disagreed. Guarded on the product
+          // actually carrying combinations — otherwise buildCartItem would
+          // see no variants and flatten basePrice back to the raw price,
+          // discarding a surcharge the backend had already applied.
+          if ((i.variantCombinations?.length ?? 0) > 0) {
+            const repriced = buildCartItem({
+              product: i,
+              quantity: i.quantity,
+              selectedVariants: variants,
+            });
+
+            if (repriced.ok) {
+              return { ...repriced.item, selected: i.selected, synced: false };
+            }
+          }
+
+          return { ...i, selectedVariants: variants, synced: false };
+        });
         const updatedItem = updatedItems.find((i) => i._id === id);
 
         // Update local state first
@@ -383,6 +431,12 @@ export const useCartStore = create<CartStore>()(
       },
       removeItem: (id) => {
         set({ items: get().items.filter((i) => i._id !== id) });
+        // The variant picker's chosen options live in their own persisted
+        // store keyed by product id, entirely separate from the cart. Nothing
+        // ever cleared them when a line left the cart, so the selection
+        // outlived the item it belonged to: reopening that product showed the
+        // old options still selected, and re-adding it silently reused them.
+        useVariantStore.getState().resetSelection(id);
         if (!getBearerToken()) return;
         removeCartItem(id).catch(() => {
           set({ syncQueue: [...get().syncQueue, { type: "remove", id }] });
@@ -393,13 +447,18 @@ export const useCartStore = create<CartStore>()(
         set({
           items: get().items.filter((item) => !ids.includes(item._id)),
         });
+        ids.forEach((id) => useVariantStore.getState().resetSelection(id));
       },
 
-      clearCart: () =>
+      clearCart: () => {
+        get().items.forEach((i) =>
+          useVariantStore.getState().resetSelection(i._id),
+        );
         set({
           items: [],
           selectedLogistic: null,
-        }),
+        });
+      },
 
       increaseQuantity: (id) => {
         const item = get().getItem(id);
@@ -418,25 +477,12 @@ export const useCartStore = create<CartStore>()(
         get().setQuantity(id, Math.max(item.quantity - 1, 1));
       },
       orderSummary: () => {
-        const items = get().items.filter((i) => i.selected);
-        const itemEffectivePrice = (item: CartItem) => item.basePrice;
-
-        const total = items.reduce(
-          (sum, i) => sum + itemEffectivePrice(i) * i.quantity,
-          0,
-        );
-
-        const discount = items.reduce((sum, i) => {
-          const unitPrice = itemEffectivePrice(i);
-          const itemDiscount = i.flashSales
-            ? calcDiscount(
-                unitPrice,
-                i.flashSales.discountValue,
-                i.flashSales.discountType,
-              )
-            : 0;
-          return sum + itemDiscount * i.quantity;
-        }, 0);
+        // Same helper the cart page renders from, so the summary shown before
+        // checkout and the one used at checkout can't disagree. This used to
+        // re-derive the discount from `flashSales` independently of
+        // buildCartItem's own calculation.
+        const { itemsTotal: total, itemsDiscount: discount } =
+          getSelectedTotals(get().items);
 
         const appliedCoupon = get().appliedCoupon;
         let coupon = 0;
@@ -632,8 +678,7 @@ export const useCartStore = create<CartStore>()(
   ),
 );
 
-// derived getter instead of in-store `get total()`
-export const useCartTotal = () =>
-  useCartStore((state) =>
-    state.items.reduce((sum, i) => sum + i.price * i.quantity, 0),
-  );
+// A `useCartTotal` hook used to live here, summing `price * quantity` across
+// ALL items (ignoring selection) — a fourth, different answer to "what does
+// the cart cost". It had no callers anywhere in the app; use
+// getSelectedTotals / orderSummary instead.

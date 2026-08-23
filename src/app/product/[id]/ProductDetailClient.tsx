@@ -16,6 +16,7 @@ import { areVariantsEqual, useCartStore } from "@/lib/stores/cart-store";
 import { useModalStore } from "@/lib/stores/modal-store";
 import { useWishlistStore } from "@/lib/stores/wishlist-store";
 import type { ProductResponse } from "@/lib/types";
+import { useHasMounted } from "@/lib/useHasMounted";
 import { useProductVariants } from "@/lib/useProductVariants";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
@@ -72,6 +73,12 @@ export default function ProductDetailPage({
 
   // 🌀 Base variables
   const item = data?.message?.product ?? null;
+
+  // Persisted wishlist state exists only on the client, so the first client
+  // render has to reproduce the server's "not wishlisted" output or React
+  // reports a hydration mismatch on the heart icon's stroke/fill.
+  const hasMounted = useHasMounted();
+  const showWishlisted = hasMounted && !!item && isInWishlist(item._id);
 
   const {
     selectedVariantsArray,
@@ -630,7 +637,7 @@ export default function ProductDetailPage({
                 void addWishlistItem(item);
               }}
             >
-              {isInWishlist(item._id) ? (
+              {showWishlisted ? (
                 <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
                   <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
                   <path

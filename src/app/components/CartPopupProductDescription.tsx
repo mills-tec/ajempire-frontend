@@ -1,18 +1,19 @@
 "use client";
+import CountdownTimer from "@/components/CountDownTimer";
+import { animateToCart } from "@/lib/animateToCart";
 import { getBearerToken } from "@/lib/api";
 import {
+  areVariantsEqual,
   CartItem,
   useCartStore,
-  areVariantsEqual,
 } from "@/lib/stores/cart-store";
+import { useModalStore } from "@/lib/stores/modal-store";
+import { useWishlistStore } from "@/lib/stores/wishlist-store";
+import { useHasMounted } from "@/lib/useHasMounted";
+import { useProductVariants } from "@/lib/useProductVariants";
 import { calcDiscountPrice } from "@/lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { animateToCart } from "@/lib/animateToCart";
-import CountdownTimer from "@/components/CountDownTimer";
-import { useModalStore } from "@/lib/stores/modal-store";
-import { useProductVariants } from "@/lib/useProductVariants";
-import { useWishlistStore } from "@/lib/stores/wishlist-store";
 
 interface Props {
   item: CartItem;
@@ -20,8 +21,8 @@ interface Props {
 }
 
 export default function CartPopupProductDescription({ item, cartRef }: Props) {
+  console.log(item);
   // const [rating, setRating] = React.useState(4);
-
   const cartItems = useCartStore((state) => state.items);
   const selectAllCartItems = useCartStore((state) => state.selectAllCartItems);
   const clearSelectedItem = useCartStore((state) => state.clearSelectedItem);
@@ -42,13 +43,20 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     selectedCombination,
     currentStock,
     hasVariants,
+    availableVariants,
+
   } = useProductVariants(item);
   const cartItem = useMemo(() => {
     if (!hasVariants) {
       return cartItems.find((cartItem) => cartItem._id === item._id);
     }
 
-    if (selectedVariantsArray.length !== (item.variants?.length ?? 0)) {
+
+    // Compare against the hook's derived variant list, not the raw
+    // `item.variants` field — for a product that only ships
+    // `variantCombinations`, the raw field is empty while the derived list
+    // isn't, so this check would never pass and no cart line would ever match.
+    if (selectedVariantsArray.length !== availableVariants.length) {
       return undefined;
     }
 
@@ -57,13 +65,24 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
         cartItem._id === item._id &&
         areVariantsEqual(cartItem.selectedVariants, selectedVariantsArray),
     );
-  }, [cartItems, hasVariants, item._id, item.variants, selectedVariantsArray]);
+  }, [
+    availableVariants.length,
+    cartItems,
+    hasVariants,
+    item._id,
+    selectedVariantsArray,
+  ]);
   const [quantity, setQuantity] = useState(cartItem?.quantity || 1);
   const {
     addItem: addWishlistItem,
     removeItem: removeWishlistItem,
     isInWishlist,
   } = useWishlistStore();
+  // The wishlist store is persisted and rehydrates from localStorage before
+  // React hydrates, so gate the icon on mount to keep the first client render
+  // identical to the server's. See src/lib/useHasMounted.ts.
+  const hasMounted = useHasMounted();
+  const showWishlisted = hasMounted && isInWishlist(item._id);
 
   const checkoutHandler = () => {
     if (!ensureVariantSelection()) {
@@ -118,7 +137,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     } else if (cartItem.quantity !== quantity) {
       setCartItemQty(cartItem._id, quantity);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantity]); // intentionally omit cartItem — we only want this to fire when the user changes quantity
 
   // useEffect(() => {
@@ -204,6 +223,8 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     toast.error(`Please select ${missingVariantName}`);
     return false;
   };
+
+  console.log(hasVariants);
   return (
     <div className="space-y-4 lg:space-y-8">
       <div className="space-y-1 px-4">
@@ -248,7 +269,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
               </>
             ) : (
               <h3 className="text-base lg:text-2xl text-brand_pink font-medium">
-                {Number(item.price).toLocaleString("en-NG", {
+                {Number(basePrice).toLocaleString("en-NG", {
                   style: "currency",
                   currency: "NGN",
                 })}
@@ -330,7 +351,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
         <div className="flex gap-6">
           {hasVariants && (
             <div className="flex gap-6 px-4">
-              {item.variants!.map((variant, key) => (
+              {availableVariants.map((variant, key) => (
                 <div
                   key={key}
                   ref={(el) => {
@@ -446,7 +467,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
               void addWishlistItem(item);
             }}
           >
-            {isInWishlist(item._id) ? (
+            {showWishlisted ? (
               <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
                 <circle cx="21" cy="21" r="20.5" stroke="#FF008C" />
                 <path
