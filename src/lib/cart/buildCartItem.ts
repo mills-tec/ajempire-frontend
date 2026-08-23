@@ -69,7 +69,12 @@ export function buildCartItem({
     ok: true,
     item: {
       ...product,
-      price: basePrice,
+      // `price` deliberately stays the RAW catalogue price; `basePrice` is the
+      // variant-adjusted one. This used to be `price: basePrice`, which made a
+      // CartItem unsafe to feed back through this function — re-pricing a line
+      // after a variant change added `additionalPrice` a second time — and left
+      // `price` meaning two different things depending on whether the line came
+      // from here or from backendItemToCartItem (which keeps it raw).
       basePrice,
       finalPrice,
       discount,

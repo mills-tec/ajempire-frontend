@@ -23,19 +23,29 @@ firebase.initializeApp({
 // messages.
 const messaging = firebase.messaging();
 
+// Activate a new version of this file IMMEDIATELY instead of parking it in
+// "waiting" until every tab of the site is closed.
+//
+// This matters more than it looks: a service worker only updates when its
+// bytes change, and even then the replacement idles while the old one keeps
+// handling pushes. That is how a fixed handler can appear not to work — the
+// browser is still running the previous one. Specifically, the original
+// version of this file read `payload.notification.title` unguarded, which
+// throws on the data-only payloads the backend now sends, so a stale copy
+// silently shows nothing at all while the foreground path keeps working.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
 messaging.onBackgroundMessage((payload) => {
-    // THE DUPLICATE-NOTIFICATION FIX.
+    // The backend sends data-only payloads, which the FCM SDK never renders
+    // by itself — showing them is entirely this handler's job, and it is the
+    // only path that runs when no tab is open.
     //
-    // The FCM SDK already calls showNotification() itself for any message
-    // carrying a `notification` payload, and it does that BEFORE handing the
-    // message to this callback. Rendering it again here is what produced two
-    // notifications for every push. So when the SDK has already shown one,
-    // bail and let its copy stand.
-    //
-    // Data-only messages (no `notification` key) are never auto-displayed,
-    // which makes them the shape to prefer: they're the only way to control
-    // the icon, tag and click-through target from this file. Switch the
-    // backend to data-only and everything below takes over.
+    // The guard below is for the other shape: when a message DOES carry a
+    // `notification` key, the SDK has already called showNotification()
+    // before reaching this callback, so rendering it again here is what
+    // produced duplicate notifications. Nothing should be sending that shape
+    // any more, but the guard keeps a regression from doubling up again.
     if (payload.notification) return;
 
     const data = payload.data || {};
@@ -56,7 +66,6 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const url = (event.notification.data && event.notification.data.url) || '/';
-
     event.waitUntil(
         self.clients
             .matchAll({ type: 'window', includeUncontrolled: true })
