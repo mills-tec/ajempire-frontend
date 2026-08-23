@@ -32,7 +32,7 @@ export default function OrdersAndAccountPage() {
     } else {
       setIsMobile(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Only runs on mobile — prefetch all link destinations. Deferred to idle
@@ -66,7 +66,7 @@ export default function OrdersAndAccountPage() {
     }
     const timeoutId = setTimeout(prefetchAll, 1);
     return () => clearTimeout(timeoutId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
 
   if (!isMobile) return null;

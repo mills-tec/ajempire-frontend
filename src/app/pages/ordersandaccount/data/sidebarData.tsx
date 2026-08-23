@@ -33,7 +33,7 @@ export type SideBarItem = {
 // permission → token → save flow lives in one place (see
 // src/lib/pushNotifications.ts), shared with the automatic registration in
 // NotificationWrapper, so this only has to decide what to say afterwards.
-const handleEnableNotifications = async (e: React.MouseEvent) => {
+export const handleEnableNotifications = async (e: React.MouseEvent) => {
   // The icon sits inside the "Notifications" nav link — don't navigate away
   // while the browser's permission prompt is up.
   e.preventDefault();

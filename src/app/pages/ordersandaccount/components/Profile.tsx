@@ -2,6 +2,7 @@ import ProfileName from "@/app/components/ui/ProfileName";
 import { NotificationsIcon } from "@/components/svgs/NotificationsIcon";
 import SettingsIcon from "@/components/svgs/SettingIcon";
 import Link from "next/link";
+import { handleEnableNotifications } from "../data/sidebarData";
 
 export default function Profile() {
     return (
@@ -10,7 +11,10 @@ export default function Profile() {
                 <Link href={"/pages/ordersandaccount/settings/profile"} className=" transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1">
                     <ProfileName />
                 </Link>
-                <div className="flex items-center gap-2 ">
+                <div className="flex items-center gap-2 "
+                    onClick={(e) => {
+                        handleEnableNotifications(e)
+                    }}>
                     <Link href={"/pages/ordersandaccount/notifications/all"} className=" transition-transform duration-200 ease-out  active:scale-90 focus:outline-nonefocus-visible:ring-2 focus-visible:ring-white/60rounded-fullp-1">
                         <NotificationsIcon className="text-black" />
                     </Link>

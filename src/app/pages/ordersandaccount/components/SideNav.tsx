@@ -1,5 +1,5 @@
-import SideBarComp from "./SideBarComp";
 import { sidebarItems } from "../data/sidebarData";
+import SideBarComp from "./SideBarComp";
 
 
 const SideNav = () => {
