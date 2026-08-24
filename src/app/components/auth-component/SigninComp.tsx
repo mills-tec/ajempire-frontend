@@ -1,19 +1,20 @@
 "use client";
-import Image from "next/image";
+import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
 import Logo from "@/assets/logo.png";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { z } from "zod";
-import { Eye, EyeClosed } from "lucide-react";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { loginBackend } from "@/lib/api";
-import { toast } from "sonner";
-import Spinner from "../Spinner";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { useCartStore } from "@/lib/stores/cart-store";
 import { saveAccounts } from "@/lib/utils";
+import { Eye, EyeClosed } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import Spinner from "../Spinner";
 import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
 
@@ -60,10 +61,9 @@ export default function SigninComp({
 
     try {
       const { email, password } = form;
-  
+
       const res = await loginBackend(email, password);
-      // Store JWT token in localStorage (accessible to JS, but not httpOnly)
-      console.log("login response data :",res)
+
       if (res?.message) {
         setIsLoggedIn(Boolean(res.message.token));
         setUser({ email: res.message.user.email, name: res.message.user.fullname, id: res.message.user._id });
@@ -72,6 +72,8 @@ export default function SigninComp({
           JSON.stringify(res.message)
         );
         saveAccounts({ email: res.message.user.email, token: res.message.token, user: res.message.user });
+
+
         // Merges whatever was added to the cart while browsing as a guest
         // into this account's backend cart — see hydrateFromBackend for the
         // merge strategy. Not awaited: it has its own error handling (a
@@ -85,7 +87,7 @@ export default function SigninComp({
       toast(successMessage);
       setIsLoading(false);
       onClose();
-     
+
     } catch (error) {
       console.error("❌ Login error:", error);
       const errorMessage = error instanceof Error ? error.message : "Login failed";
@@ -95,7 +97,9 @@ export default function SigninComp({
   }
 
   return (
-    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={(e) => {
+      handleEnableNotifications(e);
+    }}>
       {isLoading && <Spinner />}
       <div className=" relative bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
         {canGoBack && <AuthBackButton onBack={onBack} />}
@@ -178,6 +182,7 @@ export default function SigninComp({
                 form.email.trim().length === 0 ||
                 form.password.trim().length === 0
               }
+
             >
               Continue
             </button>
