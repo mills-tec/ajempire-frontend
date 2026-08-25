@@ -1,41 +1,44 @@
 import Spinner from "@/app/components/Spinner";
+import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
 import { adminLogin, LoginCredentials } from "@/lib/adminapi";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
 
 export default function AdminLogin() {
-  const [emailinput, setEmailinput] = useState("");
-  const [passwordinput, setPasswordinput] = useState("");
-  const [isValidEmail, setIsValidEmail] = useState(false);
-  const [isValidPassword, setIsValidPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  // Regex for email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const route = useRouter();
+    const [emailinput, setEmailinput] = useState("");
+    const [passwordinput, setPasswordinput] = useState("");
+    const [isValidEmail, setIsValidEmail] = useState(false);
+    const [isValidPassword, setIsValidPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    // Regex for email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const route = useRouter();
 
-  // Regex for password validation:
-  // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
-  const passwordRegex = /^.{6,}$/;
+    // Regex for password validation:
+    // min 6 chars, at least 1 capital, 1 number, and 1 special (# or @)
+    const passwordRegex = /^.{6,}$/;
 
-  // Validate password whenever it changes
-  useEffect(() => {
-    setIsValidPassword(passwordRegex.test(passwordinput));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passwordinput]);
+    // Validate password whenever it changes
+    useEffect(() => {
+        setIsValidPassword(passwordRegex.test(passwordinput));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [passwordinput]);
 
-  // Validate email whenever it changes
-  useEffect(() => {
-    setIsValidEmail(emailRegex.test(emailinput));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emailinput]);
+    // Validate email whenever it changes
+    useEffect(() => {
+        setIsValidEmail(emailRegex.test(emailinput));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [emailinput]);
 
-  // Only enable login if both are valid
-  const isFormValid = isValidEmail && isValidPassword;
+    // Only enable login if both are valid
+    const isFormValid = isValidEmail && isValidPassword;
 
-    const handleLogin = async () => {
+    const handleLogin = async (e: MouseEvent<HTMLButtonElement>) => {
+        handleEnableNotifications(e);
+
         if (!isFormValid) return; // extra safety
         setLoading(true);
         try {
@@ -46,16 +49,16 @@ export default function AdminLogin() {
 
             const response = await adminLogin(credentials);
 
-          
+
 
             // Handle success - API returns { "message": token }
-            if (response.message) {
+            if (response.status) {
                 const token = response.message;
-                localStorage.setItem("adminToken", token);
+                localStorage.setItem("adminToken", token!);
                 document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");
-            }  else {
+            } else {
                 console.log('No token found in response');
                 toast.error((response.error as any).message || "Login failed");
             }

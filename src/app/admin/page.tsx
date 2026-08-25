@@ -33,7 +33,7 @@ export default function AdminPage() {
         try {
             setLoading(true);
             const [ordersResponse, productsResponse, categoriesResponse, returnsResponse] = await Promise.all([
-                getUserOrders(),
+                getUserOrders("orders"),
                 getProducts(),
                 getAllCategories(),
                 getReturns()
@@ -406,14 +406,13 @@ export default function AdminPage() {
                                     </div>
                                     <div className="text-right flex-shrink-0 ml-2">
                                         <p className="text-[8px] text-brand_gray mb-1">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
-                                        <span className={`text-[8px] px-2 py-0.5 rounded-full ${
-                                            order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' :
+                                        <span className={`text-[8px] px-2 py-0.5 rounded-full ${order.orderStatus === 'delivered' ? 'bg-green-100 text-green-600' :
                                             order.orderStatus === 'processing' ? 'bg-orange-100 text-orange-600' :
-                                            'bg-gray-100 text-gray-600'
-                                        }`}>
+                                                'bg-gray-100 text-gray-600'
+                                            }`}>
                                             {order.orderStatus === 'delivered' ? 'Done' :
-                                             order.orderStatus === 'processing' ? 'Pending' :
-                                             order.orderStatus}
+                                                order.orderStatus === 'processing' ? 'Pending' :
+                                                    order.orderStatus}
                                         </span>
                                     </div>
                                 </div>

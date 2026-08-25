@@ -21,6 +21,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import PromotionDetailsModal from './components/PromotionDetailsModal';
 import PromotionFormModal from './components/PromotionFormModal';
@@ -302,8 +303,10 @@ const PromotionsPage = () => {
           : await createPromotion(payload);
 
         if (response.status) {
+          toast.success(isEdit ? "Editted Promotion successfully" : "Added Promotion Successfully")
           closeModal();
           refreshCurrentPage();
+
         } else {
           setActionError(
             response.error || `Failed to ${isEdit ? 'update' : 'create'} promotion`,
@@ -326,7 +329,8 @@ const PromotionsPage = () => {
     setActionError(null);
     try {
       const response = await deletePromotion(selectedPromotion._id);
-      if (response.message) {
+      if (response.status) {
+        toast.success("Promotion Deleted Successfully");
         closeModal();
         refreshCurrentPage();
       } else {

@@ -1,26 +1,27 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import butterflyImage from "@/assets/butterfly.png";
 import Logo from "@/assets/logo.png";
-import { Button } from "@/components/ui/button";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
+import { Button } from "@/components/ui/button";
+import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 
+import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
+import { API_URL } from "@/lib/api";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { useCartStore } from "@/lib/stores/cart-store";
+import { saveAccounts } from "@/lib/utils";
 import {
   GoogleLogin,
   useGoogleOAuth,
   type CredentialResponse,
 } from "@react-oauth/google";
-import { useState } from "react";
-import GoogleButton from "./GoogleButton";
 import axios from "axios";
+import { useState } from "react";
 import { toast } from "sonner";
 import Spinner from "../Spinner";
-import { useAuthStore } from "@/lib/stores/auth-store";
-import { useCartStore } from "@/lib/stores/cart-store";
-import { saveAccounts } from "@/lib/utils";
-import { API_URL } from "@/lib/api";
+import GoogleButton from "./GoogleButton";
 
 type IntroCompProps = {
   onClose: () => void; // function prop to handle closing
@@ -77,6 +78,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             duration: 3000,
           });
           setTimeout(() => {
+
             onClose();
           }, 800);
         }
@@ -84,7 +86,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
       .catch((err) => {
         const message =
           err.response?.data?.error ?? err.response?.data ?? err.message;
-          console.log(message);
+        console.log(message);
         toast.error(message, { duration: 3000 });
         console.error("Auth error:", message);
       })
@@ -101,7 +103,10 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-        style={{zIndex: 200}}
+        style={{ zIndex: 200 }}
+        onClick={(e) => {
+          handleEnableNotifications(e);
+        }}
       >
         {isLoading && <Spinner />}
         <motion.div
@@ -113,7 +118,7 @@ export default function IntroComp({ onClose, setScreen }: IntroCompProps) {
             ease: [0.22, 1, 0.36, 1], // premium easing
           }}
           className=" relative bg-brand_gradient lg:rounded-3xl flex flex-col w-full h-full lg:h-[35rem] lg:w-[27rem] text-3xl"
-          
+
         >
           <div className="relative w-[15rem] mx-auto h-[13rem] overflow-hidden">
             <Image

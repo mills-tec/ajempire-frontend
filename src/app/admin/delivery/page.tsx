@@ -1,6 +1,7 @@
 'use client'
 
 import { ToastContainer, useToast } from '@/app/components/ui/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { IOrderStats } from '@/lib/admin-types';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
@@ -8,6 +9,7 @@ import { ChevronLeft, ChevronRight, Eye, Filter, Package, Search, ShoppingBag, X
 import React, { useEffect, useState } from 'react';
 
 const DeliveryPage = () => {
+  const { user } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
@@ -92,19 +94,19 @@ const DeliveryPage = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await getUserOrders();
+      const response = await getUserOrders("orders");
 
-      if (response.message && Array.isArray(response.message)) {
+      if (response.status && Array.isArray(response.message)) {
         // Transform orders data to match delivery structure
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedOrders = response.message.map((order: any) => ({
           id: order.order_id || 'Unknown',
           dbId: order._id || order.id || 'Unknown',
-          trackingId: `TRK-${order.order_id?.slice(-6) || '000000'}`,
+          trackingId: "",
           customer: order.shippingAddress?.fullName || 'Unknown Customer',
           agent: order.deliveryAgent || 'Not Assigned',
           address: order.shippingAddress ?
-            `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}`.trim() :
+            `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}`.trim() :
             'Unknown Address',
           status: order.orderStatus === 'shipped' || order.orderStatus === 'shipping' ? 'In Transit' :
             order.orderStatus === 'delivered' ? 'Delivered' :
@@ -135,9 +137,7 @@ const DeliveryPage = () => {
   const totalDeliveries = periodFilteredDeliveries?.length || 0;
   const inTransitDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'In Transit').length || 0;
   const deliveredDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Delivered').length || 0;
-  const _pendingDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Pending').length || 0;
-  const _failedDeliveries = periodFilteredDeliveries?.filter(o => o.status === 'Failed').length || 0;
-  const _assignedAgents = new Set(periodFilteredDeliveries?.map(o => o.agent).filter(a => a !== 'Not Assigned')).size || 0;
+
 
   // Filter deliveries based on search and status filter
   const filteredDeliveries = periodFilteredDeliveries?.filter(delivery => {
@@ -165,6 +165,19 @@ const DeliveryPage = () => {
       case 'Failed': return 'bg-red-50 text-red-500 border-red-100';
       default: return 'bg-gray-50 text-gray-500 border-gray-100';
     }
+  };
+
+  const hasLogisticsData = () => {
+    // Check if delivery has logistics data (in transit or already delivered)
+    return selectedDelivery?.status === 'In Transit' || selectedDelivery?.status === 'Delivered';
+  };
+
+  const canEditStatus = () => {
+    // Only super admins can edit orders with logistics data
+    if (hasLogisticsData() && user?.role !== 'super') {
+      return false;
+    }
+    return true;
   };
 
   return (
@@ -320,7 +333,7 @@ const DeliveryPage = () => {
                           <span className="font-semibold text-sm text-brand_gray_dark">{delivery.customer}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-sm text-brand_gray_dark/80">{delivery.agent}</td>
+                      <td className="p-4 text-sm text-brand_gray_dark/80">ShipBubble</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-brand_gray_dark/80 max-w-xs truncate">{delivery.address}</span>
@@ -408,7 +421,12 @@ const DeliveryPage = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h4 className="text-sm font-semibold text-brand_gray_dark mb-1">Update Delivery Status</h4>
-                    <p className="text-xs text-brand_gray font-medium">Select a status to update the order immediately</p>
+                    <p className="text-xs text-brand_gray font-medium">
+                      {!canEditStatus()
+                        ? 'Only super admins can edit orders with logistics data'
+                        : 'Select a status to update the order immediately'
+                      }
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {[
@@ -421,12 +439,13 @@ const DeliveryPage = () => {
                       return (
                         <button
                           key={statusBtn.value}
-                          disabled={isUpdatingStatus}
+                          disabled={isUpdatingStatus || !canEditStatus()}
                           onClick={() => handleUpdateStatus(selectedDelivery.id, statusBtn.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${statusBtn.color} ${isActive
                             ? 'ring-2 ring-brand_pink border-transparent scale-105 shadow-sm'
                             : 'opacity-70 hover:opacity-100'
-                            }`}
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={!canEditStatus() ? 'Only super admins can edit orders with logistics data' : ''}
                         >
                           {isUpdatingStatus && isActive && (
                             <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -449,13 +468,14 @@ const DeliveryPage = () => {
                       <p className="text-[10px] text-brand_gray font-medium">Customer Name</p>
                       <p className="text-sm font-semibold text-brand_gray_dark">{selectedDelivery.customer}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-brand_gray font-medium">Email Address</p>
-                      <p className="text-sm font-medium text-brand_gray_dark/80">{selectedDelivery.email}</p>
-                    </div>
+
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Phone Number</p>
-                      <p className="text-sm font-medium text-brand_gray_dark/80">{selectedDelivery.phone}</p>
+                      <p className="text-sm font-medium text-brand_gray_dark/80">
+                        <a href={`tel:${selectedDelivery.phone}`}>
+                          {selectedDelivery.phone}
+                        </a>
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Shipping Address</p>
@@ -470,7 +490,7 @@ const DeliveryPage = () => {
                   <div className="space-y-2">
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Delivery Agent</p>
-                      <p className="text-sm font-semibold text-brand_gray_dark">{selectedDelivery.agent}</p>
+                      <p className="text-sm font-semibold text-brand_gray_dark">ShipBubble</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Payment Method</p>
