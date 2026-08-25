@@ -52,9 +52,9 @@ export default function AdminLogin() {
 
 
             // Handle success - API returns { "message": token }
-            if (response.message) {
+            if (response.status) {
                 const token = response.message;
-                localStorage.setItem("adminToken", token);
+                localStorage.setItem("adminToken", token!);
                 document.cookie = `adminToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
                 toast.success("Login successful!");
                 route.push("/admin");

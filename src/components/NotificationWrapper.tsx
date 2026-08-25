@@ -115,12 +115,12 @@ export default function NotificationWrapper() {
     };
 
 
-    // socket.on("userNotifications", handleUserNotifications);
+    // socket.on("get:userNotifications", handleUserNotifications);
     socket.on("get:userNotifications", handleNewNotification);
     socket.on("connect_error", handleConnectError);
 
     return () => {
-      // socket.off("userNotifications", handleUserNotifications);
+      // socket.off("get:userNotifications", handleUserNotifications);
       socket.off("get:userNotifications", handleNewNotification);
       socket.off("connect_error", handleConnectError);
     };
@@ -142,9 +142,9 @@ export default function NotificationWrapper() {
   // their locally persisted cart alone instead of clearing it.
   useEffect(() => {
     if (isAdminRoute) {
-      useCartStore.getState().setCartLoaded(true);
       return;
     }
+    useCartStore.getState().setCartLoaded(true);
     void useCartStore.getState().hydrateFromBackend();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

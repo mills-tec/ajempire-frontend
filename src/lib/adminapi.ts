@@ -184,8 +184,8 @@ export const deleteProduct = (id: string): Promise<ApiResponse<void>> =>
   });
 
 // Order endpoints
-export const getUserOrders = (): Promise<ApiResponse<IOrder[]>> =>
-  apiCall('/admin/order');
+export const getUserOrders = (type: "orders" | "delivery"): Promise<ApiResponse<IOrder[]>> =>
+  apiCall(`/admin/order?orderType=${type}`);
 
 export const getOrderById = (id: string): Promise<ApiResponse<IOrder>> =>
   apiCall(`/admin/order/${id}`);
@@ -512,10 +512,10 @@ export const createBanner = (images: {
     body: JSON.stringify({ images }),
   });
 
-export const updateBanner = (id: string, data: FormData): Promise<ApiResponse<Banner>> =>
+export const updateBanner = (id: string, data: { images?: { url: string; link?: string }[], isActive: boolean }): Promise<ApiResponse<Banner>> =>
   apiCall(`/admin/banner/${id}`, {
     method: 'PATCH',
-    body: data,
+    body: JSON.stringify(data),
   });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

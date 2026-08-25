@@ -8,6 +8,7 @@ import {
   removeImageFromBanner,
   updateBanner
 } from '@/lib/adminapi';
+import { BannerImage } from '@/lib/api';
 import { uploadImageFileToStorage } from '@/lib/utils';
 import {
   AlertCircle,
@@ -53,6 +54,7 @@ export default function BannersPage() {
   const [editIsActive, setEditIsActive] = useState(true);
   const [appendedImages, setAppendedImages] = useState<NewImageItem[]>([]);
   const [deletingImageUrls, setDeletingImageUrls] = useState<string[]>([]);
+  const [editedImageLinks, setEditedImageLinks] = useState<{ [url: string]: string }>({});
 
   // Fetch banners
   const fetchBanners = async () => {
@@ -149,10 +151,9 @@ export default function BannersPage() {
   const handleToggleStatus = async (banner: Banner) => {
     try {
       setActionLoading(true);
-      const formData = new FormData();
-      formData.append('isActive', (!banner.isActive).toString());
 
-      const res = await updateBanner(banner._id, formData);
+
+      const res = await updateBanner(banner._id, { isActive: !banner.isActive });
       if (res && res.success !== false && !res.error) {
         toast.success(`Banner status updated to ${!banner.isActive ? 'Active' : 'Inactive'}`);
         fetchBanners();
@@ -206,6 +207,12 @@ export default function BannersPage() {
     setEditIsActive(banner.isActive);
     setAppendedImages([]);
     setDeletingImageUrls([]);
+    // Initialize edited links with current links
+    const currentLinks: { [url: string]: string } = {};
+    banner.images?.forEach(img => {
+      currentLinks[img.url] = img.link || '';
+    });
+    setEditedImageLinks(currentLinks);
     setShowEditModal(true);
   };
 
@@ -247,28 +254,51 @@ export default function BannersPage() {
 
     try {
       setActionLoading(true);
-      const formData = new FormData();
-      formData.append('isActive', editIsActive.toString());
 
-      // If there are new images appended
-      if (appendedImages.length > 0) {
-        appendedImages.forEach(img => {
-          formData.append('images', img.file);
+      const allImages: BannerImage[] = [];
+
+      // Add existing images with their updated links (excluding deleted ones)
+      if (selectedBanner.images && selectedBanner.images.length > 0) {
+        selectedBanner.images.forEach(img => {
+          if (!deletingImageUrls.includes(img.url)) {
+            allImages.push({
+              url: img.url,
+              link: editedImageLinks[img.url] ?? img.link ?? ''
+            });
+          }
         });
-
-        const meta = appendedImages.map(img => ({
-          link: img.link.trim()
-        }));
-        formData.append('imagesMeta', JSON.stringify(meta));
       }
 
-      const res = await updateBanner(selectedBanner._id, formData);
+      // Upload and add new appended images
+      if (appendedImages.length > 0) {
+        const uploadedImages = await Promise.all(
+          appendedImages.map((item) => uploadImageFileToStorage(item.file))
+        );
+        uploadedImages.forEach((item, index) => {
+          allImages.push({
+            url: item,
+            link: appendedImages[index].link
+          });
+        });
+      }
+
+      const updateData: { images?: BannerImage[]; isActive: boolean } = {
+        isActive: editIsActive
+      };
+
+      // Only include images if there are any
+      if (allImages.length > 0) {
+        updateData.images = allImages;
+      }
+
+      const res = await updateBanner(selectedBanner._id, updateData);
       if (res && res.success !== false && !res.error) {
         toast.success('Banner updated successfully');
         setShowEditModal(false);
         // Clean up object URLs
         appendedImages.forEach(img => URL.revokeObjectURL(img.preview));
         setAppendedImages([]);
+        setEditedImageLinks({});
         fetchBanners();
       } else {
         toast.error(res?.error || 'Failed to update banner');
@@ -690,10 +720,11 @@ export default function BannersPage() {
                   {selectedBanner.images && selectedBanner.images.length > 0 ? (
                     selectedBanner.images.map((img, idx) => {
                       const isDeleting = deletingImageUrls.includes(img.url);
+                      const currentLink = editedImageLinks[img.url] ?? img.link ?? '';
                       return (
                         <div
                           key={idx}
-                          className="flex items-center gap-4 p-3 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all"
+                          className="flex items-start gap-4 p-3 border border-gray-100 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all"
                         >
                           <div className="relative w-20 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -705,20 +736,22 @@ export default function BannersPage() {
                             )}
                           </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 text-xs text-brand_gray">
-                              <Link2 size={12} className="text-brand_pink flex-shrink-0" />
-                              <span className="truncate max-w-[320px] font-medium" title={img.link || 'No link'}>
-                                {img.link || <span className="italic">No redirect link</span>}
-                              </span>
-                            </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <input
+                              type="url"
+                              placeholder="Destination redirect link"
+                              value={currentLink}
+                              onChange={(e) => setEditedImageLinks(prev => ({ ...prev, [img.url]: e.target.value }))}
+                              disabled={isDeleting}
+                              className="w-full bg-white border border-gray-200 rounded-lg py-1.5 px-3 text-xs outline-none focus:border-brand_pink/30 focus:ring-1 focus:ring-brand_pink/10 transition-all disabled:opacity-50"
+                            />
                           </div>
 
                           <button
                             type="button"
                             onClick={() => handleDeleteImageFromBanner(img.url)}
                             disabled={isDeleting || deletingImageUrls.length > 0}
-                            className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-white transition-colors disabled:opacity-50"
+                            className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-white transition-colors disabled:opacity-50 flex-shrink-0 mt-0.5"
                             title="Remove image from banner"
                           >
                             <Trash2 size={14} />
