@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from '@/contexts/AuthContext';
 import { getOrderById, updateOrder } from '@/lib/adminapi';
 import { IItem, IOrder } from '@/lib/types';
 import { Copy, CreditCardIcon, ListFilter, MapPin, X } from 'lucide-react';
@@ -12,11 +13,12 @@ const SingleOrderPage = () => {
   const params = useParams();
   const router = useRouter();
   const orderId = params.orderId as string;
-
+  const { user } = useAuth();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [order, setOrder] = useState<IOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+
 
   useEffect(() => {
     fetchOrderDetails();
@@ -121,7 +123,7 @@ const SingleOrderPage = () => {
         apiStatus = newStatus;
       }
       const response = await updateOrder(order.order_id, { orderStatus: apiStatus });
-    
+
       if (response.status) {
         await fetchOrderDetails();
       } else {
@@ -153,6 +155,62 @@ const SingleOrderPage = () => {
       default:
         return "bg-gray-50 text-gray-500 border-gray-100";
     }
+  };
+
+  const getStatusIndex = (status: string) => {
+    switch (status) {
+      case "processing":
+        return 0;
+      case "shipping":
+        return 1;
+      case "delivered":
+        return 2;
+      case "canceled":
+        return -1;
+      default:
+        return -1;
+    }
+  };
+
+  const isStatusTransitionAllowed = (targetStatus: string) => {
+    const currentStatus = order?.orderStatus;
+
+    // Cannot change from delivered or canceled
+    if (currentStatus === "delivered" || currentStatus === "canceled") {
+      return false;
+    }
+
+    // Cannot go back to a previous status
+    const currentIndex = getStatusIndex(currentStatus);
+    const targetIndex = getStatusIndex(targetStatus);
+
+    // Cancel can be done from processing or shipping
+    if (targetStatus === "canceled") {
+      return currentStatus === "processing" || currentStatus === "shipping";
+    }
+
+    // Can only move forward in the status progression
+    return targetIndex > currentIndex;
+  };
+
+  const hasLogisticsData = () => {
+    // Check if order has logistics data (shipping/tracking info)
+    return (
+      order?.orderStatus === "shipping" ||
+      order?.orderStatus === "shipped" ||
+      order?.orderStatus === "delivered" ||
+
+      order?.logistics
+    );
+  };
+
+  const canEditOrder = () => {
+    // Super admins can always edit
+    if (user?.role === "super") {
+      return true;
+    }
+    // Non-super admins can only edit if there's no logistics data
+    return !hasLogisticsData();
   };
 
   return (
@@ -189,7 +247,14 @@ const SingleOrderPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="relative actions-dropdown-container">
+          {!canEditOrder() && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <span className="text-xs text-amber-700 font-medium">
+                Order has logistics data — only super admins can edit
+              </span>
+            </div>
+          )}
+          {canEditOrder() && <div className="relative actions-dropdown-container">
             <button
               onClick={() => setShowActionsDropdown(!showActionsDropdown)}
               className="p-2 px-4 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-x-2 text-sm font-medium text-brand_gray_dark shadow-sm"
@@ -201,21 +266,24 @@ const SingleOrderPage = () => {
               <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-50 transition-all">
                 <button
                   onClick={() => handleUpdateStatus('processing')}
-                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 font-medium"
+                  disabled={!isStatusTransitionAllowed('processing')}
+                  className={`w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${order.orderStatus === "processing" ? "bg-orange-50 text-orange-600" : ""}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                   Mark as Processing
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('shipping')}
-                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2 font-medium"
+                  disabled={!isStatusTransitionAllowed('shipping')}
+                  className={`w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${order.orderStatus === "shipping" ? "bg-blue-50 text-blue-600" : ""}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   Mark as Shipped
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('delivered')}
-                  className="w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-green-50 hover:text-green-600 transition-colors flex items-center gap-2 font-medium"
+                  disabled={!isStatusTransitionAllowed('delivered')}
+                  className={`w-full text-left px-4 py-2 text-xs text-brand_gray_dark hover:bg-green-50 hover:text-green-600 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${order.orderStatus === "delivered" ? "bg-green-50 text-green-600" : ""}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                   Mark as Delivered
@@ -223,14 +291,15 @@ const SingleOrderPage = () => {
                 <div className="border-t border-gray-100 my-1"></div>
                 <button
                   onClick={handleCancelOrder}
-                  className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 font-medium"
+                  disabled={!isStatusTransitionAllowed('canceled')}
+                  className={`w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${order.orderStatus === "canceled" ? "bg-red-50 text-red-600" : ""}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                   Cancel Order
                 </button>
               </div>
             )}
-          </div>
+          </div>}
 
           <button
             onClick={handleCancelOrder}
@@ -270,7 +339,7 @@ const SingleOrderPage = () => {
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-normal border ${getStatusStyle(order.orderStatus)}`}
+                  className={`px-3 py-1 rounded-full text-xs font-normal border capitalize ${getStatusStyle(order.orderStatus)}`}
                 >
                   {order.orderStatus}
                 </span>
@@ -280,15 +349,13 @@ const SingleOrderPage = () => {
               <div className="items-center gap-2 text-xs">
                 <p className="text-gray-400">Phone</p>
                 <span className="text-sm text-black">
-                  {order.shippingAddress?.phone || "Not provided"}
+                  {
+                    order.shippingAddress?.phone ? <a href={`tel:${order.shippingAddress.phone}`}>{order.shippingAddress.phone}</a> : "Not provided"
+                  }
+                  {/* {order.shippingAddress?.phone || "Not provided"} */}
                 </span>
               </div>
-              <div className="items-center gap-2 text-xs">
-                <p className="text-gray-400">Email</p>
-                <span className="text-sm text-black">
-                  {order.shippingAddress?.email || "Not provided"}
-                </span>
-              </div>
+
             </div>
           </div>
         </div>

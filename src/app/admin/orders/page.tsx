@@ -12,6 +12,8 @@ const OrdersPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,17 +25,17 @@ const OrdersPage = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await getUserOrders();
+      const response = await getUserOrders("orders");
 
       if (response.message && Array.isArray(response.message)) {
         // Transform API data to match our table structure
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedOrders = response.message.map((order: any) => ({
-          
+
           id: order.order_id || 'Unknown',
           customer: order.shippingAddress?.fullName || 'Unknown Customer',
           products: order.items?.length || 0,
-          total: `N${order.amountPaid?.toLocaleString?.() || '0'}.00`,
+          total: `₦${order.amountPaid?.toLocaleString?.() || '0'}.00`,
           status: order.orderStatus || 'Unknown',
           date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -112,6 +114,18 @@ const OrdersPage = () => {
 
     return matchesSearch && matchesStatus;
   }) || [];
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, selectedPeriod]);
+
+  // Pagination calculations
+  const totalItems = filteredOrders.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   const getStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -295,9 +309,9 @@ const OrdersPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredOrders.length === 0 && <EmptyTable tableType='Orders' searchTerm={searchTerm} colSpan={8}/> }
-                
-                {filteredOrders.map((order, idx) => (
+                {filteredOrders.length === 0 && <EmptyTable tableType='Orders' searchTerm={searchTerm} colSpan={8} />}
+
+                {paginatedOrders.map((order, idx) => (
                   <tr
                     key={idx}
                     onClick={() => handleViewOrder(order.id)}
@@ -322,7 +336,7 @@ const OrdersPage = () => {
                     <td className="p-4 text-sm font-bold text-brand_gray_dark/80 text-center">{order.products}</td>
                     <td className="p-4 text-sm font-bold text-brand_gray_dark">{order.total}</td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(order.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border capitalize ${getStatusStyle(order.status)}`}>
                         {order.status}
                       </span>
                     </td>
@@ -346,34 +360,61 @@ const OrdersPage = () => {
         </div>
 
         {/* Pagination */}
-        <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-50 bg-gray-50/20">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <select className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none">
-                <option>8</option>
-                <option>16</option>
-                <option>32</option>
-              </select>
-              <span className="text-xs text-brand_gray font-medium">Items per page</span>
+        {totalItems > 0 && (
+          <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-50 bg-gray-50/20">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none cursor-pointer"
+                >
+                  <option value="8">8</option>
+                  <option value="16">16</option>
+                  <option value="32">32</option>
+                </select>
+                <span className="text-xs text-brand_gray font-medium">Items per page</span>
+              </div>
+              <span className="text-xs text-brand_gray font-medium">
+                {startIndex + 1}-{endIndex} of {totalItems} items
+              </span>
             </div>
-            <span className="text-xs text-brand_gray font-medium">1-8 of 200 items</span>
-          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <select className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none">
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-              </select>
-              <span className="text-xs text-brand_gray font-medium">of 25 pages</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="p-1 rounded-md text-brand_gray hover:bg-gray-100"><ChevronLeft className="w-4 h-4" /></button>
-              <button className="p-1 rounded-md text-brand_gray hover:bg-gray-100"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <select
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
+                  className="bg-gray-100 border-none rounded-lg text-xs font-bold px-2 py-1 outline-none cursor-pointer"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <option key={page} value={page}>{page}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-brand_gray font-medium">of {totalPages} pages</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded-md text-brand_gray hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded-md text-brand_gray hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal removed */}
