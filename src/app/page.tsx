@@ -1,6 +1,16 @@
 "use client";
 
+import HomeHeroSlider from "@/app/components/HomeHeroSlider";
+import PullToRefreshContainer from "@/app/components/pull-to-refresh/PullToRefreshContainer";
+import PullToRefreshHeader from "@/app/components/pull-to-refresh/PullToRefreshHeader";
+import {
+  PullToRefreshProvider,
+  usePullToRefresh,
+} from "@/app/components/pull-to-refresh/PullToRefreshProvider";
 import Categories from "@/app/components/ui/Categories";
+import ScrollToTop from "@/app/components/ui/ScrollToTop";
+import SearchBar from "@/app/components/ui/SearchBar";
+import { DEFAULT_STALE_TIME } from "@/app/provider";
 import EndlessScrollLoading from "@/components/EndlessScrollLoading";
 import { InfiniteFeed } from "@/components/InfinteScrollList";
 import ProductItem from "@/components/ProductItem";
@@ -16,16 +26,6 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import HomeHeroSlider from "./components/HomeHeroSlider";
-import PullToRefreshContainer from "./components/pull-to-refresh/PullToRefreshContainer";
-import PullToRefreshHeader from "./components/pull-to-refresh/PullToRefreshHeader";
-import {
-  PullToRefreshProvider,
-  usePullToRefresh,
-} from "./components/pull-to-refresh/PullToRefreshProvider";
-import ScrollToTop from "./components/ui/ScrollToTop";
-import SearchBar from "./components/ui/SearchBar";
-import { DEFAULT_STALE_TIME } from "./provider";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -140,10 +140,10 @@ function MobileSearchBar({ isMounted }: { isMounted: boolean }) {
       style={
         isMounted
           ? {
-              transform: `translateY(-${pull * 0.7}px)`,
-              opacity: 1 - Math.min(pull / 150, 1),
-              transition: pull === 0 ? "all 0.25s ease" : "none",
-            }
+            transform: `translateY(-${pull * 0.7}px)`,
+            opacity: 1 - Math.min(pull / 150, 1),
+            transition: pull === 0 ? "all 0.25s ease" : "none",
+          }
           : undefined
       }
     >

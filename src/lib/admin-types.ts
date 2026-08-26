@@ -443,6 +443,7 @@ export interface PickupAddress {
   postalCode: string;
 }
 
+export interface LogisticsData { logisticsMode: "auto" | "manual"; pickupAddress: PickupAddress | null }
 export const PERMISSIONS = [
   "",
   "all",
@@ -503,6 +504,7 @@ export interface LogisticsSettings {
   automaticProvider?: string;
   manualInstructions?: string;
   isActive?: boolean;
+  pickupAddress?: PickupAddress
   shippingZones?: Array<{
     id: string;
     name: string;

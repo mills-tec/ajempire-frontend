@@ -12,6 +12,16 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 export default function NotificationWrapper() {
+  const pathname = usePathname();
+  // Admin routes are handled entirely by AdminNotificationWrapper (mounted in
+  // admin/layout.tsx). This can't bail out with an early `return` before the
+  // hooks below — that's a Rules of Hooks violation: this component lives in
+  // the root layout and persists across client-side navigation, so the same
+  // instance re-renders with `isAdminRoute` flipped whenever someone crosses
+  // between an admin route and a regular one, which would change how many
+  // hooks got called between renders and crash the app. Every effect below
+  // guards itself on `isAdminRoute` instead.
+  const isAdminRoute = pathname.includes("admin");
   // Selector subscriptions — the old whole-store destructures re-rendered this
   // wrapper on every auth/cart/notification store mutation anywhere in the app.
   const user = useAuthStore((s) => s.user);
@@ -27,8 +37,8 @@ export default function NotificationWrapper() {
   const setNotifications = useNotificationStore((s) => s.setNotifications);
   const updateNotifications = useNotificationStore((s) => s.updateNotifications);
   const socket = useSocket();
-  const pathname = usePathname();
-  const isAdminRoute = pathname.includes("admin");
+
+
 
   // Firebase foreground message handler.
   //
@@ -37,7 +47,13 @@ export default function NotificationWrapper() {
   // isSupported() check resolves, so on a cold load this effect used to see
   // null, bail, and — with its empty dep array — never attach the handler
   // at all. Foreground pushes were silently dropped as a result.
+  //
+  // Depends on isAdminRoute (rather than running once) so that crossing into
+  // or out of an admin route within the same session detaches/reattaches
+  // this instead of getting stuck with whatever was true on first mount.
   useEffect(() => {
+    if (isAdminRoute) return;
+
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
 
@@ -73,7 +89,7 @@ export default function NotificationWrapper() {
       cancelled = true;
       unsubscribe?.();
     };
-  }, []);
+  }, [isAdminRoute]);
 
   // Automatic push registration on load. All of the actual work — permission,
   // token, backend save, recording what was saved — lives in
@@ -83,8 +99,12 @@ export default function NotificationWrapper() {
   // already holds this exact token, so re-running it on these dependencies is
   // safe; it also serialises internally, so this can't race the sidebar
   // button into showing two prompts.
+  //
+  // Shopper-only: on an admin route this skips entirely rather than passing
+  // isAdmin:true — admin devices aren't auto-registered from here.
   useEffect(() => {
-    void registerPushToken({ isAdmin: isAdminRoute });
+    if (isAdminRoute) return;
+    void registerPushToken();
   }, [isLoggedIn, userId, isAdminRoute, registeredPushToken, adminTokenTick]);
 
   // Socket.IO — user notifications (non-admin routes only).
@@ -141,9 +161,7 @@ export default function NotificationWrapper() {
   // reload with an existing token — and does nothing for guests, leaving
   // their locally persisted cart alone instead of clearing it.
   useEffect(() => {
-    if (isAdminRoute) {
-      return;
-    }
+
     useCartStore.getState().setCartLoaded(true);
     void useCartStore.getState().hydrateFromBackend();
     // eslint-disable-next-line react-hooks/exhaustive-deps

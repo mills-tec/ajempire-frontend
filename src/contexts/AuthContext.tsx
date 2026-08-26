@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
   const getProfile = useCallback(async () => {
     const response = await fetchAdminProfile();
     const profile = response.data || (typeof response.message !== 'string' ? response.message : undefined);
