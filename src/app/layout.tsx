@@ -1,13 +1,20 @@
+import NotificationWrapper from "@/components/NotificationWrapper";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import SplashScreenWrapper from "@/components/SplashScreenWrapper";
 import TawkToWidget from "@/components/TawkToWidget";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import React from "react";
 import { Toaster } from "sonner";
+import LayoutWrapper from "./components/LayoutWrapper";
 import NetworkStatus from "./components/NetworkStatus";
+import ModalProvider from "./components/providers/ModalProvider";
+import { SocketProvider } from "./components/providers/SocketProvider";
+import { CartIconProvider } from "./contextanimation/CartIconContext";
 import "./globals.css";
-import LayoutSpecific from "./LayoutSpecific";
+import { Providers } from "./provider";
 export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
@@ -82,8 +89,29 @@ export default function RootLayout({
         {/* System UI */}
         <Toaster />
         <PWAInstallPrompt />
-        <NetworkStatus />
-        <LayoutSpecific children={children} />
+
+        <Providers>
+          <SocketProvider>
+            {/* Must live INSIDE SocketProvider — it consumes the shared
+                connection via useSocket(). As a sibling of <Providers> it
+                only ever saw SocketContext's default value (null), so its
+                socket effect bailed immediately and user notifications
+                never arrived over the wire. */}
+            <NotificationWrapper />
+            <TooltipProvider>
+              <CartIconProvider>
+                <NetworkStatus />
+                {/* Splash Screen - Shows on app load */}
+                <SplashScreenWrapper>
+                  {/* App Layout */}
+                  <LayoutWrapper>{children}</LayoutWrapper>
+                </SplashScreenWrapper>
+                {/* GLOBAL UI LAYER (IMPORTANT POSITION) */}
+                <ModalProvider />
+              </CartIconProvider>
+            </TooltipProvider>
+          </SocketProvider>
+        </Providers>
         <SpeedInsights />
         <TawkToWidget />
       </body>

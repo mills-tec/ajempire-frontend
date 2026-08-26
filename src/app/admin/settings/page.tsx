@@ -283,7 +283,7 @@ const SettingsPage = () => {
       setLogisticsLoading(true);
       const response = await getLogisticsData();
       if (response.status) {
-        let { logisticsMode, pickupAddress }: { logisticsMode: "auto" | "manual", pickupAddress: PickupAddress | null } = response.message;
+        const { logisticsMode, pickupAddress }: { logisticsMode: "auto" | "manual", pickupAddress: PickupAddress | null } = response.message;
         setLogisticsData({ logisticsMode, pickupAddress })
       } else {
         console.error('Error fetching logistics settings:', response.error);
