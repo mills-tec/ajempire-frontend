@@ -1,15 +1,16 @@
 "use client";
 
+import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
 import { useState } from "react";
+import ForgotPassword from "./ForgotPassword";
 import IntroComp from "./IntroComp";
+import NewPassword from "./NewPassword";
+import PhoneNumberComp from "./PhoneNumberComp";
 import SigninComp from "./SigninComp";
 import SignupComp from "./SignupComp";
-import PhoneNumberComp from "./PhoneNumberComp";
-import ForgotPassword from "./ForgotPassword";
 import VerifyEmailComp from "./VerifyEmailComp";
-import VerifyPhoneComp from "./VerifyPhoneComp";
 import VerifyPasswordResetCode from "./VerifyPasswordResetCode";
-import NewPassword from "./NewPassword";
+import VerifyPhoneComp from "./VerifyPhoneComp";
 import type { AuthScreen } from "./auth-flow";
 
 interface AuthWrapperProps {
@@ -70,7 +71,10 @@ export default function AuthWrapper({ onClose }: AuthWrapperProps) {
   const canGoBack = screen !== "intro";
 
   return (
-    <div>
+    <div onClick={(e) => {
+      handleEnableNotifications(e);
+
+    }}>
       {screen === "intro" && (
         <IntroComp setScreen={handleScreenChange} onClose={handleClose} />
       )}

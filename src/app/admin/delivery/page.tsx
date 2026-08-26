@@ -5,13 +5,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { IOrderStats } from '@/lib/admin-types';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
+import { IOrder } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Eye, Filter, Package, Search, ShoppingBag, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+interface DeliveryOrder {
+  id: string;
+  trackingId: string;
+  customer: string;
+  agent: string;
+  address: string;
+  status: "In Transit" | "Delivered" | "Pending" | "Failed";
+  deliveryDate: string;
+  phone: string;
+  fullOrder: IOrder;
+}
 
 const DeliveryPage = () => {
   const { user } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -94,17 +106,16 @@ const DeliveryPage = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await getUserOrders("orders");
+      const response = await getUserOrders("delivery");
 
       if (response.status && Array.isArray(response.message)) {
         // Transform orders data to match delivery structure
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const transformedOrders = response.message.map((order: any) => ({
+        const transformedOrders: DeliveryOrder[] = response.message.map((order: IOrder) => ({
           id: order.order_id || 'Unknown',
-          dbId: order._id || order.id || 'Unknown',
-          trackingId: "",
+          trackingId: order.logistics?.tracking_id || "",
           customer: order.shippingAddress?.fullName || 'Unknown Customer',
-          agent: order.deliveryAgent || 'Not Assigned',
+          agent: 'Shipbubble',
           address: order.shippingAddress ?
             `${order.shippingAddress.street || ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''}`.trim() :
             'Unknown Address',
@@ -117,8 +128,7 @@ const DeliveryPage = () => {
             month: '2-digit',
             year: 'numeric'
           }).replace(/\//g, '-') : 'Unknown',
-          phone: order.shippingAddress?.phone || 'Unknown',
-          email: order.shippingAddress?.email || 'Unknown',
+          phone: order.shippingAddress.phone,
           fullOrder: order
         }));
         setOrders(transformedOrders);
@@ -178,6 +188,37 @@ const DeliveryPage = () => {
       return false;
     }
     return true;
+  };
+
+  const getStatusIndex = (status: string) => {
+    switch (status) {
+      case 'Pending': return 0;
+      case 'In Transit': return 1;
+      case 'Delivered': return 2;
+      case 'Failed': return -1;
+      default: return -1;
+    }
+  };
+
+  const isStatusTransitionAllowed = (targetStatus: string) => {
+    const currentStatus = selectedDelivery?.status;
+
+    // Cannot change from delivered or failed
+    if (currentStatus === 'Delivered' || currentStatus === 'Failed') {
+      return false;
+    }
+
+    // Cannot go back to a previous status
+    const currentIndex = getStatusIndex(currentStatus);
+    const targetIndex = getStatusIndex(targetStatus);
+
+    // Failed can only be done from pending or in transit
+    if (targetStatus === 'Failed') {
+      return currentStatus === 'Pending' || currentStatus === 'In Transit';
+    }
+
+    // Can only move forward in the status progression
+    return targetIndex > currentIndex;
   };
 
   return (
@@ -436,16 +477,23 @@ const DeliveryPage = () => {
                       { label: 'Failed', value: 'cancelled', activeVal: 'Failed', color: 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' },
                     ].map((statusBtn) => {
                       const isActive = selectedDelivery.status === statusBtn.activeVal;
+                      const isAllowed = isStatusTransitionAllowed(statusBtn.activeVal);
+                      const canTransition = isAllowed && canEditStatus() && !isUpdatingStatus;
                       return (
                         <button
                           key={statusBtn.value}
-                          disabled={isUpdatingStatus || !canEditStatus()}
+                          disabled={!canTransition}
                           onClick={() => handleUpdateStatus(selectedDelivery.id, statusBtn.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${statusBtn.color} ${isActive
                             ? 'ring-2 ring-brand_pink border-transparent scale-105 shadow-sm'
                             : 'opacity-70 hover:opacity-100'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          title={!canEditStatus() ? 'Only super admins can edit orders with logistics data' : ''}
+                          title={
+                            isActive ? 'Current status' :
+                              !canEditStatus() ? 'Only super admins can edit orders with logistics data' :
+                                !isAllowed ? `Cannot change from ${selectedDelivery.status} to ${statusBtn.activeVal}` :
+                                  ''
+                          }
                         >
                           {isUpdatingStatus && isActive && (
                             <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>

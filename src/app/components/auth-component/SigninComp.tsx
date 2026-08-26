@@ -1,5 +1,4 @@
 "use client";
-import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
 import Logo from "@/assets/logo.png";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
 import { Button } from "@/components/ui/button";
@@ -45,6 +44,7 @@ export default function SigninComp({
   }
 
   async function handleSubmit(e: React.FormEvent) {
+    console.log("Hiii");
     setIsLoading(true);
     e.preventDefault();
     const result = schema.safeParse(form);
@@ -58,6 +58,8 @@ export default function SigninComp({
       setErrors(fieldErrors);
       return; // stop here if validation failed
     }
+
+
 
     try {
       const { email, password } = form;
@@ -97,9 +99,7 @@ export default function SigninComp({
   }
 
   return (
-    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={(e) => {
-      handleEnableNotifications(e);
-    }}>
+    <section className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" >
       {isLoading && <Spinner />}
       <div className=" relative bg-white rounded-3xl flex flex-col justify-between h-full w-full lg:h-[30rem] lg:w-[27rem] text-3xl">
         {canGoBack && <AuthBackButton onBack={onBack} />}

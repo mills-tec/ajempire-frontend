@@ -236,14 +236,16 @@ const SingleOrderPage = () => {
             </h1>
           </div>
 
-          <div className='flex items-center gap-x-2'>
-            <h1 className="text-sm font-semibold text-brand_gray_dark">Tracking ID <span className="text-brand_gray font-normal">{order.order_id || 'Not assigned'}</span></h1>
-            <Copy
-              size={14}
-              className="text-blue-500 cursor-pointer hover:text-blue-600"
-              onClick={handleCopyTrackingId}
-            />
-          </div>
+          {
+            order.logistics && <div className='flex items-center gap-x-2'>
+              <h1 className="text-sm font-semibold text-brand_gray_dark">Tracking ID <span className="text-brand_gray font-normal">{order.logistics.tracking_id || 'Not assigned'}</span></h1>
+              <Copy
+                size={14}
+                className="text-blue-500 cursor-pointer hover:text-blue-600"
+                onClick={handleCopyTrackingId}
+              />
+            </div>
+          }
         </div>
 
         <div className="flex items-center gap-3">
