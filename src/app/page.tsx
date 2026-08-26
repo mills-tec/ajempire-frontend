@@ -46,9 +46,9 @@ const makeProductQueryFn = (queryClient: QueryClient) => async (cursor: string) 
   const res =
     cursor === ""
       ? await queryClient.fetchQuery({
-          queryKey: HERO_PRODUCTS_QUERY_KEY,
-          queryFn: fetchPage,
-        })
+        queryKey: HERO_PRODUCTS_QUERY_KEY,
+        queryFn: fetchPage,
+      })
       : await fetchPage();
   return {
     items: res?.message?.products ?? EMPTY_PRODUCTS,
@@ -138,10 +138,10 @@ function MobileSearchBar({ isMounted }: { isMounted: boolean }) {
       style={
         isMounted
           ? {
-              transform: `translateY(-${pull * 0.7}px)`,
-              opacity: 1 - Math.min(pull / 150, 1),
-              transition: pull === 0 ? "all 0.25s ease" : "none",
-            }
+            transform: `translateY(-${pull * 0.7}px)`,
+            opacity: 1 - Math.min(pull / 150, 1),
+            transition: pull === 0 ? "all 0.25s ease" : "none",
+          }
           : undefined
       }
     >

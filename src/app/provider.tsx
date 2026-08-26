@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const GOOGLE_CLIENT_ID =
@@ -36,6 +37,10 @@ const PERSIST_BUSTER = "v1";
 export const DEFAULT_STALE_TIME = 30 * 1000; // 30s
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -56,25 +61,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    if (pathname.includes("admin")) return;
     const retrySync = useCartStore.getState().retrySync;
 
     // Retry when connection is restored
     window.addEventListener("online", retrySync);
     // Retry periodically (e.g., every 1 minute)
     const interval = setInterval(retrySync, 60000);
+    if (!getBearerToken()) return;
+    const initWishlist = useWishlistStore.getState().initWishlist;
 
+    initWishlist();
     return () => {
       window.removeEventListener("online", retrySync);
       clearInterval(interval);
     };
   }, []);
 
-  useEffect(() => {
-    if (!getBearerToken()) return;
-    const initWishlist = useWishlistStore.getState().initWishlist;
 
-    initWishlist();
-  }, []);
 
 
 

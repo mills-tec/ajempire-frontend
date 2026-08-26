@@ -364,40 +364,7 @@ const SettingsPage = () => {
       }));
     };
 
-    const _handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        // Validate file type and size
-        if (!file.type.startsWith('image/')) {
-          alert('Please select an image file.');
-          return;
-        }
 
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          alert('Image size should be less than 5MB.');
-          return;
-        }
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileData(prev => ({
-            ...prev,
-            profilePicture: reader.result as string
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    const _handleDeleteProfilePicture = () => {
-      if (window.confirm('Are you sure you want to remove your profile picture?')) {
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: null
-        }));
-      }
-    };
 
     const handleResetProfile = () => {
       if (window.confirm('Are you sure you want to reset all profile changes?')) {
@@ -645,7 +612,6 @@ const SettingsPage = () => {
     };
 
     const handleUpdatePermissions = async (e: React.FormEvent) => {
-      console.log("Hiiii");
       e.preventDefault();
       if (!selectedAdmin) return;
       try {
@@ -1166,17 +1132,19 @@ const SettingsPage = () => {
   const renderLogisticsTab = () => {
 
 
-    const handleLogisticsUpdate = async (e: React.FormEvent) => {
-      e.preventDefault();
+    const handleLogisticsUpdate = async (value: "auto" | "manual") => {
+
       try {
         setLogisticsLoading(true);
-        const response = await updateLogisticsSettings(logisticsSettings);
-
-        if (response.message || response.data) {
+        const response = await updateLogisticsSettings({ logisticsMode: value });
+        if (response.status) {
+          setLogisticsSettings({ logisticsMode: value })
           showToast('Logistics settings updated successfully!', 'success');
+
         } else {
-          throw new Error('No success response');
+          throw new Error(response.error);
         }
+
       } catch (error) {
         console.error('Error updating logistics settings:', error);
         showToast('Failed to update logistics settings. Please try again.', 'error');
@@ -1314,7 +1282,7 @@ const SettingsPage = () => {
             <p className='text-gray-600'>Manage your shipping and logistics preferences</p>
           </div>
 
-          <form onSubmit={handleLogisticsUpdate} className="space-y-6">
+          <div className="space-y-6">
             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
@@ -1326,7 +1294,8 @@ const SettingsPage = () => {
                         name="logisticsMode"
                         value="auto"
                         checked={logisticsSettings.logisticsMode === 'auto'}
-                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        onChange={() => handleLogisticsUpdate("auto")}
+                        // onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
                         className="mr-3 text-brand_pink focus:ring-brand_pink"
                       />
                       <div>
@@ -1340,7 +1309,8 @@ const SettingsPage = () => {
                         name="logisticsMode"
                         value="manual"
                         checked={logisticsSettings.logisticsMode === 'manual'}
-                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        onChange={() => handleLogisticsUpdate("manual")}
+
                         className="mr-3 text-brand_pink focus:ring-brand_pink"
                       />
                       <div>
@@ -1406,7 +1376,7 @@ const SettingsPage = () => {
                 {logisticsLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
-          </form>
+          </div>
         </div>
 
         <hr />

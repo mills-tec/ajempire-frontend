@@ -3,6 +3,8 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL + "/api";
 
 import axios, { AxiosResponse } from 'axios';
+import { toast } from 'sonner';
+import { useAuthStore } from './stores/auth-store';
 // Import all types from the types file
 import { PromotionPayload } from '@/app/admin/promotions/types';
 import {
@@ -44,6 +46,28 @@ import {
 } from './admin-types';
 import { IOrder } from './types';
 
+// Admin session expired or token invalid - clear all admin data and redirect
+function handleAdminUnauthorized() {
+  if (typeof window !== "undefined") {
+    // Clear all admin-specific data
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    sessionStorage.clear();
+
+    // Reset auth store and bump the tick to signal socket provider
+    useAuthStore.getState().setIsLoggedIn(false);
+    useAuthStore.getState().setRegisteredPushToken(null);
+    useAuthStore.getState().bumpAdminTokenTick();
+  }
+
+  toast.error("Your admin session has expired. Please log in again.", {
+    position: "top-right",
+  });
+
+  // Redirect to admin login
+  window.location.href = '/admin-login';
+}
+
 // Helper function for API calls
 const apiCall = async <T, M = T>(
   endpoint: string,
@@ -71,6 +95,17 @@ const apiCall = async <T, M = T>(
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+    // Handle 401 Unauthorized - session expired or token invalid
+    if (response.status === 401) {
+      handleAdminUnauthorized();
+      return {
+        success: false,
+        error: 'Admin session expired',
+        status: false
+      };
+    }
+
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || data.message || 'API request failed');
