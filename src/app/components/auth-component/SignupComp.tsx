@@ -1,15 +1,15 @@
 "use client";
-import Image from "next/image";
 import Logo from "@/assets/logo.png";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { z } from "zod";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeClosed } from "lucide-react";
 import { CloseIcon } from "@/components/svgs/CloseIcon";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { signupBackend } from "@/lib/api";
+import { Eye, EyeClosed } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import Spinner from "../Spinner";
 import AuthBackButton from "./AuthBackButton";
 import type { AuthStepProps } from "./auth-flow";
@@ -74,36 +74,13 @@ export default function SignupComp({
       console.log("📧 Full response:", res);
 
       // Check for success in different possible structures
-      const isSuccess = res.message?.emailSent ||
-        res.message?.success ||
-        res.success ||
-        res.emailSent ||
-        res.message?.message?.includes("email sent") ||
-        res.message?.message?.includes("verification");
+      const isSuccess = res.status
+      localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
+      const successMsg = res.message?.message || "Verification email sent!";
+      toast(successMsg);
+      setIsLoading(false);
+      setScreen("verifyemail");
 
-      const hasError = res.message?.error || res.error;
-
-      if (isSuccess) {
-        console.log("✅ Signup successful - email sent");
-        localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
-        setErrors({});
-        const successMsg = res.message?.message || "Verification email sent!";
-        toast(successMsg);
-        setIsLoading(false);
-        setScreen("verifyemail");
-      } else if (hasError) {
-        console.log("❌ API returned error:", hasError);
-        throw new Error(hasError);
-      } else {
-        console.log("⚠️ Unknown response format - treating as success");
-        console.log("📊 Response keys:", Object.keys(res));
-        // If signup didn't error, assume it was successful
-        localStorage.setItem("ajempire_signup_email", JSON.stringify(email));
-        setErrors({});
-        toast("Verification email sent!");
-        setIsLoading(false);
-        setScreen("verifyemail");
-      }
 
     } catch (error) {
       console.error("❌ Signup Error Details:");
@@ -223,12 +200,12 @@ export default function SignupComp({
             </div>
             <button
               className={`w-full py-2 text-base !rounded-full text-white hover:!text-white ${isLoading ||
-                  errors.email ||
-                  errors.password ||
-                  form.email.trim().length == 0 ||
-                  form.password.trim().length == 0
-                  ? "!bg-brand_gradient_light"
-                  : "!bg-brand_pink"
+                errors.email ||
+                errors.password ||
+                form.email.trim().length == 0 ||
+                form.password.trim().length == 0
+                ? "!bg-brand_gradient_light"
+                : "!bg-brand_pink"
                 }`}
               type="submit"
               disabled={

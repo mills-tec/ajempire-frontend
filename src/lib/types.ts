@@ -37,8 +37,6 @@ export interface Product {
   price: number;
   cover_image?: string;
   images?: string[];
-  discountedPrice?: number;
-  discount?: number; // percentage from API (fallback for discountedPrice)
   itemsSold?: number;
   stock?: number;
   whatsInside?: string[];
@@ -143,7 +141,13 @@ export interface IOrder {
   processedAt: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
-  logistics?: { trackingUrl?: string };
+  logistics?: {
+    request_token: string;
+    service_code: string;
+    courier_id: string;
+    tracking_url: string;
+    tracking_id: string;
+  };
 }
 
 export interface Comment {

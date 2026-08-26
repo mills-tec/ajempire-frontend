@@ -385,9 +385,9 @@ export async function addToCart(products: CartItem[]) {
     qty: product.quantity,
     variants: product.selectedVariants?.length
       ? product.selectedVariants.map((variant) => ({
-          name: variant.name,
-          value: variant.value,
-        }))
+        name: variant.name,
+        value: variant.value,
+      }))
       : [],
   }));
 
