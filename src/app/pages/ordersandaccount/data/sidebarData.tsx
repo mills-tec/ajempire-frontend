@@ -35,8 +35,9 @@ export type SideBarItem = {
 export const handleEnableNotifications = async (e: React.MouseEvent) => {
   // The icon sits inside the "Notifications" nav link — don't navigate away
   // while the browser's permission prompt is up.
-  e.preventDefault();
+  // e.preventDefault();
   e.stopPropagation();
+
 
   // "always" — this is an explicit tap on Notifications, so go through the
   // permission request every time rather than only when undecided. (The
