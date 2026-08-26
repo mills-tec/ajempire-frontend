@@ -1,15 +1,15 @@
 "use client";
-import NotificationTable from '@/app/pages/ordersandaccount/components/NotificationTable'
-import { useEffect, useState } from 'react'
-import EmptyNotification from '@/components/EmptyNotification'
-import { timeAgo } from '@/lib/utils';
-import { useParams } from 'next/navigation';
-import FlashSaleNotificationCom from '@/app/pages/ordersandaccount/components/FlashSaleNotificationCom';
 import { useNotification } from '@/api/customHooks';
-import { useNotificationStore } from '@/lib/stores/notification-store';
-import { Trash } from 'lucide-react';
+import FlashSaleNotificationCom from '@/app/pages/ordersandaccount/components/FlashSaleNotificationCom';
+import NotificationTable from '@/app/pages/ordersandaccount/components/NotificationTable';
+import EmptyNotification from '@/components/EmptyNotification';
 import { getUser } from '@/lib/api';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useNotificationStore } from '@/lib/stores/notification-store';
+import { timeAgo } from '@/lib/utils';
+import { Trash } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const TimerInterval = ({ date }: { date: string }) => {
     const [time, setTimer] = useState(timeAgo(date));
@@ -49,10 +49,10 @@ export default function Notification() {
         (async () => {
             await handleMarkRead();
         })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notifications.length])
 
-  
+
 
 
     return (

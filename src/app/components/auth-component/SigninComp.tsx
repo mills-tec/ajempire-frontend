@@ -44,7 +44,6 @@ export default function SigninComp({
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    console.log("Hiii");
     setIsLoading(true);
     e.preventDefault();
     const result = schema.safeParse(form);

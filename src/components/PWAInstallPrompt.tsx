@@ -3,6 +3,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -120,6 +121,12 @@ export default function PWAInstallPrompt({
   appStartUrl,
   accentColor = "#FF008C",
 }: PWAInstallPromptProps) {
+  // This installs the AJ Empire *shopping* PWA — it has no business showing
+  // up over the admin dashboard. Computed with the other hooks (not used to
+  // bail out early) since this component persists across client-side nav
+  // between admin and shop routes; see the render guard near the bottom.
+  const pathname = usePathname();
+  const isAdminRoute = pathname.includes("admin");
   const [state, setState] = useState<PromptState>("idle");
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -233,6 +240,7 @@ export default function PWAInstallPrompt({
 
   // ── 5-second countdown ──────────────────────────────────────────────────────
   useEffect(() => {
+    if (isAdminRoute) return;
     if (platform === "desktop") return;
     if (isInstalled) return;
     if (state !== "idle") return;
@@ -255,7 +263,7 @@ export default function PWAInstallPrompt({
     }, FIRST_PROMPT_DELAY);
 
     return () => clearTimeout(timer);
-  }, [platform, isInstalled, state, repromptGate, deferredPrompt]);
+  }, [isAdminRoute, platform, isInstalled, state, repromptGate, deferredPrompt]);
 
   // ── Dismiss install prompt ──────────────────────────────────────────────────
   const handleDismiss = useCallback(() => {
@@ -311,6 +319,7 @@ export default function PWAInstallPrompt({
   }, [deferredPrompt, platform, handleDismiss]);
 
   // ── Render guards ───────────────────────────────────────────────────────────
+  if (isAdminRoute) return null;
   if (platform === "desktop") return null;
   if (isInstalled && state === "idle") return null;
   if (!isInstalled && state === "idle") return null;

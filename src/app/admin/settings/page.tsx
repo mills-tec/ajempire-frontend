@@ -2,7 +2,7 @@
 
 import SendNotificationModal from '@/app/components/admin/SendNotificationModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { PickupAddress } from '@/lib/admin-types';
+import { LogisticsData, PickupAddress } from '@/lib/admin-types';
 import {
   addAdmin,
   deleteAdmin,
@@ -11,11 +11,11 @@ import {
   fetchPermissions,
   fundWallet,
   getAllAdmins,
-  getLogisticsSettings,
+  getLogisticsData,
   getWalletBalance,
   sendAdminNotification,
   updateAdminNotificationSettings, updateAdminPermission, updateAdminProfile, updateAdminSecuritySettings,
-  updateLogisticsSettings,
+  updateLogisticsData,
   updateLogisticsShippingAddress
 } from '@/lib/adminapi';
 import { AlertCircle, Bell, CheckCircle, Info, Loader2, Lock, Package, Plus, RefreshCcw, Shield, SquarePen, Trash2, User, X } from 'lucide-react';
@@ -139,11 +139,8 @@ const SettingsPage = () => {
   const [securityLoading, setSecurityLoading] = useState(false);
 
   // Logistics state
-  const [logisticsSettings, setLogisticsSettings] = useState({
-    logisticsMode: 'auto' as 'auto' | 'manual',
-  });
-  const [pickupAddress, setPickUpAddress] = useState<PickupAddress
-  >({
+
+  const EMPTY_PICKUP_ADDRESS: PickupAddress = {
     fullName: "",
     phone: "",
     country: "",
@@ -151,7 +148,13 @@ const SettingsPage = () => {
     state: "",
     street: "",
     city: "",
-  })
+  };
+
+  const [logisticsData, setLogisticsData] = useState<LogisticsData>({
+    logisticsMode: "auto",
+    pickupAddress: EMPTY_PICKUP_ADDRESS
+  });
+  // const [pickupAddress, setPickUpAddress] = useState<PickupAddress>(EMPTY_PICKUP_ADDRESS);
 
 
 
@@ -188,9 +191,7 @@ const SettingsPage = () => {
           profilePicture: ""
 
         });
-        if (response.data.pickupAddress) {
-          setPickUpAddress(response.data.pickupAddress)
-        }
+
 
       }
     } catch (error) {
@@ -280,14 +281,15 @@ const SettingsPage = () => {
   const fetchLogisticsData = useCallback(async () => {
     try {
       setLogisticsLoading(true);
-      const response = await getLogisticsSettings();
+      const response = await getLogisticsData();
+      if (response.status) {
+        const { logisticsMode, pickupAddress }: { logisticsMode: "auto" | "manual", pickupAddress: PickupAddress | null } = response.message;
+        setLogisticsData({ logisticsMode, pickupAddress })
+      } else {
+        console.error('Error fetching logistics settings:', response.error);
 
-      const mode = (response as unknown as { logisticsMode?: 'auto' | 'manual' }).logisticsMode
-        || response.data?.logisticsMode
-        || 'auto';
-      setLogisticsSettings({
-        logisticsMode: mode,
-      });
+      }
+
     } catch (error) {
       console.error('Error fetching logistics settings:', error);
     } finally {
@@ -364,40 +366,7 @@ const SettingsPage = () => {
       }));
     };
 
-    const _handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        // Validate file type and size
-        if (!file.type.startsWith('image/')) {
-          alert('Please select an image file.');
-          return;
-        }
 
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          alert('Image size should be less than 5MB.');
-          return;
-        }
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfileData(prev => ({
-            ...prev,
-            profilePicture: reader.result as string
-          }));
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    const _handleDeleteProfilePicture = () => {
-      if (window.confirm('Are you sure you want to remove your profile picture?')) {
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: null
-        }));
-      }
-    };
 
     const handleResetProfile = () => {
       if (window.confirm('Are you sure you want to reset all profile changes?')) {
@@ -645,7 +614,6 @@ const SettingsPage = () => {
     };
 
     const handleUpdatePermissions = async (e: React.FormEvent) => {
-      console.log("Hiiii");
       e.preventDefault();
       if (!selectedAdmin) return;
       try {
@@ -1166,17 +1134,19 @@ const SettingsPage = () => {
   const renderLogisticsTab = () => {
 
 
-    const handleLogisticsUpdate = async (e: React.FormEvent) => {
-      e.preventDefault();
+    const handleLogisticsUpdate = async ({ logisticsMode, pickupAddress }: LogisticsData) => {
+
       try {
         setLogisticsLoading(true);
-        const response = await updateLogisticsSettings(logisticsSettings);
-
-        if (response.message || response.data) {
+        const response = await updateLogisticsData({ logisticsMode, pickupAddress });
+        if (response.status) {
+          setLogisticsData(prev => ({ ...prev, logisticsMode, pickupAddress }))
           showToast('Logistics settings updated successfully!', 'success');
+
         } else {
-          throw new Error('No success response');
+          throw new Error(response.error);
         }
+
       } catch (error) {
         console.error('Error updating logistics settings:', error);
         showToast('Failed to update logistics settings. Please try again.', 'error');
@@ -1187,27 +1157,51 @@ const SettingsPage = () => {
 
 
 
-    const handlePickupAddress = async (e: React.FormEvent) => {
+
+
+    const handleLogisticsModeSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      setPickupAddressLoading(true);
-      try {
-        const response = await updateLogisticsShippingAddress({ shippingAddress: pickupAddress });
-        if (response.message || response.data) {
-          showToast('Pickup address updated successfully!', 'success');
-        } else {
-          throw new Error('No success response');
-        }
-      } catch (err) {
-        console.error('Error updating pickup address:', err);
-        showToast('Failed to update pickup address. Please try again.', 'error');
-      } finally {
-        setPickupAddressLoading(false);
-      }
-    }
+      handleLogisticsUpdate(logisticsData);
+    };
 
     const updateInputs = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
-      setPickUpAddress(prev => ({ ...prev, [name]: value }));
+      setLogisticsData(prev => {
+        const nextPickupAddress: PickupAddress = {
+          ...(prev.pickupAddress ?? EMPTY_PICKUP_ADDRESS),
+          [name]: value,
+        };
+
+        return {
+          ...prev,
+          pickupAddress: nextPickupAddress,
+        };
+      });
+    };
+
+    const handlePickupAddress = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const pickupAddress = logisticsData.pickupAddress ?? EMPTY_PICKUP_ADDRESS;
+
+      if (Object.values(pickupAddress).some((value) => !value.trim())) {
+        showToast('Please fill in all pickup address fields.', 'error');
+        return;
+      }
+
+      try {
+        setPickupAddressLoading(true);
+        const response = await updateLogisticsShippingAddress({ shippingAddress: pickupAddress });
+        if (response.status) {
+          showToast('Pickup address updated successfully!', 'success');
+        } else {
+          throw new Error(response.error);
+        }
+      } catch (error) {
+        console.error('Error updating pickup address:', error);
+        showToast(error instanceof Error ? error.message : 'Failed to update pickup address. Please try again.', 'error');
+      } finally {
+        setPickupAddressLoading(false);
+      }
     };
 
     const handleFundWallet = async (e: React.FormEvent) => {
@@ -1236,6 +1230,7 @@ const SettingsPage = () => {
         setWalletLoadingStates(prev => ({ ...prev, post: false }));
       }
     };
+
 
     return (
       <div className="space-y-6 h-[400px] overflow-auto">
@@ -1314,7 +1309,7 @@ const SettingsPage = () => {
             <p className='text-gray-600'>Manage your shipping and logistics preferences</p>
           </div>
 
-          <form onSubmit={handleLogisticsUpdate} className="space-y-6">
+          <form className="space-y-6" onSubmit={handleLogisticsModeSubmit}>
             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
@@ -1325,8 +1320,8 @@ const SettingsPage = () => {
                         type="radio"
                         name="logisticsMode"
                         value="auto"
-                        checked={logisticsSettings.logisticsMode === 'auto'}
-                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        checked={logisticsData.logisticsMode === 'auto'}
+                        onChange={() => setLogisticsData(prev => ({ ...prev, logisticsMode: 'auto' }))}
                         className="mr-3 text-brand_pink focus:ring-brand_pink"
                       />
                       <div>
@@ -1339,8 +1334,8 @@ const SettingsPage = () => {
                         type="radio"
                         name="logisticsMode"
                         value="manual"
-                        checked={logisticsSettings.logisticsMode === 'manual'}
-                        onChange={(e) => setLogisticsSettings(prev => ({ ...prev, logisticsMode: e.target.value as 'auto' | 'manual' }))}
+                        checked={logisticsData.logisticsMode === 'manual'}
+                        onChange={() => setLogisticsData(prev => ({ ...prev, logisticsMode: 'manual' }))}
                         className="mr-3 text-brand_pink focus:ring-brand_pink"
                       />
                       <div>
@@ -1351,36 +1346,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
-                {/* {logisticsSettings.logisticsMode === 'auto' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Shipping Provider</label>
-                  <select
-                    value={logisticsSettings.automaticProvider}
-                    onChange={(e) => setLogisticsSettings(prev => ({ ...prev, automaticProvider: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
-                  >
-                    <option value="">Select a provider</option>
-                    <option value="dhl">DHL</option>
-                    <option value="fedex">FedEx</option>
-                    <option value="ups">UPS</option>
-                    <option value="usps">USPS</option>
-                    <option value="custom">Custom Provider</option>
-                  </select>
-                </div>
-              )} */}
 
-                {/* {logisticsSettings.logisticsMode === 'manual' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Manual Shipping Instructions</label>
-                  <textarea
-                    value={logisticsSettings.manualInstructions}
-                    onChange={(e) => setLogisticsSettings(prev => ({ ...prev, manualInstructions: e.target.value }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand_pink"
-                    placeholder="Enter instructions for manual shipping process..."
-                  />
-                </div>
-              )} */}
 
 
               </div>
@@ -1389,11 +1355,7 @@ const SettingsPage = () => {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setLogisticsSettings({
-                    logisticsMode: 'auto',
-                  });
-                }}
+                onClick={() => fetchLogisticsData()}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Reset
@@ -1431,7 +1393,7 @@ const SettingsPage = () => {
                     type="text"
                     name="fullName"
                     placeholder="Enter your fullname"
-                    value={pickupAddress.fullName}
+                    value={logisticsData.pickupAddress?.fullName ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />
@@ -1444,7 +1406,7 @@ const SettingsPage = () => {
                   <input
                     type="tel"
                     name="phone"
-                    value={pickupAddress.phone}
+                    value={logisticsData.pickupAddress?.phone ?? ""}
                     onChange={updateInputs}
                     placeholder="Enter your phone number"
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
@@ -1458,7 +1420,7 @@ const SettingsPage = () => {
                   <input
                     type="text"
                     name="street"
-                    value={pickupAddress.street}
+                    value={logisticsData.pickupAddress?.street ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />
@@ -1471,7 +1433,7 @@ const SettingsPage = () => {
                   <input
                     type="text"
                     name="city"
-                    value={pickupAddress.city}
+                    value={logisticsData.pickupAddress?.city ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />
@@ -1484,7 +1446,7 @@ const SettingsPage = () => {
                   <input
                     type="text"
                     name="state"
-                    value={pickupAddress.state}
+                    value={logisticsData.pickupAddress?.state ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />
@@ -1497,7 +1459,7 @@ const SettingsPage = () => {
                   <input
                     type="text"
                     name="country"
-                    value={pickupAddress.country}
+                    value={logisticsData.pickupAddress?.country ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />
@@ -1510,7 +1472,7 @@ const SettingsPage = () => {
                   <input
                     type="text"
                     name="postalCode"
-                    value={pickupAddress.postalCode}
+                    value={logisticsData.pickupAddress?.postalCode ?? ""}
                     onChange={updateInputs}
                     className="w-full h-11 px-3.5 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/60 border border-gray-200 rounded-xl outline-none transition-all duration-150 focus:bg-white focus:border-brand_pink focus:ring-4 focus:ring-brand_pink/10"
                   />

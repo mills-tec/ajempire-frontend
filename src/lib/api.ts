@@ -2,8 +2,9 @@ import { postData } from "@/api/api";
 import { ICoupon } from "@/app/pages/ordersandaccount/coupoonsandoffers/page";
 import { toast } from "sonner";
 import { useAuthStore } from "./stores/auth-store";
-import { CartItem } from "./stores/cart-store";
+import { CartItem, useCartStore } from "./stores/cart-store";
 import { useModalStore } from "./stores/modal-store";
+import { useNotificationStore } from "./stores/notification-store";
 import {
   Category,
   Comment,
@@ -35,14 +36,36 @@ const DEFAULT_PRODUCTS_LIMIT = 20;
 // sign back in, instead of leaving the app stuck retrying with a dead token.
 function handleUnauthorized() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("ajempire_signin_user");
+    // Clear all localStorage items
+    localStorage.clear();
+    // Clear all sessionStorage items
     sessionStorage.clear();
+
+    // Reset all Zustand stores
+    useAuthStore.getState().setIsLoggedIn(false);
+    useAuthStore.getState().setRegisteredPushToken(null);
+
+    // Clear cart store
+    const cartState = useCartStore.getState();
+    if (cartState.clearCart) {
+      cartState.clearCart();
+    }
+
+    // Clear notification store
+    useNotificationStore.getState().setNotifications([]);
+
+    // Close any open modals
+    useModalStore.getState().closeModal();
+
+    window.location.href = "/"
   }
-  useAuthStore.getState().setIsLoggedIn(false);
+
   toast.error("Your session has expired. Please log in again.", {
     position: "top-right",
   });
-  useModalStore.getState().openModal("authwrapper");
+
+
+
 }
 
 // fetch wrapper for endpoints that require an authenticated session (they
