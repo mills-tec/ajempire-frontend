@@ -1,11 +1,11 @@
 "use client";
-import NotificationTable from '@/app/pages/ordersandaccount/components/NotificationTable'
-import { Notification as NotificationType } from '@/lib/types'
-import { useEffect, useState } from 'react'
-import EmptyNotification from './EmptyNotification'
+import FlashSaleNotificationCom from '@/app/pages/ordersandaccount/components/FlashSaleNotificationCom';
+import NotificationTable from '@/app/pages/ordersandaccount/components/NotificationTable';
+import { Notification as NotificationType } from '@/lib/types';
 import { timeAgo } from '@/lib/utils';
 import { useParams } from 'next/navigation';
-import FlashSaleNotificationCom from '@/app/pages/ordersandaccount/components/FlashSaleNotificationCom';
+import { useEffect, useState } from 'react';
+import EmptyNotification from './EmptyNotification';
 
 export default function Notification({ data }: { data: NotificationType[] }) {
     const [notifications, setNotifications] = useState<NotificationType[]>([]);
@@ -19,7 +19,7 @@ export default function Notification({ data }: { data: NotificationType[] }) {
 
         setNotifications(data);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.type])
     return (
         <div className="px-5 lg:px-14 lg:mt-4 font-poppins">

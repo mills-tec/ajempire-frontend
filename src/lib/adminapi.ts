@@ -29,9 +29,8 @@ import {
   IReturn,
   LoginCredentials,
   LoginResponse,
-  LogisticsPickupAddress,
-  LogisticsSettings,
-  Product,
+  LogisticsData,
+  LogisticsPickupAddress, Product,
   Promotion,
   ReturnRequest,
   Review,
@@ -56,7 +55,7 @@ function handleAdminUnauthorized() {
 
     // Reset auth store and bump the tick to signal socket provider
     useAuthStore.getState().setIsLoggedIn(false);
-    useAuthStore.getState().setRegisteredPushToken(null);
+    // useAuthStore.getState().setRegisteredPushToken(null);
     useAuthStore.getState().bumpAdminTokenTick();
   }
 
@@ -479,10 +478,10 @@ export const updateAdminNotificationSettings = (data: AdminNotificationSettings)
 
 // Logistics endpoints
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getLogisticsSettings = (): Promise<ApiResponse<any>> =>
-  apiCall('/logisticsStatus');
+export const getLogisticsData = (): Promise<ApiResponse<any>> =>
+  apiCall('/admin/logistics');
 
-export const updateLogisticsSettings = (data: LogisticsSettings): Promise<ApiResponse<LogisticsSettings>> =>
+export const updateLogisticsData = (data: LogisticsData): Promise<ApiResponse<LogisticsData>> =>
   apiCall('/admin/logistics', {
     method: 'PATCH',
     body: JSON.stringify(data),

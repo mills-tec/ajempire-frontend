@@ -1,5 +1,6 @@
 "use client";
 
+// import { handleEnableNotifications } from "./app/pages/ordersandaccount/data/sidebarData";
 import { handleEnableNotifications } from "@/app/pages/ordersandaccount/data/sidebarData";
 import { useState } from "react";
 import ForgotPassword from "./ForgotPassword";
