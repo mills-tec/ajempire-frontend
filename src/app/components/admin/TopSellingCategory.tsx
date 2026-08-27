@@ -41,7 +41,7 @@ const TopSellingCategory = memo(function TopSellingCategory({ orders = [], perio
         }));
     const lowerPeriod = period.toLowerCase();
     const periodLabel = lowerPeriod === 'all time' ? 'all time' : lowerPeriod === 'this week' ? 'this week' : lowerPeriod === 'this month' ? 'this month' : 'this year';
-
+    console.log(displayCategories);
     return (
         <div className="bg-white border p-6 rounded-2xl flex-1">
             <div className="mb-6">
@@ -56,11 +56,11 @@ const TopSellingCategory = memo(function TopSellingCategory({ orders = [], perio
                     displayCategories.map((category, index) => (
                         <div key={index} className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                               {
-                                category.image &&  <div className="w-9 h-9  bg-brand_pink/10 relative rounded-full" >
-                                    <Image className="object-cover rounded-full" fill alt={category.name} src={category.image} />
-                                </div>
-                               }
+                                {
+                                    category.image && <div className="w-9 h-9  bg-brand_pink/10 relative rounded-full" >
+                                        <Image className="object-cover rounded-full" fill alt={category.name} src={category.image} />
+                                    </div>
+                                }
                                 <span className=" capitalize">{category.name}</span>
                             </div>
                             <div className="flex items-center gap-3">

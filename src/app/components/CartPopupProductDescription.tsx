@@ -38,6 +38,7 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
     selectedOptions,
     selectOption,
     isValidOption,
+    getOptionUnavailableReason,
     selectedVariantsArray,
     missingVariantName,
     selectedCombination,
@@ -373,7 +374,12 @@ export default function CartPopupProductDescription({ item, cartRef }: Props) {
                         <div
                           key={idx}
                           onClick={() => {
-                            if (!isValid) return;
+                            if (!isValid) {
+                              toast.error(
+                                getOptionUnavailableReason(variant.name, value),
+                              );
+                              return;
+                            }
                             selectOption(variant.name, value);
                           }}
                           className={`relative size-[2rem] flex items-center justify-center text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]

@@ -423,10 +423,19 @@ export async function addToCart(products: CartItem[]) {
     body: JSON.stringify({ items }),
   });
   if (!res.ok) {
-    const errorData = await res.text();
-    console.error("🔥 BACKEND CART API REJECTED PAYLOAD:", errorData);
+    const errorText = await res.text();
+    console.error("🔥 BACKEND CART API REJECTED PAYLOAD:", errorText);
     console.error("Sent Payload was:", JSON.stringify({ items }, null, 2));
-    throw new Error("Cart update failed: " + errorData);
+    // The backend always responds with `{ error: "<message>" }` on 4xx —
+    // parse it so callers (retrySync's stock-failure check, error toasts)
+    // see the clean human-readable message instead of the raw JSON blob.
+    let message = errorText;
+    try {
+      message = JSON.parse(errorText).error ?? errorText;
+    } catch {
+      // Not JSON — fall back to the raw text.
+    }
+    throw new Error(message);
   }
   return res.json();
 }
