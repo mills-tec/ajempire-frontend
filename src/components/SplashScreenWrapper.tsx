@@ -39,14 +39,7 @@ export default function SplashScreenWrapper({ children }: { children: React.Reac
 
   return (
     <>
-      {/* SplashScreen is a fixed, full-viewport overlay (z-[99999]) — it
-          doesn't need `children` hidden underneath it. Hiding them behind
-          display:none used to block the real page from painting (and its
-          images from being requested) for the full splash duration on every
-          first visit, which is exactly when Lighthouse/CWV measure LCP. */}
-      {!isAdminRoute && (
-        <SplashScreen onComplete={handleSplashComplete} showSplash={showSplash} />
-      )}
+      <SplashScreen onComplete={handleSplashComplete} showSplash={showSplash} />
       {children}
     </>
   );

@@ -103,29 +103,33 @@ export default function CheckoutSummeryCard({
         </>
       )}
 
-      <div className="mt-4 lg:hidden w-full">
-        <p className="text-lg font-semibold">Delivery details</p>
-        <div className="mt-2 p-4 border w-full text-[14px] text-gray-600 border-gray-200 rounded-md">
-          <p>
-            <span className="font-medium text-black">Delivery Arrives:</span>{" "}
-            {selectedLogistic?.delivery_eta}
-          </p>
-          <p>
-            <span className="font-medium text-black">Delivery Arrives on:</span>{" "}
-            <span className="text-brand_solid_gradient">
-              {selectedLogistic?.delivery_eta_time &&
-                new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  },
-                )}
-            </span>
-          </p>
-        </div>
-      </div>
+      {
+        logisticsStatus && (
+          <div className="mt-4 lg:hidden w-full">
+            <p className="text-lg font-semibold">Delivery details</p>
+            <div className="mt-2 p-4 border w-full text-[14px] text-gray-600 border-gray-200 rounded-md">
+              <p>
+                <span className="font-medium text-black">Delivery Arrives:</span>{" "}
+                {selectedLogistic?.delivery_eta}
+              </p>
+              <p>
+                <span className="font-medium text-black">Delivery Arrives on:</span>{" "}
+                <span className="text-brand_solid_gradient">
+                  {selectedLogistic?.delivery_eta_time &&
+                    new Date(selectedLogistic.delivery_eta_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    )}
+                </span>
+              </p>
+            </div>
+          </div>
+        )
+      }
       <div className="w-full">
         <SelectedpaymentMethod />
       </div>

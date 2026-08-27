@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
@@ -11,7 +12,7 @@ interface SplashScreenProps {
 export default function SplashScreen({ onComplete, showSplash }: SplashScreenProps) {
 
   const [isVisible, setIsVisible] = useState(true);
-
+  const pathname = usePathname();
   useEffect(() => {
 
     // Show splash screen for 2.5 seconds
@@ -24,12 +25,12 @@ export default function SplashScreen({ onComplete, showSplash }: SplashScreenPro
   }, [onComplete]);
 
 
+  // using pathname here cos after user goes to update and leaves, overflow remains hidden, since the update page's overflow is hidden
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible && !pathname.includes("update")) {
       document.body.style.overflow = "auto"
     }
-  }, [isVisible])
-
+  }, [isVisible, pathname])
 
   return (
     <AnimatePresence>
