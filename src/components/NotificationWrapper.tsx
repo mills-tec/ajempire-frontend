@@ -8,11 +8,9 @@ import { useCartStore } from "@/lib/stores/cart-store";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import type { Notification as AppNotification } from "@/lib/types";
 import { onMessage } from "firebase/messaging";
-import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 export default function NotificationWrapper() {
-  const pathname = usePathname();
   // Admin routes are handled entirely by AdminNotificationWrapper (mounted in
   // admin/layout.tsx). This can't bail out with an early `return` before the
   // hooks below — that's a Rules of Hooks violation: this component lives in
@@ -21,7 +19,6 @@ export default function NotificationWrapper() {
   // between an admin route and a regular one, which would change how many
   // hooks got called between renders and crash the app. Every effect below
   // guards itself on `isAdminRoute` instead.
-  const isAdminRoute = pathname.includes("admin");
   // Selector subscriptions — the old whole-store destructures re-rendered this
   // wrapper on every auth/cart/notification store mutation anywhere in the app.
   const user = useAuthStore((s) => s.user);
@@ -52,7 +49,6 @@ export default function NotificationWrapper() {
   // or out of an admin route within the same session detaches/reattaches
   // this instead of getting stuck with whatever was true on first mount.
   useEffect(() => {
-    if (isAdminRoute) return;
 
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
@@ -89,7 +85,7 @@ export default function NotificationWrapper() {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [isAdminRoute]);
+  }, []);
 
   // Automatic push registration on load. All of the actual work — permission,
   // token, backend save, recording what was saved — lives in
@@ -103,9 +99,8 @@ export default function NotificationWrapper() {
   // Shopper-only: on an admin route this skips entirely rather than passing
   // isAdmin:true — admin devices aren't auto-registered from here.
   useEffect(() => {
-    if (isAdminRoute) return;
     void registerPushToken();
-  }, [isLoggedIn, userId, isAdminRoute, registeredPushToken, adminTokenTick]);
+  }, [isLoggedIn, userId, registeredPushToken, adminTokenTick]);
 
   // Socket.IO — user notifications (non-admin routes only).
   //
@@ -121,7 +116,7 @@ export default function NotificationWrapper() {
   // usually still connecting — the `socket.connected` call below only
   // covers the already-connected case.
   useEffect(() => {
-    if (isAdminRoute || !user || !socket) return;
+    if (!user || !socket) return;
 
 
     // Live push from server (e.g. new order, flash sale)
@@ -144,7 +139,7 @@ export default function NotificationWrapper() {
       socket.off("get:userNotifications", handleNewNotification);
       socket.off("connect_error", handleConnectError);
     };
-  }, [user, isAdminRoute, socket, setNotifications, updateNotifications]);
+  }, [user, socket, setNotifications, updateNotifications]);
 
   // Cart hydration — runs once per app boot, not on every `user`/route
   // change. This used to be keyed on `[user, ...]` and double as the

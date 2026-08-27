@@ -111,23 +111,23 @@ export function useProductVariants(product?: Product | null) {
 
     const selectedCombination =
       product &&
-      hasVariants &&
-      selectedVariantsArray.length === availableVariants.length
+        hasVariants &&
+        selectedVariantsArray.length === availableVariants.length
         ? ((product.variantCombinations ?? []).find((combo) =>
-            availableVariants.every((variant) =>
-              combo.options.some(
-                (option) =>
-                  optionNameMatches(option.name, variant.name) &&
-                  option.value === selectedOptions[variant.name],
-              ),
+          availableVariants.every((variant) =>
+            combo.options.some(
+              (option) =>
+                optionNameMatches(option.name, variant.name) &&
+                option.value === selectedOptions[variant.name],
             ),
-          ) ?? null)
+          ),
+        ) ?? null)
         : null;
 
     const missingVariantName =
       product && hasVariants
         ? (availableVariants.find((variant) => !selectedOptions[variant.name])
-            ?.name ?? null)
+          ?.name ?? null)
         : null;
 
     const currentStock = selectedCombination?.stock ?? product?.stock ?? 0;
@@ -157,6 +157,45 @@ export function useProductVariants(product?: Product | null) {
     });
   };
 
+  // Only meaningful to call when isValidOption() is false. Distinguishes
+  // "this combination doesn't exist at all" from "it exists but is sold
+  // out", since matchesSelections() collapses both cases into `false`.
+  const getOptionUnavailableReason = (
+    variantName: string,
+    value: string,
+  ): string => {
+    if (!product) return "This option isn't available.";
+
+    const variant = derived.availableVariants.find(
+      (item) => item.name === variantName,
+    );
+    if (!variant || !variant.values.includes(value)) {
+      return "This option isn't available for this product.";
+    }
+
+    const candidateSelections = {
+      ...derived.selectedOptions,
+      [variantName]: value,
+    };
+    const combinations = product.variantCombinations ?? [];
+    const entries = Object.entries(candidateSelections);
+
+    const existsRegardlessOfStock = combinations.some((combo) =>
+      entries.every(([name, val]) =>
+        combo.options.some(
+          (option) => optionNameMatches(option.name, name) && option.value === val,
+        ),
+      ),
+    );
+
+    if (!existsRegardlessOfStock) {
+      return `This combination of ${Object.keys(candidateSelections)
+        .join(" / ")} isn't available.`;
+    }
+
+    return `${variant.name} "${value}" is out of stock.`;
+  };
+
   const selectOption = (variantName: string, value: string) => {
     if (!product || !productId) return;
 
@@ -176,6 +215,7 @@ export function useProductVariants(product?: Product | null) {
     selectedOptions: derived.selectedOptions,
     selectOption,
     isValidOption,
+    getOptionUnavailableReason,
     selectedVariantsArray: derived.selectedVariantsArray,
     missingVariantName: derived.missingVariantName,
     selectedCombination: derived.selectedCombination,

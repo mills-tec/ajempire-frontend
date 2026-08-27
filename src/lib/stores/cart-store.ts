@@ -274,11 +274,11 @@ export const useCartStore = create<CartStore>()(
 
           current = existing
             ? current.map((i) =>
-                i._id === item._id &&
+              i._id === item._id &&
                 areVariantsEqual(i.selectedVariants, item.selectedVariants)
-                  ? { ...i, quantity: i.quantity + item.quantity, synced: false }
-                  : i,
-              )
+                ? { ...i, quantity: i.quantity + item.quantity, synced: false }
+                : i,
+            )
             // New cart entries always start selected — matches every
             // add-to-cart / buy-again / buy-now call site in the app.
             : [...current, { ...item, selected: true, synced: false }];
@@ -529,7 +529,7 @@ export const useCartStore = create<CartStore>()(
               set({
                 items: get().items.map((i) =>
                   i._id === action.item._id &&
-                  areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
+                    areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
                     ? { ...i, synced: true, everSyncedFromBackend: true }
                     : i,
                 ),
@@ -541,7 +541,7 @@ export const useCartStore = create<CartStore>()(
               set({
                 items: get().items.map((i) =>
                   i._id === action.item._id &&
-                  areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
+                    areVariantsEqual(i.selectedVariants, action.item.selectedVariants)
                     ? { ...i, synced: true, everSyncedFromBackend: true }
                     : i,
                 ),
@@ -552,6 +552,21 @@ export const useCartStore = create<CartStore>()(
               const itemId = action.type === "remove" ? action.id : action.item._id;
               set({ items: get().items.filter((i) => i._id !== itemId) });
               toast.error("An item was removed from your cart because it no longer exists.");
+              continue;
+            }
+            // Stock ran out (or dropped below the queued quantity) since this
+            // action was queued. The backend always phrases this as `Only N
+            // units of "<name>" ... are available.` — distinct enough from
+            // every other error this endpoint returns to match on safely.
+            // Left in the queue, this would just fail and retry forever,
+            // repeating the "pending" warning below on every sync attempt.
+            if (
+              err instanceof Error &&
+              action.type !== "remove" &&
+              err.message.includes("are available")
+            ) {
+              set({ items: get().items.filter((i) => i._id !== action.item._id) });
+              toast.error(`${action.item.name} is out of stock and was removed from your cart.`);
               continue;
             }
             // If it's a validation error (missing variants), don't retry
