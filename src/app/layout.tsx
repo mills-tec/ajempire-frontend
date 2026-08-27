@@ -80,7 +80,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`${poppins.variable}  antialiased`}>
+      <body className={`${poppins.variable}  antialiased overflow-hidden`}>
         {/* System UI */}
         <Toaster />
         <PWAInstallPrompt />
