@@ -25,12 +25,12 @@ export default function SplashScreen({ onComplete, showSplash }: SplashScreenPro
   }, [onComplete]);
 
 
+  // using pathname here cos after user goes to update and leaves, overflow remains hidden, since the update page's overflow is hidden
   useEffect(() => {
     if (!isVisible && !pathname.includes("update")) {
       document.body.style.overflow = "auto"
     }
   }, [isVisible, pathname])
-  console.log(pathname);
 
   return (
     <AnimatePresence>
