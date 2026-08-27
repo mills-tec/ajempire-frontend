@@ -49,6 +49,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           }
         }
       }
+
+      document.body.style.overflow = "auto";
+    } else {
+      document.body.style.overflow = "hidden";
+
     }
   }, [token, isLoading, pathname, router, user]);
 
