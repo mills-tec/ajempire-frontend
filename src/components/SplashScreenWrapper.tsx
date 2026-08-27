@@ -16,7 +16,7 @@ export default function SplashScreenWrapper({ children }: { children: React.Reac
     // get their real first-visit splash when they later reach the storefront
     // in the same tab. Depends on isAdminRoute rather than running once so
     // that crossing between admin and shop routes re-evaluates this.
-    if (isAdminRoute) return;
+    // if (isAdminRoute) return;
 
     const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
 

@@ -49,6 +49,7 @@ export default function ProductDescription({
     currentStock,
     hasVariants,
     availableVariants,
+    getOptionUnavailableReason
   } = useProductVariants(product);
   const openModal = useModalStore((s) => s.openModal);
   const checkoutHandler = () => {
@@ -255,7 +256,7 @@ export default function ProductDescription({
                   {Number(
                     calcDiscountPrice(
                       product.price +
-                        (selectedCombination?.additionalPrice ?? 0),
+                      (selectedCombination?.additionalPrice ?? 0),
                       product.flashSales.discountValue,
                       product.flashSales.discountType,
                     ),
@@ -398,21 +399,24 @@ export default function ProductDescription({
                           key={idx}
                           title={value}
                           onClick={() => {
-                            if (!isValid) return;
+                            if (!isValid) {
+                              toast.error(
+                                getOptionUnavailableReason(variant.name, value),
+                              );
+                              return;
+                            };
                             selectOption(variant.name, value);
                           }}
-                          className={`relative ${
-                            isColorVariant
-                              ? "rounded-full size-[2rem]"
-                              : "min-h-[2rem] min-w-[3rem] max-w-[9rem] rounded-sm px-2"
-                          } flex items-center justify-center overflow-hidden whitespace-nowrap text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
-                                  ${
-                                    isSelected
-                                      ? isColorVariant
-                                        ? "outline outline-1 outline-offset-2  outline-purple-600 "
-                                        : "outline outline-1 outline-offset-2 outline-purple-600"
-                                      : ""
-                                  } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
+                          className={`relative ${isColorVariant
+                            ? "rounded-full size-[2rem]"
+                            : "min-h-[2rem] min-w-[3rem] max-w-[9rem] rounded-sm px-2"
+                            } flex items-center justify-center overflow-hidden whitespace-nowrap text-xs cursor-pointer transition-all duration-200 border border-[#BFBFBF]
+                                  ${isSelected
+                              ? isColorVariant
+                                ? "outline outline-1 outline-offset-2  outline-purple-600 "
+                                : "outline outline-1 outline-offset-2 outline-purple-600"
+                              : ""
+                            } ${!isValid ? "opacity-30 cursor-not-allowed" : ""}`}
                           style={{
                             backgroundColor: isColorVariant ? value : undefined,
                           }}

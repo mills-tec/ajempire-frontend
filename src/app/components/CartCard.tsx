@@ -10,6 +10,7 @@ import { useProductVariants } from "@/lib/useProductVariants";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { memo, useEffect, useState } from "react";
+import { toast } from "sonner";
 import CartPopup from "./CartPopup";
 
 const formatPrice = (amount: number) => {
@@ -49,6 +50,8 @@ function CartCard({ item }: { item: CartItem }) {
     hasVariants,
     availableVariants,
     selectedVariantsArray,
+    getOptionUnavailableReason
+
   } = useProductVariants(item);
 
   const [_remove, setRemove] = useState(false);
@@ -141,6 +144,13 @@ function CartCard({ item }: { item: CartItem }) {
                               if (isValid) {
 
                                 selectOption(variant.name, value);
+                              } else {
+                                if (!isValid) {
+                                  toast.error(
+                                    getOptionUnavailableReason(variant.name, value),
+                                  );
+                                  return;
+                                }
                               }
                             }}
                             key={value}
