@@ -41,7 +41,7 @@ interface Order {
   processedAt: string;
   shippedAt: string | null;
   deliveredAt: string | null;
-  logistics?: { trackingUrl: string }
+  logistics?: { tracking_url: string, tracking_id: string }
 
 }
 
@@ -87,7 +87,6 @@ export default function Status() {
 
   const [returnModal, setReturnModal] = useState(false);
   const [inputs, setInputs] = useState<ReturnInputs>(INITIAL_RETURN_INPUTS);
-  console.log(orderId);
   const {
     addItem,
 
@@ -109,11 +108,16 @@ export default function Status() {
 
       try {
         const data = await getOrder(orderId);
-        setOrder(data.message as any)
 
+        setOrder(data.message as any);
+        if (!data.status) {
+          setError(
+            typeof data?.message === "string" ? data.message : "Failed to load order",
+          );
+        }
       } catch (err) {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load order");
+
+        setError(err instanceof Error ? err.message : "Failed to load order");
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -134,7 +138,7 @@ export default function Status() {
     [order?.orderStatus],
   );
 
-  const itemCount = order?.items.length ?? 0;
+  const itemCount = order?.items?.length ?? 0;
 
   // ── Loading / Error states ────────────────────────────────────────────────
 
@@ -161,7 +165,6 @@ export default function Status() {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  // return <></>;
   return (
     <div>
       <OrderTabs
@@ -174,26 +177,49 @@ export default function Status() {
         <div className="font-poppins">
           <h1 className="mb-5 text-lg font-medium">Order Tracking</h1>
 
-          <div className="flex flex-col gap-2 text-sm">
-            <p>Order #{order.order_id}</p>
-            <p className="text-black/70">
-              Placed On:{" "}
-              <span className="text-primaryhover">
-                {formatDate(order.processedAt)}
-              </span>
-            </p>
-            <p className="text-black/70">
-              Delivery Date:{" "}
-              <span className="text-primaryhover">
-                {formatDate(order.processedAt)}
-              </span>
-            </p>
-            <p className="text-black/70">No of Items: {itemCount}</p>
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-black">Order #{order.order_id}</p>
+              {order.logistics && (
+                <p className="text-black/70">
+                  Tracking ID:{" "}
+                  <span className="font-medium text-black">
+                    {order.logistics.tracking_id}
+                  </span>
+                </p>
+              )}
+            </div>
 
-            <p className="mt-10 text-sm font-semibold text-black">
-              Total for {itemCount} {itemCount === 1 ? "Item" : "Items"}: ₦
-              {order.amountPaid.toLocaleString()}
-            </p>
+            <div className="flex flex-col gap-1.5 text-black/70">
+              <div className="flex items-center justify-between gap-4">
+                <span>Placed on</span>
+                <span className="font-medium text-primaryhover">
+                  {formatDate(order.processedAt)}
+                </span>
+              </div>
+              {
+                order.deliveredAt && <div className="flex items-center justify-between gap-4">
+                  <span>Delivery date</span>
+                  <span className="font-medium text-primaryhover">
+                    {formatDate(order.deliveredAt)}
+                  </span>
+                </div>
+              }
+
+              <div className="flex items-center justify-between gap-4">
+                <span>No of items</span>
+                <span className="font-medium text-black">{itemCount}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-black/10 pt-3">
+              <p className="font-semibold text-black">
+                Total for {itemCount} {itemCount === 1 ? "item" : "items"}
+              </p>
+              <p className="font-semibold text-black">
+                ₦{order.items.reduce((prev, item) => prev + (item.price * item.qty), 0)}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -220,7 +246,7 @@ export default function Status() {
               createdAt={order.createdAt}
               processedAt={order.processedAt}
               shippedAt={order.shippedAt}
-              trackingUrl={order.logistics?.trackingUrl}
+              trackingUrl={order.logistics?.tracking_url}
             />
           </div>
 

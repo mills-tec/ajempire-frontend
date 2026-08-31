@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 
 
 interface IOrderStatus {
@@ -61,8 +60,7 @@ const fmtDate = (date: string) =>
     second: "2-digit"
   });
 
-export default function OrderStatus({ createdAt, processedAt, shippedAt, deliveredAt,  trackingUrl}: IOrderStatus) {
-  console.log(createdAt, processedAt);
+export default function OrderStatus({ createdAt, processedAt, shippedAt, deliveredAt, trackingUrl }: IOrderStatus) {
   const steps = [
     {
       date: createdAt,
@@ -109,8 +107,7 @@ export default function OrderStatus({ createdAt, processedAt, shippedAt, deliver
               <div className="space-y-1 pb-1">
                 <h2 className={`text-sm ${step.activeColor}`}>{step.label}</h2>
                 <h3 className="text-xs font-medium">{fmtDate(step.date!)}</h3>
-         
-                {step.label.toLowerCase().includes("shipped") && trackingUrl ? <Link target="_blank"  className="text-xs text-primaryhover font-poppins" href={trackingUrl}>Track order</Link> :        <p className="text-xs text-black/50">{step.desc}</p>}
+                {step.label.toLowerCase().includes("shipped") && <p className="text-xs text-black/50">{step.desc}</p>}
               </div>
             ) : (
               <h2 className="text-sm text-black/45 pt-0.5">{step.label}</h2>
