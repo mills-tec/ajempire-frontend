@@ -6,7 +6,7 @@ import { IOrderStats } from '@/lib/admin-types';
 import { getUserOrders, updateOrder } from '@/lib/adminapi';
 import { filterByPeriod } from '@/lib/dashboard-utils';
 import { IOrder } from '@/lib/types';
-import { ChevronLeft, ChevronRight, Eye, Filter, Package, Search, ShoppingBag, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Eye, Filter, Package, Search, ShoppingBag, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 interface DeliveryOrder {
   id: string;
@@ -544,12 +544,37 @@ const DeliveryPage = () => {
                       <p className="text-[10px] text-brand_gray font-medium">Payment Method</p>
                       <p className="text-sm font-medium text-brand_gray_dark/80 uppercase">{selectedDelivery.fullOrder?.paymentMethod || 'N/A'}</p>
                     </div>
+                    {selectedDelivery.fullOrder?.logistics?.tracking_id && (
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Tracking ID</p>
+                        <p className="text-sm font-semibold text-brand_gray_dark">
+                          {selectedDelivery.fullOrder.logistics.tracking_id}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedDelivery.fullOrder?.logistics?.tracking_url && (
+                      <div>
+                        <p className="text-[10px] text-brand_gray font-medium">Track Package</p>
+                        <a
+                          href={selectedDelivery.fullOrder.logistics.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand_pink hover:text-brand_pink/80 transition-colors mt-0.5"
+                        >
+                          View on courier site
+                          <ExternalLink size={13} />
+                        </a>
+                      </div>
+                    )}
+
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Delivery Status</p>
                       <span className={`inline-block mt-1 px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(selectedDelivery.status)}`}>
                         {selectedDelivery.status}
                       </span>
                     </div>
+
                     <div>
                       <p className="text-[10px] text-brand_gray font-medium">Order Date</p>
                       <p className="text-sm font-medium text-brand_gray_dark/80">{selectedDelivery.deliveryDate}</p>
