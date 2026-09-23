@@ -838,7 +838,7 @@ const InventoryPage = () => {
                                                         </div>
                                                         <div className="flex flex-col gap-1">
                                                             <span className="font-semibold text-sm text-brand_gray_dark">{product.name.slice(0, 20)}...</span>
-                                                            
+
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1202,7 +1202,7 @@ const InventoryPage = () => {
                                                 />
                                             </div>
                                         </div>
-
+                                        {/* 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">SKU (optional)</label>
@@ -1222,7 +1222,7 @@ const InventoryPage = () => {
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand_pink focus:border-brand_pink"
                                                 />
                                             </div>
-                                        </div>
+                                        </div> */}
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>

@@ -570,7 +570,7 @@ const AddProductPage = () => {
 
                                 <div className="col-span-2">
                                     <label className="block text-xs font-medium text-gray-700 mb-2">Description <span className="text-red-500">*</span></label>
-                                    <textarea value={productDescription} onChange={e => setProductDescription(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter product description" required />
+                                    <textarea value={productDescription} onChange={e => setProductDescription(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" placeholder="Enter product description" required />
                                 </div>
 
                                 {/* Category */}
@@ -597,15 +597,15 @@ const AddProductPage = () => {
                                     )}
                                 </div>
 
-                                <div>
+                                {/* <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-2">SKU (optional)</label>
                                     <input type="text" value={sku} onChange={e => setSku(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter SKU" />
-                                </div>
+                                </div> */}
 
-                                <div>
+                                {/* <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-2">Barcode (optional)</label>
                                     <input type="text" value={barcode} onChange={e => setBarcode(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter barcode" />
-                                </div>
+                                </div> */}
 
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-2">Base Price (₦) <span className="text-red-500">*</span></label>
